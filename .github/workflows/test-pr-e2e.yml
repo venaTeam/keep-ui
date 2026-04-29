@@ -1,0 +1,48 @@
+name: test-pr-e2e
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches:
+      - main
+      - development
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e-smoke:
+    name: E2E Smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Monaco workers
+        run: npm run build-monaco-workers
+
+      - name: Start app
+        run: npm run dev:webpack -- -p 3000 > app.log 2>&1 &
+
+      - name: Wait for app
+        run: npx wait-on http://127.0.0.1:3000 -t 120000
+
+      - name: Smoke check homepage
+        run: curl -fsS http://127.0.0.1:3000 > /dev/null
+
+      - name: Print app logs on failure
+        if: failure()
+        run: cat app.log
