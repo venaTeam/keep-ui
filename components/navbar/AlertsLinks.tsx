@@ -4,7 +4,6 @@ import { Button, Subtitle, Callout } from "@tremor/react";
 import { LinkWithIcon } from "components/LinkWithIcon";
 import {
   CustomPresetAlertLinks,
-  usePresetAlertsCount,
 } from "@/features/presets/custom-preset-links";
 import { AiOutlineSwap } from "react-icons/ai";
 import { FiFilter } from "react-icons/fi";
@@ -69,9 +68,6 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
     return staticPresets?.some((preset) => preset.name === "feed");
   })();
 
-  const { isLoading: isAsyncLoading, totalCount: feedAlertsTotalCount } =
-    usePresetAlertsCount("", false);
-
   return (
     <>
       <Disclosure as="div" className="space-y-1" defaultOpen>
@@ -111,7 +107,6 @@ export const AlertsLinks = ({ session }: AlertsLinksProps) => {
                   <LinkWithIcon
                     href="/alerts/feed"
                     icon={AiOutlineSwap}
-                    count={feedAlertsTotalCount}
                     testId="menu-alerts-feed"
                     onClick={(e) => {
                       // If we're already on the feed page, force a reload

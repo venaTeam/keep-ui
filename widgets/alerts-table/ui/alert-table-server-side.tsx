@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { Table, Card, Button } from "@tremor/react";
+import { Table, Card, Button, Badge } from "@tremor/react";
 import { AlertsTableBody } from "@/widgets/alerts-table/ui/alerts-table-body";
 import {
   AlertDto,
@@ -51,10 +51,12 @@ import { Icon } from "@tremor/react";
 import {
   BellIcon,
   BellSlashIcon,
+  FireIcon,
   FunnelIcon,
   MagnifyingGlassIcon,
 } from "@heroicons/react/24/outline";
 import { FacetDto, Pagination } from "@/features/filter";
+import { ShortNumber } from "@/components/ui";
 import { GroupingState, getGroupedRowModel } from "@tanstack/react-table";
 import { v4 as uuidV4 } from "uuid";
 import { FacetsConfig } from "@/features/filter/models";
@@ -103,6 +105,7 @@ interface Props {
   isAsyncLoading?: boolean;
   presetName: string;
   presetId?: string;
+  counterShowsFiringOnly?: boolean;
   presetTabs?: PresetTab[];
   isRefreshAllowed?: boolean;
   isMenuColDisplayed?: boolean;
@@ -127,6 +130,7 @@ export function AlertTableServerSide({
   isAsyncLoading = false,
   presetName,
   presetId,
+  counterShowsFiringOnly = false,
   facetsCel,
   facetsPanelRefreshToken,
   isRefreshAllowed = true,
@@ -682,8 +686,23 @@ export function AlertTableServerSide({
     <div className="flex flex-col gap-4">
       <div className="flex-none">
         <div className="flex justify-between">
-          <span data-testid="preset-page-title">
+          <span data-testid="preset-page-title" className="flex items-center gap-2">
             <PageTitle className="capitalize inline">{presetName}</PageTitle>
+            {presetName !== "feed" && (
+              <Badge
+                size="md"
+                color={alertsTotalCount === 0 ? "green" : "orange"}
+                data-testid="preset-count-badge"
+                className="px-1.5 min-w-6"
+              >
+                <div className="flex gap-1 items-center">
+                  {counterShowsFiringOnly && (
+                    <Icon className="p-0 relative top-[1px]" size="xs" icon={FireIcon} color={alertsTotalCount === 0 ? "green" : "orange"} />
+                  )}
+                  <ShortNumber value={alertsTotalCount} />
+                </div>
+              </Badge>
+            )}
           </span>
           <div className="grid grid-cols-[auto_auto] grid-rows-[auto_auto] gap-4">
             {timeFrame && (
