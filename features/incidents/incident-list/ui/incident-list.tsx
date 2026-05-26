@@ -52,6 +52,8 @@ import EnhancedDateRangePickerV2, {
 } from "@/components/ui/DateRangePickerV2";
 import { useTimeframeState } from "@/components/ui/useTimeframeState";
 import { PaginationState } from "@/features/filter/pagination";
+import { useConfig } from "@/utils/hooks/useConfig";
+import { recordPageLoad } from "@/utils/metrics";
 
 const AssigneeLabel = ({ email }: { email: string }) => {
   const user = useUser(email);
@@ -64,6 +66,12 @@ export function IncidentList({
   initialData?: PaginatedIncidentsDto;
   initialFacetsData?: InitialFacetsData;
 }) {
+
+  // Record page load time - call directly since useEffect may not fire reliably in Next.js
+  if (typeof window !== "undefined") {
+    recordPageLoad("incidents", 0);
+  }
+
   const [incidentsPagination, setIncidentsPagination] =
     useState<PaginationState>({
       limit: DEFAULT_INCIDENTS_PAGE_SIZE,
@@ -113,6 +121,7 @@ export function IncidentList({
     string | undefined
   >(undefined);
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
+  const { data: config } = useConfig();
 
   const handleCloseForm = () => {
     setIsFormOpen(false);
@@ -292,7 +301,8 @@ export function IncidentList({
   return (
     <div className="flex h-full w-full">
       <div className="flex-grow min-w-0">
-        {!isPredictedLoading &&
+        {config?.AI_FEATURES_ENABLED &&
+        !isPredictedLoading &&
         predictedIncidents &&
         predictedIncidents.items.length > 0 ? (
           <Card className="mt-10 mb-10 flex-grow">

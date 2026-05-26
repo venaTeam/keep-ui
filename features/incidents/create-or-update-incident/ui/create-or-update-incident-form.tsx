@@ -10,7 +10,7 @@ import {
   SelectItem,
   Switch,
 } from "@tremor/react";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useState, useRef } from "react";
 import { useUsers } from "@/entities/users/model/useUsers";
 import { useIncidentActions } from "@/entities/incidents/model";
 import type { IncidentDto } from "@/entities/incidents/model";
@@ -21,6 +21,7 @@ import { useSession } from "next-auth/react";
 import dynamic from "next/dynamic";
 import { IncidentSeveritySelect } from "@/features/incidents/change-incident-severity";
 import { Severity } from "@/entities/incidents/model/models";
+import { recordAction, recordError } from "@/utils/metrics";
 
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 
@@ -40,6 +41,8 @@ export function CreateOrUpdateIncidentForm({
   );
   const { data: session } = useSession();
   const currentUser = session?.user;
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
   const [incidentName, setIncidentName] = useState<string>("");
   const [incidentUserSummary, setIncidentUserSummary] = useState<string>("");
   const [incidentAssignee, setIncidentAssignee] = useState<string>(currentUser?.email || "");
@@ -48,7 +51,7 @@ export function CreateOrUpdateIncidentForm({
   const { data: users = [] } = useUsers();
   const { addIncident, updateIncident } = useIncidentActions();
 
-    // Sort users alphabetically
+  // Sort users alphabetically
   const sortedUsers = [...users].sort((a, b) =>
     (a.name || a.email).localeCompare(b.name || b.email)
   );
@@ -81,38 +84,45 @@ export function CreateOrUpdateIncidentForm({
     clearForm();
   };
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
+const handleSubmit = async (e: FormEvent) => {
+  e.preventDefault();
+  if (isSubmittingRef.current || isSubmitting) return;
+
+  isSubmittingRef.current = true;
+  setIsSubmitting(true);
+  const start = performance.now();
+
+  try {
     if (editMode) {
-      await updateIncident(
-        incidentToEdit!.id,
-        {
-          user_generated_name: incidentName,
-          user_summary: incidentUserSummary,
-          assignee: incidentAssignee,
-          resolve_on: resolveOnAlertsResolved,
-          same_incident_in_the_past_id:
-            incidentToEdit!.same_incident_in_the_past_id,
-        },
-        false
-      );
+      await updateIncident(incidentToEdit!.id, {
+        user_generated_name: incidentName,
+        user_summary: incidentUserSummary,
+        assignee: incidentAssignee,
+        resolve_on: resolveOnAlertsResolved,
+        same_incident_in_the_past_id: incidentToEdit!.same_incident_in_the_past_id,
+      }, false);
       exitEditMode();
     } else {
-      try {
-        const newIncident = await addIncident({
-          user_generated_name: incidentName,
-          user_summary: incidentUserSummary,
-          assignee: incidentAssignee,
-          resolve_on: resolveOnAlertsResolved,
-          severity: incidentSeverity,
-        });
-        createCallback?.(newIncident.id);
-        exitEditMode();
-      } catch (error) {
-        console.error(error);
-      }
+      const newIncident = await addIncident({
+        user_generated_name: incidentName,
+        user_summary: incidentUserSummary,
+        assignee: incidentAssignee,
+        resolve_on: resolveOnAlertsResolved,
+        severity: incidentSeverity,
+      });
+
+      recordAction("create_incident", (performance.now() - start) / 1000);
+      createCallback?.(newIncident.id);
+      exitEditMode();
     }
-  };
+  } catch (error) {
+    recordError("create_incident");
+    console.error(error);
+  } finally {
+    isSubmittingRef.current = false;
+    setIsSubmitting(false);
+  }
+};
 
   const submitEnabled = (): boolean => {
     return !!incidentName;
@@ -233,7 +243,8 @@ export function CreateOrUpdateIncidentForm({
           </Button>
         )}
         <Button
-          disabled={!submitEnabled()}
+          disabled={!submitEnabled() || isSubmitting}
+          loading={isSubmitting}
           color="orange"
           size="xs"
           type="submit"

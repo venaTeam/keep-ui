@@ -222,9 +222,16 @@ export function AlertTableServerSide({
   );
   const [lastViewedAlert, setLastViewedAlert] = useState<string | null>(null);
 
+  const isFeedAwaitingQuery =
+    presetName === "feed" && !searchCel && !filterCel;
+
   useEffect(
     function whenQueryChange() {
       if (filterCel === null || searchCel === null || timeFrame === null) {
+        return;
+      }
+
+      if (isFeedAwaitingQuery) {
         return;
       }
 
@@ -243,7 +250,7 @@ export function AlertTableServerSide({
         onQueryChange(query);
       }
     },
-    [filterCel, searchCel, paginationState, sorting, timeFrame, onQueryChange]
+    [filterCel, searchCel, paginationState, sorting, timeFrame, onQueryChange, isFeedAwaitingQuery]
   );
 
   const [selectedAlert, setSelectedAlert] = useState<AlertDto | null>(null);
@@ -384,6 +391,29 @@ export function AlertTableServerSide({
             className="!p-0"
           />
         ),
+        filterOut: (facetOption) => {
+          const hiddenStatuses = ["pending", "maintenance"];
+          return hiddenStatuses.includes(
+            facetOption.display_name.trim().toLowerCase()
+          );
+        },
+      },
+      ["status"]: {
+        canHitEmptyState: true,
+        renderOptionIcon: (facetOption) => (
+          <Icon
+            icon={getStatusIcon(facetOption.display_name)}
+            size="sm"
+            color={getStatusColor(facetOption.display_name)}
+            className="!p-0"
+          />
+        ),
+        filterOut: (facetOption) => {
+          const hiddenStatuses = ["pending", "maintenance"];
+          return hiddenStatuses.includes(
+            facetOption.display_name.trim().toLowerCase()
+          );
+        },
       },
       ["Source"]: {
         renderOptionIcon: (facetOption) => {
@@ -554,6 +584,21 @@ export function AlertTableServerSide({
   );
 
   function renderTable() {
+    if (isFeedAwaitingQuery) {
+      return (
+        <div className="flex-1 flex items-center w-full">
+          <div className="flex flex-col justify-center items-center w-full p-4">
+            <EmptyStateCard
+              noCard
+              title="Query Your Alerts"
+              description="Use the CEL search bar above to filter alerts, or select facets from the panel on the left."
+              icon={MagnifyingGlassIcon}
+            />
+          </div>
+        </div>
+      );
+    }
+
     if (
       !showSkeleton &&
       table.getPageCount() === 0 &&
@@ -678,13 +723,27 @@ export function AlertTableServerSide({
     );
   }
 
+  const fromDashboard = searchParams?.get("fromDashboard");
+  const widgetName = searchParams?.get("widgetName");
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex-none">
         <div className="flex justify-between">
-          <span data-testid="preset-page-title">
+          <div className="flex flex-col" data-testid="preset-page-title">
             <PageTitle className="capitalize inline">{presetName}</PageTitle>
-          </span>
+            {fromDashboard && (
+              <div className="flex items-center gap-1 text-sm mt-1 text-gray-500">
+                <span className="text-gray-400">from</span>
+                <a
+                  href={`/dashboard/${encodeURIComponent(fromDashboard)}`}
+                  className="text-gray-500 hover:text-orange-500 transition-colors cursor-pointer underline underline-offset-2"
+                >
+                  {fromDashboard}
+                </a>
+              </div>
+            )}
+          </div>
           <div className="grid grid-cols-[auto_auto] grid-rows-[auto_auto] gap-4">
             {timeFrame && (
               <EnhancedDateRangePickerV2
@@ -739,20 +798,26 @@ export function AlertTableServerSide({
       <div className="pb-4">
         <div className="flex gap-4">
           {/* Facets sidebar */}
-          <div className="w-33 min-w-[12rem] overflow-y-auto">
-            <FacetsPanelServerSide
-              usePropertyPathsSuggestions={true}
-              entityName={"alerts"}
-              facetOptionsCel={facetsCel}
-              clearFiltersToken={clearFiltersToken}
-              initialFacetsData={{ facets: initialFacets, facetOptions: null }}
-              facetsConfig={facetsConfig}
-              persistenceKey={`facets-${userPrefix}${presetName}`}
-              onCelChange={setFilterCel}
-              revalidationToken={facetsPanelRefreshToken}
-              isSilentReloading={isAsyncLoading}
-            />
-          </div>
+          {!isFeedAwaitingQuery && (
+            <div className="w-33 min-w-[12rem] overflow-y-auto">
+              <FacetsPanelServerSide
+                usePropertyPathsSuggestions={true}
+                entityName={"alerts"}
+                facetOptionsCel={facetsCel}
+                clearFiltersToken={clearFiltersToken}
+                initialFacetsData={{ facets: initialFacets, facetOptions: null }}
+                facetsConfig={facetsConfig}
+                persistenceKey={
+                  presetName === "feed"
+                    ? undefined
+                    : `facets-${userPrefix}${presetName}`
+                }
+                onCelChange={setFilterCel}
+                revalidationToken={facetsPanelRefreshToken}
+                isSilentReloading={isAsyncLoading}
+              />
+            </div>
+          )}
 
           {/* Table section */}
           <div className="flex-1 flex flex-col min-w-0 gap-4">

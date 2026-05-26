@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { NextAuthProvider } from "../auth-provider";
+
 import { ToastContainer } from "react-toastify";
 import Navbar from "components/navbar/Navbar";
 import { TopologyPollingContextProvider } from "@/app/(keep)/topology/model/TopologyPollingContext";
@@ -14,6 +15,9 @@ import "react-toastify/dist/ReactToastify.css";
 import { WorkflowModalProvider } from "@/features/workflows/manual-run-workflow";
 import ScreenWakeLock from "@/components/ui/ScreenWakeLock";
 import { SSEProvider } from "@/app/sse-provider";
+import { FontSizeInitializer } from "@/components/FontSizeInitializer";
+
+
 
 type RootLayoutProps = {
   children: ReactNode;
@@ -28,6 +32,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
       <body className="h-screen flex flex-col lg:grid lg:grid-cols-[192px_30px_auto] xl:grid-cols-[220px_30px_auto] 2xl:grid-cols-[250px_30px_auto] lg:grid-rows-1 lg:has-[aside[data-minimized='true']]:grid-cols-[0px_30px_auto]">
         {/* ThemeScript must be the first thing to avoid flickering */}
         <ThemeScript />
+        <FontSizeInitializer />
         <ConfigProvider config={config}>
           <ScreenWakeLock />
           <NextAuthProvider session={session}>

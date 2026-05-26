@@ -27,15 +27,17 @@ import {
   ExclamationCircleIcon,
   PauseIcon,
   CircleStackIcon,
+  ClockIcon,
 } from "@heroicons/react/24/outline";
 import "./alert-dismiss-modal.css";
+import { recordAction, recordError } from "@/utils/metrics";
 
-const statusIcons = {
+const statusIcons: any = {
   [Status.Firing]: <ExclamationCircleIcon className="w-5 h-5 text-red-500 mr-2" />,
   [Status.Resolved]: <CheckCircleIcon className="w-5 h-5 text-green-500 mr-2" />,
   [Status.Acknowledged]: <PauseIcon className="w-5 h-5 text-gray-500 mr-2" />,
   [Status.Suppressed]: <CircleStackIcon className="w-5 h-5 text-gray-500 mr-2" />,
-  [Status.Pending]: <CircleStackIcon className="w-5 h-5 text-gray-500 mr-2" />,
+  [Status.Pending]: <ClockIcon className="w-5 h-5 text-gray-500 mr-2" />,
 };
 
 interface Props {
@@ -130,28 +132,27 @@ export function AlertDismissModal({
       fingerprints: alerts.map((alert: AlertDto) => alert.fingerprint),
     };
 
-    try {
-      const endpoint = isRestore
-        ? "/alerts/batch_enrich?dispose_on_new_alert=false"
-        : `/alerts/batch_enrich?dispose_on_new_alert=${disposeOnNewAlert}`;
+      const start = performance.now();
+  try {
+    const endpoint = isRestore
+      ? "/alerts/batch_enrich?dispose_on_new_alert=false"
+      : `/alerts/batch_enrich?dispose_on_new_alert=${disposeOnNewAlert}`;
 
-      await api.post(endpoint, requestData);
-      toast.success(
-        `${alerts.length} alerts ${isRestore ? "restored" : "dismissed"
-        } successfully!`,
-        {
-          position: "top-right",
-        }
-      );
-      onSuccess?.();
-      await alertsMutator();
-      await presetsMutator();
-    } catch (error) {
-      showErrorToast(error, "Failed to dismiss alerts");
-    } finally {
-      clearAndClose();
-      setIsLoading(false);
-    }
+    await api.post(endpoint, requestData);
+    recordAction("dismiss_alert", (performance.now() - start) / 1000);
+    toast.success(
+      `${alerts.length} alerts ${isRestore ? "restored" : "dismissed"} successfully!`,
+      { position: "top-right" }
+    );
+    onSuccess?.();
+    await alertsMutator();
+    await presetsMutator();
+  } catch (error) {
+    recordError("dismiss_alert");
+    showErrorToast(error, "Failed to dismiss alerts");
+  } finally {
+    clearAndClose();
+  }
   };
 
   const clearAndClose = () => {
@@ -194,15 +195,17 @@ export function AlertDismissModal({
               New status:
             </Subtitle>
             <Select
-              options={Object.values(Status).map((status) => ({
-                value: status,
-                label: (
-                  <div className="flex items-center">
-                    {statusIcons[status]}
-                    <span>{status.charAt(0).toUpperCase() + status.slice(1)}</span>
-                  </div>
-                ),
-              }))}
+              options={Object.values(Status)
+                .filter((status) => status !== Status.Pending)
+                .map((status) => ({
+                  value: status,
+                  label: (
+                    <div className="flex items-center">
+                      {statusIcons[status]}
+                      <span>{status.charAt(0).toUpperCase() + status.slice(1)}</span>
+                    </div>
+                  ),
+                }))}
               value={
                 selectedStatus
                   ? {

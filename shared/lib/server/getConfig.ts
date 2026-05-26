@@ -48,11 +48,19 @@ export function getConfig(): InternalConfig {
     API_URL: process.env.API_URL,
     // could be relative (e.g. for ingress) or absolute (e.g. for cloud run)
     API_URL_CLIENT: API_URL_CLIENT,
+    WORKFLOWS_API_URL: process.env.WORKFLOWS_API_URL || "http://localhost:8082",
 
     SENTRY_DISABLED: process.env.SENTRY_DISABLED,
     READ_ONLY: process.env.KEEP_READ_ONLY === "true",
     OPEN_AI_API_KEY_SET:
       !!process.env.OPEN_AI_API_KEY || !!process.env.OPENAI_API_KEY,
+    KEEP_AI_FEATURES_DISABLED:
+      process.env.KEEP_AI_FEATURES_DISABLED?.toLowerCase() === "true",
+    AI_FEATURES_ENABLED:
+      !!(
+        (!!process.env.OPEN_AI_API_KEY || !!process.env.OPENAI_API_KEY) &&
+        process.env.KEEP_AI_FEATURES_DISABLED?.toLowerCase() !== "true"
+      ),
     // NOISY ALERTS DISABLED BY DEFAULT TO SPARE SPACE ON THE TABLE
     NOISY_ALERTS_ENABLED: process.env.NOISY_ALERTS_ENABLED === "true",
     // The URL of the documentation site

@@ -1,5 +1,6 @@
 import React, { ReactNode } from "react";
 import { NextAuthProvider } from "../auth-provider";
+import { Mulish } from "next/font/google";
 import { ToastContainer } from "react-toastify";
 import { getConfig } from "@/shared/lib/server/getConfig";
 import { ConfigProvider } from "../config-provider";
@@ -10,6 +11,13 @@ import { ThemeScript, WatchUpdateTheme } from "@/shared/ui";
 import "@/app/globals.css";
 import "react-toastify/dist/ReactToastify.css";
 
+
+// If loading a variable font, you don't need to specify the font weight
+const mulish = Mulish({
+  subsets: ["latin"],
+  display: "swap",
+});
+
 type RootLayoutProps = {
   children: ReactNode;
 };
@@ -19,7 +27,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
   const session = await auth();
 
   return (
-    <html lang="en" className="bg-gray-50">
+    <html lang="en" className={`bg-gray-50 ${mulish.className}`}>
       <body className="h-screen flex flex-col lg:grid lg:grid-cols-[fit-content(250px)_30px_auto] lg:grid-rows-1 lg:has-[aside[data-minimized='true']]:grid-cols-[0px_30px_auto]">
         {/* ThemeScript must be the first thing to avoid flickering */}
         <ThemeScript />
