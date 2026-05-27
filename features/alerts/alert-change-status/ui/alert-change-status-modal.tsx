@@ -93,9 +93,10 @@ const handleChangeStatus = async () => {
         enrichments: {
           status: selectedStatus,
           ...(selectedStatus !== Status.Suppressed && {
-            // Phase 2: align field names — keep legacy keys, add typed dismissed_until.
+            // Phase 2: leaving suppressed -> undismiss. `dismissed: false` makes the
+            // server clear dismiss_mode/dismissed_until while keeping the explicit
+            // `status` above. No camelCase `dismissUntil` (strict backend 422s it).
             dismissed: false,
-            dismissUntil: "",
             dismissed_until: "",
           }),
           ...(noteContent && noteContent.trim() !== "" && {
@@ -132,9 +133,10 @@ const handleChangeStatusBatch = async () => {
         enrichments: {
           status: selectedStatus,
           ...(selectedStatus !== Status.Suppressed && {
-            // Phase 2: align field names — keep legacy keys, add typed dismissed_until.
+            // Phase 2: leaving suppressed -> undismiss. `dismissed: false` makes the
+            // server clear dismiss_mode/dismissed_until while keeping the explicit
+            // `status` above. No camelCase `dismissUntil` (strict backend 422s it).
             dismissed: false,
-            dismissUntil: "",
             dismissed_until: "",
           }),
           ...(noteContent && noteContent.trim() !== "" && {

@@ -117,11 +117,12 @@ export function AlertDismissModal({
 
     // Phase 2: send typed dismiss_mode/dismissed_until for new dismiss calls.
     // tab 0 = "Dismiss Forever" -> permanent; tab 1 = "Dismiss Until" -> dismiss_until + dismissed_until.
-    // We keep sending the legacy `dismissed` + `dismissUntil` keys too; the server translates them.
+    // `dismissed` (bool) is kept for back-compat; the server translates it. The legacy
+    // camelCase `dismissUntil` is dropped — the strict backend only accepts snake_case
+    // enrichment keys and rejects unknown ones (422).
     const enrichments: {
       dismissed: boolean;
       note: string;
-      dismissUntil?: string;
       dismiss_mode?: "permanent" | "dismiss_until";
       dismissed_until?: string;
       status?: Status | null;
@@ -129,7 +130,6 @@ export function AlertDismissModal({
       dismissed: !alerts[0]?.dismissed,
       note: plainTextNote,
       ...(!isRestore && {
-        dismissUntil: dismissUntil || "",
         dismiss_mode: selectedTab === 0 ? "permanent" : "dismiss_until",
         ...(dismissUntil && { dismissed_until: dismissUntil }),
       }),
