@@ -93,8 +93,10 @@ const handleChangeStatus = async () => {
         enrichments: {
           status: selectedStatus,
           ...(selectedStatus !== Status.Suppressed && {
+            // Phase 2: align field names — keep legacy keys, add typed dismissed_until.
             dismissed: false,
             dismissUntil: "",
+            dismissed_until: "",
           }),
           ...(noteContent && noteContent.trim() !== "" && {
             note: noteContent.trim(),
@@ -130,8 +132,10 @@ const handleChangeStatusBatch = async () => {
         enrichments: {
           status: selectedStatus,
           ...(selectedStatus !== Status.Suppressed && {
+            // Phase 2: align field names — keep legacy keys, add typed dismissed_until.
             dismissed: false,
             dismissUntil: "",
+            dismissed_until: "",
           }),
           ...(noteContent && noteContent.trim() !== "" && {
             note: noteContent.trim(),
