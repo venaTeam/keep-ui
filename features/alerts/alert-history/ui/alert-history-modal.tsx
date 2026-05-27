@@ -1,5 +1,5 @@
 import { Fragment, useState } from "react";
-import { AlertDto, AlertKnownKeys } from "@/entities/alerts/model";
+import { AlertDto, AlertKnownKeys, AuditEvent } from "@/entities/alerts/model";
 import { AlertTable } from "@/widgets/alerts-table/ui/alert-table";
 import { useAlertTableCols } from "@/widgets/alerts-table/lib/alert-table-utils";
 import { Button, Flex, Subtitle, Title, Divider } from "@tremor/react";
@@ -15,11 +15,13 @@ interface AlertHistoryPanelProps {
   alertsHistoryWithDate: (Omit<AlertDto, "lastReceived"> & {
     lastReceived: Date;
   })[];
+  activity: AuditEvent[];
   presetName: string;
 }
 
 const AlertHistoryPanel = ({
   alertsHistoryWithDate,
+  activity,
   presetName,
 }: AlertHistoryPanelProps) => {
   const router = useRouter();
@@ -109,6 +111,28 @@ const AlertHistoryPanel = ({
         isRefreshAllowed={false}
         presetName="alert-history"
       />
+      {activity.length > 0 && (
+        <>
+          <Divider />
+          <Title>Activity</Title>
+          <ul className="mt-4 space-y-3">
+            {activity.map((entry) => (
+              <li key={entry.id} className="flex flex-col">
+                <div className="flex items-center gap-2">
+                  <Subtitle className="font-bold">{entry.action}</Subtitle>
+                  <span className="text-xs text-gray-400">
+                    {new Date(entry.timestamp).toLocaleString()}
+                  </span>
+                </div>
+                <span className="text-sm text-gray-600">
+                  {entry.user_id}
+                  {entry.description ? ` — ${entry.description}` : ""}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
       <AlertNoteModal
         handleClose={() => setNoteModalAlert(null)}
         alert={noteModalAlert ?? null}
@@ -133,11 +157,15 @@ export function AlertHistoryModal({ alerts, presetName, onClose }: Props) {
   );
 
   const { useAlertHistory } = useAlerts();
-  const { data: alertHistory = [] } = useAlertHistory(selectedAlert, {
+  const { data: alertHistory } = useAlertHistory(selectedAlert, {
     revalidateOnFocus: false,
   });
 
-  const alertsHistoryWithDate = alertHistory.map((alert) => ({
+  // `occurrences`/`activity` may be undefined while loading; guard for the new shape.
+  const occurrences = alertHistory?.occurrences ?? [];
+  const activity = alertHistory?.activity ?? [];
+
+  const alertsHistoryWithDate = occurrences.map((alert) => ({
     ...alert,
     lastReceived: toDateObjectWithFallback(alert.lastReceived),
   }));
@@ -151,6 +179,7 @@ export function AlertHistoryModal({ alerts, presetName, onClose }: Props) {
     >
       <AlertHistoryPanel
         alertsHistoryWithDate={alertsHistoryWithDate}
+        activity={activity}
         presetName={presetName}
       />
     </Modal>
