@@ -115,15 +115,24 @@ export function AlertDismissModal({
 
     const plainTextNote = dismissComment.trim();
 
+    // Phase 2: send typed dismiss_mode/dismissed_until for new dismiss calls.
+    // tab 0 = "Dismiss Forever" -> permanent; tab 1 = "Dismiss Until" -> dismiss_until + dismissed_until.
+    // We keep sending the legacy `dismissed` + `dismissUntil` keys too; the server translates them.
     const enrichments: {
       dismissed: boolean;
       note: string;
       dismissUntil?: string;
+      dismiss_mode?: "permanent" | "dismiss_until";
+      dismissed_until?: string;
       status?: Status | null;
     } = {
       dismissed: !alerts[0]?.dismissed,
       note: plainTextNote,
-      ...(!isRestore && { dismissUntil: dismissUntil || "" }),
+      ...(!isRestore && {
+        dismissUntil: dismissUntil || "",
+        dismiss_mode: selectedTab === 0 ? "permanent" : "dismiss_until",
+        ...(dismissUntil && { dismissed_until: dismissUntil }),
+      }),
       ...(isRestore && selectedStatus && { status: selectedStatus }),
     };
 
