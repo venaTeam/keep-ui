@@ -155,7 +155,7 @@ const handleSubmit = async (e: FormEvent) => {
   };
 
   return (
-    <form className="py-2" onSubmit={handleSubmit}>
+    <form className="py-2" onSubmit={handleSubmit} data-cy="incidents-form">
       <Subtitle>Incident Metadata</Subtitle>
       <div className="mt-2.5">
         <Text className="mb-2">Severity</Text>
@@ -173,6 +173,7 @@ const handleSubmit = async (e: FormEvent) => {
           required={true}
           value={incidentName}
           onValueChange={setIncidentName}
+          data-cy="incidents-form-name-input"
         />
       </div>
       <div className="mt-2.5">
@@ -185,6 +186,7 @@ const handleSubmit = async (e: FormEvent) => {
           formats={formats} // Add formats
           placeholder="What happened?"
           className="border border-tremor-border rounded-tremor-default shadow-tremor-input"
+          data-cy="incidents-form-summary-input"
         />
       </div>
 
@@ -194,6 +196,7 @@ const handleSubmit = async (e: FormEvent) => {
           <Select
             value={incidentAssignee}
             onValueChange={setIncidentAssignee}
+            data-cy="incidents-form-assignee-select"
           >
             {sortedUsers.map((user) => (
               <SelectItem key={user.email} value={user.email}>
@@ -206,6 +209,7 @@ const handleSubmit = async (e: FormEvent) => {
             placeholder="Who is responsible"
             value={incidentAssignee}
             onValueChange={setIncidentAssignee}
+            data-cy="incidents-form-assignee-input"
           />
         )}
       </div>
@@ -224,6 +228,7 @@ const handleSubmit = async (e: FormEvent) => {
                   : "all_resolved"
               )
             }
+            data-cy="incidents-form-resolve-on-alerts-switch"
           />
           <Text>Resolve when all alerts are resolved</Text>
         </div>
@@ -238,6 +243,7 @@ const handleSubmit = async (e: FormEvent) => {
             size="xs"
             variant="secondary"
             onClick={exitEditMode}
+            data-cy="incidents-form-cancel-btn"
           >
             Cancel
           </Button>
@@ -248,6 +254,7 @@ const handleSubmit = async (e: FormEvent) => {
           color="orange"
           size="xs"
           type="submit"
+          data-cy="incidents-form-submit-btn"
         >
           {editMode ? "Update" : "Create"}
         </Button>
