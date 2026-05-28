@@ -55,9 +55,9 @@ jobs:
         id: set-image-name
         run: |
           if [[ "${{ env.IS_FORK }}" == "true" ]]; then
-            echo "image_name=keep-frontend:local" >> $GITHUB_OUTPUT
+            echo "image_name=keep-ui:local" >> $GITHUB_OUTPUT
           else
-            echo "image_name=ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-frontend:${{ github.sha }}" >> $GITHUB_OUTPUT
+            echo "image_name=ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-ui:${{ github.sha }}" >> $GITHUB_OUTPUT
           fi
 
       - name: Login to GitHub Container Registry
@@ -99,7 +99,7 @@ jobs:
         if: ${{ env.IS_FORK != 'true' }}
         continue-on-error: true
         run: |
-          BRANCH_CACHE_TAG="ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}"
+          BRANCH_CACHE_TAG="ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-ui:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}"
           if docker buildx imagetools inspect "$BRANCH_CACHE_TAG" &>/dev/null; then
             echo "Branch cache exists: $BRANCH_CACHE_TAG"
             echo "cache_exists=true" >> $GITHUB_OUTPUT
@@ -113,7 +113,7 @@ jobs:
         run: |
           if [ "${{ steps.branch-cache-exists.outputs.cache_exists }}" == "true" ]; then
             echo "FRONTEND CACHE HIT ✅"
-            echo "Cache tag: ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}"
+            echo "Cache tag: ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-ui:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}"
           else
             echo "FRONTEND CACHE MISS ❌"
             echo "Will attempt to use main branch cache and create a new branch cache"
@@ -128,19 +128,19 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-frontend:${{ github.sha }}
-            ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-frontend:${{ steps.get-version.outputs.version }}
+            ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-ui:${{ github.sha }}
+            ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-ui:${{ steps.get-version.outputs.version }}
           # Debug: Print what we're pushing
           metadata: |
-            labels.docker.image="${{ steps.repo-owner.outputs.owner }}/keep-frontend:${{ github.sha }}"
+            labels.docker.image="${{ steps.repo-owner.outputs.owner }}/keep-ui:${{ github.sha }}"
           # Use registry-based caching with branch-specific tags
           cache-from: |
-            type=registry,ref=ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}
-            type=registry,ref=ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.DEPS_HASH }}
-            type=registry,ref=ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-frontend:cache-main
+            type=registry,ref=ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-ui:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }}
+            type=registry,ref=ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-ui:cache-${{ steps.cache-keys.outputs.DEPS_HASH }}
+            type=registry,ref=ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-ui:cache-main
           cache-to: |
-            type=registry,ref=ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }},mode=max
-            type=registry,ref=ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-frontend:cache-${{ steps.cache-keys.outputs.DEPS_HASH }},mode=max
+            type=registry,ref=ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-ui:cache-${{ steps.cache-keys.outputs.SAFE_BRANCH_NAME }},mode=max
+            type=registry,ref=ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-ui:cache-${{ steps.cache-keys.outputs.DEPS_HASH }},mode=max
           # Add build args for better caching
           build-args: |
             BUILDKIT_INLINE_CACHE=1
@@ -150,6 +150,6 @@ jobs:
       - name: Verify frontend image was pushed
         if: ${{ env.IS_FORK != 'true' }}
         run: |
-          echo "Frontend image tag: ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-frontend:${{ github.sha }}"
+          echo "Frontend image tag: ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-ui:${{ github.sha }}"
           echo "Commit SHA: ${{ github.sha }}"
           echo "Repository owner (lowercase): ${{ steps.repo-owner.outputs.owner }}"
