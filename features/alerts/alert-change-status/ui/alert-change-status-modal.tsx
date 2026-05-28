@@ -93,11 +93,10 @@ const handleChangeStatus = async () => {
         enrichments: {
           status: selectedStatus,
           ...(selectedStatus !== Status.Suppressed && {
-            // Phase 2: leaving suppressed -> undismiss. `dismissed: false` makes the
-            // server clear dismiss_mode/dismissed_until while keeping the explicit
-            // `status` above. No camelCase `dismissUntil` (strict backend 422s it).
+            // Phase 2: leaving suppressed -> undismiss. `dismissed: false` is the
+            // legacy key the route translates to clear dismiss_mode/dismissed_until
+            // while preserving the explicit `status` above.
             dismissed: false,
-            dismissed_until: "",
           }),
           ...(noteContent && noteContent.trim() !== "" && {
             note: noteContent.trim(),
@@ -133,11 +132,10 @@ const handleChangeStatusBatch = async () => {
         enrichments: {
           status: selectedStatus,
           ...(selectedStatus !== Status.Suppressed && {
-            // Phase 2: leaving suppressed -> undismiss. `dismissed: false` makes the
-            // server clear dismiss_mode/dismissed_until while keeping the explicit
-            // `status` above. No camelCase `dismissUntil` (strict backend 422s it).
+            // Phase 2: leaving suppressed -> undismiss. `dismissed: false` is the
+            // legacy key the route translates to clear dismiss_mode/dismissed_until
+            // while preserving the explicit `status` above.
             dismissed: false,
-            dismissed_until: "",
           }),
           ...(noteContent && noteContent.trim() !== "" && {
             note: noteContent.trim(),
