@@ -1,11 +1,13 @@
 {
-  "version": "a2eb0cc11bc0979ef853dbaf5ad26854a16378e2",
-  "generatedAt": "2026-05-07T00:12:14.921Z",
-  "totalSelectors": 185,
+  "version": "cb39f4c9988b010a615f6aa43789b48062ef4d7b",
+  "generatedAt": "2026-05-07T00:18:05.043Z",
+  "totalSelectors": 801,
   "byArea": {
     "(dynamic)": 5,
+    "ai": 4,
     "alerts": 109,
     "apply": 1,
+    "auth": 49,
     "cancel": 2,
     "cel": 2,
     "column": 2,
@@ -13,21 +15,35 @@
     "counter": 1,
     "create": 2,
     "custom": 1,
+    "dashboard": 43,
+    "dedup": 14,
     "delete": 2,
     "drawer": 1,
+    "extraction": 24,
     "facet": 18,
     "facets": 1,
+    "incidents": 138,
     "is": 1,
+    "maintenance": 13,
+    "mapping": 23,
     "modal": 1,
-    "no": 1,
+    "nav": 42,
+    "no": 2,
     "noisy": 1,
+    "notif": 1,
     "panel": 5,
     "preset": 16,
+    "providers": 17,
     "reset": 1,
+    "rules": 17,
     "save": 2,
-    "settings": 2,
+    "settings": 31,
+    "sort": 1,
     "tab": 5,
-    "theme": 1
+    "theme": 1,
+    "topology": 31,
+    "wf": 168,
+    "workflow": 1
   },
   "selectors": [
     {
@@ -77,6 +93,46 @@
       "dynamic": true,
       "file": "shared/ui/TablePagination/TablePagination.tsx",
       "line": 115,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "ai-page",
+      "area": "ai",
+      "role": "page",
+      "dynamic": false,
+      "file": "app/(keep)/ai/ai-plugins.tsx",
+      "line": 86,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "ai-plugins-list",
+      "area": "ai",
+      "role": "plugins",
+      "dynamic": false,
+      "file": "app/(keep)/ai/ai-plugins.tsx",
+      "line": 98,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "ai-plugin-card-${algorithm_config.algorithm_id}",
+      "area": "ai",
+      "role": "plugin",
+      "dynamic": true,
+      "file": "app/(keep)/ai/ai-plugins.tsx",
+      "line": 141,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "ai-plugin-apply-proposed-btn-${algorithm_config.algorithm_id}",
+      "area": "ai",
+      "role": "plugin",
+      "dynamic": true,
+      "file": "app/(keep)/ai/ai-plugins.tsx",
+      "line": 250,
       "description": "",
       "mirrorsDataTestId": false
     },
@@ -1181,6 +1237,496 @@
       "mirrorsDataTestId": true
     },
     {
+      "selector": "auth-api-key-row",
+      "area": "auth",
+      "role": "api",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/api-key-settings.tsx",
+      "line": 154,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-api-key-regenerate-btn",
+      "area": "auth",
+      "role": "api",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/api-key-settings.tsx",
+      "line": 181,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-api-key-delete-btn",
+      "area": "auth",
+      "role": "api",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/api-key-settings.tsx",
+      "line": 189,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-api-key-row",
+      "area": "auth",
+      "role": "api",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/api-key-table.tsx",
+      "line": 65,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-group-sidebar",
+      "area": "auth",
+      "role": "group",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/groups-sidebar.tsx",
+      "line": 142,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-group-name-input",
+      "area": "auth",
+      "role": "group",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/groups-sidebar.tsx",
+      "line": 168,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-group-cancel-btn",
+      "area": "auth",
+      "role": "group",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/groups-sidebar.tsx",
+      "line": 242,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-group-submit-btn",
+      "area": "auth",
+      "role": "group",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/groups-sidebar.tsx",
+      "line": 250,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-add-group-btn",
+      "area": "auth",
+      "role": "add",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/groups-tab.tsx",
+      "line": 116,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-groups-search-input",
+      "area": "auth",
+      "role": "groups",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/groups-tab.tsx",
+      "line": 127,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-group-row",
+      "area": "auth",
+      "role": "group",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/groups-tab.tsx",
+      "line": 146,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-group-delete-btn",
+      "area": "auth",
+      "role": "group",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/groups-tab.tsx",
+      "line": 185,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-group-row",
+      "area": "auth",
+      "role": "group",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/groups-table.tsx",
+      "line": 53,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-permission-sidebar",
+      "area": "auth",
+      "role": "permission",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/permissions-sidebar.tsx",
+      "line": 141,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-permission-cancel-btn",
+      "area": "auth",
+      "role": "permission",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/permissions-sidebar.tsx",
+      "line": 214,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-permission-submit-btn",
+      "area": "auth",
+      "role": "permission",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/permissions-sidebar.tsx",
+      "line": 223,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-permissions-search-input",
+      "area": "auth",
+      "role": "permissions",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/permissions-tab.tsx",
+      "line": 145,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-permission-row",
+      "area": "auth",
+      "role": "permission",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/permissions-table.tsx",
+      "line": 42,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-role-sidebar",
+      "area": "auth",
+      "role": "role",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/roles-sidebar.tsx",
+      "line": 210,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-role-name-input",
+      "area": "auth",
+      "role": "role",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/roles-sidebar.tsx",
+      "line": 244,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-role-description-input",
+      "area": "auth",
+      "role": "role",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/roles-sidebar.tsx",
+      "line": 268,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-role-cancel-btn",
+      "area": "auth",
+      "role": "role",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/roles-sidebar.tsx",
+      "line": 313,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-role-submit-btn",
+      "area": "auth",
+      "role": "role",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/roles-sidebar.tsx",
+      "line": 332,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-add-role-btn",
+      "area": "auth",
+      "role": "add",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/roles-tab.tsx",
+      "line": 104,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-roles-search-input",
+      "area": "auth",
+      "role": "roles",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/roles-tab.tsx",
+      "line": 115,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-role-row",
+      "area": "auth",
+      "role": "role",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/roles-tab.tsx",
+      "line": 137,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-role-delete-btn",
+      "area": "auth",
+      "role": "role",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/roles-tab.tsx",
+      "line": 187,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-role-row",
+      "area": "auth",
+      "role": "role",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/roles-table.tsx",
+      "line": 52,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-sso-row",
+      "area": "auth",
+      "role": "sso",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/sso-settings.tsx",
+      "line": 54,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-sso-connect-btn",
+      "area": "auth",
+      "role": "sso",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/sso-settings.tsx",
+      "line": 67,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-sso-disconnect-btn",
+      "area": "auth",
+      "role": "sso",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/sso-settings.tsx",
+      "line": 76,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-add-user-btn",
+      "area": "auth",
+      "role": "add",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/users-settings.tsx",
+      "line": 137,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-users-search-input",
+      "area": "auth",
+      "role": "users",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/users-settings.tsx",
+      "line": 148,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-user-sidebar",
+      "area": "auth",
+      "role": "user",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/users-sidebar.tsx",
+      "line": 177,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-user-email-input",
+      "area": "auth",
+      "role": "user",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/users-sidebar.tsx",
+      "line": 221,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-user-name-input",
+      "area": "auth",
+      "role": "user",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/users-sidebar.tsx",
+      "line": 241,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-user-username-input",
+      "area": "auth",
+      "role": "user",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/users-sidebar.tsx",
+      "line": 263,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-user-password-input",
+      "area": "auth",
+      "role": "user",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/users-sidebar.tsx",
+      "line": 287,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-user-cancel-btn",
+      "area": "auth",
+      "role": "user",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/users-sidebar.tsx",
+      "line": 369,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-user-submit-btn",
+      "area": "auth",
+      "role": "user",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/users-sidebar.tsx",
+      "line": 378,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-user-row",
+      "area": "auth",
+      "role": "user",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/users-table.tsx",
+      "line": 68,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-user-delete-btn",
+      "area": "auth",
+      "role": "user",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/users-table.tsx",
+      "line": 136,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-tabs",
+      "area": "auth",
+      "role": "tabs",
+      "dynamic": false,
+      "file": "app/(keep)/settings/settings.client.tsx",
+      "line": 407,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-tab-users",
+      "area": "auth",
+      "role": "tab",
+      "dynamic": false,
+      "file": "app/(keep)/settings/settings.client.tsx",
+      "line": 411,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-tab-groups",
+      "area": "auth",
+      "role": "tab",
+      "dynamic": false,
+      "file": "app/(keep)/settings/settings.client.tsx",
+      "line": 418,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-tab-roles",
+      "area": "auth",
+      "role": "tab",
+      "dynamic": false,
+      "file": "app/(keep)/settings/settings.client.tsx",
+      "line": 425,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-tab-permissions",
+      "area": "auth",
+      "role": "tab",
+      "dynamic": false,
+      "file": "app/(keep)/settings/settings.client.tsx",
+      "line": 432,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-tab-api-keys",
+      "area": "auth",
+      "role": "tab",
+      "dynamic": false,
+      "file": "app/(keep)/settings/settings.client.tsx",
+      "line": 439,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "auth-tab-sso",
+      "area": "auth",
+      "role": "tab",
+      "dynamic": false,
+      "file": "app/(keep)/settings/settings.client.tsx",
+      "line": 446,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
       "selector": "cancel-facet-creation-btn",
       "area": "cancel",
       "role": "facet",
@@ -1301,6 +1847,576 @@
       "mirrorsDataTestId": true
     },
     {
+      "selector": "dashboard-page",
+      "area": "dashboard",
+      "role": "page",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/[id]/dashboard.tsx",
+      "line": 162,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-name-input",
+      "area": "dashboard",
+      "role": "name",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/[id]/dashboard.tsx",
+      "line": 172,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-name",
+      "area": "dashboard",
+      "role": "name",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/[id]/dashboard.tsx",
+      "line": 175,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-edit-btn",
+      "area": "dashboard",
+      "role": "edit",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/[id]/dashboard.tsx",
+      "line": 185,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-save-layout-btn",
+      "area": "dashboard",
+      "role": "save",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/[id]/dashboard.tsx",
+      "line": 197,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-add-widget-btn",
+      "area": "dashboard",
+      "role": "add",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/[id]/dashboard.tsx",
+      "line": 199,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-empty-state",
+      "area": "dashboard",
+      "role": "empty",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/[id]/dashboard.tsx",
+      "line": 209,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-grid-container",
+      "area": "dashboard",
+      "role": "grid",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/[id]/dashboard.tsx",
+      "line": 217,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-alert-quality-table",
+      "area": "dashboard",
+      "role": "alert",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/alert-quality-table.tsx",
+      "line": 291,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-widget-${item.i}",
+      "area": "dashboard",
+      "role": "widget",
+      "dynamic": true,
+      "file": "app/(keep)/dashboard/GridItem.tsx",
+      "line": 30,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-widget-title",
+      "area": "dashboard",
+      "role": "widget",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/GridItem.tsx",
+      "line": 33,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-widget-cell-${item.i}",
+      "area": "dashboard",
+      "role": "widget",
+      "dynamic": true,
+      "file": "app/(keep)/dashboard/GridLayout.tsx",
+      "line": 73,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-widget-menu-btn",
+      "area": "dashboard",
+      "role": "widget",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/MenuButton.tsx",
+      "line": 30,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-widget-menu-edit",
+      "area": "dashboard",
+      "role": "widget",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/MenuButton.tsx",
+      "line": 61,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-widget-menu-delete",
+      "area": "dashboard",
+      "role": "widget",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/MenuButton.tsx",
+      "line": 78,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-widget-menu-save",
+      "area": "dashboard",
+      "role": "widget",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/MenuButton.tsx",
+      "line": 96,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-widget-generic-metrics",
+      "area": "dashboard",
+      "role": "widget",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/widget-types/generic-metrics/generic-metrics-grid-item.tsx",
+      "line": 53,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-widget-form-generic-metrics",
+      "area": "dashboard",
+      "role": "widget",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/widget-types/generic-metrics/generic-metrics-widget-form.tsx",
+      "line": 68,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-widget-form-generic-metrics-select",
+      "area": "dashboard",
+      "role": "widget",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/widget-types/generic-metrics/generic-metrics-widget-form.tsx",
+      "line": 85,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-widget-metric",
+      "area": "dashboard",
+      "role": "widget",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/widget-types/metric/metric-grid-item.tsx",
+      "line": 15,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-widget-form-metric",
+      "area": "dashboard",
+      "role": "widget",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/widget-types/metric/metric-widget-form.tsx",
+      "line": 54,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-widget-form-metric-select",
+      "area": "dashboard",
+      "role": "widget",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/widget-types/metric/metric-widget-form.tsx",
+      "line": 65,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-widget-form-columns-multiselect",
+      "area": "dashboard",
+      "role": "widget",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/widget-types/preset/columns-selection.tsx",
+      "line": 42,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-widget-preset",
+      "area": "dashboard",
+      "role": "widget",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/widget-types/preset/preset-grid-item.tsx",
+      "line": 182,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-widget-preset-go-to-btn",
+      "area": "dashboard",
+      "role": "widget",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/widget-types/preset/preset-grid-item.tsx",
+      "line": 205,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-widget-form-preset",
+      "area": "dashboard",
+      "role": "widget",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/widget-types/preset/preset-widget-form.tsx",
+      "line": 161,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-widget-form-preset-select",
+      "area": "dashboard",
+      "role": "widget",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/widget-types/preset/preset-widget-form.tsx",
+      "line": 178,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-widget-form-panel-type-select",
+      "area": "dashboard",
+      "role": "widget",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/widget-types/preset/preset-widget-form.tsx",
+      "line": 206,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-widget-form-custom-link-input",
+      "area": "dashboard",
+      "role": "widget",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/widget-types/preset/preset-widget-form.tsx",
+      "line": 245,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-widget-form-count-of-last-alerts-input",
+      "area": "dashboard",
+      "role": "widget",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/widget-types/preset/preset-widget-form.tsx",
+      "line": 274,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-widget-alert-count-panel",
+      "area": "dashboard",
+      "role": "widget",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/widget-types/preset/widget-alert-count-panel.tsx",
+      "line": 142,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-widget-alerts-table",
+      "area": "dashboard",
+      "role": "widget",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/widget-types/preset/widget-alerts-table.tsx",
+      "line": 214,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-widget-form-service-now",
+      "area": "dashboard",
+      "role": "widget",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/widget-types/service-now/widget-service-now-form.tsx",
+      "line": 109,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-widget-form-service-now-team-input",
+      "area": "dashboard",
+      "role": "widget",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/widget-types/service-now/widget-service-now-form.tsx",
+      "line": 123,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-widget-form-service-now-status-select",
+      "area": "dashboard",
+      "role": "widget",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/widget-types/service-now/widget-service-now-form.tsx",
+      "line": 136,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-widget-form-service-now-detection-select",
+      "area": "dashboard",
+      "role": "widget",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/widget-types/service-now/widget-service-now-form.tsx",
+      "line": 152,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-widget-form-service-now-custom-link-input",
+      "area": "dashboard",
+      "role": "widget",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/widget-types/service-now/widget-service-now-form.tsx",
+      "line": 171,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-widget-service-now",
+      "area": "dashboard",
+      "role": "widget",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/widget-types/service-now/widget-service-now.tsx",
+      "line": 103,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-widget-modal",
+      "area": "dashboard",
+      "role": "widget",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/WidgetModal.tsx",
+      "line": 104,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-widget-form",
+      "area": "dashboard",
+      "role": "widget",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/WidgetModal.tsx",
+      "line": 106,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-widget-form-name-input",
+      "area": "dashboard",
+      "role": "widget",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/WidgetModal.tsx",
+      "line": 121,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-widget-form-type-select",
+      "area": "dashboard",
+      "role": "widget",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/WidgetModal.tsx",
+      "line": 144,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dashboard-widget-form-submit-btn",
+      "area": "dashboard",
+      "role": "widget",
+      "dynamic": false,
+      "file": "app/(keep)/dashboard/WidgetModal.tsx",
+      "line": 206,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dedup-sidebar",
+      "area": "dedup",
+      "role": "sidebar",
+      "dynamic": false,
+      "file": "app/(keep)/deduplication/DeduplicationSidebar.tsx",
+      "line": 261,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dedup-form-name-input",
+      "area": "dedup",
+      "role": "form",
+      "dynamic": false,
+      "file": "app/(keep)/deduplication/DeduplicationSidebar.tsx",
+      "line": 280,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dedup-form-description-input",
+      "area": "dedup",
+      "role": "form",
+      "dynamic": false,
+      "file": "app/(keep)/deduplication/DeduplicationSidebar.tsx",
+      "line": 299,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dedup-form-provider-select",
+      "area": "dedup",
+      "role": "form",
+      "dynamic": false,
+      "file": "app/(keep)/deduplication/DeduplicationSidebar.tsx",
+      "line": 328,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dedup-form-fingerprint-fields-select",
+      "area": "dedup",
+      "role": "form",
+      "dynamic": false,
+      "file": "app/(keep)/deduplication/DeduplicationSidebar.tsx",
+      "line": 409,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dedup-form-ignore-fields-select",
+      "area": "dedup",
+      "role": "form",
+      "dynamic": false,
+      "file": "app/(keep)/deduplication/DeduplicationSidebar.tsx",
+      "line": 490,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dedup-form-cancel-btn",
+      "area": "dedup",
+      "role": "form",
+      "dynamic": false,
+      "file": "app/(keep)/deduplication/DeduplicationSidebar.tsx",
+      "line": 538,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dedup-form-submit-btn",
+      "area": "dedup",
+      "role": "form",
+      "dynamic": false,
+      "file": "app/(keep)/deduplication/DeduplicationSidebar.tsx",
+      "line": 546,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dedup-action-delete-btn",
+      "area": "dedup",
+      "role": "action",
+      "dynamic": false,
+      "file": "app/(keep)/deduplication/DeduplicationTable.tsx",
+      "line": 297,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dedup-page",
+      "area": "dedup",
+      "role": "page",
+      "dynamic": false,
+      "file": "app/(keep)/deduplication/DeduplicationTable.tsx",
+      "line": 328,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dedup-create-btn",
+      "area": "dedup",
+      "role": "create",
+      "dynamic": false,
+      "file": "app/(keep)/deduplication/DeduplicationTable.tsx",
+      "line": 350,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dedup-table",
+      "area": "dedup",
+      "role": "table",
+      "dynamic": false,
+      "file": "app/(keep)/deduplication/DeduplicationTable.tsx",
+      "line": 355,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dedup-row",
+      "area": "dedup",
+      "role": "row",
+      "dynamic": false,
+      "file": "app/(keep)/deduplication/DeduplicationTable.tsx",
+      "line": 415,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "dedup-cell-${cell.column.id}",
+      "area": "dedup",
+      "role": "cell",
+      "dynamic": true,
+      "file": "app/(keep)/deduplication/DeduplicationTable.tsx",
+      "line": 434,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
       "selector": "delete-facet",
       "area": "delete",
       "role": "facet",
@@ -1327,6 +2443,246 @@
       "dynamic": false,
       "file": "shared/ui/Drawer/TremorDrawer.tsx",
       "line": 115,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "extraction-execution-detail-page",
+      "area": "extraction",
+      "role": "execution",
+      "dynamic": false,
+      "file": "app/(keep)/extraction/[rule_id]/executions/[execution_id]/page.tsx",
+      "line": 37,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "extraction-executions-page",
+      "area": "extraction",
+      "role": "executions",
+      "dynamic": false,
+      "file": "app/(keep)/extraction/[rule_id]/executions/page.tsx",
+      "line": 40,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "extraction-sidebar",
+      "area": "extraction",
+      "role": "sidebar",
+      "dynamic": false,
+      "file": "app/(keep)/extraction/create-or-update-extraction-rule.tsx",
+      "line": 139,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "extraction-form-name-input",
+      "area": "extraction",
+      "role": "form",
+      "dynamic": false,
+      "file": "app/(keep)/extraction/create-or-update-extraction-rule.tsx",
+      "line": 151,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "extraction-form-description-input",
+      "area": "extraction",
+      "role": "form",
+      "dynamic": false,
+      "file": "app/(keep)/extraction/create-or-update-extraction-rule.tsx",
+      "line": 160,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "extraction-form-priority-input",
+      "area": "extraction",
+      "role": "form",
+      "dynamic": false,
+      "file": "app/(keep)/extraction/create-or-update-extraction-rule.tsx",
+      "line": 180,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "extraction-form-attribute-input",
+      "area": "extraction",
+      "role": "form",
+      "dynamic": false,
+      "file": "app/(keep)/extraction/create-or-update-extraction-rule.tsx",
+      "line": 222,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "extraction-form-regex-input",
+      "area": "extraction",
+      "role": "form",
+      "dynamic": false,
+      "file": "app/(keep)/extraction/create-or-update-extraction-rule.tsx",
+      "line": 247,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "extraction-form-cancel-btn",
+      "area": "extraction",
+      "role": "form",
+      "dynamic": false,
+      "file": "app/(keep)/extraction/create-or-update-extraction-rule.tsx",
+      "line": 302,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "extraction-form-submit-btn",
+      "area": "extraction",
+      "role": "form",
+      "dynamic": false,
+      "file": "app/(keep)/extraction/create-or-update-extraction-rule.tsx",
+      "line": 311,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "extraction-page",
+      "area": "extraction",
+      "role": "page",
+      "dynamic": false,
+      "file": "app/(keep)/extraction/extraction.tsx",
+      "line": 42,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "extraction-create-btn",
+      "area": "extraction",
+      "role": "create",
+      "dynamic": false,
+      "file": "app/(keep)/extraction/extraction.tsx",
+      "line": 57,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "extraction-empty-create-btn",
+      "area": "extraction",
+      "role": "empty",
+      "dynamic": false,
+      "file": "app/(keep)/extraction/extraction.tsx",
+      "line": 91,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "extraction-action-run-btn",
+      "area": "extraction",
+      "role": "action",
+      "dynamic": false,
+      "file": "app/(keep)/extraction/extractions-table.tsx",
+      "line": 152,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "extraction-action-edit-btn",
+      "area": "extraction",
+      "role": "action",
+      "dynamic": false,
+      "file": "app/(keep)/extraction/extractions-table.tsx",
+      "line": 164,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "extraction-action-delete-btn",
+      "area": "extraction",
+      "role": "action",
+      "dynamic": false,
+      "file": "app/(keep)/extraction/extractions-table.tsx",
+      "line": 176,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "extraction-table",
+      "area": "extraction",
+      "role": "table",
+      "dynamic": false,
+      "file": "app/(keep)/extraction/extractions-table.tsx",
+      "line": 211,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "extraction-header-${header.column.id}",
+      "area": "extraction",
+      "role": "header",
+      "dynamic": true,
+      "file": "app/(keep)/extraction/extractions-table.tsx",
+      "line": 216,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "extraction-row",
+      "area": "extraction",
+      "role": "row",
+      "dynamic": false,
+      "file": "app/(keep)/extraction/extractions-table.tsx",
+      "line": 235,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "extraction-cell-${cell.column.id}",
+      "area": "extraction",
+      "role": "cell",
+      "dynamic": true,
+      "file": "app/(keep)/extraction/extractions-table.tsx",
+      "line": 239,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "extraction-run-modal",
+      "area": "extraction",
+      "role": "run",
+      "dynamic": false,
+      "file": "app/(keep)/extraction/run-extraction-modal.tsx",
+      "line": 59,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "extraction-run-alert-select",
+      "area": "extraction",
+      "role": "run",
+      "dynamic": false,
+      "file": "app/(keep)/extraction/run-extraction-modal.tsx",
+      "line": 69,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "extraction-run-cancel-btn",
+      "area": "extraction",
+      "role": "run",
+      "dynamic": false,
+      "file": "app/(keep)/extraction/run-extraction-modal.tsx",
+      "line": 87,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "extraction-run-confirm-btn",
+      "area": "extraction",
+      "role": "run",
+      "dynamic": false,
+      "file": "app/(keep)/extraction/run-extraction-modal.tsx",
+      "line": 95,
       "description": "",
       "mirrorsDataTestId": false
     },
@@ -1521,6 +2877,1386 @@
       "mirrorsDataTestId": true
     },
     {
+      "selector": "incidents-activity-card",
+      "area": "incidents",
+      "role": "activity",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/activity/page.tsx",
+      "line": 16,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-comment-form",
+      "area": "incidents",
+      "role": "comment",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/activity/ui/IncidentActivityComment.tsx",
+      "line": 45,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-comment-submit-btn",
+      "area": "incidents",
+      "role": "comment",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/activity/ui/IncidentActivityComment.tsx",
+      "line": 60,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-activity-item-${activity.id}",
+      "area": "incidents",
+      "role": "activity",
+      "dynamic": true,
+      "file": "app/(keep)/incidents/[id]/activity/ui/IncidentActivityItem.tsx",
+      "line": 37,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-comment-input-loading",
+      "area": "incidents",
+      "role": "comment",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/activity/ui/IncidentCommentInput.dynamic.tsx",
+      "line": 12,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-comment-input",
+      "area": "incidents",
+      "role": "comment",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/activity/ui/IncidentCommentInput.tsx",
+      "line": 133,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-alert-action-tray",
+      "area": "incidents",
+      "role": "alert",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/alerts/incident-alert-action-tray.tsx",
+      "line": 36,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-alert-action-expand-btn",
+      "area": "incidents",
+      "role": "alert",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/alerts/incident-alert-action-tray.tsx",
+      "line": 63,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-alert-action-view-btn",
+      "area": "incidents",
+      "role": "alert",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/alerts/incident-alert-action-tray.tsx",
+      "line": 76,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-alert-action-unlink-btn",
+      "area": "incidents",
+      "role": "alert",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/alerts/incident-alert-action-tray.tsx",
+      "line": 90,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-alerts-actions",
+      "area": "incidents",
+      "role": "alerts",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/alerts/incident-alert-actions.tsx",
+      "line": 23,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-action-split-btn",
+      "area": "incidents",
+      "role": "action",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/alerts/incident-alert-actions.tsx",
+      "line": 28,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-action-unlink-btn",
+      "area": "incidents",
+      "role": "action",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/alerts/incident-alert-actions.tsx",
+      "line": 40,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-action-view-feed-btn",
+      "area": "incidents",
+      "role": "action",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/alerts/incident-alert-actions.tsx",
+      "line": 51,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-alerts-table-body-skeleton",
+      "area": "incidents",
+      "role": "alerts",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/alerts/incident-alert-table-body-skeleton.tsx",
+      "line": 18,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-alerts-skeleton-row",
+      "area": "incidents",
+      "role": "alerts",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/alerts/incident-alert-table-body-skeleton.tsx",
+      "line": 22,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-alerts-skeleton-cell-${column.id}",
+      "area": "incidents",
+      "role": "alerts",
+      "dynamic": true,
+      "file": "app/(keep)/incidents/[id]/alerts/incident-alert-table-body-skeleton.tsx",
+      "line": 34,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-action-add-alerts-manually-btn",
+      "area": "incidents",
+      "role": "action",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/alerts/incident-alerts.tsx",
+      "line": 227,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-action-ai-correlation-btn",
+      "area": "incidents",
+      "role": "action",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/alerts/incident-alerts.tsx",
+      "line": 239,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-alerts-row",
+      "area": "incidents",
+      "role": "alerts",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/alerts/incident-alerts.tsx",
+      "line": 270,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-alerts-cell-${cell.column.id}",
+      "area": "incidents",
+      "role": "alerts",
+      "dynamic": true,
+      "file": "app/(keep)/incidents/[id]/alerts/incident-alerts.tsx",
+      "line": 287,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-chat-card",
+      "area": "incidents",
+      "role": "chat",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/chat/incident-chat.tsx",
+      "line": 547,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-chat-container",
+      "area": "incidents",
+      "role": "chat",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/chat/incident-chat.tsx",
+      "line": 548,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-chat-messages",
+      "area": "incidents",
+      "role": "chat",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/chat/incident-chat.tsx",
+      "line": 549,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-create-ticket-modal",
+      "area": "incidents",
+      "role": "create",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/create-ticket-modal.tsx",
+      "line": 76,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-create-ticket-close-btn",
+      "area": "incidents",
+      "role": "create",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/create-ticket-modal.tsx",
+      "line": 83,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-create-ticket-modal",
+      "area": "incidents",
+      "role": "create",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/create-ticket-modal.tsx",
+      "line": 100,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-create-ticket-close-btn",
+      "area": "incidents",
+      "role": "create",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/create-ticket-modal.tsx",
+      "line": 107,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-create-ticket-modal",
+      "area": "incidents",
+      "role": "create",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/create-ticket-modal.tsx",
+      "line": 122,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-create-ticket-title-input",
+      "area": "incidents",
+      "role": "create",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/create-ticket-modal.tsx",
+      "line": 170,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-create-ticket-cancel-btn",
+      "area": "incidents",
+      "role": "create",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/create-ticket-modal.tsx",
+      "line": 226,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-create-ticket-submit-btn",
+      "area": "incidents",
+      "role": "create",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/create-ticket-modal.tsx",
+      "line": 235,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-enrichment-edit",
+      "area": "incidents",
+      "role": "enrichment",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/enrichments/EnrichmentEditableField.tsx",
+      "line": 90,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-enrichment-name-input",
+      "area": "incidents",
+      "role": "enrichment",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/enrichments/EnrichmentEditableField.tsx",
+      "line": 99,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-enrichment-value-input",
+      "area": "incidents",
+      "role": "enrichment",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/enrichments/EnrichmentEditableField.tsx",
+      "line": 107,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-enrichment-save-btn",
+      "area": "incidents",
+      "role": "enrichment",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/enrichments/EnrichmentEditableField.tsx",
+      "line": 118,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-enrichment-cancel-btn",
+      "area": "incidents",
+      "role": "enrichment",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/enrichments/EnrichmentEditableField.tsx",
+      "line": 126,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-enrichment-field",
+      "area": "incidents",
+      "role": "enrichment",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/enrichments/EnrichmentEditableField.tsx",
+      "line": 135,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-enrichment-edit-btn",
+      "area": "incidents",
+      "role": "enrichment",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/enrichments/EnrichmentEditableField.tsx",
+      "line": 166,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-enrichment-delete-btn",
+      "area": "incidents",
+      "role": "enrichment",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/enrichments/EnrichmentEditableField.tsx",
+      "line": 178,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-enrichment-add",
+      "area": "incidents",
+      "role": "enrichment",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/enrichments/EnrichmentEditableField.tsx",
+      "line": 186,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-enrichment-form-edit-btn",
+      "area": "incidents",
+      "role": "enrichment",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/enrichments/EnrichmentEditableForm.tsx",
+      "line": 65,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-enrichment-form-delete-btn",
+      "area": "incidents",
+      "role": "enrichment",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/enrichments/EnrichmentEditableForm.tsx",
+      "line": 79,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-enrichment-form-modal",
+      "area": "incidents",
+      "role": "enrichment",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/enrichments/EnrichmentEditableForm.tsx",
+      "line": 88,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-enrichment-form-${key}-input",
+      "area": "incidents",
+      "role": "enrichment",
+      "dynamic": true,
+      "file": "app/(keep)/incidents/[id]/enrichments/EnrichmentEditableForm.tsx",
+      "line": 97,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-enrichment-form-save-btn",
+      "area": "incidents",
+      "role": "enrichment",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/enrichments/EnrichmentEditableForm.tsx",
+      "line": 113,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-enrichment-form-cancel-btn",
+      "area": "incidents",
+      "role": "enrichment",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/enrichments/EnrichmentEditableForm.tsx",
+      "line": 121,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-action-run-workflow-btn",
+      "area": "incidents",
+      "role": "action",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/incident-header.tsx",
+      "line": 97,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-action-edit-btn",
+      "area": "incidents",
+      "role": "action",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/incident-header.tsx",
+      "line": 112,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-action-confirm-btn",
+      "area": "incidents",
+      "role": "action",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/incident-header.tsx",
+      "line": 156,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-action-discard-btn",
+      "area": "incidents",
+      "role": "action",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/incident-header.tsx",
+      "line": 171,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-edit-modal",
+      "area": "incidents",
+      "role": "edit",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/incident-header.tsx",
+      "line": 191,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-action-ai-summary-btn",
+      "area": "incidents",
+      "role": "action",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/incident-overview.tsx",
+      "line": 153,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-tab-${tab.path}",
+      "area": "incidents",
+      "role": "tab",
+      "dynamic": true,
+      "file": "app/(keep)/incidents/[id]/incident-tabs-navigation.tsx",
+      "line": 40,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-link-ticket-modal",
+      "area": "incidents",
+      "role": "link",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/link-ticket-modal.tsx",
+      "line": 118,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-link-ticket-close-btn",
+      "area": "incidents",
+      "role": "link",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/link-ticket-modal.tsx",
+      "line": 125,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-link-ticket-modal",
+      "area": "incidents",
+      "role": "link",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/link-ticket-modal.tsx",
+      "line": 142,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-link-ticket-close-btn",
+      "area": "incidents",
+      "role": "link",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/link-ticket-modal.tsx",
+      "line": 149,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-link-ticket-modal",
+      "area": "incidents",
+      "role": "link",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/link-ticket-modal.tsx",
+      "line": 164,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-link-ticket-id-input",
+      "area": "incidents",
+      "role": "link",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/link-ticket-modal.tsx",
+      "line": 242,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-link-ticket-url-input",
+      "area": "incidents",
+      "role": "link",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/link-ticket-modal.tsx",
+      "line": 256,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-link-ticket-cancel-btn",
+      "area": "incidents",
+      "role": "link",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/link-ticket-modal.tsx",
+      "line": 265,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-link-ticket-submit-btn",
+      "area": "incidents",
+      "role": "link",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/link-ticket-modal.tsx",
+      "line": 274,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-action-open-ticket-btn",
+      "area": "incidents",
+      "role": "action",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/ticketing-incident-options.tsx",
+      "line": 84,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-action-create-ticket-btn",
+      "area": "incidents",
+      "role": "action",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/ticketing-incident-options.tsx",
+      "line": 97,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-action-link-ticket-btn",
+      "area": "incidents",
+      "role": "action",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/ticketing-incident-options.tsx",
+      "line": 108,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-action-assign-alerts-btn",
+      "area": "incidents",
+      "role": "action",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/timeline/incident-timeline.tsx",
+      "line": 269,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-timeline",
+      "area": "incidents",
+      "role": "timeline",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/timeline/incident-timeline.tsx",
+      "line": 420,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-topology-main",
+      "area": "incidents",
+      "role": "topology",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/topology/page.tsx",
+      "line": 29,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-topology-main",
+      "area": "incidents",
+      "role": "topology",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/topology/page.tsx",
+      "line": 40,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-action-run-workflow-empty-btn",
+      "area": "incidents",
+      "role": "action",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/workflows/incident-workflow-empty.tsx",
+      "line": 37,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-workflow-sidebar",
+      "area": "incidents",
+      "role": "workflow",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/workflows/incident-workflow-sidebar.tsx",
+      "line": 60,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-workflow-sidebar-close-btn",
+      "area": "incidents",
+      "role": "workflow",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/workflows/incident-workflow-sidebar.tsx",
+      "line": 80,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-workflow-row",
+      "area": "incidents",
+      "role": "workflow",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/[id]/workflows/incident-workflow-table.tsx",
+      "line": 233,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-workflow-cell-${cell.column.id}",
+      "area": "incidents",
+      "role": "workflow",
+      "dynamic": true,
+      "file": "app/(keep)/incidents/[id]/workflows/incident-workflow-table.tsx",
+      "line": 237,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-action-confirm-predicted-btn",
+      "area": "incidents",
+      "role": "action",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/predicted-incidents-table.tsx",
+      "line": 94,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-action-discard-predicted-btn",
+      "area": "incidents",
+      "role": "action",
+      "dynamic": false,
+      "file": "app/(keep)/incidents/predicted-incidents-table.tsx",
+      "line": 107,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-severity-select",
+      "area": "incidents",
+      "role": "severity",
+      "dynamic": false,
+      "file": "features/incidents/change-incident-severity/ui/incident-severity-select.tsx",
+      "line": 76,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-change-status-modal",
+      "area": "incidents",
+      "role": "change",
+      "dynamic": false,
+      "file": "features/incidents/change-incident-status/ui/incident-change-status-modal.tsx",
+      "line": 85,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-change-status-modal-select",
+      "area": "incidents",
+      "role": "change",
+      "dynamic": false,
+      "file": "features/incidents/change-incident-status/ui/incident-change-status-modal.tsx",
+      "line": 106,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-change-status-dispose-toggle-btn",
+      "area": "incidents",
+      "role": "change",
+      "dynamic": false,
+      "file": "features/incidents/change-incident-status/ui/incident-change-status-modal.tsx",
+      "line": 118,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-change-status-note-input",
+      "area": "incidents",
+      "role": "change",
+      "dynamic": false,
+      "file": "features/incidents/change-incident-status/ui/incident-change-status-modal.tsx",
+      "line": 133,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-change-status-cancel-btn",
+      "area": "incidents",
+      "role": "change",
+      "dynamic": false,
+      "file": "features/incidents/change-incident-status/ui/incident-change-status-modal.tsx",
+      "line": 138,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-change-status-submit-btn",
+      "area": "incidents",
+      "role": "change",
+      "dynamic": false,
+      "file": "features/incidents/change-incident-status/ui/incident-change-status-modal.tsx",
+      "line": 146,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-status-select",
+      "area": "incidents",
+      "role": "status",
+      "dynamic": false,
+      "file": "features/incidents/change-incident-status/ui/incident-change-status-select.tsx",
+      "line": 102,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-form",
+      "area": "incidents",
+      "role": "form",
+      "dynamic": false,
+      "file": "features/incidents/create-or-update-incident/ui/create-or-update-incident-form.tsx",
+      "line": 157,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-form-name-input",
+      "area": "incidents",
+      "role": "form",
+      "dynamic": false,
+      "file": "features/incidents/create-or-update-incident/ui/create-or-update-incident-form.tsx",
+      "line": 175,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-form-summary-input",
+      "area": "incidents",
+      "role": "form",
+      "dynamic": false,
+      "file": "features/incidents/create-or-update-incident/ui/create-or-update-incident-form.tsx",
+      "line": 188,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-form-assignee-select",
+      "area": "incidents",
+      "role": "form",
+      "dynamic": false,
+      "file": "features/incidents/create-or-update-incident/ui/create-or-update-incident-form.tsx",
+      "line": 198,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-form-assignee-input",
+      "area": "incidents",
+      "role": "form",
+      "dynamic": false,
+      "file": "features/incidents/create-or-update-incident/ui/create-or-update-incident-form.tsx",
+      "line": 211,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-form-resolve-on-alerts-switch",
+      "area": "incidents",
+      "role": "form",
+      "dynamic": false,
+      "file": "features/incidents/create-or-update-incident/ui/create-or-update-incident-form.tsx",
+      "line": 230,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-form-cancel-btn",
+      "area": "incidents",
+      "role": "form",
+      "dynamic": false,
+      "file": "features/incidents/create-or-update-incident/ui/create-or-update-incident-form.tsx",
+      "line": 245,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-form-submit-btn",
+      "area": "incidents",
+      "role": "form",
+      "dynamic": false,
+      "file": "features/incidents/create-or-update-incident/ui/create-or-update-incident-form.tsx",
+      "line": 256,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-row-menu-btn",
+      "area": "incidents",
+      "role": "row",
+      "dynamic": false,
+      "file": "features/incidents/incident-list/ui/incident-dropdown-menu.tsx",
+      "line": 25,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-row-menu-edit",
+      "area": "incidents",
+      "role": "row",
+      "dynamic": false,
+      "file": "features/incidents/incident-list/ui/incident-dropdown-menu.tsx",
+      "line": 31,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-row-menu-run-workflow",
+      "area": "incidents",
+      "role": "row",
+      "dynamic": false,
+      "file": "features/incidents/incident-list/ui/incident-dropdown-menu.tsx",
+      "line": 41,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-row-menu-delete",
+      "area": "incidents",
+      "role": "row",
+      "dynamic": false,
+      "file": "features/incidents/incident-list/ui/incident-dropdown-menu.tsx",
+      "line": 52,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-list-placeholder",
+      "area": "incidents",
+      "role": "list",
+      "dynamic": false,
+      "file": "features/incidents/incident-list/ui/incident-list-placeholder.tsx",
+      "line": 17,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-action-create-btn",
+      "area": "incidents",
+      "role": "action",
+      "dynamic": false,
+      "file": "features/incidents/incident-list/ui/incident-list-placeholder.tsx",
+      "line": 29,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-list-container",
+      "area": "incidents",
+      "role": "list",
+      "dynamic": false,
+      "file": "features/incidents/incident-list/ui/incident-list.tsx",
+      "line": 295,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-action-create-btn",
+      "area": "incidents",
+      "role": "action",
+      "dynamic": false,
+      "file": "features/incidents/incident-list/ui/incident-list.tsx",
+      "line": 329,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-create-modal",
+      "area": "incidents",
+      "role": "create",
+      "dynamic": false,
+      "file": "features/incidents/incident-list/ui/incident-list.tsx",
+      "line": 365,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-table",
+      "area": "incidents",
+      "role": "table",
+      "dynamic": false,
+      "file": "features/incidents/incident-list/ui/incident-table-component.tsx",
+      "line": 90,
+      "description": "",
+      "mirrorsDataTestId": true
+    },
+    {
+      "selector": "incidents-row",
+      "area": "incidents",
+      "role": "row",
+      "dynamic": false,
+      "file": "features/incidents/incident-list/ui/incident-table-component.tsx",
+      "line": 119,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-cell-${cell.column.id}",
+      "area": "incidents",
+      "role": "cell",
+      "dynamic": true,
+      "file": "features/incidents/incident-list/ui/incident-table-component.tsx",
+      "line": 136,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-action-clear-filters-btn",
+      "area": "incidents",
+      "role": "action",
+      "dynamic": false,
+      "file": "features/incidents/incident-list/ui/incidents-not-found.tsx",
+      "line": 22,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-action-correlate-manually-btn",
+      "area": "incidents",
+      "role": "action",
+      "dynamic": false,
+      "file": "features/incidents/incident-list/ui/incidents-not-found.tsx",
+      "line": 44,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-action-ai-correlation-btn",
+      "area": "incidents",
+      "role": "action",
+      "dynamic": false,
+      "file": "features/incidents/incident-list/ui/incidents-not-found.tsx",
+      "line": 56,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-report-modal",
+      "area": "incidents",
+      "role": "report",
+      "dynamic": false,
+      "file": "features/incidents/incident-list/ui/incidents-report/generate-report-modal.tsx",
+      "line": 36,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-report-content",
+      "area": "incidents",
+      "role": "report",
+      "dynamic": false,
+      "file": "features/incidents/incident-list/ui/incidents-report/generate-report-modal.tsx",
+      "line": 43,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-report-print-btn",
+      "area": "incidents",
+      "role": "report",
+      "dynamic": false,
+      "file": "features/incidents/incident-list/ui/incidents-report/generate-report-modal.tsx",
+      "line": 54,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-report-severity-metric",
+      "area": "incidents",
+      "role": "report",
+      "dynamic": false,
+      "file": "features/incidents/incident-list/ui/incidents-report/incident-severity-metric.tsx",
+      "line": 47,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-report",
+      "area": "incidents",
+      "role": "report",
+      "dynamic": false,
+      "file": "features/incidents/incident-list/ui/incidents-report/incidents-report.tsx",
+      "line": 145,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-report-pie-chart",
+      "area": "incidents",
+      "role": "report",
+      "dynamic": false,
+      "file": "features/incidents/incident-list/ui/incidents-report/pie-chart.tsx",
+      "line": 34,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-selected-actions",
+      "area": "incidents",
+      "role": "selected",
+      "dynamic": false,
+      "file": "features/incidents/incident-list/ui/incidents-table.tsx",
+      "line": 51,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-action-generate-report-btn",
+      "area": "incidents",
+      "role": "action",
+      "dynamic": false,
+      "file": "features/incidents/incident-list/ui/incidents-table.tsx",
+      "line": 60,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-selected-count",
+      "area": "incidents",
+      "role": "selected",
+      "dynamic": false,
+      "file": "features/incidents/incident-list/ui/incidents-table.tsx",
+      "line": 68,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-action-merge-btn",
+      "area": "incidents",
+      "role": "action",
+      "dynamic": false,
+      "file": "features/incidents/incident-list/ui/incidents-table.tsx",
+      "line": 78,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-action-delete-btn",
+      "area": "incidents",
+      "role": "action",
+      "dynamic": false,
+      "file": "features/incidents/incident-list/ui/incidents-table.tsx",
+      "line": 88,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-merge-modal",
+      "area": "incidents",
+      "role": "merge",
+      "dynamic": false,
+      "file": "features/incidents/merge-incidents/ui/merge-incidents-modal.tsx",
+      "line": 59,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-merge-destination-select",
+      "area": "incidents",
+      "role": "merge",
+      "dynamic": false,
+      "file": "features/incidents/merge-incidents/ui/merge-incidents-modal.tsx",
+      "line": 94,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-merge-cancel-btn",
+      "area": "incidents",
+      "role": "merge",
+      "dynamic": false,
+      "file": "features/incidents/merge-incidents/ui/merge-incidents-modal.tsx",
+      "line": 99,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-merge-confirm-btn",
+      "area": "incidents",
+      "role": "merge",
+      "dynamic": false,
+      "file": "features/incidents/merge-incidents/ui/merge-incidents-modal.tsx",
+      "line": 106,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-past-go-to-incidents-btn",
+      "area": "incidents",
+      "role": "past",
+      "dynamic": false,
+      "file": "features/incidents/same-incidents-in-the-past/ui/change-same-incident-in-the-past-form.tsx",
+      "line": 81,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-past-form",
+      "area": "incidents",
+      "role": "past",
+      "dynamic": false,
+      "file": "features/incidents/same-incidents-in-the-past/ui/change-same-incident-in-the-past-form.tsx",
+      "line": 95,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-past-select",
+      "area": "incidents",
+      "role": "past",
+      "dynamic": false,
+      "file": "features/incidents/same-incidents-in-the-past/ui/change-same-incident-in-the-past-form.tsx",
+      "line": 100,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-past-unlink-btn",
+      "area": "incidents",
+      "role": "past",
+      "dynamic": false,
+      "file": "features/incidents/same-incidents-in-the-past/ui/change-same-incident-in-the-past-form.tsx",
+      "line": 129,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-past-link-btn",
+      "area": "incidents",
+      "role": "past",
+      "dynamic": false,
+      "file": "features/incidents/same-incidents-in-the-past/ui/change-same-incident-in-the-past-form.tsx",
+      "line": 138,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-past-item-${incidentId}",
+      "area": "incidents",
+      "role": "past",
+      "dynamic": true,
+      "file": "features/incidents/same-incidents-in-the-past/ui/following-incidents.tsx",
+      "line": 21,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-following-list",
+      "area": "incidents",
+      "role": "following",
+      "dynamic": false,
+      "file": "features/incidents/same-incidents-in-the-past/ui/following-incidents.tsx",
+      "line": 47,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-following-item",
+      "area": "incidents",
+      "role": "following",
+      "dynamic": false,
+      "file": "features/incidents/same-incidents-in-the-past/ui/following-incidents.tsx",
+      "line": 49,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-past-change-btn",
+      "area": "incidents",
+      "role": "past",
+      "dynamic": false,
+      "file": "features/incidents/same-incidents-in-the-past/ui/same-incident-field.tsx",
+      "line": 51,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-past-link-modal-btn",
+      "area": "incidents",
+      "role": "past",
+      "dynamic": false,
+      "file": "features/incidents/same-incidents-in-the-past/ui/same-incident-field.tsx",
+      "line": 66,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-past-modal",
+      "area": "incidents",
+      "role": "past",
+      "dynamic": false,
+      "file": "features/incidents/same-incidents-in-the-past/ui/same-incident-field.tsx",
+      "line": 82,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-split-modal",
+      "area": "incidents",
+      "role": "split",
+      "dynamic": false,
+      "file": "features/incidents/split-incident-alerts/ui/split-incident-alerts-modal.tsx",
+      "line": 76,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-split-destination-select",
+      "area": "incidents",
+      "role": "split",
+      "dynamic": false,
+      "file": "features/incidents/split-incident-alerts/ui/split-incident-alerts-modal.tsx",
+      "line": 109,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-split-cancel-btn",
+      "area": "incidents",
+      "role": "split",
+      "dynamic": false,
+      "file": "features/incidents/split-incident-alerts/ui/split-incident-alerts-modal.tsx",
+      "line": 114,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "incidents-split-confirm-btn",
+      "area": "incidents",
+      "role": "split",
+      "dynamic": false,
+      "file": "features/incidents/split-incident-alerts/ui/split-incident-alerts-modal.tsx",
+      "line": 117,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
       "selector": "is-noisy-switch",
       "area": "is",
       "role": "noisy",
@@ -1531,6 +4267,366 @@
       "mirrorsDataTestId": true
     },
     {
+      "selector": "maintenance-form-name-input",
+      "area": "maintenance",
+      "role": "form",
+      "dynamic": false,
+      "file": "app/(keep)/maintenance/create-or-update-maintenance-rule.tsx",
+      "line": 235,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "maintenance-form-description-input",
+      "area": "maintenance",
+      "role": "form",
+      "dynamic": false,
+      "file": "app/(keep)/maintenance/create-or-update-maintenance-rule.tsx",
+      "line": 244,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "maintenance-form-end-interval-input",
+      "area": "maintenance",
+      "role": "form",
+      "dynamic": false,
+      "file": "app/(keep)/maintenance/create-or-update-maintenance-rule.tsx",
+      "line": 299,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "maintenance-form-interval-type-select",
+      "area": "maintenance",
+      "role": "form",
+      "dynamic": false,
+      "file": "app/(keep)/maintenance/create-or-update-maintenance-rule.tsx",
+      "line": 301,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "maintenance-form-cancel-btn",
+      "area": "maintenance",
+      "role": "form",
+      "dynamic": false,
+      "file": "app/(keep)/maintenance/create-or-update-maintenance-rule.tsx",
+      "line": 341,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "maintenance-form-submit-btn",
+      "area": "maintenance",
+      "role": "form",
+      "dynamic": false,
+      "file": "app/(keep)/maintenance/create-or-update-maintenance-rule.tsx",
+      "line": 351,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "maintenance-action-edit-btn",
+      "area": "maintenance",
+      "role": "action",
+      "dynamic": false,
+      "file": "app/(keep)/maintenance/maintenance-rules-table.tsx",
+      "line": 59,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "maintenance-action-delete-btn",
+      "area": "maintenance",
+      "role": "action",
+      "dynamic": false,
+      "file": "app/(keep)/maintenance/maintenance-rules-table.tsx",
+      "line": 70,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "maintenance-table",
+      "area": "maintenance",
+      "role": "table",
+      "dynamic": false,
+      "file": "app/(keep)/maintenance/maintenance-rules-table.tsx",
+      "line": 143,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "maintenance-header-${header.column.id}",
+      "area": "maintenance",
+      "role": "header",
+      "dynamic": true,
+      "file": "app/(keep)/maintenance/maintenance-rules-table.tsx",
+      "line": 154,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "maintenance-row",
+      "area": "maintenance",
+      "role": "row",
+      "dynamic": false,
+      "file": "app/(keep)/maintenance/maintenance-rules-table.tsx",
+      "line": 172,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "maintenance-cell-${cell.column.id}",
+      "area": "maintenance",
+      "role": "cell",
+      "dynamic": true,
+      "file": "app/(keep)/maintenance/maintenance-rules-table.tsx",
+      "line": 176,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "maintenance-page",
+      "area": "maintenance",
+      "role": "page",
+      "dynamic": false,
+      "file": "app/(keep)/maintenance/maintenance.tsx",
+      "line": 21,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "mapping-execution-detail-page",
+      "area": "mapping",
+      "role": "execution",
+      "dynamic": false,
+      "file": "app/(keep)/mapping/[rule_id]/executions/[execution_id]/page.tsx",
+      "line": 37,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "mapping-executions-page",
+      "area": "mapping",
+      "role": "executions",
+      "dynamic": false,
+      "file": "app/(keep)/mapping/[rule_id]/executions/page.tsx",
+      "line": 56,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "mapping-data-preview-table",
+      "area": "mapping",
+      "role": "data",
+      "dynamic": false,
+      "file": "app/(keep)/mapping/[rule_id]/executions/page.tsx",
+      "line": 104,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "mapping-form-name-input",
+      "area": "mapping",
+      "role": "form",
+      "dynamic": false,
+      "file": "app/(keep)/mapping/create-or-edit-mapping.tsx",
+      "line": 290,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "mapping-form-priority-input",
+      "area": "mapping",
+      "role": "form",
+      "dynamic": false,
+      "file": "app/(keep)/mapping/create-or-edit-mapping.tsx",
+      "line": 310,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "mapping-form-description-input",
+      "area": "mapping",
+      "role": "form",
+      "dynamic": false,
+      "file": "app/(keep)/mapping/create-or-edit-mapping.tsx",
+      "line": 320,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "mapping-form-cancel-btn",
+      "area": "mapping",
+      "role": "form",
+      "dynamic": false,
+      "file": "app/(keep)/mapping/create-or-edit-mapping.tsx",
+      "line": 541,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "mapping-form-submit-btn",
+      "area": "mapping",
+      "role": "form",
+      "dynamic": false,
+      "file": "app/(keep)/mapping/create-or-edit-mapping.tsx",
+      "line": 555,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "mapping-page",
+      "area": "mapping",
+      "role": "page",
+      "dynamic": false,
+      "file": "app/(keep)/mapping/mapping.tsx",
+      "line": 39,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "mapping-create-btn",
+      "area": "mapping",
+      "role": "create",
+      "dynamic": false,
+      "file": "app/(keep)/mapping/mapping.tsx",
+      "line": 54,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "mapping-sidebar",
+      "area": "mapping",
+      "role": "sidebar",
+      "dynamic": false,
+      "file": "app/(keep)/mapping/mapping.tsx",
+      "line": 64,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "mapping-empty-create-btn",
+      "area": "mapping",
+      "role": "empty",
+      "dynamic": false,
+      "file": "app/(keep)/mapping/mapping.tsx",
+      "line": 98,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "mapping-action-run-btn",
+      "area": "mapping",
+      "role": "action",
+      "dynamic": false,
+      "file": "app/(keep)/mapping/rules-table.tsx",
+      "line": 143,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "mapping-action-edit-btn",
+      "area": "mapping",
+      "role": "action",
+      "dynamic": false,
+      "file": "app/(keep)/mapping/rules-table.tsx",
+      "line": 155,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "mapping-action-delete-btn",
+      "area": "mapping",
+      "role": "action",
+      "dynamic": false,
+      "file": "app/(keep)/mapping/rules-table.tsx",
+      "line": 167,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "mapping-table",
+      "area": "mapping",
+      "role": "table",
+      "dynamic": false,
+      "file": "app/(keep)/mapping/rules-table.tsx",
+      "line": 200,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "mapping-header-${header.column.id}",
+      "area": "mapping",
+      "role": "header",
+      "dynamic": true,
+      "file": "app/(keep)/mapping/rules-table.tsx",
+      "line": 215,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "mapping-row",
+      "area": "mapping",
+      "role": "row",
+      "dynamic": false,
+      "file": "app/(keep)/mapping/rules-table.tsx",
+      "line": 234,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "mapping-cell-${cell.column.id}",
+      "area": "mapping",
+      "role": "cell",
+      "dynamic": true,
+      "file": "app/(keep)/mapping/rules-table.tsx",
+      "line": 245,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "mapping-run-modal",
+      "area": "mapping",
+      "role": "run",
+      "dynamic": false,
+      "file": "app/(keep)/mapping/run-mapping-modal.tsx",
+      "line": 59,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "mapping-run-alert-select",
+      "area": "mapping",
+      "role": "run",
+      "dynamic": false,
+      "file": "app/(keep)/mapping/run-mapping-modal.tsx",
+      "line": 67,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "mapping-run-cancel-btn",
+      "area": "mapping",
+      "role": "run",
+      "dynamic": false,
+      "file": "app/(keep)/mapping/run-mapping-modal.tsx",
+      "line": 85,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "mapping-run-confirm-btn",
+      "area": "mapping",
+      "role": "run",
+      "dynamic": false,
+      "file": "app/(keep)/mapping/run-mapping-modal.tsx",
+      "line": 93,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
       "selector": "modal-close-btn",
       "area": "modal",
       "role": "close",
@@ -1539,6 +4635,440 @@
       "line": 60,
       "description": "",
       "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-page-main",
+      "area": "nav",
+      "role": "page",
+      "dynamic": false,
+      "file": "app/(keep)/layout.tsx",
+      "line": 47,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-link-ai",
+      "area": "nav",
+      "role": "link",
+      "dynamic": false,
+      "file": "components/navbar/AILink.tsx",
+      "line": 42,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-group-alerts",
+      "area": "nav",
+      "role": "group",
+      "dynamic": false,
+      "file": "components/navbar/AlertsLinks.tsx",
+      "line": 80,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-btn-alerts-tag-filter",
+      "area": "nav",
+      "role": "btn",
+      "dynamic": false,
+      "file": "components/navbar/AlertsLinks.tsx",
+      "line": 100,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-link-alerts-feed",
+      "area": "nav",
+      "role": "link",
+      "dynamic": false,
+      "file": "components/navbar/AlertsLinks.tsx",
+      "line": 117,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-modal-alerts-tag-filter",
+      "area": "nav",
+      "role": "modal",
+      "dynamic": false,
+      "file": "components/navbar/AlertsLinks.tsx",
+      "line": 143,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-select-alerts-tags",
+      "area": "nav",
+      "role": "select",
+      "dynamic": false,
+      "file": "components/navbar/AlertsLinks.tsx",
+      "line": 162,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-btn-alerts-tag-cancel",
+      "area": "nav",
+      "role": "btn",
+      "dynamic": false,
+      "file": "components/navbar/AlertsLinks.tsx",
+      "line": 171,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-btn-alerts-tag-apply",
+      "area": "nav",
+      "role": "btn",
+      "dynamic": false,
+      "file": "components/navbar/AlertsLinks.tsx",
+      "line": 180,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-link-dashboard-${dashboard.id}",
+      "area": "nav",
+      "role": "link",
+      "dynamic": true,
+      "file": "components/navbar/DashboardLink.tsx",
+      "line": 39,
+      "description": "Sidebar dashboard link in the Dashboards section; one per saved dashboard.",
+      "mirrorsDataTestId": false,
+      "idSource": "dashboard.id (server uuid stored in the dashboards table)",
+      "resolvedExample": "nav-link-dashboard-9f2c8b21-1c3d-4a51-9c2a-7c8e2bd2d100"
+    },
+    {
+      "selector": "nav-group-dashboards",
+      "area": "nav",
+      "role": "group",
+      "dynamic": false,
+      "file": "components/navbar/DashboardLinks.tsx",
+      "line": 88,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-btn-add-dashboard",
+      "area": "nav",
+      "role": "btn",
+      "dynamic": false,
+      "file": "components/navbar/DashboardLinks.tsx",
+      "line": 147,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-group-incidents",
+      "area": "nav",
+      "role": "group",
+      "dynamic": false,
+      "file": "components/navbar/IncidentLinks.tsx",
+      "line": 47,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-link-incidents",
+      "area": "nav",
+      "role": "link",
+      "dynamic": false,
+      "file": "components/navbar/IncidentLinks.tsx",
+      "line": 68,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-mobile-menu-open-btn",
+      "area": "nav",
+      "role": "mobile",
+      "dynamic": false,
+      "file": "components/navbar/Menu.tsx",
+      "line": 55,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-sidebar",
+      "area": "nav",
+      "role": "sidebar",
+      "dynamic": false,
+      "file": "components/navbar/Menu.tsx",
+      "line": 64,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-mobile-menu-close-btn",
+      "area": "nav",
+      "role": "mobile",
+      "dynamic": false,
+      "file": "components/navbar/Menu.tsx",
+      "line": 80,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-minimize-btn",
+      "area": "nav",
+      "role": "minimize",
+      "dynamic": false,
+      "file": "components/navbar/MinimizeMenuButton.tsx",
+      "line": 18,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-sections",
+      "area": "nav",
+      "role": "sections",
+      "dynamic": false,
+      "file": "components/navbar/Navbar.tsx",
+      "line": 22,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-group-noise-reduction",
+      "area": "nav",
+      "role": "group",
+      "dynamic": false,
+      "file": "components/navbar/NoiseReductionLinks.tsx",
+      "line": 77,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-link-deduplication",
+      "area": "nav",
+      "role": "link",
+      "dynamic": false,
+      "file": "components/navbar/NoiseReductionLinks.tsx",
+      "line": 112,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-link-rules",
+      "area": "nav",
+      "role": "link",
+      "dynamic": false,
+      "file": "components/navbar/NoiseReductionLinks.tsx",
+      "line": 126,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-link-workflows",
+      "area": "nav",
+      "role": "link",
+      "dynamic": false,
+      "file": "components/navbar/NoiseReductionLinks.tsx",
+      "line": 140,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-link-topology",
+      "area": "nav",
+      "role": "link",
+      "dynamic": false,
+      "file": "components/navbar/NoiseReductionLinks.tsx",
+      "line": 155,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-link-mapping",
+      "area": "nav",
+      "role": "link",
+      "dynamic": false,
+      "file": "components/navbar/NoiseReductionLinks.tsx",
+      "line": 169,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-link-extraction",
+      "area": "nav",
+      "role": "link",
+      "dynamic": false,
+      "file": "components/navbar/NoiseReductionLinks.tsx",
+      "line": 183,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-link-maintenance",
+      "area": "nav",
+      "role": "link",
+      "dynamic": false,
+      "file": "components/navbar/NoiseReductionLinks.tsx",
+      "line": 197,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-header",
+      "area": "nav",
+      "role": "header",
+      "dynamic": false,
+      "file": "components/navbar/Search.tsx",
+      "line": 336,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-tenant-switcher-trigger",
+      "area": "nav",
+      "role": "tenant",
+      "dynamic": false,
+      "file": "components/navbar/Search.tsx",
+      "line": 346,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-tenant-option-${tenant.tenant_id}",
+      "area": "nav",
+      "role": "tenant",
+      "dynamic": true,
+      "file": "components/navbar/Search.tsx",
+      "line": 376,
+      "description": "Tenant option button in the logo/tenant-switcher popover; one per tenant the current user belongs to.",
+      "mirrorsDataTestId": false,
+      "idSource": "tenant.tenant_id (server-issued tenant uuid from session.user.tenantIds)",
+      "resolvedExample": "nav-tenant-option-2f8a3a5e-3a47-4b27-9d2f-7d2af6e3aa12"
+    },
+    {
+      "selector": "nav-logo-link",
+      "area": "nav",
+      "role": "logo",
+      "dynamic": false,
+      "file": "components/navbar/Search.tsx",
+      "line": 387,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-search-input",
+      "area": "nav",
+      "role": "search",
+      "dynamic": false,
+      "file": "components/navbar/Search.tsx",
+      "line": 426,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-user-avatar",
+      "area": "nav",
+      "role": "user",
+      "dynamic": false,
+      "file": "components/navbar/UserInfo.tsx",
+      "line": 43,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-user-avatar-image",
+      "area": "nav",
+      "role": "user",
+      "dynamic": false,
+      "file": "components/navbar/UserInfo.tsx",
+      "line": 49,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-user-menu",
+      "area": "nav",
+      "role": "user",
+      "dynamic": false,
+      "file": "components/navbar/UserInfo.tsx",
+      "line": 60,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-user-menu-item-settings",
+      "area": "nav",
+      "role": "user",
+      "dynamic": false,
+      "file": "components/navbar/UserInfo.tsx",
+      "line": 69,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-user-menu-item-signout",
+      "area": "nav",
+      "role": "user",
+      "dynamic": false,
+      "file": "components/navbar/UserInfo.tsx",
+      "line": 80,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-footer",
+      "area": "nav",
+      "role": "footer",
+      "dynamic": false,
+      "file": "components/navbar/UserInfo.tsx",
+      "line": 126,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-link-providers",
+      "area": "nav",
+      "role": "link",
+      "dynamic": false,
+      "file": "components/navbar/UserInfo.tsx",
+      "line": 131,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-link-slack",
+      "area": "nav",
+      "role": "link",
+      "dynamic": false,
+      "file": "components/navbar/UserInfo.tsx",
+      "line": 142,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-link-docs",
+      "area": "nav",
+      "role": "link",
+      "dynamic": false,
+      "file": "components/navbar/UserInfo.tsx",
+      "line": 152,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-theme-control",
+      "area": "nav",
+      "role": "theme",
+      "dynamic": false,
+      "file": "components/navbar/UserInfo.tsx",
+      "line": 159,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "no-workflows-state",
+      "area": "no",
+      "role": "workflows",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/no-workflows-state.tsx",
+      "line": 20,
+      "description": "",
+      "mirrorsDataTestId": true
     },
     {
       "selector": "no-columns-found",
@@ -1559,6 +5089,16 @@
       "line": 75,
       "description": "",
       "mirrorsDataTestId": true
+    },
+    {
+      "selector": "notif-hub-page",
+      "area": "notif",
+      "role": "hub",
+      "dynamic": false,
+      "file": "app/(keep)/notifications-hub/page.tsx",
+      "line": 5,
+      "description": "",
+      "mirrorsDataTestId": false
     },
     {
       "selector": "panel-columns",
@@ -1771,6 +5311,176 @@
       "mirrorsDataTestId": true
     },
     {
+      "selector": "providers-category-chips",
+      "area": "providers",
+      "role": "category",
+      "dynamic": false,
+      "file": "app/(keep)/providers/components/providers-categories/providers-categories.tsx",
+      "line": 37,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "providers-category-chip-${category\n            .toLowerCase()\n            .replace(/\\s+/g, \"-\")}",
+      "area": "providers",
+      "role": "category",
+      "dynamic": true,
+      "file": "app/(keep)/providers/components/providers-categories/providers-categories.tsx",
+      "line": 51,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "providers-filter-by-label-select",
+      "area": "providers",
+      "role": "filter",
+      "dynamic": false,
+      "file": "app/(keep)/providers/components/providers-filter-by-label/providers-filter-by-label.tsx",
+      "line": 24,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "providers-search-input",
+      "area": "providers",
+      "role": "search",
+      "dynamic": false,
+      "file": "app/(keep)/providers/components/providers-search/providers-search.tsx",
+      "line": 17,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "providers-form-${id}-input",
+      "area": "providers",
+      "role": "form",
+      "dynamic": true,
+      "file": "app/(keep)/providers/form-fields.tsx",
+      "line": 269,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "providers-form-${id}-select",
+      "area": "providers",
+      "role": "form",
+      "dynamic": true,
+      "file": "app/(keep)/providers/form-fields.tsx",
+      "line": 311,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "providers-form-${id}-file-input",
+      "area": "providers",
+      "role": "form",
+      "dynamic": true,
+      "file": "app/(keep)/providers/form-fields.tsx",
+      "line": 375,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "providers-form-validate-scopes-btn",
+      "area": "providers",
+      "role": "form",
+      "dynamic": false,
+      "file": "app/(keep)/providers/provider-form-scopes.tsx",
+      "line": 49,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "providers-form-oauth2-btn",
+      "area": "providers",
+      "role": "form",
+      "dynamic": false,
+      "file": "app/(keep)/providers/provider-form.tsx",
+      "line": 477,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "providers-form-install-webhook-input",
+      "area": "providers",
+      "role": "form",
+      "dynamic": false,
+      "file": "app/(keep)/providers/provider-form.tsx",
+      "line": 568,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "providers-form-disconnect-btn",
+      "area": "providers",
+      "role": "form",
+      "dynamic": false,
+      "file": "app/(keep)/providers/provider-form.tsx",
+      "line": 883,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "providers-form-cancel-btn",
+      "area": "providers",
+      "role": "form",
+      "dynamic": false,
+      "file": "app/(keep)/providers/provider-form.tsx",
+      "line": 897,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "providers-form-update-btn",
+      "area": "providers",
+      "role": "form",
+      "dynamic": false,
+      "file": "app/(keep)/providers/provider-form.tsx",
+      "line": 909,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "providers-form-connect-btn",
+      "area": "providers",
+      "role": "form",
+      "dynamic": false,
+      "file": "app/(keep)/providers/provider-form.tsx",
+      "line": 920,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "providers-logs-refresh-btn",
+      "area": "providers",
+      "role": "logs",
+      "dynamic": false,
+      "file": "app/(keep)/providers/provider-logs.tsx",
+      "line": 68,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "providers-tile-${provider.type}",
+      "area": "providers",
+      "role": "tile",
+      "dynamic": true,
+      "file": "app/(keep)/providers/provider-tile.tsx",
+      "line": 165,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "providers-connect-drawer",
+      "area": "providers",
+      "role": "connect",
+      "dynamic": false,
+      "file": "app/(keep)/providers/providers-tiles.tsx",
+      "line": 135,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
       "selector": "reset-to-default-button",
       "area": "reset",
       "role": "to",
@@ -1779,6 +5489,176 @@
       "line": 223,
       "description": "",
       "mirrorsDataTestId": true
+    },
+    {
+      "selector": "rules-create-btn",
+      "area": "rules",
+      "role": "create",
+      "dynamic": false,
+      "file": "app/(keep)/rules/CorrelationPlaceholder.tsx",
+      "line": 30,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "rules-placeholder-sankey",
+      "area": "rules",
+      "role": "placeholder",
+      "dynamic": false,
+      "file": "app/(keep)/rules/CorrelationPlaceholder.tsx",
+      "line": 34,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "rules-form-name-input",
+      "area": "rules",
+      "role": "form",
+      "dynamic": false,
+      "file": "app/(keep)/rules/CorrelationSidebar/CorrelationForm.tsx",
+      "line": 78,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "rules-form-time-amount-input",
+      "area": "rules",
+      "role": "form",
+      "dynamic": false,
+      "file": "app/(keep)/rules/CorrelationSidebar/CorrelationForm.tsx",
+      "line": 104,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "rules-form-incident-name-template-input",
+      "area": "rules",
+      "role": "form",
+      "dynamic": false,
+      "file": "app/(keep)/rules/CorrelationSidebar/CorrelationForm.tsx",
+      "line": 148,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "rules-form-incident-prefix-input",
+      "area": "rules",
+      "role": "form",
+      "dynamic": false,
+      "file": "app/(keep)/rules/CorrelationSidebar/CorrelationForm.tsx",
+      "line": 168,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "rules-form-threshold-input",
+      "area": "rules",
+      "role": "form",
+      "dynamic": false,
+      "file": "app/(keep)/rules/CorrelationSidebar/CorrelationForm.tsx",
+      "line": 295,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "rules-form-cancel-btn",
+      "area": "rules",
+      "role": "form",
+      "dynamic": false,
+      "file": "app/(keep)/rules/CorrelationSidebar/CorrelationSubmission.tsx",
+      "line": 27,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "rules-form-submit-btn",
+      "area": "rules",
+      "role": "form",
+      "dynamic": false,
+      "file": "app/(keep)/rules/CorrelationSidebar/CorrelationSubmission.tsx",
+      "line": 30,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "rules-delete-btn",
+      "area": "rules",
+      "role": "delete",
+      "dynamic": false,
+      "file": "app/(keep)/rules/CorrelationSidebar/DeleteRule.tsx",
+      "line": 38,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "rules-sidebar",
+      "area": "rules",
+      "role": "sidebar",
+      "dynamic": false,
+      "file": "app/(keep)/rules/CorrelationSidebar/index.tsx",
+      "line": 97,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "rules-page",
+      "area": "rules",
+      "role": "page",
+      "dynamic": false,
+      "file": "app/(keep)/rules/CorrelationTable.tsx",
+      "line": 130,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "rules-create-btn",
+      "area": "rules",
+      "role": "create",
+      "dynamic": false,
+      "file": "app/(keep)/rules/CorrelationTable.tsx",
+      "line": 146,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "rules-table",
+      "area": "rules",
+      "role": "table",
+      "dynamic": false,
+      "file": "app/(keep)/rules/CorrelationTable.tsx",
+      "line": 151,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "rules-header-${header.column.id}",
+      "area": "rules",
+      "role": "header",
+      "dynamic": true,
+      "file": "app/(keep)/rules/CorrelationTable.tsx",
+      "line": 160,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "rules-row",
+      "area": "rules",
+      "role": "row",
+      "dynamic": false,
+      "file": "app/(keep)/rules/CorrelationTable.tsx",
+      "line": 175,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "rules-cell-${cell.column.id}",
+      "area": "rules",
+      "role": "cell",
+      "dynamic": true,
+      "file": "app/(keep)/rules/CorrelationTable.tsx",
+      "line": 182,
+      "description": "",
+      "mirrorsDataTestId": false
     },
     {
       "selector": "save-preset-button",
@@ -1801,6 +5681,296 @@
       "mirrorsDataTestId": true
     },
     {
+      "selector": "settings-create-api-key-btn",
+      "area": "settings",
+      "role": "create",
+      "dynamic": false,
+      "file": "app/(keep)/settings/auth/api-key-settings.tsx",
+      "line": 121,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "settings-create-api-key-modal",
+      "area": "settings",
+      "role": "create",
+      "dynamic": false,
+      "file": "app/(keep)/settings/create-api-key-modal.tsx",
+      "line": 72,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "settings-create-api-key-name-input",
+      "area": "settings",
+      "role": "create",
+      "dynamic": false,
+      "file": "app/(keep)/settings/create-api-key-modal.tsx",
+      "line": 91,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "settings-create-api-key-submit-btn",
+      "area": "settings",
+      "role": "create",
+      "dynamic": false,
+      "file": "app/(keep)/settings/create-api-key-modal.tsx",
+      "line": 157,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "settings-create-api-key-cancel-btn",
+      "area": "settings",
+      "role": "create",
+      "dynamic": false,
+      "file": "app/(keep)/settings/create-api-key-modal.tsx",
+      "line": 165,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "settings-provider-images-row",
+      "area": "settings",
+      "role": "provider",
+      "dynamic": false,
+      "file": "app/(keep)/settings/provider-images/provider-image-list.tsx",
+      "line": 92,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "settings-provider-image-uploader-modal",
+      "area": "settings",
+      "role": "provider",
+      "dynamic": false,
+      "file": "app/(keep)/settings/provider-images/provider-image-uploader.tsx",
+      "line": 80,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "settings-provider-image-uploader-input",
+      "area": "settings",
+      "role": "provider",
+      "dynamic": false,
+      "file": "app/(keep)/settings/provider-images/provider-image-uploader.tsx",
+      "line": 101,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "settings-provider-image-uploader-cancel-btn",
+      "area": "settings",
+      "role": "provider",
+      "dynamic": false,
+      "file": "app/(keep)/settings/provider-images/provider-image-uploader.tsx",
+      "line": 119,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "settings-provider-image-uploader-submit-btn",
+      "area": "settings",
+      "role": "provider",
+      "dynamic": false,
+      "file": "app/(keep)/settings/provider-images/provider-image-uploader.tsx",
+      "line": 127,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "settings-provider-images-upload-btn",
+      "area": "settings",
+      "role": "provider",
+      "dynamic": false,
+      "file": "app/(keep)/settings/provider-images/provider-images-settings.tsx",
+      "line": 46,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "settings-tabs",
+      "area": "settings",
+      "role": "tabs",
+      "dynamic": false,
+      "file": "app/(keep)/settings/settings.client.tsx",
+      "line": 371,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "settings-tab-auth",
+      "area": "settings",
+      "role": "tab",
+      "dynamic": false,
+      "file": "app/(keep)/settings/settings.client.tsx",
+      "line": 375,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "settings-tab-webhook",
+      "area": "settings",
+      "role": "tab",
+      "dynamic": false,
+      "file": "app/(keep)/settings/settings.client.tsx",
+      "line": 382,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "settings-tab-smtp",
+      "area": "settings",
+      "role": "tab",
+      "dynamic": false,
+      "file": "app/(keep)/settings/settings.client.tsx",
+      "line": 389,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "settings-tab-provider-images",
+      "area": "settings",
+      "role": "tab",
+      "dynamic": false,
+      "file": "app/(keep)/settings/settings.client.tsx",
+      "line": 396,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "settings-smtp-form",
+      "area": "settings",
+      "role": "smtp",
+      "dynamic": false,
+      "file": "app/(keep)/settings/smtp-settings.tsx",
+      "line": 234,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "settings-smtp-host-input",
+      "area": "settings",
+      "role": "smtp",
+      "dynamic": false,
+      "file": "app/(keep)/settings/smtp-settings.tsx",
+      "line": 243,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "settings-smtp-port-input",
+      "area": "settings",
+      "role": "smtp",
+      "dynamic": false,
+      "file": "app/(keep)/settings/smtp-settings.tsx",
+      "line": 266,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "settings-smtp-from-email-input",
+      "area": "settings",
+      "role": "smtp",
+      "dynamic": false,
+      "file": "app/(keep)/settings/smtp-settings.tsx",
+      "line": 291,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "settings-smtp-username-input",
+      "area": "settings",
+      "role": "smtp",
+      "dynamic": false,
+      "file": "app/(keep)/settings/smtp-settings.tsx",
+      "line": 314,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "settings-smtp-password-input",
+      "area": "settings",
+      "role": "smtp",
+      "dynamic": false,
+      "file": "app/(keep)/settings/smtp-settings.tsx",
+      "line": 333,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "settings-smtp-secure-input",
+      "area": "settings",
+      "role": "smtp",
+      "dynamic": false,
+      "file": "app/(keep)/settings/smtp-settings.tsx",
+      "line": 350,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "settings-smtp-save-btn",
+      "area": "settings",
+      "role": "smtp",
+      "dynamic": false,
+      "file": "app/(keep)/settings/smtp-settings.tsx",
+      "line": 365,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "settings-smtp-delete-btn",
+      "area": "settings",
+      "role": "smtp",
+      "dynamic": false,
+      "file": "app/(keep)/settings/smtp-settings.tsx",
+      "line": 374,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "settings-smtp-to-email-input",
+      "area": "settings",
+      "role": "smtp",
+      "dynamic": false,
+      "file": "app/(keep)/settings/smtp-settings.tsx",
+      "line": 404,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "settings-smtp-test-btn",
+      "area": "settings",
+      "role": "smtp",
+      "dynamic": false,
+      "file": "app/(keep)/settings/smtp-settings.tsx",
+      "line": 423,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "settings-webhook-try-btn",
+      "area": "settings",
+      "role": "webhook",
+      "dynamic": false,
+      "file": "app/(keep)/settings/webhook-settings.tsx",
+      "line": 206,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "settings-webhook-copy-code-btn",
+      "area": "settings",
+      "role": "webhook",
+      "dynamic": false,
+      "file": "app/(keep)/settings/webhook-settings.tsx",
+      "line": 229,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
       "selector": "settings-button",
       "area": "settings",
       "role": "button",
@@ -1819,6 +5989,16 @@
       "line": 67,
       "description": "",
       "mirrorsDataTestId": true
+    },
+    {
+      "selector": "sort-direction-${column.id}",
+      "area": "sort",
+      "role": "direction",
+      "dynamic": true,
+      "file": "features/incidents/incident-list/ui/incident-table-component.tsx",
+      "line": 53,
+      "description": "",
+      "mirrorsDataTestId": false
     },
     {
       "selector": "tab-columns",
@@ -1877,6 +6057,2062 @@
       "dynamic": false,
       "file": "features/alerts/change-alert-table-theme/ui/AlertTableThemeSelection.tsx",
       "line": 73,
+      "description": "",
+      "mirrorsDataTestId": true
+    },
+    {
+      "selector": "topology-page-header",
+      "area": "topology",
+      "role": "page",
+      "dynamic": false,
+      "file": "app/(keep)/topology/page.tsx",
+      "line": 41,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "topology-tabs",
+      "area": "topology",
+      "role": "tabs",
+      "dynamic": false,
+      "file": "app/(keep)/topology/topology-client.tsx",
+      "line": 57,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "topology-tab-map",
+      "area": "topology",
+      "role": "tab",
+      "dynamic": false,
+      "file": "app/(keep)/topology/topology-client.tsx",
+      "line": 62,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "topology-tab-applications",
+      "area": "topology",
+      "role": "tab",
+      "dynamic": false,
+      "file": "app/(keep)/topology/topology-client.tsx",
+      "line": 66,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "topology-tab-pull",
+      "area": "topology",
+      "role": "tab",
+      "dynamic": false,
+      "file": "app/(keep)/topology/topology-client.tsx",
+      "line": 71,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "topology-app-card-${application.id}",
+      "area": "topology",
+      "role": "app",
+      "dynamic": true,
+      "file": "app/(keep)/topology/ui/applications/application-card.tsx",
+      "line": 12,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "topology-app-modal",
+      "area": "topology",
+      "role": "app",
+      "dynamic": false,
+      "file": "app/(keep)/topology/ui/applications/application-modal.tsx",
+      "line": 36,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "topology-app-create-empty-btn",
+      "area": "topology",
+      "role": "app",
+      "dynamic": false,
+      "file": "app/(keep)/topology/ui/applications/applications-list.tsx",
+      "line": 107,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "topology-app-add-btn",
+      "area": "topology",
+      "role": "app",
+      "dynamic": false,
+      "file": "app/(keep)/topology/ui/applications/applications-list.tsx",
+      "line": 138,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "topology-app-list",
+      "area": "topology",
+      "role": "app",
+      "dynamic": false,
+      "file": "app/(keep)/topology/ui/applications/applications-list.tsx",
+      "line": 144,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "topology-app-show-on-map-btn-${application.id}",
+      "area": "topology",
+      "role": "app",
+      "dynamic": true,
+      "file": "app/(keep)/topology/ui/applications/applications-list.tsx",
+      "line": 158,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "topology-app-edit-btn-${application.id}",
+      "area": "topology",
+      "role": "app",
+      "dynamic": true,
+      "file": "app/(keep)/topology/ui/applications/applications-list.tsx",
+      "line": 166,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "topology-app-form",
+      "area": "topology",
+      "role": "app",
+      "dynamic": false,
+      "file": "app/(keep)/topology/ui/applications/create-or-update-application-form.tsx",
+      "line": 137,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "topology-app-form-name-input",
+      "area": "topology",
+      "role": "app",
+      "dynamic": false,
+      "file": "app/(keep)/topology/ui/applications/create-or-update-application-form.tsx",
+      "line": 152,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "topology-app-form-description-input",
+      "area": "topology",
+      "role": "app",
+      "dynamic": false,
+      "file": "app/(keep)/topology/ui/applications/create-or-update-application-form.tsx",
+      "line": 163,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "topology-app-form-repository-input",
+      "area": "topology",
+      "role": "app",
+      "dynamic": false,
+      "file": "app/(keep)/topology/ui/applications/create-or-update-application-form.tsx",
+      "line": 177,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "topology-app-form-delete-btn",
+      "area": "topology",
+      "role": "app",
+      "dynamic": false,
+      "file": "app/(keep)/topology/ui/applications/create-or-update-application-form.tsx",
+      "line": 238,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "topology-app-form-cancel-btn",
+      "area": "topology",
+      "role": "app",
+      "dynamic": false,
+      "file": "app/(keep)/topology/ui/applications/create-or-update-application-form.tsx",
+      "line": 249,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "topology-app-form-submit-btn",
+      "area": "topology",
+      "role": "app",
+      "dynamic": false,
+      "file": "app/(keep)/topology/ui/applications/create-or-update-application-form.tsx",
+      "line": 259,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "topology-edit-node-sidebar",
+      "area": "topology",
+      "role": "edit",
+      "dynamic": false,
+      "file": "app/(keep)/topology/ui/map/AddEditNodeSidePanel.tsx",
+      "line": 120,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "topology-edit-node-update-btn",
+      "area": "topology",
+      "role": "edit",
+      "dynamic": false,
+      "file": "app/(keep)/topology/ui/map/AddEditNodeSidePanel.tsx",
+      "line": 262,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "topology-edit-node-save-btn",
+      "area": "topology",
+      "role": "edit",
+      "dynamic": false,
+      "file": "app/(keep)/topology/ui/map/AddEditNodeSidePanel.tsx",
+      "line": 271,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "topology-edit-node-close-btn",
+      "area": "topology",
+      "role": "edit",
+      "dynamic": false,
+      "file": "app/(keep)/topology/ui/map/AddEditNodeSidePanel.tsx",
+      "line": 276,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "topology-app-node-${id}",
+      "area": "topology",
+      "role": "app",
+      "dynamic": true,
+      "file": "app/(keep)/topology/ui/map/application-node.tsx",
+      "line": 46,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "topology-selection-toolbar",
+      "area": "topology",
+      "role": "selection",
+      "dynamic": false,
+      "file": "app/(keep)/topology/ui/map/manage-selection.tsx",
+      "line": 326,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "topology-service-node-${data.service}",
+      "area": "topology",
+      "role": "service",
+      "dynamic": true,
+      "file": "app/(keep)/topology/ui/map/service-node.tsx",
+      "line": 125,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "topology-map-container",
+      "area": "topology",
+      "role": "map",
+      "dynamic": false,
+      "file": "app/(keep)/topology/ui/map/topology-map.tsx",
+      "line": 575,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "topology-add-node-btn",
+      "area": "topology",
+      "role": "add",
+      "dynamic": false,
+      "file": "app/(keep)/topology/ui/map/topology-map.tsx",
+      "line": 608,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "topology-map-canvas",
+      "area": "topology",
+      "role": "map",
+      "dynamic": false,
+      "file": "app/(keep)/topology/ui/map/topology-map.tsx",
+      "line": 645,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "topology-search-autocomplete",
+      "area": "topology",
+      "role": "search",
+      "dynamic": false,
+      "file": "app/(keep)/topology/ui/TopologySearchAutocomplete.tsx",
+      "line": 92,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "topology-search-input",
+      "area": "topology",
+      "role": "search",
+      "dynamic": false,
+      "file": "app/(keep)/topology/ui/TopologySearchAutocomplete.tsx",
+      "line": 108,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-executions-filters",
+      "area": "wf",
+      "role": "executions",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/table-filters.tsx",
+      "line": 176,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-executions-filter-input",
+      "area": "wf",
+      "role": "executions",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/table-filters.tsx",
+      "line": 185,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-executions-clear-filters-btn",
+      "area": "wf",
+      "role": "executions",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/table-filters.tsx",
+      "line": 221,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-version-page",
+      "area": "wf",
+      "role": "version",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/versions/[revision]/page.tsx",
+      "line": 17,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-version-page-title",
+      "area": "wf",
+      "role": "version",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/versions/[revision]/page.tsx",
+      "line": 18,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-version-yaml-editor-card",
+      "area": "wf",
+      "role": "version",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/versions/[revision]/page.tsx",
+      "line": 19,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-breadcrumbs",
+      "area": "wf",
+      "role": "breadcrumbs",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-breadcrumbs.tsx",
+      "line": 13,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-breadcrumbs-all",
+      "area": "wf",
+      "role": "breadcrumbs",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-breadcrumbs.tsx",
+      "line": 14,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-breadcrumbs-detail",
+      "area": "wf",
+      "role": "breadcrumbs",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-breadcrumbs.tsx",
+      "line": 18,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-breadcrumbs-detail",
+      "area": "wf",
+      "role": "breadcrumbs",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-breadcrumbs.tsx",
+      "line": 25,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-breadcrumbs-revision",
+      "area": "wf",
+      "role": "breadcrumbs",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-breadcrumbs.tsx",
+      "line": 33,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-name",
+      "area": "wf",
+      "role": "name",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-detail-header.tsx",
+      "line": 50,
+      "description": "",
+      "mirrorsDataTestId": true
+    },
+    {
+      "selector": "wf-description",
+      "area": "wf",
+      "role": "description",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-detail-header.tsx",
+      "line": 56,
+      "description": "",
+      "mirrorsDataTestId": true
+    },
+    {
+      "selector": "wf-run-now-button",
+      "area": "wf",
+      "role": "run",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-detail-header.tsx",
+      "line": 75,
+      "description": "",
+      "mirrorsDataTestId": true
+    },
+    {
+      "selector": "wf-detail-page",
+      "area": "wf",
+      "role": "detail",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-detail-page.tsx",
+      "line": 93,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-detail-tabs",
+      "area": "wf",
+      "role": "detail",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-detail-page.tsx",
+      "line": 95,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-tab-overview",
+      "area": "wf",
+      "role": "tab",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-detail-page.tsx",
+      "line": 96,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-tab-builder",
+      "area": "wf",
+      "role": "tab",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-detail-page.tsx",
+      "line": 97,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-tab-yaml",
+      "area": "wf",
+      "role": "tab",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-detail-page.tsx",
+      "line": 105,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-tab-versions",
+      "area": "wf",
+      "role": "tab",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-detail-page.tsx",
+      "line": 113,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-tab-secrets",
+      "area": "wf",
+      "role": "tab",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-detail-page.tsx",
+      "line": 114,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-tab-tutorials",
+      "area": "wf",
+      "role": "tab",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-detail-page.tsx",
+      "line": 119,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-tab-docs",
+      "area": "wf",
+      "role": "tab",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-detail-page.tsx",
+      "line": 127,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-tab-panel-overview",
+      "area": "wf",
+      "role": "tab",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-detail-page.tsx",
+      "line": 133,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-tab-panel-builder",
+      "area": "wf",
+      "role": "tab",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-detail-page.tsx",
+      "line": 139,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-tab-panel-yaml",
+      "area": "wf",
+      "role": "tab",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-detail-page.tsx",
+      "line": 151,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-tab-panel-versions",
+      "area": "wf",
+      "role": "tab",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-detail-page.tsx",
+      "line": 166,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-tab-panel-secrets",
+      "area": "wf",
+      "role": "tab",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-detail-page.tsx",
+      "line": 172,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-execution-row-menu-${row.original.id}",
+      "area": "wf",
+      "role": "execution",
+      "dynamic": true,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-executions-table.tsx",
+      "line": 61,
+      "description": "Per-row dropdown trigger in the workflow executions table.",
+      "mirrorsDataTestId": false,
+      "idSource": "execution.id",
+      "resolvedExample": "wf-execution-row-menu-c1f2..."
+    },
+    {
+      "selector": "wf-execution-view-logs-btn",
+      "area": "wf",
+      "role": "execution",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-executions-table.tsx",
+      "line": 71,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-execution-copy-id-btn",
+      "area": "wf",
+      "role": "execution",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-executions-table.tsx",
+      "line": 76,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-execution-row-${row.original.id}",
+      "area": "wf",
+      "role": "execution",
+      "dynamic": true,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-executions-table.tsx",
+      "line": 128,
+      "description": "Workflow execution row link in the executions table.",
+      "mirrorsDataTestId": false,
+      "idSource": "execution.id",
+      "resolvedExample": "wf-execution-row-c1f2..."
+    },
+    {
+      "selector": "wf-overview",
+      "area": "wf",
+      "role": "overview",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-overview.tsx",
+      "line": 85,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-overview-stats",
+      "area": "wf",
+      "role": "overview",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-overview.tsx",
+      "line": 90,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-overview-stat-total",
+      "area": "wf",
+      "role": "overview",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-overview.tsx",
+      "line": 93,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-overview-stat-pass-fail",
+      "area": "wf",
+      "role": "overview",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-overview.tsx",
+      "line": 101,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-overview-stat-success-pct",
+      "area": "wf",
+      "role": "overview",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-overview.tsx",
+      "line": 111,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-overview-stat-avg-duration",
+      "area": "wf",
+      "role": "overview",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-overview.tsx",
+      "line": 123,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-providers-carousel",
+      "area": "wf",
+      "role": "providers",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-providers.tsx",
+      "line": 21,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-provider-${provider.type}",
+      "area": "wf",
+      "role": "provider",
+      "dynamic": true,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-providers.tsx",
+      "line": 26,
+      "description": "Provider chip in the workflow detail providers carousel.",
+      "mirrorsDataTestId": false,
+      "idSource": "provider.type",
+      "resolvedExample": "wf-provider-slack"
+    },
+    {
+      "selector": "wf-provider-connect-btn-${provider.type}",
+      "area": "wf",
+      "role": "provider",
+      "dynamic": true,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-providers.tsx",
+      "line": 32,
+      "description": "Connect button inside a provider chip in the workflow providers carousel.",
+      "mirrorsDataTestId": false,
+      "idSource": "provider.type",
+      "resolvedExample": "wf-provider-connect-btn-slack"
+    },
+    {
+      "selector": "wf-providers-connect-drawer",
+      "area": "wf",
+      "role": "providers",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-providers.tsx",
+      "line": 133,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-secrets-toggle-${row.original.name}",
+      "area": "wf",
+      "role": "secrets",
+      "dynamic": true,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-secrets.tsx",
+      "line": 66,
+      "description": "Show/hide value toggle button for a workflow secret row.",
+      "mirrorsDataTestId": false,
+      "idSource": "secret name",
+      "resolvedExample": "wf-secrets-toggle-SLACK_TOKEN"
+    },
+    {
+      "selector": "wf-secrets-delete-${row.original.name}",
+      "area": "wf",
+      "role": "secrets",
+      "dynamic": true,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-secrets.tsx",
+      "line": 82,
+      "description": "Delete button for a workflow secret row.",
+      "mirrorsDataTestId": false,
+      "idSource": "secret name",
+      "resolvedExample": "wf-secrets-delete-SLACK_TOKEN"
+    },
+    {
+      "selector": "wf-secrets",
+      "area": "wf",
+      "role": "secrets",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-secrets.tsx",
+      "line": 97,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-secrets-name-input",
+      "area": "wf",
+      "role": "secrets",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-secrets.tsx",
+      "line": 106,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-secrets-value-input",
+      "area": "wf",
+      "role": "secrets",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-secrets.tsx",
+      "line": 114,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-secrets-add-btn",
+      "area": "wf",
+      "role": "secrets",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-secrets.tsx",
+      "line": 121,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-sync-status-tooltip",
+      "area": "wf",
+      "role": "sync",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-sync-status.tsx",
+      "line": 55,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-sync-status",
+      "area": "wf",
+      "role": "sync",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-sync-status.tsx",
+      "line": 56,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-revision",
+      "area": "wf",
+      "role": "revision",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-sync-status.tsx",
+      "line": 62,
+      "description": "",
+      "mirrorsDataTestId": true
+    },
+    {
+      "selector": "wf-versions",
+      "area": "wf",
+      "role": "versions",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-versions.tsx",
+      "line": 103,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-version-row-${revision.revision}",
+      "area": "wf",
+      "role": "version",
+      "dynamic": true,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-versions.tsx",
+      "line": 133,
+      "description": "Revision selector row in the workflow versions panel.",
+      "mirrorsDataTestId": false,
+      "idSource": "revision (integer)",
+      "resolvedExample": "wf-version-row-3"
+    },
+    {
+      "selector": "wf-versions-show-diff-switch",
+      "area": "wf",
+      "role": "versions",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/[workflow_id]/workflow-versions.tsx",
+      "line": 159,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-create-modal",
+      "area": "wf",
+      "role": "create",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/create-workflow-modal.tsx",
+      "line": 23,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-create-modal-start-from-scratch-btn",
+      "area": "wf",
+      "role": "create",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/create-workflow-modal.tsx",
+      "line": 40,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-list-grid",
+      "area": "wf",
+      "role": "list",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/existing-workflows-state.tsx",
+      "line": 243,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-list-page",
+      "area": "wf",
+      "role": "list",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/existing-workflows-state.tsx",
+      "line": 260,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-upload-btn",
+      "area": "wf",
+      "role": "upload",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/existing-workflows-state.tsx",
+      "line": 281,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-create-btn",
+      "area": "wf",
+      "role": "create",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/existing-workflows-state.tsx",
+      "line": 291,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-upload-btn",
+      "area": "wf",
+      "role": "upload",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/no-workflows-state.tsx",
+      "line": 40,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-start-from-scratch-btn",
+      "area": "wf",
+      "role": "start",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/no-workflows-state.tsx",
+      "line": 50,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-preview-page",
+      "area": "wf",
+      "role": "preview",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/preview/[workflowId]/page.tsx",
+      "line": 31,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-preview-breadcrumbs",
+      "area": "wf",
+      "role": "preview",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/preview/[workflowId]/page.tsx",
+      "line": 32,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-preview-all-link",
+      "area": "wf",
+      "role": "preview",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/preview/[workflowId]/page.tsx",
+      "line": 33,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-preview-go-back-link",
+      "area": "wf",
+      "role": "preview",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/preview/[workflowId]/page.tsx",
+      "line": 53,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-preview-not-found",
+      "area": "wf",
+      "role": "preview",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/preview/[workflowId]/page.tsx",
+      "line": 57,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-preview-go-back-link",
+      "area": "wf",
+      "role": "preview",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/preview/page.tsx",
+      "line": 46,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-preview-not-found",
+      "area": "wf",
+      "role": "preview",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/preview/page.tsx",
+      "line": 50,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-upload-modal",
+      "area": "wf",
+      "role": "upload",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/upload-workflows-modal.tsx",
+      "line": 116,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-upload-file-input",
+      "area": "wf",
+      "role": "upload",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/upload-workflows-modal.tsx",
+      "line": 131,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-upload-yaml-textarea",
+      "area": "wf",
+      "role": "upload",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/upload-workflows-modal.tsx",
+      "line": 146,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-upload-yaml-load-btn",
+      "area": "wf",
+      "role": "upload",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/upload-workflows-modal.tsx",
+      "line": 154,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-upload-example-slack-btn",
+      "area": "wf",
+      "role": "upload",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/upload-workflows-modal.tsx",
+      "line": 168,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-upload-example-sql-btn",
+      "area": "wf",
+      "role": "upload",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/upload-workflows-modal.tsx",
+      "line": 180,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-upload-cancel-btn",
+      "area": "wf",
+      "role": "upload",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/upload-workflows-modal.tsx",
+      "line": 202,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-menu-trigger",
+      "area": "wf",
+      "role": "menu",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/workflow-menu.tsx",
+      "line": 41,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-menu-run-btn",
+      "area": "wf",
+      "role": "menu",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/workflow-menu.tsx",
+      "line": 52,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-menu-download-btn",
+      "area": "wf",
+      "role": "menu",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/workflow-menu.tsx",
+      "line": 62,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-menu-view-btn",
+      "area": "wf",
+      "role": "menu",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/workflow-menu.tsx",
+      "line": 72,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-menu-builder-btn",
+      "area": "wf",
+      "role": "menu",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/workflow-menu.tsx",
+      "line": 82,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-menu-toggle-btn",
+      "area": "wf",
+      "role": "menu",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/workflow-menu.tsx",
+      "line": 94,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-menu-delete-btn",
+      "area": "wf",
+      "role": "menu",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/workflow-menu.tsx",
+      "line": 108,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-template-card-${template?.workflow_raw_id ?? \"loading\"}",
+      "area": "wf",
+      "role": "template",
+      "dynamic": true,
+      "file": "app/(keep)/workflows/workflow-templates/workflow-template-card.tsx",
+      "line": 30,
+      "description": "Workflow template card on the create / no-workflows screens.",
+      "mirrorsDataTestId": false,
+      "idSource": "template.workflow_raw_id (slug); falls back to \"loading\" while skeletons render",
+      "resolvedExample": "wf-template-card-bq-sql-query"
+    },
+    {
+      "selector": "wf-template-preview-btn",
+      "area": "wf",
+      "role": "template",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/workflow-templates/workflow-template-card.tsx",
+      "line": 44,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-templates-clear-search-btn",
+      "area": "wf",
+      "role": "templates",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/workflow-templates/workflow-templates.tsx",
+      "line": 76,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-templates-grid",
+      "area": "wf",
+      "role": "templates",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/workflow-templates/workflow-templates.tsx",
+      "line": 90,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-templates-section",
+      "area": "wf",
+      "role": "templates",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/workflow-templates/workflow-templates.tsx",
+      "line": 114,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-tile-${workflow.id}",
+      "area": "wf",
+      "role": "tile",
+      "dynamic": true,
+      "file": "app/(keep)/workflows/workflow-tile.tsx",
+      "line": 184,
+      "description": "Workflow tile card in the workflows grid; one per workflow.",
+      "mirrorsDataTestId": false,
+      "idSource": "workflow.id (server uuid)",
+      "resolvedExample": "wf-tile-9f2c8b21"
+    },
+    {
+      "selector": "wf-tile-triggers-modal-${workflow.id}",
+      "area": "wf",
+      "role": "tile",
+      "dynamic": true,
+      "file": "app/(keep)/workflows/workflow-tile.tsx",
+      "line": 274,
+      "description": "Triggers modal opened from a workflow tile.",
+      "mirrorsDataTestId": false,
+      "idSource": "workflow.id",
+      "resolvedExample": "wf-tile-triggers-modal-9f2c8b21"
+    },
+    {
+      "selector": "wf-node-task-step-http-1",
+      "area": "wf",
+      "role": "node",
+      "dynamic": false,
+      "file": "features/workflows/builder/ui/__tests__/WorkflowNode.data-cy.test.tsx",
+      "line": 47,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-editor-field-${name}",
+      "area": "wf",
+      "role": "editor",
+      "dynamic": true,
+      "file": "features/workflows/builder/ui/Editor/EditorField.tsx",
+      "line": 13,
+      "description": "EditorField wrapper around a builder property input.",
+      "mirrorsDataTestId": false,
+      "idSource": "property name (e.g. message, url, body, code)",
+      "resolvedExample": "wf-editor-field-message"
+    },
+    {
+      "selector": "wf-editor-${name}-input",
+      "area": "wf",
+      "role": "editor",
+      "dynamic": true,
+      "file": "features/workflows/builder/ui/Editor/EditorField.tsx",
+      "line": 21,
+      "description": "Input/Textarea inside an EditorField for a builder property.",
+      "mirrorsDataTestId": false,
+      "idSource": "property name (e.g. message, url, body, code)",
+      "resolvedExample": "wf-editor-message-input"
+    },
+    {
+      "selector": "wf-editor-field-${name}",
+      "area": "wf",
+      "role": "editor",
+      "dynamic": true,
+      "file": "features/workflows/builder/ui/Editor/EditorField.tsx",
+      "line": 28,
+      "description": "EditorField wrapper around a builder property input.",
+      "mirrorsDataTestId": false,
+      "idSource": "property name (e.g. message, url, body, code)",
+      "resolvedExample": "wf-editor-field-message"
+    },
+    {
+      "selector": "wf-editor-${name}-input",
+      "area": "wf",
+      "role": "editor",
+      "dynamic": true,
+      "file": "features/workflows/builder/ui/Editor/EditorField.tsx",
+      "line": 36,
+      "description": "Input/Textarea inside an EditorField for a builder property.",
+      "mirrorsDataTestId": false,
+      "idSource": "property name (e.g. message, url, body, code)",
+      "resolvedExample": "wf-editor-message-input"
+    },
+    {
+      "selector": "wf-editor-field-${name}",
+      "area": "wf",
+      "role": "editor",
+      "dynamic": true,
+      "file": "features/workflows/builder/ui/Editor/EditorField.tsx",
+      "line": 42,
+      "description": "EditorField wrapper around a builder property input.",
+      "mirrorsDataTestId": false,
+      "idSource": "property name (e.g. message, url, body, code)",
+      "resolvedExample": "wf-editor-field-message"
+    },
+    {
+      "selector": "wf-editor-${name}-input",
+      "area": "wf",
+      "role": "editor",
+      "dynamic": true,
+      "file": "features/workflows/builder/ui/Editor/EditorField.tsx",
+      "line": 50,
+      "description": "Input/Textarea inside an EditorField for a builder property.",
+      "mirrorsDataTestId": false,
+      "idSource": "property name (e.g. message, url, body, code)",
+      "resolvedExample": "wf-editor-message-input"
+    },
+    {
+      "selector": "wf-editor-panel",
+      "area": "wf",
+      "role": "editor",
+      "dynamic": false,
+      "file": "features/workflows/builder/ui/Editor/ReactFlowEditor.tsx",
+      "line": 54,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-open-editor-button",
+      "area": "wf",
+      "role": "open",
+      "dynamic": false,
+      "file": "features/workflows/builder/ui/Editor/ReactFlowEditor.tsx",
+      "line": 66,
+      "description": "",
+      "mirrorsDataTestId": true
+    },
+    {
+      "selector": "wf-close-editor-button",
+      "area": "wf",
+      "role": "close",
+      "dynamic": false,
+      "file": "features/workflows/builder/ui/Editor/ReactFlowEditor.tsx",
+      "line": 77,
+      "description": "",
+      "mirrorsDataTestId": true
+    },
+    {
+      "selector": "wf-editor-content",
+      "area": "wf",
+      "role": "editor",
+      "dynamic": false,
+      "file": "features/workflows/builder/ui/Editor/ReactFlowEditor.tsx",
+      "line": 86,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-editor-if-input",
+      "area": "wf",
+      "role": "editor",
+      "dynamic": false,
+      "file": "features/workflows/builder/ui/Editor/StepEditor.tsx",
+      "line": 456,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-editor-step-name-input",
+      "area": "wf",
+      "role": "editor",
+      "dynamic": false,
+      "file": "features/workflows/builder/ui/Editor/StepEditor.tsx",
+      "line": 945,
+      "description": "",
+      "mirrorsDataTestId": true
+    },
+    {
+      "selector": "wf-editor-step-tabs",
+      "area": "wf",
+      "role": "editor",
+      "dynamic": false,
+      "file": "features/workflows/builder/ui/Editor/StepEditor.tsx",
+      "line": 948,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-editor-step-tab-setup",
+      "area": "wf",
+      "role": "editor",
+      "dynamic": false,
+      "file": "features/workflows/builder/ui/Editor/StepEditor.tsx",
+      "line": 949,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-editor-step-tab-configure",
+      "area": "wf",
+      "role": "editor",
+      "dynamic": false,
+      "file": "features/workflows/builder/ui/Editor/StepEditor.tsx",
+      "line": 954,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-editor-step-tab-test",
+      "area": "wf",
+      "role": "editor",
+      "dynamic": false,
+      "file": "features/workflows/builder/ui/Editor/StepEditor.tsx",
+      "line": 959,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-editor-setup-save-button",
+      "area": "wf",
+      "role": "editor",
+      "dynamic": false,
+      "file": "features/workflows/builder/ui/Editor/StepEditor.tsx",
+      "line": 984,
+      "description": "",
+      "mirrorsDataTestId": true
+    },
+    {
+      "selector": "wf-editor-configure-save-button",
+      "area": "wf",
+      "role": "editor",
+      "dynamic": false,
+      "file": "features/workflows/builder/ui/Editor/StepEditor.tsx",
+      "line": 1016,
+      "description": "",
+      "mirrorsDataTestId": true
+    },
+    {
+      "selector": "wf-editor-step-debug-with-ai-btn",
+      "area": "wf",
+      "role": "editor",
+      "dynamic": false,
+      "file": "features/workflows/builder/ui/Editor/StepTest.tsx",
+      "line": 53,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-editor-step-test-run-button",
+      "area": "wf",
+      "role": "editor",
+      "dynamic": false,
+      "file": "features/workflows/builder/ui/Editor/StepTest.tsx",
+      "line": 299,
+      "description": "",
+      "mirrorsDataTestId": true
+    },
+    {
+      "selector": "wf-trigger-editor-add-filter-btn",
+      "area": "wf",
+      "role": "trigger",
+      "dynamic": false,
+      "file": "features/workflows/builder/ui/Editor/TriggerEditor.tsx",
+      "line": 164,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-trigger-editor-interval-input",
+      "area": "wf",
+      "role": "trigger",
+      "dynamic": false,
+      "file": "features/workflows/builder/ui/Editor/TriggerEditor.tsx",
+      "line": 248,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-trigger-editor-${selectedTriggerKey}",
+      "area": "wf",
+      "role": "trigger",
+      "dynamic": true,
+      "file": "features/workflows/builder/ui/Editor/TriggerEditor.tsx",
+      "line": 266,
+      "description": "Heading of the trigger editor for the currently selected trigger type.",
+      "mirrorsDataTestId": false,
+      "idSource": "trigger key (alert | incident | interval | manual)",
+      "resolvedExample": "wf-trigger-editor-alert"
+    },
+    {
+      "selector": "wf-trigger-editor-${selectedTriggerKey}-content",
+      "area": "wf",
+      "role": "trigger",
+      "dynamic": true,
+      "file": "features/workflows/builder/ui/Editor/TriggerEditor.tsx",
+      "line": 269,
+      "description": "Body of the trigger editor for the currently selected trigger type.",
+      "mirrorsDataTestId": false,
+      "idSource": "trigger key (alert | incident | interval | manual)",
+      "resolvedExample": "wf-trigger-editor-alert-content"
+    },
+    {
+      "selector": "wf-editor-workflow-settings-title",
+      "area": "wf",
+      "role": "editor",
+      "dynamic": false,
+      "file": "features/workflows/builder/ui/Editor/WorkflowEditor.tsx",
+      "line": 48,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-editor-workflow-settings",
+      "area": "wf",
+      "role": "editor",
+      "dynamic": false,
+      "file": "features/workflows/builder/ui/Editor/WorkflowEditor.tsx",
+      "line": 51,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-editor-add-constant-btn",
+      "area": "wf",
+      "role": "editor",
+      "dynamic": false,
+      "file": "features/workflows/builder/ui/Editor/WorkflowEditor.tsx",
+      "line": 146,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-editor-${key}-input",
+      "area": "wf",
+      "role": "editor",
+      "dynamic": true,
+      "file": "features/workflows/builder/ui/Editor/WorkflowEditor.tsx",
+      "line": 160,
+      "description": "TextInput rendered by WorkflowEditorV2 for a workflow-level property.",
+      "mirrorsDataTestId": false,
+      "idSource": "workflow property key (e.g. name, description, owners)",
+      "resolvedExample": "wf-editor-name-input"
+    },
+    {
+      "selector": "wf-node-menu-${id}",
+      "area": "wf",
+      "role": "node",
+      "dynamic": true,
+      "file": "features/workflows/builder/ui/NodeMenu.tsx",
+      "line": 28,
+      "description": "Inline dropdown root attached to a workflow builder node.",
+      "mirrorsDataTestId": false,
+      "idSource": "node id from React Flow",
+      "resolvedExample": "wf-node-menu-step-1"
+    },
+    {
+      "selector": "wf-node-menu-trigger-${id}",
+      "area": "wf",
+      "role": "node",
+      "dynamic": true,
+      "file": "features/workflows/builder/ui/NodeMenu.tsx",
+      "line": 33,
+      "description": "Dropdown trigger button attached to a workflow builder node.",
+      "mirrorsDataTestId": false,
+      "idSource": "node id from React Flow",
+      "resolvedExample": "wf-node-menu-trigger-step-1"
+    },
+    {
+      "selector": "wf-node-menu-delete-${id}",
+      "area": "wf",
+      "role": "node",
+      "dynamic": true,
+      "file": "features/workflows/builder/ui/NodeMenu.tsx",
+      "line": 59,
+      "description": "Delete-node menu item attached to a workflow builder node.",
+      "mirrorsDataTestId": false,
+      "idSource": "node id from React Flow",
+      "resolvedExample": "wf-node-menu-delete-step-1"
+    },
+    {
+      "selector": "wf-node-menu-properties-${id}",
+      "area": "wf",
+      "role": "node",
+      "dynamic": true,
+      "file": "features/workflows/builder/ui/NodeMenu.tsx",
+      "line": 76,
+      "description": "Properties menu item attached to a workflow builder node.",
+      "mirrorsDataTestId": false,
+      "idSource": "node id from React Flow",
+      "resolvedExample": "wf-node-menu-properties-step-1"
+    },
+    {
+      "selector": "wf-builder-canvas",
+      "area": "wf",
+      "role": "builder",
+      "dynamic": false,
+      "file": "features/workflows/builder/ui/ReactFlowBuilder.tsx",
+      "line": 86,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-builder-react-flow",
+      "area": "wf",
+      "role": "builder",
+      "dynamic": false,
+      "file": "features/workflows/builder/ui/ReactFlowBuilder.tsx",
+      "line": 104,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-status-valid",
+      "area": "wf",
+      "role": "status",
+      "dynamic": false,
+      "file": "features/workflows/builder/ui/workflow-status.tsx",
+      "line": 83,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-status-warning",
+      "area": "wf",
+      "role": "status",
+      "dynamic": false,
+      "file": "features/workflows/builder/ui/workflow-status.tsx",
+      "line": 96,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-status-error",
+      "area": "wf",
+      "role": "status",
+      "dynamic": false,
+      "file": "features/workflows/builder/ui/workflow-status.tsx",
+      "line": 113,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-edge-label-${id}",
+      "area": "wf",
+      "role": "edge",
+      "dynamic": true,
+      "file": "features/workflows/builder/ui/WorkflowEdge.tsx",
+      "line": 143,
+      "description": "Edge label rendered by WorkflowEdge (e.g. True / False / orange) for a single edge.",
+      "mirrorsDataTestId": false,
+      "idSource": "edge id from React Flow",
+      "resolvedExample": "wf-edge-label-e1-2"
+    },
+    {
+      "selector": "wf-node-${data?.componentType ?? \"step\"}-${id}",
+      "area": "wf",
+      "role": "node",
+      "dynamic": true,
+      "file": "features/workflows/builder/ui/WorkflowNode.tsx",
+      "line": 134,
+      "description": "Custom React Flow node rendered by WorkflowNode for a single step/action/trigger.",
+      "mirrorsDataTestId": false,
+      "idSource": "componentType from node data + node id from React Flow",
+      "resolvedExample": "wf-node-task-step-1"
+    },
+    {
+      "selector": "wf-node-${data?.componentType ?? \"step\"}-${id}",
+      "area": "wf",
+      "role": "node",
+      "dynamic": true,
+      "file": "features/workflows/builder/ui/WorkflowNode.tsx",
+      "line": 178,
+      "description": "Custom React Flow node rendered by WorkflowNode for a single step/action/trigger.",
+      "mirrorsDataTestId": false,
+      "idSource": "componentType from node data + node id from React Flow",
+      "resolvedExample": "wf-node-task-step-1"
+    },
+    {
+      "selector": "wf-toolbox-group-${name.toLowerCase()}-toggle",
+      "area": "wf",
+      "role": "toolbox",
+      "dynamic": true,
+      "file": "features/workflows/builder/ui/WorkflowToolbox.tsx",
+      "line": 96,
+      "description": "Toolbox group disclosure toggle (Triggers / Steps / Actions / Conditions / Misc).",
+      "mirrorsDataTestId": false,
+      "idSource": "group name (kebab-cased to lowercase)",
+      "resolvedExample": "wf-toolbox-group-triggers-toggle"
+    },
+    {
+      "selector": "wf-toolbox-${step.componentType}-${step.type}",
+      "area": "wf",
+      "role": "toolbox",
+      "dynamic": true,
+      "file": "features/workflows/builder/ui/WorkflowToolbox.tsx",
+      "line": 123,
+      "description": "Toolbox item used to add a step / trigger / action / condition to the workflow builder.",
+      "mirrorsDataTestId": false,
+      "idSource": "step.componentType + step.type",
+      "resolvedExample": "wf-toolbox-step-http"
+    },
+    {
+      "selector": "wf-toolbox",
+      "area": "wf",
+      "role": "toolbox",
+      "dynamic": false,
+      "file": "features/workflows/builder/ui/WorkflowToolbox.tsx",
+      "line": 228,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-toolbox-search-input",
+      "area": "wf",
+      "role": "toolbox",
+      "dynamic": false,
+      "file": "features/workflows/builder/ui/WorkflowToolbox.tsx",
+      "line": 243,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-yaml-editor",
+      "area": "wf",
+      "role": "yaml",
+      "dynamic": false,
+      "file": "shared/ui/WorkflowYAMLEditor/ui/WorkflowYAMLEditor.tsx",
+      "line": 226,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-yaml-editor-footer",
+      "area": "wf",
+      "role": "yaml",
+      "dynamic": false,
+      "file": "shared/ui/WorkflowYAMLEditor/ui/WorkflowYAMLEditor.tsx",
+      "line": 268,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-yaml-editor-filename",
+      "area": "wf",
+      "role": "yaml",
+      "dynamic": false,
+      "file": "shared/ui/WorkflowYAMLEditor/ui/WorkflowYAMLEditor.tsx",
+      "line": 269,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-yaml-editor-workflow-id",
+      "area": "wf",
+      "role": "yaml",
+      "dynamic": false,
+      "file": "shared/ui/WorkflowYAMLEditor/ui/WorkflowYAMLEditor.tsx",
+      "line": 271,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-yaml-editor-header",
+      "area": "wf",
+      "role": "yaml",
+      "dynamic": false,
+      "file": "shared/ui/WorkflowYAMLEditor/ui/WorkflowYamlEditorHeader.tsx",
+      "line": 21,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-yaml-editor-title",
+      "area": "wf",
+      "role": "yaml",
+      "dynamic": false,
+      "file": "shared/ui/WorkflowYAMLEditor/ui/WorkflowYamlEditorHeader.tsx",
+      "line": 23,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-yaml-standalone",
+      "area": "wf",
+      "role": "yaml",
+      "dynamic": false,
+      "file": "shared/ui/WorkflowYAMLEditor/ui/WorkflowYAMLEditorStandalone.tsx",
+      "line": 127,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-yaml-editor-save-button",
+      "area": "wf",
+      "role": "yaml",
+      "dynamic": false,
+      "file": "shared/ui/WorkflowYAMLEditor/ui/WorkflowYAMLEditorStandalone.tsx",
+      "line": 147,
+      "description": "",
+      "mirrorsDataTestId": true
+    },
+    {
+      "selector": "wf-yaml-toolbar",
+      "area": "wf",
+      "role": "yaml",
+      "dynamic": false,
+      "file": "shared/ui/WorkflowYAMLEditor/ui/WorkflowYAMLEditorToolbar.tsx",
+      "line": 48,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-yaml-copy-btn",
+      "area": "wf",
+      "role": "yaml",
+      "dynamic": false,
+      "file": "shared/ui/WorkflowYAMLEditor/ui/WorkflowYAMLEditorToolbar.tsx",
+      "line": 56,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-yaml-download-btn",
+      "area": "wf",
+      "role": "yaml",
+      "dynamic": false,
+      "file": "shared/ui/WorkflowYAMLEditor/ui/WorkflowYAMLEditorToolbar.tsx",
+      "line": 72,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-yaml-save-btn",
+      "area": "wf",
+      "role": "yaml",
+      "dynamic": false,
+      "file": "shared/ui/WorkflowYAMLEditor/ui/WorkflowYAMLEditorToolbar.tsx",
+      "line": 85,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-yaml-editor-validation-errors-loading",
+      "area": "wf",
+      "role": "yaml",
+      "dynamic": false,
+      "file": "shared/ui/WorkflowYAMLEditor/ui/WorkflowYAMLValidationErrors.tsx",
+      "line": 27,
+      "description": "",
+      "mirrorsDataTestId": true
+    },
+    {
+      "selector": "wf-yaml-editor-validation-errors-initializing",
+      "area": "wf",
+      "role": "yaml",
+      "dynamic": false,
+      "file": "shared/ui/WorkflowYAMLEditor/ui/WorkflowYAMLValidationErrors.tsx",
+      "line": 39,
+      "description": "",
+      "mirrorsDataTestId": true
+    },
+    {
+      "selector": "wf-yaml-editor-validation-errors-no-errors",
+      "area": "wf",
+      "role": "yaml",
+      "dynamic": false,
+      "file": "shared/ui/WorkflowYAMLEditor/ui/WorkflowYAMLValidationErrors.tsx",
+      "line": 66,
+      "description": "",
+      "mirrorsDataTestId": true
+    },
+    {
+      "selector": "wf-yaml-editor-validation-errors",
+      "area": "wf",
+      "role": "yaml",
+      "dynamic": false,
+      "file": "shared/ui/WorkflowYAMLEditor/ui/WorkflowYAMLValidationErrors.tsx",
+      "line": 93,
+      "description": "",
+      "mirrorsDataTestId": true
+    },
+    {
+      "selector": "wf-yaml-editor-validation-errors-summary",
+      "area": "wf",
+      "role": "yaml",
+      "dynamic": false,
+      "file": "shared/ui/WorkflowYAMLEditor/ui/WorkflowYAMLValidationErrors.tsx",
+      "line": 99,
+      "description": "",
+      "mirrorsDataTestId": true
+    },
+    {
+      "selector": "wf-yaml-editor-validation-errors-list",
+      "area": "wf",
+      "role": "yaml",
+      "dynamic": false,
+      "file": "shared/ui/WorkflowYAMLEditor/ui/WorkflowYAMLValidationErrors.tsx",
+      "line": 108,
+      "description": "",
+      "mirrorsDataTestId": true
+    },
+    {
+      "selector": "wf-builder-empty-state",
+      "area": "wf",
+      "role": "builder",
+      "dynamic": false,
+      "file": "widgets/workflow-builder/empty-builder-state.tsx",
+      "line": 5,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-builder-card-loading",
+      "area": "wf",
+      "role": "builder",
+      "dynamic": false,
+      "file": "widgets/workflow-builder/workflow-builder-card.tsx",
+      "line": 45,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-builder-card-error",
+      "area": "wf",
+      "role": "builder",
+      "dynamic": false,
+      "file": "widgets/workflow-builder/workflow-builder-card.tsx",
+      "line": 52,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-builder-card-empty",
+      "area": "wf",
+      "role": "builder",
+      "dynamic": false,
+      "file": "widgets/workflow-builder/workflow-builder-card.tsx",
+      "line": 67,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-builder-card",
+      "area": "wf",
+      "role": "builder",
+      "dynamic": false,
+      "file": "widgets/workflow-builder/workflow-builder-card.tsx",
+      "line": 77,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-builder-widget",
+      "area": "wf",
+      "role": "builder",
+      "dynamic": false,
+      "file": "widgets/workflow-builder/workflow-builder-widget.tsx",
+      "line": 90,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-builder-title",
+      "area": "wf",
+      "role": "builder",
+      "dynamic": false,
+      "file": "widgets/workflow-builder/workflow-builder-widget.tsx",
+      "line": 93,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-builder-import-yaml-btn",
+      "area": "wf",
+      "role": "builder",
+      "dynamic": false,
+      "file": "widgets/workflow-builder/workflow-builder-widget.tsx",
+      "line": 114,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-builder-import-yaml-input",
+      "area": "wf",
+      "role": "builder",
+      "dynamic": false,
+      "file": "widgets/workflow-builder/workflow-builder-widget.tsx",
+      "line": 124,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-builder-edit-metadata-btn",
+      "area": "wf",
+      "role": "builder",
+      "dynamic": false,
+      "file": "widgets/workflow-builder/workflow-builder-widget.tsx",
+      "line": 138,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-builder-main-save-deploy-button",
+      "area": "wf",
+      "role": "builder",
+      "dynamic": false,
+      "file": "widgets/workflow-builder/workflow-builder-widget.tsx",
+      "line": 156,
+      "description": "",
+      "mirrorsDataTestId": true
+    },
+    {
+      "selector": "wf-builder-yaml-pane",
+      "area": "wf",
+      "role": "builder",
+      "dynamic": false,
+      "file": "widgets/workflow-builder/workflow-builder.tsx",
+      "line": 263,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-builder-canvas-pane",
+      "area": "wf",
+      "role": "builder",
+      "dynamic": false,
+      "file": "widgets/workflow-builder/workflow-builder.tsx",
+      "line": 276,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-builder-open-yaml-btn",
+      "area": "wf",
+      "role": "builder",
+      "dynamic": false,
+      "file": "widgets/workflow-builder/workflow-builder.tsx",
+      "line": 283,
+      "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "wf-close-yaml-editor-button",
+      "area": "wf",
+      "role": "close",
+      "dynamic": false,
+      "file": "widgets/workflow-builder/workflow-builder.tsx",
+      "line": 293,
+      "description": "",
+      "mirrorsDataTestId": true
+    },
+    {
+      "selector": "workflow-menu",
+      "area": "workflow",
+      "role": "menu",
+      "dynamic": false,
+      "file": "app/(keep)/workflows/workflow-menu.tsx",
+      "line": 40,
       "description": "",
       "mirrorsDataTestId": true
     }
