@@ -10,18 +10,25 @@ import { toDateObjectWithFallback } from "@/utils/helpers";
 import Image from "next/image";
 import Modal from "@/components/ui/Modal";
 import { AlertNoteModal } from "@/features/alerts/alert-note";
+import { AlertTimeline } from "@/features/alerts/alert-detail-sidebar/ui/alert-timeline";
 
 interface AlertHistoryPanelProps {
+  selectedAlert: AlertDto | null;
   alertsHistoryWithDate: (Omit<AlertDto, "lastReceived"> & {
     lastReceived: Date;
   })[];
   activity: AuditEvent[];
+  isLoading: boolean;
+  onRefresh: () => void;
   presetName: string;
 }
 
 const AlertHistoryPanel = ({
+  selectedAlert,
   alertsHistoryWithDate,
   activity,
+  isLoading,
+  onRefresh,
   presetName,
 }: AlertHistoryPanelProps) => {
   const router = useRouter();
@@ -61,7 +68,10 @@ const AlertHistoryPanel = ({
   const maxLastReceived = new Date(Math.max(...sortedHistoryAlert));
   const minLastReceived = new Date(Math.min(...sortedHistoryAlert));
 
-  if (alertsHistoryWithDate.length === 0) {
+  // While the history request is in flight (SWR returns undefined data),
+  // show the loading bounce. Once data has arrived, render whichever
+  // sections (occurrences and/or activity) are non-empty.
+  if (isLoading) {
     return (
       <div className="flex justify-center">
         <Image
@@ -75,18 +85,32 @@ const AlertHistoryPanel = ({
     );
   }
 
+  if (alertsHistoryWithDate.length === 0 && activity.length === 0) {
+    return (
+      <Flex alignItems="center" justifyContent="center" className="py-12">
+        <Subtitle>No history available for this alert.</Subtitle>
+      </Flex>
+    );
+  }
+
+  const hasOccurrences = alertsHistoryWithDate.length > 0;
+  const headerName =
+    alertsHistoryWithDate.at(0)?.name ?? selectedAlert?.name ?? "";
+
   return (
     <Fragment>
       <Flex alignItems="center" justifyContent="between">
         <div className="w-11/12">
-          <Title className="truncate">
-            History of: {alertsHistoryWithDate.at(0)?.name}
-          </Title>
-          <Subtitle>
-            Showing: {alertsHistoryWithDate.length} alerts (1000 maximum)
-          </Subtitle>
-          <Subtitle>First Occurence: {minLastReceived.toString()}</Subtitle>
-          <Subtitle>Last Occurence: {maxLastReceived.toString()}</Subtitle>
+          <Title className="truncate">History of: {headerName}</Title>
+          {hasOccurrences && (
+            <>
+              <Subtitle>
+                Showing: {alertsHistoryWithDate.length} alerts (1000 maximum)
+              </Subtitle>
+              <Subtitle>First Occurence: {minLastReceived.toString()}</Subtitle>
+              <Subtitle>Last Occurence: {maxLastReceived.toString()}</Subtitle>
+            </>
+          )}
         </div>
         <Button
           className="mt-2 bg-white border-gray-200 text-gray-500 hover:bg-gray-50 hover:border-gray-300"
@@ -96,41 +120,35 @@ const AlertHistoryPanel = ({
         </Button>
       </Flex>
       <Divider />
-      {alertsHistoryWithDate.length && (
-        <AlertHistoryCharts
-          maxLastReceived={maxLastReceived}
-          minLastReceived={minLastReceived}
-          alerts={alertsHistoryWithDate}
-        />
+      {hasOccurrences && (
+        <>
+          <AlertHistoryCharts
+            maxLastReceived={maxLastReceived}
+            minLastReceived={minLastReceived}
+            alerts={alertsHistoryWithDate}
+          />
+          <Divider />
+          <AlertTable
+            alerts={alertsHistoryWithDate}
+            columns={alertTableColumns}
+            isMenuColDisplayed={false}
+            isRefreshAllowed={false}
+            presetName="alert-history"
+          />
+        </>
       )}
-      <Divider />
-      <AlertTable
-        alerts={alertsHistoryWithDate}
-        columns={alertTableColumns}
-        isMenuColDisplayed={false}
-        isRefreshAllowed={false}
-        presetName="alert-history"
-      />
       {activity.length > 0 && (
         <>
           <Divider />
-          <Title>Activity</Title>
-          <ul className="mt-4 space-y-3">
-            {activity.map((entry) => (
-              <li key={entry.id} className="flex flex-col">
-                <div className="flex items-center gap-2">
-                  <Subtitle className="font-bold">{entry.action}</Subtitle>
-                  <span className="text-xs text-gray-400">
-                    {new Date(entry.timestamp).toLocaleString()}
-                  </span>
-                </div>
-                <span className="text-sm text-gray-600">
-                  {entry.user_id}
-                  {entry.description ? ` — ${entry.description}` : ""}
-                </span>
-              </li>
-            ))}
-          </ul>
+          {/* Reuse the alert-detail-sidebar timeline: it handles UTC-naive
+              timestamps, action icons, system/user avatars, and note parsing —
+              matches the rendering elsewhere in the app. */}
+          <AlertTimeline
+            alert={selectedAlert}
+            auditData={activity}
+            isLoading={false}
+            onRefresh={onRefresh}
+          />
         </>
       )}
       <AlertNoteModal
@@ -157,7 +175,11 @@ export function AlertHistoryModal({ alerts, presetName, onClose }: Props) {
   );
 
   const { useAlertHistory } = useAlerts();
-  const { data: alertHistory } = useAlertHistory(selectedAlert, {
+  const {
+    data: alertHistory,
+    isLoading,
+    mutate,
+  } = useAlertHistory(selectedAlert, {
     revalidateOnFocus: false,
   });
 
@@ -178,8 +200,11 @@ export function AlertHistoryModal({ alerts, presetName, onClose }: Props) {
                     p-6 text-left align-middle shadow-tremor transition-all rounded-xl"
     >
       <AlertHistoryPanel
+        selectedAlert={selectedAlert ?? null}
         alertsHistoryWithDate={alertsHistoryWithDate}
         activity={activity}
+        isLoading={isLoading || alertHistory === undefined}
+        onRefresh={() => mutate()}
         presetName={presetName}
       />
     </Modal>
