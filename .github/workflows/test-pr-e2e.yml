@@ -59,7 +59,6 @@ jobs:
         run: cat app.log
 
   build-frontend:
-    needs: e2e-smoke
     runs-on: ubuntu-latest
     outputs:
       image_name: ${{ steps.set-image-name.outputs.image_name }}
@@ -179,3 +178,10 @@ jobs:
             BUILDKIT_INLINE_CACHE=1
           # Verbose output
           outputs: type=image,push=true
+
+      - name: Verify frontend image was pushed
+        if: ${{ env.IS_FORK != 'true' }}
+        run: |
+          echo "Frontend image tag: ghcr.io/${{ steps.repo-owner.outputs.owner }}/keep-frontend:${{ github.sha }}"
+          echo "Commit SHA: ${{ github.sha }}"
+          echo "Repository owner (lowercase): ${{ steps.repo-owner.outputs.owner }}"
