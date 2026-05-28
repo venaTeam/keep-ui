@@ -1,4 +1,4 @@
-name: test-pr-e2e
+name: Build Frontend Image
 
 on:
   workflow_dispatch:
@@ -7,7 +7,6 @@ on:
   push:
     branches:
       - main
-      - development
 
 # Add permissions for GitHub Container Registry
 permissions:
@@ -15,49 +14,18 @@ permissions:
   packages: write
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.event_name }}-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 env:
+  # Docker Compose project name
+  COMPOSE_PROJECT_NAME: keep
   # Check if PR is from external fork (different repository)
   # A PR is from an external fork if head and base repos are different
   # PRs within the same fork (to main) will have same head/base repo
   IS_FORK: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name }}
 
 jobs:
-  e2e-smoke:
-    name: E2E Smoke
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build Monaco workers
-        run: npm run build-monaco-workers
-
-      - name: Start app
-        run: npm run dev:webpack -- -p 3000 > app.log 2>&1 &
-
-      - name: Wait for app
-        run: npx wait-on http://127.0.0.1:3000 -t 120000
-
-      - name: Smoke check homepage
-        run: curl -fsS http://127.0.0.1:3000 > /dev/null
-
-      - name: Print app logs on failure
-        if: failure()
-        run: cat app.log
-
   build-frontend:
     runs-on: ubuntu-latest
     outputs:
