@@ -151,6 +151,7 @@ function Summary({
             ? "AI is not configured"
             : "Generate AI summary"
         }
+        data-cy="incidents-action-ai-summary-btn"
       >
         AI Summary
       </Button>
