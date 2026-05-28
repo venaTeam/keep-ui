@@ -59,6 +59,8 @@ export interface AlertDto {
   dismissed_until?: string | null;
   assignee?: string;
   ticket_url: string;
+  ticket_type?: string | null;
+  ticket_provider_id?: string | null;
   ticket_status?: string;
   playbook_url?: string;
   providerId?: string;
