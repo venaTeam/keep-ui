@@ -10,7 +10,6 @@ import { AlertNoteModal } from "@/features/alerts/alert-note";
 import { AlertMethodModal } from "@/features/alerts/alert-call-provider-method";
 import { ManualRunWorkflowModal } from "@/features/workflows/manual-run-workflow";
 import { AlertDismissModal } from "@/features/alerts/dismiss-alert";
-import { ViewAlertModal } from "@/features/alerts/view-raw-alert";
 import { AlertChangeStatusModal } from "@/features/alerts/alert-change-status";
 import { AlertAssignModal } from "@/features/alerts/alert-assign";
 import { EnrichAlertSidePanel } from "@/features/alerts/enrich-alert";
@@ -80,7 +79,6 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
   >();
   const [changeStatusAlert, setChangeStatusAlert] = useState<AlertDto | null>();
   const [assignModalAlert, setAssignModalAlert] = useState<AlertDto | null>();
-  const [viewAlertModal, setViewAlertModal] = useState<AlertDto | null>();
   const [viewEnrichAlertModal, setEnrichAlertModal] =
     useState<AlertDto | null>();
   const [isEnrichSidebarOpen, setIsEnrichSidebarOpen] = useState(false);
@@ -119,16 +117,7 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
         showErrorToast(null, "Alert fingerprint not found");
         resetUrlAfterModal();
       }
-    } else if (fingerprint && alerts) {
-      const alert = alerts?.find((alert) => alert.fingerprint === fingerprint);
-      if (alert) {
-        setViewAlertModal(alert);
-      } else {
-        showErrorToast(null, "Alert fingerprint not found");
-        resetUrlAfterModal();
-      }
     } else if (alerts) {
-      setViewAlertModal(null);
       setEnrichAlertModal(null);
       setIsEnrichSidebarOpen(false);
     }
@@ -242,11 +231,6 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
       <ManualRunWorkflowModal
         alert={runWorkflowModalAlert}
         onClose={() => setRunWorkflowModalAlert(null)}
-      />
-      <ViewAlertModal
-        alert={viewAlertModal}
-        handleClose={() => resetUrlAfterModal()}
-        mutate={mutateAlerts}
       />
       <EnrichAlertSidePanel
         alert={viewEnrichAlertModal}

@@ -33,7 +33,6 @@ import clsx from "clsx";
 import { IncidentAlertsTableBodySkeleton } from "./incident-alert-table-body-skeleton";
 import { IncidentAlertsActions } from "./incident-alert-actions";
 import { AlertSidebar } from "@/features/alerts/alert-detail-sidebar";
-import { ViewAlertModal } from "@/features/alerts/view-raw-alert";
 import { AlertChangeStatusModal } from "@/features/alerts/alert-change-status";
 import { AlertDismissModal } from "@/features/alerts/dismiss-alert";
 import { ManualRunWorkflowModal } from "@/features/workflows/manual-run-workflow";
@@ -104,10 +103,7 @@ export default function IncidentAlerts({ incident }: Props) {
   }, [alerts, pagination]);
   usePollIncidentAlerts(incident.id);
 
-  // State for ViewAlertModal (opened by view button)
-  const [viewAlertModal, setViewAlertModal] = useState<AlertDto | null>(null);
-
-  // State for AlertSidebar (opened by row click)
+  // State for AlertSidebar (opened by row click or view button)
   const [selectedAlert, setSelectedAlert] = useState<AlertDto | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
@@ -149,8 +145,9 @@ export default function IncidentAlerts({ incident }: Props) {
         <IncidentAlertActionTray
           alert={alert}
           onViewAlert={(alert) => {
-            // Open the ViewAlertModal when clicking the view button
-            setViewAlertModal(alert);
+            // Open the AlertSidebar when clicking the view button
+            setSelectedAlert(alert);
+            setIsSidebarOpen(true);
           }}
           onUnlink={async (alert) => {
             if (!incident.is_candidate) {
@@ -365,14 +362,7 @@ export default function IncidentAlerts({ incident }: Props) {
         <TablePagination table={table} />
       </div>
 
-      {/* ViewAlertModal - opened by the view button in the action tray */}
-      <ViewAlertModal
-        alert={viewAlertModal}
-        handleClose={() => setViewAlertModal(null)}
-        mutate={() => mutateAlerts()}
-      />
-
-      {/* AlertSidebar - opened by clicking on the alert row */}
+      {/* AlertSidebar - opened by clicking on the alert row or the view button */}
       <AlertSidebar
         isOpen={isSidebarOpen}
         toggle={handleSidebarClose}
