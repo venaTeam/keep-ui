@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { type AlertDto, type AlertsQuery } from "@/entities/alerts/model";
 import { usePresets, type Preset } from "@/entities/presets/model";
 import { AlertHistoryModal } from "@/features/alerts/alert-history";
@@ -12,10 +12,9 @@ import { ManualRunWorkflowModal } from "@/features/workflows/manual-run-workflow
 import { AlertDismissModal } from "@/features/alerts/dismiss-alert";
 import { AlertChangeStatusModal } from "@/features/alerts/alert-change-status";
 import { AlertAssignModal } from "@/features/alerts/alert-assign";
-import { EnrichAlertSidePanel } from "@/features/alerts/enrich-alert";
 import { FacetDto } from "@/features/filter";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { KeepLoader, showErrorToast } from "@/shared/ui";
+import { KeepLoader } from "@/shared/ui";
 import NotFound from "@/app/(keep)/not-found";
 import AlertTableTabPanelServerSide from "./alert-table-tab-panel-server-side";
 import { useProviders } from "@/utils/hooks/useProviders";
@@ -68,7 +67,6 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
     [providersData.installed_providers]
   );
 
-  const searchParams = useSearchParams();
   // hooks for the note and ticket modals
   const [noteModalAlert, setNoteModalAlert] = useState<AlertDto | null>();
   const [ticketModalAlert, setTicketModalAlert] = useState<AlertDto | null>();
@@ -79,9 +77,6 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
   >();
   const [changeStatusAlert, setChangeStatusAlert] = useState<AlertDto | null>();
   const [assignModalAlert, setAssignModalAlert] = useState<AlertDto | null>();
-  const [viewEnrichAlertModal, setEnrichAlertModal] =
-    useState<AlertDto | null>();
-  const [isEnrichSidebarOpen, setIsEnrichSidebarOpen] = useState(false);
   // Store the reset selection callback to call when dismiss/status change succeeds
   const [resetAlertsSelection, setResetAlertsSelection] = useState<(() => void) | null>(null);
   const { dynamicPresets: savedPresets = [], isLoading: _isPresetsLoading } =
@@ -104,24 +99,6 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
     facetsCel,
     facetsPanelRefreshToken,
   } = useAlertsTableData(alertsTableDataQuery);
-
-  useEffect(() => {
-    const fingerprint = searchParams?.get("alertPayloadFingerprint");
-    const enrich = searchParams?.get("enrich");
-    if (fingerprint && enrich && alerts) {
-      const alert = alerts?.find((alert) => alert.fingerprint === fingerprint);
-      if (alert) {
-        setEnrichAlertModal(alert);
-        setIsEnrichSidebarOpen(true);
-      } else {
-        showErrorToast(null, "Alert fingerprint not found");
-        resetUrlAfterModal();
-      }
-    } else if (alerts) {
-      setEnrichAlertModal(null);
-      setIsEnrichSidebarOpen(false);
-    }
-  }, [searchParams, alerts]);
 
   const alertsQueryStateRef = useRef(alertsQueryState);
 
@@ -231,15 +208,6 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
       <ManualRunWorkflowModal
         alert={runWorkflowModalAlert}
         onClose={() => setRunWorkflowModalAlert(null)}
-      />
-      <EnrichAlertSidePanel
-        alert={viewEnrichAlertModal}
-        isOpen={isEnrichSidebarOpen}
-        handleClose={() => {
-          setIsEnrichSidebarOpen(false);
-          resetUrlAfterModal();
-        }}
-        mutate={mutateAlerts}
       />
     </>
   );
