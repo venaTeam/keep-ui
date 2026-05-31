@@ -1,6 +1,6 @@
 import { AlertDto } from "@/entities/alerts/model";
 import Modal from "@/components/ui/Modal";
-import { Button, Text } from "@tremor/react";
+import { Button } from "@tremor/react";
 import React, { useMemo } from "react";
 import { MonacoEditor, showSuccessToast, showErrorToast } from "@/shared/ui";
 import { Copy } from "lucide-react";
@@ -57,13 +57,11 @@ export const ViewAlertModal: React.FC<ViewAlertModalProps> = ({
     <Modal
       onClose={handleClose}
       isOpen={isOpen}
+      beforeTitle={alert?.name}
+      title="Alert Payload"
       className="overflow-visible max-w-[800px]"
     >
-      <div className="flex justify-between items-center mb-4 min-w-full">
-        <div className="flex flex-col flex-1">
-          <Text className="text-sm text-gray-500">{alert?.name}</Text>
-          <h2 className="text-lg font-semibold">Alert Payload</h2>
-        </div>
+      <div className="flex justify-end mb-2">
         <Button
           color="orange"
           variant="secondary"
