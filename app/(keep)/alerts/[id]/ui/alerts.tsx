@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { type AlertDto, type AlertsQuery } from "@/entities/alerts/model";
 import { usePresets, type Preset } from "@/entities/presets/model";
 import { AlertHistoryModal } from "@/features/alerts/alert-history";
@@ -12,9 +12,10 @@ import { ManualRunWorkflowModal } from "@/features/workflows/manual-run-workflow
 import { AlertDismissModal } from "@/features/alerts/dismiss-alert";
 import { AlertChangeStatusModal } from "@/features/alerts/alert-change-status";
 import { AlertAssignModal } from "@/features/alerts/alert-assign";
+import { ViewAlertModal } from "@/features/alerts/view-alert";
 import { FacetDto } from "@/features/filter";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { KeepLoader } from "@/shared/ui";
+import { KeepLoader, showErrorToast } from "@/shared/ui";
 import NotFound from "@/app/(keep)/not-found";
 import AlertTableTabPanelServerSide from "./alert-table-tab-panel-server-side";
 import { useProviders } from "@/utils/hooks/useProviders";
@@ -58,6 +59,7 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
     useState<AlertsTableDataQuery>();
   const { data: providersData = { installed_providers: [] } } = useProviders();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const ticketingProviders = useMemo(
     () =>
@@ -77,6 +79,8 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
   >();
   const [changeStatusAlert, setChangeStatusAlert] = useState<AlertDto | null>();
   const [assignModalAlert, setAssignModalAlert] = useState<AlertDto | null>();
+  // "View Alert" sets ?alertPayloadFingerprint=; this drives the read-only payload viewer.
+  const [viewAlertModal, setViewAlertModal] = useState<AlertDto | null>();
   // Store the reset selection callback to call when dismiss/status change succeeds
   const [resetAlertsSelection, setResetAlertsSelection] = useState<(() => void) | null>(null);
   const { dynamicPresets: savedPresets = [], isLoading: _isPresetsLoading } =
@@ -134,6 +138,23 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
     router.replace(url);
   }, [router]);
 
+  // Open the read-only payload viewer when ?alertPayloadFingerprint= is present
+  // (set by the "View Alert" action). Clearing the param closes it.
+  useEffect(() => {
+    const fingerprint = searchParams?.get("alertPayloadFingerprint");
+    if (fingerprint && alerts) {
+      const alert = alerts.find((a) => a.fingerprint === fingerprint);
+      if (alert) {
+        setViewAlertModal(alert);
+      } else {
+        showErrorToast(null, "Alert fingerprint not found");
+        resetUrlAfterModal();
+      }
+    } else {
+      setViewAlertModal(null);
+    }
+  }, [searchParams, alerts, resetUrlAfterModal]);
+
   // if we don't have presets data yet, just show loading
   if (!selectedPreset && isPresetsLoading) {
     return <KeepLoader />;
@@ -190,6 +211,13 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
         alert={assignModalAlert}
         presetName={selectedPreset.name}
         handleClose={() => setAssignModalAlert(null)}
+      />
+      <ViewAlertModal
+        alert={viewAlertModal}
+        handleClose={() => {
+          setViewAlertModal(null);
+          resetUrlAfterModal();
+        }}
       />
       <AlertMethodModal
         alerts={alerts || []}
