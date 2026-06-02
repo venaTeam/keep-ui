@@ -42,7 +42,12 @@ export interface AlertDto {
   duplicateReason?: string;
   service?: string;
   source: string[];
-  message?: string;
+  object?: string;
+  component?: string;
+  site?: string;
+  impact?: string;
+  runbook_url?: string;
+  alert_rule_url?: string;
   description?: string;
   description_format?: "markdown" | "html" | null;
   severity?: Severity;
@@ -112,6 +117,12 @@ export const AlertKnownKeys = [
   "alertMenu",
   "group",
   "extraPayload",
+  "object",
+  "component",
+  "site",
+  "impact",
+  "runbook_url",
+  "alert_rule_url",
 ];
 
 export interface ViewedAlert {
