@@ -16,11 +16,9 @@ export const AlertsCountBadge: React.FC<AlertsCountBadgeProps> = ({
   description,
 }) => {
   console.log("AlertsCountBadge::presetCEL", presetCEL);
-  const { useLastAlerts } = useAlerts();
-  const { totalCount, isLoading: isSearching } = useLastAlerts({
-    cel: presetCEL,
-    limit: 20,
-    offset: 0,
+  const { useLastAlertsCount } = useAlerts();
+  const { totalCount, isLoading: isSearching } = useLastAlertsCount({
+    cel: presetCEL
   });
 
   console.log("AlertsCountBadge::swr", totalCount);
@@ -58,7 +56,7 @@ export const AlertsCountBadge: React.FC<AlertsCountBadgeProps> = ({
             vertical ? "flex-col" : "flex-row"
           } items-center gap-2`}
         >
-          <Badge data-testid="alerts-count-badge" size="xl" color="orange">
+          <Badge data-testid="alerts-count-badge" data-cy="alerts-count-badge" size="xl" color="orange">
             {totalCount}
           </Badge>
           <Text className="text-sm">

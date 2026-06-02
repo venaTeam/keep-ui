@@ -221,6 +221,7 @@ export default function IncidentAlerts({ incident }: Props) {
             onClick={() => {
               router.push(`/alerts/feed`);
             }}
+            data-cy="incidents-action-add-alerts-manually-btn"
           >
             Add Alerts Manually
           </Button>
@@ -232,6 +233,7 @@ export default function IncidentAlerts({ incident }: Props) {
               onClick={() => {
                 router.push(`/alerts/feed?createIncidentsFromLastAlerts=50`);
               }}
+              data-cy="incidents-action-ai-correlation-btn"
             >
               Try AI Correlation
             </Button>
@@ -262,6 +264,8 @@ export default function IncidentAlerts({ incident }: Props) {
         <TableRow
           key={`row-${row.id}-${rowIndex}`}
           className="group/row hover:bg-gray-50"
+          data-cy="incidents-alerts-row"
+          data-cy-id={row.id}
         >
           {row.getVisibleCells().map((cell, index) => {
             const { style, className } = getCommonPinningStylesAndClassNames(
@@ -277,6 +281,7 @@ export default function IncidentAlerts({ incident }: Props) {
                   cell.column.columnDef.meta?.tdClassName,
                   className
                 )}
+                data-cy={`incidents-alerts-cell-${cell.column.id}`}
               >
                 {flexRender(cell.column.columnDef.cell, cell.getContext())}
               </TableCell>
@@ -359,7 +364,7 @@ export default function IncidentAlerts({ incident }: Props) {
       </Card>
 
       <div className="mt-4 mb-8">
-        <TablePagination table={table} />
+        <TablePagination table={table} dataCyPrefix="incidents-alerts" />
       </div>
 
       {/* AlertSidebar - opened by clicking on the alert row or the view button */}
