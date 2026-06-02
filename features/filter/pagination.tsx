@@ -81,12 +81,13 @@ export function Pagination({
   }
 
   return (
-    <div className="flex justify-between items-center">
+    <div className="flex justify-between items-center" data-cy="alerts-pagination">
       <Text>
         Showing {pageIndex + 1} of {ReachedLimit ? `${pageIndex + 1}+` : pageIndex + 1}
       </Text>
       <div className="flex gap-1">
         <Select
+          data-cy="alerts-pagination-page-size"
           components={{ SingleValue }}
           value={{
             value: state.limit.toString(),
@@ -101,6 +102,7 @@ export function Pagination({
         <div className="flex">
           <Button
             className="pagination-button"
+            data-cy="alerts-pagination-first"
             icon={ChevronDoubleLeftIcon}
             onClick={() => setPageIndex(0)}
             disabled={pageIndex == 0}
@@ -110,6 +112,7 @@ export function Pagination({
           />
           <Button
             className="pagination-button"
+            data-cy="alerts-pagination-prev"
             icon={ChevronLeftIcon}
             onClick={() => setPageIndex(pageIndex - 1)}
             disabled={pageIndex == 0}
@@ -119,6 +122,7 @@ export function Pagination({
           />
           <Button
             className="pagination-button"
+            data-cy="alerts-pagination-next"
             icon={ChevronRightIcon}
             onClick={() => setPageIndex(pageIndex + 1)}
             disabled={!ReachedLimit}
@@ -136,6 +140,7 @@ export function Pagination({
             loading={isRefreshing}
             onClick={async () => onRefresh?.()}
             title="Refresh"
+            data-cy="alerts-btn-refresh"
           />
         )}
       </div>
