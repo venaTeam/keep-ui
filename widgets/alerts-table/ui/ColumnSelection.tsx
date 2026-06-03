@@ -90,6 +90,7 @@ export default function ColumnSelection({
     'instance',
     'application',
     'component',
+    'object',
     'site',
     'impact',
     'team',

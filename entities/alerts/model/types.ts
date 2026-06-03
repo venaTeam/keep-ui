@@ -110,13 +110,7 @@ export const AlertKnownKeys = [
   "checkbox",
   "alertMenu",
   "group",
-  "extraPayload",
-  "object",
-  "component",
-  "site",
-  "impact",
-  "runbook_url",
-  "alert_rule_url",
+  "extraPayload"
 ];
 
 export interface ViewedAlert {
