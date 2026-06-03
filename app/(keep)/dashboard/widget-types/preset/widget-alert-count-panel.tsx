@@ -77,9 +77,11 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
     }
   }
 
+  const isCountLoading = isLoading || !preset;
+
   const getColor = (count: number) => {
     let color = "#1f2937";
-    if (thresholds && thresholds.length > 0) {
+    if (thresholds.length > 0 && !isCountLoading) {
       for (let i = thresholds.length - 1; i >= 0; i--) {
         if (count >= thresholds[i].value) {
           color = thresholds[i].color;
@@ -108,11 +110,10 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
     return `rgb(${r}, ${g}, ${b}, ${alpha})`;
   }
 
-  const isCountLoading = isLoading || !preset;
   const color = getColor(isCountLoading ? 0 : alertsCount);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full" data-cy="dashboard-widget-alert-count-panel">
       <div className="flex items-center justify-end mb-2 flex-shrink-0">
         <div className="flex items-center space-x-1">
           <Button

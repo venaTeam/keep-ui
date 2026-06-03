@@ -115,15 +115,24 @@ export function AlertDismissModal({
 
     const plainTextNote = dismissComment.trim();
 
+    // Phase 2: send typed dismiss_mode/dismissed_until for new dismiss calls.
+    // tab 0 = "Dismiss Forever" -> permanent; tab 1 = "Dismiss Until" -> dismiss_until + dismissed_until.
+    // `dismissed` (bool) is kept for back-compat; the server translates it. The legacy
+    // camelCase `dismissUntil` is dropped — the strict backend only accepts snake_case
+    // enrichment keys and rejects unknown ones (422).
     const enrichments: {
       dismissed: boolean;
       note: string;
-      dismissUntil?: string;
+      dismiss_mode?: "permanent" | "dismiss_until";
+      dismissed_until?: string;
       status?: Status | null;
     } = {
       dismissed: !alerts[0]?.dismissed,
       note: plainTextNote,
-      ...(!isRestore && { dismissUntil: dismissUntil || "" }),
+      ...(!isRestore && {
+        dismiss_mode: selectedTab === 0 ? "permanent" : "dismiss_until",
+        ...(dismissUntil && { dismissed_until: dismissUntil }),
+      }),
       ...(isRestore && selectedStatus && { status: selectedStatus }),
     };
 
@@ -184,6 +193,7 @@ export function AlertDismissModal({
       className="overflow-visible"
       beforeTitle={alerts?.[0]?.name}
       title={isRestore ? "Restore Alert(s)" : "Dismiss Alert(s)"}
+      data-cy="alerts-dismiss-modal"
     >
       {isRestore ? (
         <>
@@ -237,13 +247,14 @@ export function AlertDismissModal({
             />
           </div>
           <div className="flex justify-end mt-4 space-x-2">
-            <Button variant="secondary" color="orange" onClick={clearAndClose}>
+            <Button variant="secondary" color="orange" onClick={clearAndClose} data-cy="alerts-restore-cancel-btn">
               Cancel
             </Button>
             <Button
               onClick={handleDismissChange}
               color="orange"
               loading={isLoading}
+              data-cy="alerts-restore-submit-btn"
             >
               Restore
             </Button>
@@ -331,13 +342,14 @@ export function AlertDismissModal({
             />
           </div>
           <div className="mt-4 flex justify-end gap-2">
-            <Button variant="secondary" color="orange" onClick={clearAndClose}>
+            <Button variant="secondary" color="orange" onClick={clearAndClose} data-cy="alerts-dismiss-cancel-btn">
               Cancel
             </Button>
             <Button
               onClick={handleDismissChange}
               color="orange"
               loading={isLoading}
+              data-cy="alerts-dismiss-submit-btn"
             >
               Dismiss
             </Button>

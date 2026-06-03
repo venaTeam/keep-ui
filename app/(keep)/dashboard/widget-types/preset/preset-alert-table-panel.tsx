@@ -147,6 +147,7 @@ const PresetAlertTablePanel: React.FC<PresetAlertTablePanelProps> = ({
             variant="secondary"
             size="xs"
             onClick={handleGoToPresetClick}
+            data-cy="dashboard-widget-preset-go-to-btn"
           >
             Go to preset
           </Button>

@@ -174,7 +174,7 @@ const DashboardPage = () => {
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full" data-cy="dashboard-page">
       <div className="flex items-center justify-between mb-4">
         <div className="relative">
           {isEditingName ? (
@@ -184,9 +184,10 @@ const DashboardPage = () => {
               onBlur={toggleEditingName}
               placeholder="Dashboard Name"
               className="border-orange-500 focus:border-orange-600 focus:ring-orange-600"
+              data-cy="dashboard-name-input"
             />
           ) : (
-            <Subtitle color="orange" className="mr-2">
+            <Subtitle color="orange" className="mr-2" data-cy="dashboard-name">
               {dashboardName}
             </Subtitle>
           )}
@@ -196,6 +197,7 @@ const DashboardPage = () => {
             onClick={toggleEditingName}
             className="cursor-pointer absolute right-0 top-0 transform -translate-y-1/2 translate-x-1/2 text-sm"
             color="orange"
+            data-cy="dashboard-edit-btn"
           />
         </div>
         <div className="flex gap-1 items-end">
@@ -207,8 +209,9 @@ const DashboardPage = () => {
               size="sm"
               onClick={handleSaveDashboard}
               tooltip="Save current dashboard"
+              data-cy="dashboard-save-layout-btn"
             />
-            <Button color="orange" onClick={openModal} className="ml-2">
+            <Button color="orange" onClick={openModal} className="ml-2" data-cy="dashboard-add-widget-btn">
               Add Widget
             </Button>
           </div>
@@ -218,6 +221,7 @@ const DashboardPage = () => {
         <Card
           className="w-full h-full flex items-center justify-center cursor-pointer"
           onClick={openModal}
+          data-cy="dashboard-empty-state"
         >
           <div className="text-center">
             <p className="text-lg font-medium">No widgets available</p>
@@ -225,7 +229,7 @@ const DashboardPage = () => {
           </div>
         </Card>
       ) : (
-        <Card className="w-full h-full">
+        <Card className="w-full h-full" data-cy="dashboard-grid-container">
           <GridLayout
             layout={layout}
             onLayoutChange={handleLayoutChange}
