@@ -1,6 +1,24 @@
 import { useAlerts } from "@/entities/alerts/model/useAlerts";
 import { useEffect } from "react";
 
+export const buildPresetAlertCel = (
+  presetCel: string,
+  counterShowsFiringOnly: boolean
+) => {
+  const celList = [];
+
+  if (counterShowsFiringOnly) {
+    celList.push("status == 'firing'");
+  }
+
+  celList.push(presetCel);
+
+  return celList
+    .filter((cel) => !!cel)
+    .map((cel) => `(${cel})`)
+    .join(" && ");
+};
+
 export const usePresetAlertsCount = (
   presetCel: string,
   counterShowsFiringOnly: boolean,
@@ -11,20 +29,9 @@ export const usePresetAlertsCount = (
 ) => {
   const { useLastAlerts } = useAlerts();
 
-  const celList = [];
-
-  if (counterShowsFiringOnly) {
-    celList.push("status == 'firing'");
-  }
-
-  celList.push(presetCel);
-
   const query = enabled
     ? {
-        cel: celList
-          .filter((cel) => !!cel)
-          .map((cel) => `(${cel})`)
-          .join(" && "),
+        cel: buildPresetAlertCel(presetCel, counterShowsFiringOnly),
         limit: limit,
         offset: offset,
       }
@@ -33,13 +40,13 @@ export const usePresetAlertsCount = (
   const { data, totalCount, isLoading, mutate } = useLastAlerts(query);
 
   useEffect(() => {
-    if (!refreshInterval) {
+    if (!refreshInterval || !enabled) {
       return;
     }
 
     const intervalId = setInterval(() => mutate(), refreshInterval);
     return () => clearInterval(intervalId);
-  }, [refreshInterval]);
+  }, [enabled, mutate, refreshInterval]);
 
   return { alerts: data, totalCount, isLoading };
 };

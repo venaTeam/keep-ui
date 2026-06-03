@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
-import { WidgetData, WidgetType, Threshold } from "../../types";
-import { usePresetAlertsCount } from "@/features/presets/custom-preset-links";
+import { Threshold } from "../../types";
+import { usePresetAlertCount } from "@/features/presets/custom-preset-links";
 import { useDashboardPreset } from "@/utils/hooks/useDashboardPresets";
 import { Button, Icon } from "@tremor/react";
 import { FireIcon, ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline";
@@ -13,7 +13,6 @@ import { useSearchParams } from "next/navigation";
 interface WidgetAlertCountPanelProps {
   presetName: string;
   showFiringOnly?: boolean;
-  background?: string;
   thresholds?: Threshold[];
   customLink?: string;
   dashboardName?: string;
@@ -23,7 +22,6 @@ interface WidgetAlertCountPanelProps {
 const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
   presetName,
   showFiringOnly = false,
-  background,
   thresholds = [],
   customLink,
   dashboardName,
@@ -55,31 +53,12 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
     [presetCel, timeRangeCel]
   );
 
-  // Get total alerts count
-  const {
-    totalCount: totalAlertsCount,
-    isLoading: isLoadingTotal,
-  } = usePresetAlertsCount(
-    filterCel,
-    false, // Always get total count
-    0,
-    0,
-    10000
-  );
-
-  // Get firing alerts count
-  const {
-    totalCount: firingAlertsCount,
-    isLoading: isLoadingFiring,
-  } = usePresetAlertsCount(
-    filterCel,
-    true, // Get firing count
-    0,
-    0,
-    10000
-  );
-
-  const isLoading = isLoadingTotal || isLoadingFiring;
+  const { totalCount: alertsCount, isLoading } = usePresetAlertCount({
+    presetCel: filterCel,
+    counterShowsFiringOnly: showFiringOnly,
+    refreshInterval: 10000,
+    enabled: !!preset,
+  });
 
   const router = useRouter();
 
@@ -94,12 +73,12 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
 
   function handleCustomLinkClick() {
     if (customLink) {
-      window.open(customLink, '_blank');
+      window.open(customLink, "_blank");
     }
   }
 
   const getColor = (count: number) => {
-    let color = "#1f2937"; // Default dark gray instead of black
+    let color = "#1f2937";
     if (thresholds && thresholds.length > 0) {
       for (let i = thresholds.length - 1; i >= 0; i--) {
         if (count >= thresholds[i].value) {
@@ -112,10 +91,8 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
   };
 
   function hexToRgb(hex: string, alpha: number = 1) {
-    // Remove '#' if present
     hex = hex.replace(/^#/, "");
 
-    // Handle shorthand form (#f44 → #ff4444)
     if (hex.length === 3) {
       hex = hex
         .split("")
@@ -131,16 +108,11 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
     return `rgb(${r}, ${g}, ${b}, ${alpha})`;
   }
 
-  const displayCount = showFiringOnly ? firingAlertsCount : totalAlertsCount;
-  const count = isLoading ? "..." : displayCount;
-
-  // Use firing count for threshold colors when showFiringOnly is selected
-  const thresholdCount = showFiringOnly ? firingAlertsCount : totalAlertsCount;
-  const color = getColor(thresholdCount);
+  const isCountLoading = isLoading || !preset;
+  const color = getColor(isCountLoading ? 0 : alertsCount);
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header with icon buttons */}
       <div className="flex items-center justify-end mb-2 flex-shrink-0">
         <div className="flex items-center space-x-1">
           <Button
@@ -167,12 +139,10 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
         style={{
           background: hexToRgb(color, 0.15),
           borderColor: color,
-          borderWidth: '2px'
+          borderWidth: "2px",
         }}
         className="max-w-full border rounded-lg p-2 h-full shadow-sm"
       >
-
-        {/* Main content area */}
         <div className="flex-1 flex flex-col justify-center min-h-0">
           <div className="flex flex-col space-y-2 items-center">
             <div className="text-2xl font-bold text-gray-700 flex items-center gap-1">
@@ -190,13 +160,13 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
               className="text-4xl font-black tracking-tight"
               style={{
                 color,
-                textShadow: `0 1px 2px rgba(0,0,0,0.1)`
+                textShadow: "0 1px 2px rgba(0,0,0,0.1)",
               }}
             >
-              {isLoading ? (
+              {isCountLoading ? (
                 <Skeleton containerClassName="h-8 w-16" />
               ) : (
-                count
+                alertsCount
               )}
             </div>
           </div>
@@ -206,4 +176,4 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
   );
 };
 
-export default WidgetAlertCountPanel; 
+export default WidgetAlertCountPanel;
