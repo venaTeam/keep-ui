@@ -13,7 +13,6 @@ import {
   PlusIcon,
   UserPlusIcon,
   PlayIcon,
-  AdjustmentsHorizontalIcon,
   BookOpenIcon,
   XCircleIcon,
   EyeIcon,
@@ -490,17 +489,6 @@ export function AlertMenu({
         label: "History",
         onClick: () =>
           updateUrl({ newParams: { fingerprint: alert.fingerprint } }),
-      },
-      {
-        icon: AdjustmentsHorizontalIcon,
-        label: "Enrich",
-        onClick: () =>
-          updateUrl({
-            newParams: {
-              alertPayloadFingerprint: alert.fingerprint,
-              enrich: true,
-            },
-          }),
       },
       {
         icon: UserPlusIcon,

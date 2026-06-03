@@ -58,8 +58,14 @@ export interface AlertDto {
   fingerprint: string;
   deleted: boolean;
   dismissed: boolean;
+  // Backend may serialize cleared values as null (Python None -> JSON null), so
+  // allow null in addition to undefined for these typed dismiss columns.
+  dismiss_mode?: "permanent" | "until_resolved" | "dismiss_until" | null;
+  dismissed_until?: string | null;
   assignee?: string;
   ticket_url: string;
+  ticket_type?: string | null;
+  ticket_provider_id?: string | null;
   ticket_status?: string;
   playbook_url?: string;
   providerId?: string;
@@ -131,6 +137,14 @@ export type AuditEvent = {
 export interface CommentMentionDto {
   mentioned_user_id: string;
 }
+
+// Response shape of GET /alerts/{fingerprint}/history (Phase 2).
+// `occurrences` = raw provider firings (history table source);
+// `activity` = audit-log entries (user/system actions).
+export type AlertHistory = {
+  occurrences: AlertDto[];
+  activity: AuditEvent[];
+};
 
 export interface AlertsQuery {
   cel?: string;

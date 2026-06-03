@@ -10,10 +10,9 @@ import { AlertNoteModal } from "@/features/alerts/alert-note";
 import { AlertMethodModal } from "@/features/alerts/alert-call-provider-method";
 import { ManualRunWorkflowModal } from "@/features/workflows/manual-run-workflow";
 import { AlertDismissModal } from "@/features/alerts/dismiss-alert";
-import { ViewAlertModal } from "@/features/alerts/view-raw-alert";
 import { AlertChangeStatusModal } from "@/features/alerts/alert-change-status";
 import { AlertAssignModal } from "@/features/alerts/alert-assign";
-import { EnrichAlertSidePanel } from "@/features/alerts/enrich-alert";
+import { ViewAlertModal } from "@/features/alerts/view-alert";
 import { FacetDto } from "@/features/filter";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepLoader, showErrorToast } from "@/shared/ui";
@@ -60,6 +59,7 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
     useState<AlertsTableDataQuery>();
   const { data: providersData = { installed_providers: [] } } = useProviders();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const ticketingProviders = useMemo(
     () =>
@@ -69,7 +69,6 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
     [providersData.installed_providers]
   );
 
-  const searchParams = useSearchParams();
   // hooks for the note and ticket modals
   const [noteModalAlert, setNoteModalAlert] = useState<AlertDto | null>();
   const [ticketModalAlert, setTicketModalAlert] = useState<AlertDto | null>();
@@ -80,10 +79,8 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
   >();
   const [changeStatusAlert, setChangeStatusAlert] = useState<AlertDto | null>();
   const [assignModalAlert, setAssignModalAlert] = useState<AlertDto | null>();
+  // "View Alert" sets ?alertPayloadFingerprint=; this drives the read-only payload viewer.
   const [viewAlertModal, setViewAlertModal] = useState<AlertDto | null>();
-  const [viewEnrichAlertModal, setEnrichAlertModal] =
-    useState<AlertDto | null>();
-  const [isEnrichSidebarOpen, setIsEnrichSidebarOpen] = useState(false);
   // Store the reset selection callback to call when dismiss/status change succeeds
   const [resetAlertsSelection, setResetAlertsSelection] = useState<(() => void) | null>(null);
   const { dynamicPresets: savedPresets = [], isLoading: _isPresetsLoading } =
@@ -106,33 +103,6 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
     facetsCel,
     facetsPanelRefreshToken,
   } = useAlertsTableData(alertsTableDataQuery);
-
-  useEffect(() => {
-    const fingerprint = searchParams?.get("alertPayloadFingerprint");
-    const enrich = searchParams?.get("enrich");
-    if (fingerprint && enrich && alerts) {
-      const alert = alerts?.find((alert) => alert.fingerprint === fingerprint);
-      if (alert) {
-        setEnrichAlertModal(alert);
-        setIsEnrichSidebarOpen(true);
-      } else {
-        showErrorToast(null, "Alert fingerprint not found");
-        resetUrlAfterModal();
-      }
-    } else if (fingerprint && alerts) {
-      const alert = alerts?.find((alert) => alert.fingerprint === fingerprint);
-      if (alert) {
-        setViewAlertModal(alert);
-      } else {
-        showErrorToast(null, "Alert fingerprint not found");
-        resetUrlAfterModal();
-      }
-    } else if (alerts) {
-      setViewAlertModal(null);
-      setEnrichAlertModal(null);
-      setIsEnrichSidebarOpen(false);
-    }
-  }, [searchParams, alerts]);
 
   const alertsQueryStateRef = useRef(alertsQueryState);
 
@@ -167,6 +137,23 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
 
     router.replace(url);
   }, [router]);
+
+  // Open the read-only payload viewer when ?alertPayloadFingerprint= is present
+  // (set by the "View Alert" action). Clearing the param closes it.
+  useEffect(() => {
+    const fingerprint = searchParams?.get("alertPayloadFingerprint");
+    if (fingerprint && alerts) {
+      const alert = alerts.find((a) => a.fingerprint === fingerprint);
+      if (alert) {
+        setViewAlertModal(alert);
+      } else {
+        showErrorToast(null, "Alert fingerprint not found");
+        resetUrlAfterModal();
+      }
+    } else {
+      setViewAlertModal(null);
+    }
+  }, [searchParams, alerts, resetUrlAfterModal]);
 
   // if we don't have presets data yet, just show loading
   if (!selectedPreset && isPresetsLoading) {
@@ -225,6 +212,13 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
         presetName={selectedPreset.name}
         handleClose={() => setAssignModalAlert(null)}
       />
+      <ViewAlertModal
+        alert={viewAlertModal}
+        handleClose={() => {
+          setViewAlertModal(null);
+          resetUrlAfterModal();
+        }}
+      />
       <AlertMethodModal
         alerts={alerts || []}
         presetName={selectedPreset.name}
@@ -242,20 +236,6 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
       <ManualRunWorkflowModal
         alert={runWorkflowModalAlert}
         onClose={() => setRunWorkflowModalAlert(null)}
-      />
-      <ViewAlertModal
-        alert={viewAlertModal}
-        handleClose={() => resetUrlAfterModal()}
-        mutate={mutateAlerts}
-      />
-      <EnrichAlertSidePanel
-        alert={viewEnrichAlertModal}
-        isOpen={isEnrichSidebarOpen}
-        handleClose={() => {
-          setIsEnrichSidebarOpen(false);
-          resetUrlAfterModal();
-        }}
-        mutate={mutateAlerts}
       />
     </>
   );
