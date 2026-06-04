@@ -144,7 +144,7 @@ export interface CommentMentionDto {
   mentioned_user_id: string;
 }
 
-// Response shape of GET /alerts/{fingerprint}/history (Phase 2).
+// Response shape of GET /alerts/{fingerprint}/history.
 // `occurrences` = raw provider firings (history table source);
 // `activity` = audit-log entries (user/system actions).
 export type AlertHistory = {

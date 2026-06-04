@@ -93,7 +93,7 @@ const handleChangeStatus = async () => {
         enrichments: {
           status: selectedStatus,
           ...(selectedStatus !== Status.Suppressed && {
-            // Phase 2: leaving suppressed -> undismiss. `dismissed: false` is the
+            // Leaving suppressed -> undismiss. `dismissed: false` is the
             // legacy key the route translates to clear dismiss_mode/dismissed_until
             // while preserving the explicit `status` above.
             dismissed: false,
@@ -132,7 +132,7 @@ const handleChangeStatusBatch = async () => {
         enrichments: {
           status: selectedStatus,
           ...(selectedStatus !== Status.Suppressed && {
-            // Phase 2: leaving suppressed -> undismiss. `dismissed: false` is the
+            // Leaving suppressed -> undismiss. `dismissed: false` is the
             // legacy key the route translates to clear dismiss_mode/dismissed_until
             // while preserving the explicit `status` above.
             dismissed: false,

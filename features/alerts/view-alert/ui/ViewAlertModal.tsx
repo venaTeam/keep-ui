@@ -13,7 +13,7 @@ interface ViewAlertModalProps {
 /**
  * Read-only alert payload viewer.
  *
- * Phase 2: the previous ViewAlertModal was a Monaco-based editor (unlock -> edit ->
+ * The previous ViewAlertModal was a Monaco-based editor (unlock -> edit ->
  * Save) that let users write arbitrary enrichment keys; that path was removed
  * because the strict enrichment allow-list rejects unknown keys with HTTP 422.
  * This restores the harmless read-only "View Alert" payload view (no editing).
