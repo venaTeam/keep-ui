@@ -54,7 +54,7 @@ const PresetAlertTablePanel: React.FC<PresetAlertTablePanelProps> = ({
     false,
     countOfLastAlerts,
     0,
-    10000,
+    30000,
     !!preset
   );
 

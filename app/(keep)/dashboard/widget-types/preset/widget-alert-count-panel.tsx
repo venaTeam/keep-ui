@@ -56,7 +56,7 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
   const { totalCount: alertsCount, isLoading } = usePresetAlertCount({
     presetCel: filterCel,
     counterShowsFiringOnly: showFiringOnly,
-    refreshInterval: 10000,
+    refreshInterval: 30000,
     enabled: !!preset,
   });
 
