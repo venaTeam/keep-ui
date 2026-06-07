@@ -115,7 +115,7 @@ export function AlertDismissModal({
 
     const plainTextNote = dismissComment.trim();
 
-    // Phase 2: send typed dismiss_mode/dismissed_until for new dismiss calls.
+    // Send typed dismiss_mode/dismissed_until for new dismiss calls.
     // tab 0 = "Dismiss Forever" -> permanent; tab 1 = "Dismiss Until" -> dismiss_until + dismissed_until.
     // `dismissed` (bool) is kept for back-compat; the server translates it. The legacy
     // camelCase `dismissUntil` is dropped — the strict backend only accepts snake_case
