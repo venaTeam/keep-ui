@@ -68,8 +68,15 @@ export function AlertDismissModal({
   const { alertsMutator } = useAlerts();
 
   const api = useApi();
-  // Ensuring that the useEffect hook is called consistently
+  const isOpen = !!alerts;
+
+  // Reset transient state every time the modal opens so stale state
+  // (e.g. a leftover loading spinner) never carries over between dismissals.
   useEffect(() => {
+    if (!isOpen) return;
+    setIsLoading(false);
+    setShowError(false);
+    setCommentError(false);
     const now = new Date();
     const roundedMinutes = Math.ceil(now.getMinutes() / 15) * 15;
     const defaultTime = set(now, {
@@ -78,11 +85,9 @@ export function AlertDismissModal({
       milliseconds: 0,
     });
     setSelectedDateTime(defaultTime);
-  }, []);
+  }, [isOpen]);
 
   if (!alerts) return null;
-
-  const isOpen = !!alerts;
 
   const handleTabChange = (index: number) => {
     setSelectedTab(index);
@@ -172,6 +177,7 @@ export function AlertDismissModal({
     setCommentError(false);
     setDisposeOnNewAlert(true);
     setSelectedStatus(null);
+    setIsLoading(false);
     handleClose();
   };
 
@@ -254,6 +260,7 @@ export function AlertDismissModal({
               onClick={handleDismissChange}
               color="orange"
               loading={isLoading}
+              disabled={isLoading}
               data-cy="alerts-restore-submit-btn"
             >
               Restore
@@ -349,6 +356,7 @@ export function AlertDismissModal({
               onClick={handleDismissChange}
               color="orange"
               loading={isLoading}
+              disabled={isLoading}
               data-cy="alerts-dismiss-submit-btn"
             >
               Dismiss
