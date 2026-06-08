@@ -39,7 +39,7 @@ import { useWorkflowExecutions } from "@/entities/workflow-executions/model/useW
 import { format } from "date-fns";
 import { TbCodeDots, TbTicket } from "react-icons/tb";
 import { RiStickyNoteAddLine, RiStickyNoteLine } from "react-icons/ri";
-import { useAlertRowStyle } from "@/entities/alerts/model";
+import { useAlertRowStyle, Status } from "@/entities/alerts/model";
 import {
   ImagePreviewTooltip,
   TooltipPosition,
@@ -517,7 +517,7 @@ export function AlertMenu({
       })) ?? []),
       {
         icon: IoNotificationsOffOutline,
-        label: alert.dismissed ? "Restore" : "Dismiss",
+        label: alert.status === Status.Suppressed ? "Restore" : "Dismiss",
         onClick: onDismiss,
       },
       {

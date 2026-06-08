@@ -1,6 +1,6 @@
 import { Button } from "@tremor/react";
 import { useState } from "react";
-import { AlertDto } from "@/entities/alerts/model";
+import { AlertDto, Status } from "@/entities/alerts/model";
 import { PlusIcon, RocketIcon } from "@radix-ui/react-icons";
 import { toast } from "react-toastify";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -58,9 +58,14 @@ export default function AlertActions({
     .getSelectedRowModel()
     .rows.map((row) => row.original);
 
-  // Categorize alerts by dismissed status for showing appropriate actions
-  const dismissedAlerts = selectedAlerts.filter((a) => a.dismissed);
-  const activeAlerts = selectedAlerts.filter((a) => !a.dismissed);
+  // Categorize alerts by dismissed status for showing appropriate actions.
+  // An alert is dismissed/suppressed iff its effective status is "suppressed".
+  const dismissedAlerts = selectedAlerts.filter(
+    (a) => a.status === Status.Suppressed
+  );
+  const activeAlerts = selectedAlerts.filter(
+    (a) => a.status !== Status.Suppressed
+  );
   const hasDismissedAlerts = dismissedAlerts.length > 0;
   const hasActiveAlerts = activeAlerts.length > 0;
 

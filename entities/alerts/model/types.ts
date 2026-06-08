@@ -57,7 +57,7 @@ export interface AlertDto {
   generatorURL?: string;
   fingerprint: string;
   deleted: boolean;
-  dismissed: boolean;
+  // An alert is dismissed/suppressed iff dismiss_mode != null.
   // Backend may serialize cleared values as null (Python None -> JSON null), so
   // allow null in addition to undefined for these typed dismiss columns.
   dismiss_mode?: "permanent" | "until_resolved" | "dismiss_until" | null;
