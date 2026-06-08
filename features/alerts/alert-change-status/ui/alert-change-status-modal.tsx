@@ -93,8 +93,10 @@ const handleChangeStatus = async () => {
         enrichments: {
           status: selectedStatus,
           ...(selectedStatus !== Status.Suppressed && {
-            dismissed: false,
-            dismissUntil: "",
+            // Leaving suppressed -> undismiss: clear the dismiss columns directly
+            // while preserving the explicit `status` above.
+            dismiss_mode: null,
+            dismissed_until: null,
           }),
           ...(noteContent && noteContent.trim() !== "" && {
             note: noteContent.trim(),
@@ -130,8 +132,10 @@ const handleChangeStatusBatch = async () => {
         enrichments: {
           status: selectedStatus,
           ...(selectedStatus !== Status.Suppressed && {
-            dismissed: false,
-            dismissUntil: "",
+            // Leaving suppressed -> undismiss: clear the dismiss columns directly
+            // while preserving the explicit `status` above.
+            dismiss_mode: null,
+            dismissed_until: null,
           }),
           ...(noteContent && noteContent.trim() !== "" && {
             note: noteContent.trim(),

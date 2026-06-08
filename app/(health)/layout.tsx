@@ -1,6 +1,5 @@
 import React, { ReactNode } from "react";
 import { NextAuthProvider } from "../auth-provider";
-import { Mulish } from "next/font/google";
 import { ToastContainer } from "react-toastify";
 import { getConfig } from "@/shared/lib/server/getConfig";
 import { ConfigProvider } from "../config-provider";
@@ -11,12 +10,6 @@ import { ThemeScript, WatchUpdateTheme } from "@/shared/ui";
 import "@/app/globals.css";
 import "react-toastify/dist/ReactToastify.css";
 
-
-// If loading a variable font, you don't need to specify the font weight
-const mulish = Mulish({
-  subsets: ["latin"],
-  display: "swap",
-});
 
 type RootLayoutProps = {
   children: ReactNode;

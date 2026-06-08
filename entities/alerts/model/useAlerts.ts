@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertDto, AlertsQuery, AuditEvent } from "./types";
+import { AlertDto, AlertHistory, AlertsQuery, AuditEvent } from "./types";
 import useSWR, { SWRConfiguration } from "swr";
 import { toDateObjectWithFallback } from "@/utils/helpers";
 import { useApi } from "@/shared/lib/hooks/useApi";
@@ -14,7 +14,7 @@ export const useAlerts = () => {
     selectedAlert?: AlertDto,
     options: SWRConfiguration = { revalidateOnFocus: false }
   ) => {
-    return useSWR<AlertDto[]>(
+    return useSWR<AlertHistory>(
       () =>
         api.isReady() && selectedAlert
           ? `/alerts/${selectedAlert.fingerprint}/history?provider_id=${

@@ -13,7 +13,6 @@ import {
   PlusIcon,
   UserPlusIcon,
   PlayIcon,
-  AdjustmentsHorizontalIcon,
   BookOpenIcon,
   XCircleIcon,
   EyeIcon,
@@ -40,7 +39,7 @@ import { useWorkflowExecutions } from "@/entities/workflow-executions/model/useW
 import { format } from "date-fns";
 import { TbCodeDots, TbTicket } from "react-icons/tb";
 import { RiStickyNoteAddLine, RiStickyNoteLine } from "react-icons/ri";
-import { useAlertRowStyle } from "@/entities/alerts/model";
+import { useAlertRowStyle, Status } from "@/entities/alerts/model";
 import {
   ImagePreviewTooltip,
   TooltipPosition,
@@ -492,17 +491,6 @@ export function AlertMenu({
           updateUrl({ newParams: { fingerprint: alert.fingerprint } }),
       },
       {
-        icon: AdjustmentsHorizontalIcon,
-        label: "Enrich",
-        onClick: () =>
-          updateUrl({
-            newParams: {
-              alertPayloadFingerprint: alert.fingerprint,
-              enrich: true,
-            },
-          }),
-      },
-      {
         icon: UserPlusIcon,
         label: "Self-Assign",
         onClick: () => callAssignEndpoint(),
@@ -529,7 +517,7 @@ export function AlertMenu({
       })) ?? []),
       {
         icon: IoNotificationsOffOutline,
-        label: alert.dismissed ? "Restore" : "Dismiss",
+        label: alert.status === Status.Suppressed ? "Restore" : "Dismiss",
         onClick: onDismiss,
       },
       {

@@ -191,12 +191,6 @@ jest.mock('@/features/alerts/alert-detail-sidebar', () => ({
   },
 }));
 
-// Mock ViewAlertModal
-jest.mock("@/features/alerts/view-raw-alert", () => ({
-  ViewAlertModal: ({ alert, handleClose }: any) =>
-    alert ? <div data-testid="view-alert-modal">ViewAlertModal</div> : null,
-}));
-
 const { useIncidentAlerts } = require('@/utils/hooks/useIncidents');
 
 describe('IncidentAlerts - AlertSidebar Integration', () => {
@@ -244,7 +238,6 @@ describe('IncidentAlerts - AlertSidebar Integration', () => {
       environment: 'production',
       pushed: false,
       deleted: false,
-      dismissed: false,
       enriched_fields: [],
       ticket_url: '',
     },
@@ -263,7 +256,6 @@ describe('IncidentAlerts - AlertSidebar Integration', () => {
       environment: 'production',
       pushed: false,
       deleted: false,
-      dismissed: false,
       enriched_fields: [],
       ticket_url: '',
     },
@@ -327,8 +319,7 @@ describe('IncidentAlerts - AlertSidebar Integration', () => {
   it('should open AlertSidebar when clicking view details button', async () => {
     render(<IncidentAlerts incident={mockIncident} />);
 
-    // Note: The view button actually opens ViewAlertModal, not AlertSidebar
-    // Let's click directly on the row to test AlertSidebar
+    // Click directly on the row to test AlertSidebar
     const alertRow = screen.getByTestId('alert-row-alert-2');
     fireEvent.click(alertRow);
 
@@ -450,7 +441,7 @@ describe('IncidentAlerts - AlertSidebar Integration', () => {
     expect(screen.getByTestId('loading-skeleton')).toBeInTheDocument();
   });
 
-  it('should open ViewAlertModal when clicking view button in action tray', async () => {
+  it('should open AlertSidebar when clicking view button in action tray', async () => {
     useIncidentAlerts.mockReturnValue({
       data: mockIncidentAlerts,
       isLoading: false,
@@ -464,39 +455,8 @@ describe('IncidentAlerts - AlertSidebar Integration', () => {
     const viewButtons = screen.getAllByLabelText('View Alert Details');
     fireEvent.click(viewButtons[0]);
 
-    // Check that ViewAlertModal is opened (not AlertSidebar)
+    // Check that AlertSidebar is opened (the view-raw-alert modal was removed)
     await waitFor(() => {
-      expect(screen.getByTestId('view-alert-modal')).toBeInTheDocument();
-      expect(screen.queryByTestId('alert-sidebar')).not.toBeInTheDocument();
-    });
-  });
-
-  it('should have both ViewAlertModal and AlertSidebar when appropriate', async () => {
-    useIncidentAlerts.mockReturnValue({
-      data: mockIncidentAlerts,
-      isLoading: false,
-      error: null,
-      mutate: jest.fn(),
-    });
-
-    render(<IncidentAlerts incident={mockIncident} />);
-
-    // First, open ViewAlertModal with view button
-    const viewButtons = screen.getAllByLabelText('View Alert Details');
-    fireEvent.click(viewButtons[0]);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('view-alert-modal')).toBeInTheDocument();
-    });
-
-    // Then, click on alert row to open AlertSidebar
-    const alertRows = screen.getAllByTestId(/^alert-row-/);
-    const firstAlertRow = alertRows[0];
-    fireEvent.click(firstAlertRow);
-
-    // Both should be open now
-    await waitFor(() => {
-      expect(screen.getByTestId('view-alert-modal')).toBeInTheDocument();
       expect(screen.getByTestId('alert-sidebar')).toBeInTheDocument();
     });
   });
