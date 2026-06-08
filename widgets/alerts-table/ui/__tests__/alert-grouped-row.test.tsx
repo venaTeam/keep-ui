@@ -18,7 +18,6 @@ describe("GroupedRow", () => {
     url: "https://example.com",
     pushed: true,
     assignee: undefined,
-    dismissed: false,
     deleted: false,
     event_id: `event-${fingerprint}`,
     enriched_fields: [],
