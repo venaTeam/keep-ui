@@ -62,7 +62,7 @@ export function AlertDismissModal({
   const [selectedStatus, setSelectedStatus] = useState<Status | null>(null);
   const [commentError, setCommentError] = useState<boolean>(false);
 
-  const isRestore = alerts?.every((a) => a.dismissed);
+  const isRestore = alerts?.every((a) => a.status === Status.Suppressed);
   const revalidateMultiple = useRevalidateMultiple();
   const presetsMutator = () => revalidateMultiple(["/preset"]);
   const { alertsMutator } = useAlerts();
@@ -115,26 +115,28 @@ export function AlertDismissModal({
 
     const plainTextNote = dismissComment.trim();
 
-    // Phase 2: send typed dismiss_mode/dismissed_until for new dismiss calls.
+    // Send the typed dismiss keys directly.
+    // Restore clears the dismiss columns (dismiss_mode/dismissed_until -> null) and
+    // applies the chosen status. Dismiss sets dismiss_mode from the selected tab:
     // tab 0 = "Dismiss Forever" -> permanent; tab 1 = "Dismiss Until" -> dismiss_until + dismissed_until.
-    // `dismissed` (bool) is kept for back-compat; the server translates it. The legacy
-    // camelCase `dismissUntil` is dropped — the strict backend only accepts snake_case
-    // enrichment keys and rejects unknown ones (422).
+    // Only snake_case enrichment keys are accepted; unknown keys are rejected (422).
     const enrichments: {
-      dismissed: boolean;
       note: string;
-      dismiss_mode?: "permanent" | "dismiss_until";
-      dismissed_until?: string;
+      dismiss_mode: "permanent" | "dismiss_until" | null;
+      dismissed_until?: string | null;
       status?: Status | null;
-    } = {
-      dismissed: !alerts[0]?.dismissed,
-      note: plainTextNote,
-      ...(!isRestore && {
-        dismiss_mode: selectedTab === 0 ? "permanent" : "dismiss_until",
-        ...(dismissUntil && { dismissed_until: dismissUntil }),
-      }),
-      ...(isRestore && selectedStatus && { status: selectedStatus }),
-    };
+    } = isRestore
+      ? {
+          dismiss_mode: null,
+          dismissed_until: null,
+          note: plainTextNote,
+          ...(selectedStatus && { status: selectedStatus }),
+        }
+      : {
+          dismiss_mode: selectedTab === 0 ? "permanent" : "dismiss_until",
+          ...(dismissUntil && { dismissed_until: dismissUntil }),
+          note: plainTextNote,
+        };
 
     const requestData = {
       enrichments: enrichments,

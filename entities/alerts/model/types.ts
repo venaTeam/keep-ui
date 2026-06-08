@@ -57,7 +57,7 @@ export interface AlertDto {
   generatorURL?: string;
   fingerprint: string;
   deleted: boolean;
-  dismissed: boolean;
+  // An alert is dismissed/suppressed iff dismiss_mode != null.
   // Backend may serialize cleared values as null (Python None -> JSON null), so
   // allow null in addition to undefined for these typed dismiss columns.
   dismiss_mode?: "permanent" | "until_resolved" | "dismiss_until" | null;
@@ -138,7 +138,7 @@ export interface CommentMentionDto {
   mentioned_user_id: string;
 }
 
-// Response shape of GET /alerts/{fingerprint}/history (Phase 2).
+// Response shape of GET /alerts/{fingerprint}/history.
 // `occurrences` = raw provider firings (history table source);
 // `activity` = audit-log entries (user/system actions).
 export type AlertHistory = {
