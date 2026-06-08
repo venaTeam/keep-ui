@@ -52,6 +52,18 @@ import {
 } from "@/widgets/alerts-table/ui/alert-table-column-rename";
 import { useProviders } from "@/utils/hooks/useProviders";
 
+// Detects whether a cell value is an http(s) URL so it can be rendered as a
+// clickable external link (e.g. runbook_url, alert_rule_url, generatorURL).
+function isHttpUrl(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export const DEFAULT_COLS = [
   "severity",
   "checkbox",
@@ -364,6 +376,27 @@ export const useAlertTableCols = (
               // Fallback for incompatible types
               return String(value || "");
             }
+          }
+
+          if (isHttpUrl(value)) {
+            return (
+              <Link
+                href={value}
+                target="_blank"
+                rel="noopener noreferrer"
+                // Prevent the row click handler (opens the alert sidebar) from firing
+                onClick={(e) => e.stopPropagation()}
+                title={value}
+                className={clsx(
+                  "text-blue-600 hover:underline select-text break-all",
+                  // Only apply line clamp if not expanded
+                  !isExpanded &&
+                  (rowStyle === "default" ? "line-clamp-1" : "line-clamp-3")
+                )}
+              >
+                {value}
+              </Link>
+            );
           }
 
           if (value) {
