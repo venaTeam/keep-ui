@@ -49,3 +49,9 @@ app/topology/mock-topology-data.tsx
 
 # Monaco workers (generated at build time for turbopack dev)
 public/monaco-workers/
+
+# Playwright E2E (sanity-check suite) outputs
+e2e/results/
+e2e/.auth/
+playwright-report/
+test-results/
