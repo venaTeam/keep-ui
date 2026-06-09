@@ -22,16 +22,18 @@
  * `{ bind, unbind }` API is unchanged.
  */
 
+import {
+  SSE_BROADCAST_CHANNEL_NAME,
+  SSE_BROADCAST_KIND,
+  SSE_LEADER_LOCK_NAME,
+  SSE_MAX_RECONNECT_ATTEMPTS,
+} from "@/shared/constants";
+
 type SSEHandler = (data: any) => void;
 
 // Event types the backend can send (documentation; handlers are keyed dynamically):
 // connected, poll-alerts, incident-change, poll-presets, topology-update,
 // ai-logs-change, incident-comment, alert-update
-
-const LEADER_LOCK_NAME = "keep-sse-leader";
-const BROADCAST_CHANNEL_NAME = "keep-sse";
-const BROADCAST_KIND = "keep-sse-event";
-const MAX_RECONNECT_ATTEMPTS = 10;
 
 // Handlers are shared across all hook instances in this tab.
 const handlers: Map<string, Set<SSEHandler>> = new Map();
@@ -83,7 +85,7 @@ function emit(eventType: string, data: any): void {
   dispatch(eventType, data);
   if (channel) {
     try {
-      channel.postMessage({ kind: BROADCAST_KIND, eventType, data });
+      channel.postMessage({ kind: SSE_BROADCAST_KIND, eventType, data });
     } catch (error) {
       console.error("useSSE: failed to broadcast event to other tabs", error);
     }
@@ -191,7 +193,7 @@ async function runConnectionLoop(): Promise<void> {
       }
       console.log("useSSE: Stream ended by server, reconnecting...");
       connectionAttempts++;
-      if (connectionAttempts >= MAX_RECONNECT_ATTEMPTS) {
+      if (connectionAttempts >= SSE_MAX_RECONNECT_ATTEMPTS) {
         break;
       }
       await delay(connectionAttempts * 1000);
@@ -208,7 +210,7 @@ async function runConnectionLoop(): Promise<void> {
 
       console.error("useSSE: Connection error", error);
       connectionAttempts++;
-      if (connectionAttempts >= MAX_RECONNECT_ATTEMPTS) {
+      if (connectionAttempts >= SSE_MAX_RECONNECT_ATTEMPTS) {
         break;
       }
       console.log(`useSSE: Reconnecting in ${connectionAttempts * 1000}ms...`);
@@ -219,10 +221,10 @@ async function runConnectionLoop(): Promise<void> {
 
 /** Subscribe to events broadcast by the leader tab. */
 function setupChannel(): void {
-  channel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
+  channel = new BroadcastChannel(SSE_BROADCAST_CHANNEL_NAME);
   channel.onmessage = (event: MessageEvent) => {
     const message = event.data;
-    if (message && message.kind === BROADCAST_KIND) {
+    if (message && message.kind === SSE_BROADCAST_KIND) {
       dispatch(message.eventType, message.data);
     }
   };
@@ -235,7 +237,7 @@ function setupChannel(): void {
  */
 function requestLeadership(): void {
   navigator.locks
-    .request(LEADER_LOCK_NAME, { mode: "exclusive" }, () => {
+    .request(SSE_LEADER_LOCK_NAME, { mode: "exclusive" }, () => {
       isLeader = true;
       connectionShouldRun = true;
       connectionAttempts = 0;
