@@ -1,6 +1,6 @@
 {
   "name": "keep-ui",
-  "version": "0.51.3",
+  "version": "0.51.4",
   "description": "Keep UI",
   "main": "next.config.js",
   "scripts": {
