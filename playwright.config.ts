@@ -16,7 +16,7 @@ import { defineConfig, devices } from "@playwright/test";
 const UI_BASE_URL = process.env.UI_BASE_URL ?? "http://localhost:3000";
 
 export default defineConfig({
-  testDir: "./e2e/specs",
+  testDir: "./e2e",
   globalSetup: "./e2e/global-setup.ts",
   outputDir: "./e2e/results/artifacts",
   fullyParallel: false, // shared DB + async pipeline → keep ordering deterministic
@@ -39,5 +39,13 @@ export default defineConfig({
     actionTimeout: 15_000,
     navigationTimeout: 30_000,
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    { name: "setup", testMatch: /auth\.setup\.ts/ },
+    {
+      name: "chromium",
+      testMatch: /specs\/.*\.spec\.ts$/,
+      use: { ...devices["Desktop Chrome"], storageState: "e2e/.auth/user.json" },
+      dependencies: ["setup"],
+    },
+  ],
 });

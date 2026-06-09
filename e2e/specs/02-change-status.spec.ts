@@ -1,4 +1,5 @@
 import { test, expect } from "../fixtures/test-base";
+import { loadFeedRow } from "../fixtures/ui";
 
 /**
  * [check:02] change-status
@@ -26,10 +27,8 @@ test.describe("[check:02] change-status", () => {
     await api.waitForAlert(fingerprint);
 
     // --- locate its row in the feed -----------------------------------------
-    await page.goto("/alerts/feed");
-    const row = page.locator(
-      `[data-cy="alerts-row"][data-cy-id="${fingerprint}"]`
-    );
+    // The feed only lists alerts once a CEL query is submitted; filter to this fp.
+    const row = await loadFeedRow(page, fingerprint);
     await expect(row).toBeVisible();
 
     // --- open the row action menu and pick "Change Status" ------------------
@@ -45,9 +44,11 @@ test.describe("[check:02] change-status", () => {
     const modal = page.locator('[data-cy="alerts-change-status-modal"]');
     await expect(modal).toBeVisible();
 
-    // The status picker is a react-select; open it via its placeholder and
-    // choose the "Acknowledged" option by its accessible text.
-    await modal.getByText("Select new status").click();
+    // The status picker is a react-select; focus its combobox, type to filter,
+    // then choose the "Acknowledged" option from the portal-rendered menu.
+    const statusCombo = modal.getByRole("combobox");
+    await statusCombo.click();
+    await statusCombo.fill("Acknowledged");
     await page.getByRole("option", { name: "Acknowledged" }).click();
 
     await modal.locator('[data-cy="alerts-change-status-submit-btn"]').click();
@@ -57,10 +58,14 @@ test.describe("[check:02] change-status", () => {
     await api.waitForAlertField(fingerprint, "status", "acknowledged");
 
     // --- render assert: the status cell reflects the new status -------------
-    // The status cell renders an Icon with tooltip={status}; assert the cell's
-    // title attribute surfaces "acknowledged".
+    // The status cell renders a Tremor <Icon tooltip={status}> — the status text
+    // is exposed as a hover tooltip (role="tooltip"), NOT a static title/aria
+    // attribute. Hover the icon and assert the tooltip surfaces "acknowledged".
     const statusCell = row.locator('[data-cy="alerts-cell-status"]');
     await expect(statusCell).toBeVisible();
-    await expect(statusCell.locator('[title="acknowledged"]')).toBeVisible();
+    await statusCell.hover();
+    await expect(
+      page.getByRole("tooltip").filter({ hasText: /acknowledged/i })
+    ).toBeVisible();
   });
 });

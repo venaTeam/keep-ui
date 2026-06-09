@@ -1,4 +1,5 @@
 import { test, expect } from "../fixtures/test-base";
+import { loadFeedRow } from "../fixtures/ui";
 
 /**
  * [check:09] application-column
@@ -30,9 +31,8 @@ test.describe("[check:09] application-column", () => {
     expect(alert.application).toBe(application);
 
     // --- UI: open the feed and confirm the seeded row is present ----------
-    await page.goto("/alerts/feed");
-
-    const row = page.locator(`[data-cy="alerts-row"][data-cy-id="${fingerprint}"]`);
+    // The feed only lists alerts once a CEL query is submitted; filter to this fp.
+    const row = await loadFeedRow(page, fingerprint);
     await expect(row).toBeVisible();
 
     // --- UI: add the `application` column via the settings popover --------

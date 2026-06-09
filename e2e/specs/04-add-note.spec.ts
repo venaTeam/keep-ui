@@ -1,4 +1,5 @@
 import { test, expect } from "../fixtures/test-base";
+import { loadFeedRow } from "../fixtures/ui";
 
 /**
  * [check:04] add-note
@@ -24,10 +25,8 @@ test.describe("[check:04] add-note", () => {
     await api.waitForAlert(fingerprint);
 
     // --- locate the row -----------------------------------------------------
-    await page.goto("/alerts/feed");
-    const row = page.locator(
-      `[data-cy="alerts-row"][data-cy-id="${fingerprint}"]`
-    );
+    // The feed only lists alerts once a CEL query is submitted; filter to this fp.
+    const row = await loadFeedRow(page, fingerprint);
     await expect(row).toBeVisible();
 
     // --- open the note modal via the row quick-action -----------------------

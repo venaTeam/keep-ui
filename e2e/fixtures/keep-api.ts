@@ -248,7 +248,9 @@ export class KeepApi {
   }
 
   async getIncidents(): Promise<any[]> {
-    const res = await this.req(this.gateway, "GET", "/incidents");
+    // /incidents is paginated (default limit 25). Request a high limit so freshly
+    // seeded incidents aren't missed on a stack that has accumulated many.
+    const res = await this.req(this.gateway, "GET", "/incidents?limit=1000");
     const data = await this.json<any>(res, "getIncidents");
     return data?.items ?? data?.results ?? data ?? [];
   }

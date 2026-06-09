@@ -26,19 +26,17 @@ test.describe("[check:10] create-dashboard", () => {
     await expect(dashboardPage).toBeVisible();
     await expect(page.locator('[data-cy="dashboard-name"]')).toHaveText(dashboardName);
 
-    // Save persists the (empty-layout) dashboard via POST /dashboard.
-    await page.locator('[data-cy="dashboard-save-layout-btn"]').click();
-
-    // --- backend assert ---------------------------------------------------
-    await expect
-      .poll(
-        async () => {
-          const all = await api.getDashboards();
-          return all.map((d: any) => d.dashboard_name);
-        },
-        { timeout: 30_000, message: `dashboard "${dashboardName}" to be persisted` }
-      )
-      .toContain(dashboardName);
+    // Save persists the (empty-layout) dashboard via POST /dashboard. The save
+    // handler depends on the page's data layer being ready, which can lag the
+    // first render in dev — so re-click Save until the dashboard is persisted
+    // (backend assert) rather than clicking once and hoping.
+    const saveBtn = page.locator('[data-cy="dashboard-save-layout-btn"]');
+    await expect(saveBtn).toBeVisible();
+    await expect(async () => {
+      await saveBtn.click();
+      const names = (await api.getDashboards()).map((d: any) => d.dashboard_name);
+      expect(names).toContain(dashboardName);
+    }).toPass({ timeout: 30_000, intervals: [1_500, 3_000, 5_000] });
 
     // --- UI assert: the dashboard renders and is navigable ----------------
     await expect(page.locator('[data-cy="dashboard-name"]')).toHaveText(dashboardName);

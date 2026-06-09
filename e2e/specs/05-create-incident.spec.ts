@@ -40,11 +40,13 @@ test.describe("[check:05] create-incident", () => {
 
     await form.locator('[data-cy="incidents-form-name-input"]').fill(incidentName);
 
-    // Summary is a ReactQuill rich-text editor; the data-cy wraps the editor —
-    // type into its contenteditable region.
-    const summaryEditor = form
-      .locator('[data-cy="incidents-form-summary-input"] .ql-editor')
-      .first();
+    // Summary is a ReactQuill rich-text editor. NOTE: react-quill-new does NOT
+    // forward the `data-cy="incidents-form-summary-input"` prop to the DOM, so
+    // target its contenteditable `.ql-editor` within the form directly. It is
+    // dynamically imported (ssr:false) and compiles lazily in dev, so wait for
+    // it to mount before typing.
+    const summaryEditor = form.locator(".ql-editor").first();
+    await summaryEditor.waitFor({ state: "visible", timeout: 45_000 });
     await summaryEditor.click();
     await summaryEditor.fill(summaryText);
 

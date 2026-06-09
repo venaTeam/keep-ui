@@ -1,4 +1,5 @@
 import { test, expect } from "../fixtures/test-base";
+import { loadFeedRow } from "../fixtures/ui";
 
 /**
  * [check:01] send-alert
@@ -25,9 +26,8 @@ test.describe("[check:01] send-alert", () => {
     expect(alert.status).toBe("firing");
 
     // --- render assert: the row shows up in the feed ------------------------
-    await page.goto("/alerts/feed");
-    await expect(
-      page.locator(`[data-cy="alerts-row"][data-cy-id="${fingerprint}"]`)
-    ).toBeVisible();
+    // The feed only lists alerts once a CEL query is submitted; filter to this fp.
+    const row = await loadFeedRow(page, fingerprint);
+    await expect(row).toBeVisible();
   });
 });

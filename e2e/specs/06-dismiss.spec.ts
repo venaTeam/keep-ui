@@ -1,4 +1,5 @@
 import { test, expect } from "../fixtures/test-base";
+import { loadFeed, celFingerprint } from "../fixtures/ui";
 
 /**
  * [check:06] dismiss
@@ -52,7 +53,8 @@ test.describe("[check:06] dismiss", () => {
     await api.waitForAlert(a1.fingerprint);
     await api.waitForAlert(a2.fingerprint);
 
-    await page.goto("/alerts/feed");
+    // The feed only lists alerts once a CEL query is submitted; filter to a1.
+    await loadFeed(page, celFingerprint(a1.fingerprint), [a1.fingerprint]);
 
     // --- #1 permanent (Dismiss Forever) ------------------------------------
     const modal1 = await openDismissModal(page, a1.fingerprint);
@@ -61,17 +63,21 @@ test.describe("[check:06] dismiss", () => {
     await modal1.locator('[data-cy="alerts-dismiss-submit-btn"]').click();
     await expect(modal1).toBeHidden();
 
+    // Permanent dismiss enriches dismiss_mode="permanent" (and the derived
+    // `dismissed` flag) — it does NOT change `status` (alert-dismiss-modal.tsx
+    // only sets dismiss_mode/dismissed_until on dismiss; status is touched only
+    // on restore).
     await api.waitForEnrichment(
       a1.fingerprint,
-      (a) => a.status === "suppressed",
+      (a) => a.dismiss_mode === "permanent" || a.dismissed === true,
       30_000,
-      "permanent dismiss → suppressed"
+      "permanent dismiss → dismiss_mode=permanent"
     );
 
     // --- #2 dismiss-until --------------------------------------------------
-    // The default feed filters out suppressed alerts, so a2 (still firing) is
-    // present; re-open its dismiss modal. (Reload to refresh the feed after #1.)
-    await page.reload();
+    // a2 is still firing; re-submit a CEL query scoped to it so its row renders,
+    // then re-open its dismiss modal.
+    await loadFeed(page, celFingerprint(a2.fingerprint), [a2.fingerprint]);
     const modal2 = await openDismissModal(page, a2.fingerprint);
     // Switch to the "Dismiss Until" tab. The modal pre-seeds a valid future
     // datetime on open, which this tab retains.
@@ -92,9 +98,9 @@ test.describe("[check:06] dismiss", () => {
     // action menu exposes the restore affordance rather than dismiss.
     await api.waitForEnrichment(
       a1.fingerprint,
-      (a) => a.status === "suppressed",
+      (a) => a.dismiss_mode === "permanent" || a.dismissed === true,
       30_000,
-      "a1 stays suppressed"
+      "a1 stays permanently dismissed"
     );
   });
 });
