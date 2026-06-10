@@ -185,7 +185,7 @@ const handleSubmit = async (e: FormEvent) => {
       <div className="mt-2.5">
         <Text className="mb-2">Assignee</Text>
         <TextInput
-          placeholder="Who is responsible"
+          placeholder="keep@d360.dom"
           value={incidentAssignee}
           onValueChange={setIncidentAssignee}
           data-cy="incidents-form-assignee-input"
