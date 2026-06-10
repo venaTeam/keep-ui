@@ -17,7 +17,6 @@ interface AddFacetModalWithSuggestions {
 export const AddFacetModalWithSuggestions: React.FC<
   AddFacetModalWithSuggestions
 > = ({ entityName, isOpen, onClose, onAddFacet }) => {
-  const [name, setName] = useState("");
   const [propertyPath, setPropertyPath] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -26,13 +25,12 @@ export const AddFacetModalWithSuggestions: React.FC<
   const handleNewFacetCreation = () => {
     onAddFacet({
       property_path: propertyPath,
-      name: name || propertyPath,
+      name: propertyPath,
     });
     close();
   };
 
   const close = () => {
-    setName("");
     setPropertyPath("");
     onClose();
   };
@@ -51,35 +49,9 @@ export const AddFacetModalWithSuggestions: React.FC<
     >
       <div className="flex flex-col max-w-full overflow-hidden">
         <div className="flex-1 flex flex-col mt-3 max-h-96 space-y-1">
-          <div>
-            <div className="mb-1">
-              <span className="font-bold">Facet name (optional):</span>
-            </div>
-
-            <TextInput
-              placeholder="Enter facet name"
-              required={true}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="mb-4"
-            />
-          </div>
-          <div>
-            <div className="mb-1">
-              <span className="font-bold">Facet property path:</span>
-            </div>
-
-            <TextInput
-              placeholder="Enter facet property path or select from the list"
-              required={true}
-              value={propertyPath}
-              onChange={(e) => setPropertyPath(e.target.value)}
-              className="mb-4"
-            />
-          </div>
           <div className="flex flex-col flex-1 overflow-hidden">
             <div className="mb-1">
-              <span className="font-bold">Select facet property path:</span>
+              <span className="font-bold">Select facet field:</span>
             </div>
             {!propertyPathSuggestions && "Loading..."}
             {propertyPathSuggestions &&
