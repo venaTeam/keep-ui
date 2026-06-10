@@ -16,6 +16,10 @@ import Modal from "@/components/ui/Modal";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { AlertDto, Status } from "@/entities/alerts/model";
+import {
+  DEFAULT_DISPOSE_ON_NEW_ALERT,
+  DisposeOnNewAlertToggle,
+} from "@/entities/alerts/ui";
 import { set, isSameDay, isAfter } from "date-fns";
 import { useAlerts } from "@/entities/alerts/model/useAlerts";
 import { toast } from "react-toastify";
@@ -58,7 +62,9 @@ export function AlertDismissModal({
   const [selectedDateTime, setSelectedDateTime] = useState<Date | null>(null);
   const [showError, setShowError] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [disposeOnNewAlert, setDisposeOnNewAlert] = useState<boolean>(true);
+  const [disposeOnNewAlert, setDisposeOnNewAlert] = useState<boolean>(
+    DEFAULT_DISPOSE_ON_NEW_ALERT
+  );
   const [selectedStatus, setSelectedStatus] = useState<Status | null>(null);
   const [commentError, setCommentError] = useState<boolean>(false);
 
@@ -177,7 +183,7 @@ export function AlertDismissModal({
     setDismissComment("");
     setShowError(false);
     setCommentError(false);
-    setDisposeOnNewAlert(true);
+    setDisposeOnNewAlert(DEFAULT_DISPOSE_ON_NEW_ALERT);
     setSelectedStatus(null);
     setIsLoading(false);
     handleClose();
@@ -276,14 +282,11 @@ export function AlertDismissModal({
               }`}
           </Callout>
           <div className="flex justify-end mb-4">
-            <Button
-              variant={disposeOnNewAlert ? "primary" : "secondary"}
-              size="xs"
-              onClick={() => setDisposeOnNewAlert(!disposeOnNewAlert)}
-              tooltip={disposeOnNewAlert ? "Dispose the dismissal when a new alert comes in." : "Keep the dismissal when a new alert comes in."}
-            >
-              {disposeOnNewAlert ? "Disposing on new alerts" : "Keeping on new alerts"}
-            </Button>
+            <DisposeOnNewAlertToggle
+              value={disposeOnNewAlert}
+              onChange={setDisposeOnNewAlert}
+              entityLabel="dismissal"
+            />
           </div>
           <TabGroup
             index={selectedTab}

@@ -2,6 +2,10 @@ import { Button, Title, Subtitle, Switch, Textarea } from "@tremor/react";
 import Modal from "@/components/ui/Modal";
 import { useState, useEffect } from "react";
 import { AlertDto, Status } from "@/entities/alerts/model";
+import {
+  DEFAULT_DISPOSE_ON_NEW_ALERT,
+  DisposeOnNewAlertToggle,
+} from "@/entities/alerts/ui";
 import { toast } from "react-toastify";
 import {
   CheckCircleIcon,
@@ -39,7 +43,9 @@ export function AlertChangeStatusModal({
   onSuccess,
 }: Props) {
   const api = useApi();
-  const [disposeOnNewAlert, setDisposeOnNewAlert] = useState(true);
+  const [disposeOnNewAlert, setDisposeOnNewAlert] = useState(
+    DEFAULT_DISPOSE_ON_NEW_ALERT
+  );
   const [selectedStatus, setSelectedStatus] = useState<Status | null>(null);
   const revalidateMultiple = useRevalidateMultiple();
   const { alertsMutator } = useAlerts();
@@ -70,7 +76,7 @@ export function AlertChangeStatusModal({
   const clearAndClose = () => {
     setSelectedStatus(null);
     setNoteContent("");
-    setDisposeOnNewAlert(true);
+    setDisposeOnNewAlert(DEFAULT_DISPOSE_ON_NEW_ALERT);
     handleClose();
   };
 
@@ -184,15 +190,12 @@ const handleChangeStatusBatch = async () => {
               }),
             }}
           />
-          <Button
-            variant={disposeOnNewAlert ? "primary" : "secondary"}
+          <DisposeOnNewAlertToggle
+            value={disposeOnNewAlert}
+            onChange={setDisposeOnNewAlert}
+            entityLabel="status"
             className="ml-4"
-            size="xs"
-            onClick={() => setDisposeOnNewAlert(!disposeOnNewAlert)}
-            tooltip={disposeOnNewAlert ? "Dispose the status when a new alert comes in." : "Keep the status when a new alert comes in."}
-          >
-            {disposeOnNewAlert ? "Disposing on new alerts" : "Keeping on new alerts"}
-          </Button>
+          />
         </div>
         <div className="mt-4">
           <Subtitle >Add Note</Subtitle>
@@ -242,15 +245,12 @@ const handleChangeStatusBatch = async () => {
               }),
             }}
           />
-          <Button
-            variant={disposeOnNewAlert ? "primary" : "secondary"}
+          <DisposeOnNewAlertToggle
+            value={disposeOnNewAlert}
+            onChange={setDisposeOnNewAlert}
+            entityLabel="status"
             className="ml-4"
-            size="xs"
-            onClick={() => setDisposeOnNewAlert(!disposeOnNewAlert)}
-            tooltip={disposeOnNewAlert ? "Dispose the status when a new alert comes in." : "Keep the status when a new alert comes in."}
-          >
-            {disposeOnNewAlert ? "Disposing on new alerts" : "Keeping on new alerts"}
-          </Button>
+          />
         </div>
         <div className="mt-4">
           <Subtitle >Add Note</Subtitle>
