@@ -1,7 +1,5 @@
 import { Button } from "@tremor/react";
 
-export const DEFAULT_DISPOSE_ON_NEW_ALERT = false;
-
 interface DisposeOnNewAlertToggleProps {
   value: boolean;
   onChange: (value: boolean) => void;

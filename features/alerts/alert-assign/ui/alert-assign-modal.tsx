@@ -1,11 +1,11 @@
 import { Button, Title, Subtitle, Textarea } from "@tremor/react";
 import Modal from "@/components/ui/Modal";
 import { useState } from "react";
-import { AlertDto } from "@/entities/alerts/model";
 import {
+    AlertDto,
     DEFAULT_DISPOSE_ON_NEW_ALERT,
-    DisposeOnNewAlertToggle,
-} from "@/entities/alerts/ui";
+} from "@/entities/alerts/model";
+import { DisposeOnNewAlertToggle } from "@/entities/alerts/ui";
 import { toast } from "react-toastify";
 import { useAlerts } from "@/entities/alerts/model/useAlerts";
 import { useApi } from "@/shared/lib/hooks/useApi";

@@ -1,11 +1,12 @@
 import { Button, Title, Subtitle, Switch, Textarea } from "@tremor/react";
 import Modal from "@/components/ui/Modal";
 import { useState, useEffect } from "react";
-import { AlertDto, Status } from "@/entities/alerts/model";
 import {
+  AlertDto,
+  Status,
   DEFAULT_DISPOSE_ON_NEW_ALERT,
-  DisposeOnNewAlertToggle,
-} from "@/entities/alerts/ui";
+} from "@/entities/alerts/model";
+import { DisposeOnNewAlertToggle } from "@/entities/alerts/ui";
 import { toast } from "react-toastify";
 import {
   CheckCircleIcon,

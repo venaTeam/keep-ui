@@ -2,10 +2,8 @@ import { Button, Title, Subtitle, Textarea } from "@tremor/react";
 import Modal from "@/components/ui/Modal";
 import { useState, useEffect } from "react";
 import { Status } from "@/entities/incidents/model";
-import {
-    DEFAULT_DISPOSE_ON_NEW_ALERT,
-    DisposeOnNewAlertToggle,
-} from "@/entities/alerts/ui";
+import { DEFAULT_DISPOSE_ON_NEW_ALERT } from "@/entities/alerts/model";
+import { DisposeOnNewAlertToggle } from "@/entities/alerts/ui";
 import { STATUS_ICONS } from "@/entities/incidents/ui";
 import { useIncidentActions } from "@/entities/incidents/model";
 import { Select, showErrorToast } from "@/shared/ui";

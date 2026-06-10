@@ -15,11 +15,12 @@ import {
 import Modal from "@/components/ui/Modal";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { AlertDto, Status } from "@/entities/alerts/model";
 import {
+  AlertDto,
+  Status,
   DEFAULT_DISPOSE_ON_NEW_ALERT,
-  DisposeOnNewAlertToggle,
-} from "@/entities/alerts/ui";
+} from "@/entities/alerts/model";
+import { DisposeOnNewAlertToggle } from "@/entities/alerts/ui";
 import { set, isSameDay, isAfter } from "date-fns";
 import { useAlerts } from "@/entities/alerts/model/useAlerts";
 import { toast } from "react-toastify";
