@@ -8,11 +8,10 @@
  * requests (`/preset`, `/alerts/query`, ...) would queue indefinitely — leaving
  * the page stuck on an infinite loading spinner.
  *
- * Fix: collapse the N per-tab connections into a single shared connection per
- * browser. One tab is elected "leader" via an exclusive Web Lock and owns the
- * only SSE stream; it fans every event out to the other tabs over a
- * `BroadcastChannel`. When the leader tab closes, the browser releases its lock
- * and a waiting tab automatically takes over.
+ * One tab is elected "leader" via an exclusive Web Lock and owns the only SSE
+ * stream; it fans every event out to the other tabs over a `BroadcastChannel`.
+ * When the leader tab closes, the browser releases its lock and a waiting tab
+ * automatically takes over.
  *
  * If `navigator.locks` or `BroadcastChannel` is unavailable (older browsers /
  * insecure context), we fall back to the previous per-tab behavior so realtime
@@ -241,13 +240,11 @@ function requestLeadership(): void {
       isLeader = true;
       connectionShouldRun = true;
       connectionAttempts = 0;
-      console.log("useSSE: Acquired leadership, opening shared SSE connection");
       // Hold the lock for as long as we own the connection by returning a
       // promise that only settles when the connection loop stops.
       return runConnectionLoop().finally(() => {
         isLeader = false;
         connectionShouldRun = false;
-        console.log("useSSE: Releasing leadership");
       });
     })
     .catch((error) => {
