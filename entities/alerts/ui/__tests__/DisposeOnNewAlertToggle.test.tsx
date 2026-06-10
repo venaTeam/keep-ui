@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import {
   DEFAULT_DISPOSE_ON_NEW_ALERT,
   DisposeOnNewAlertToggle,
-} from "./DisposeOnNewAlertToggle";
+} from "../DisposeOnNewAlertToggle";
 
 describe("DisposeOnNewAlertToggle", () => {
   it("defaults to keeping on new alerts (DEFAULT_DISPOSE_ON_NEW_ALERT is false)", () => {
