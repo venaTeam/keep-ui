@@ -16,6 +16,11 @@ import { loadFeedRow } from "../fixtures/ui";
  *  - mutate via the real UI
  *  - backend-assert via api.waitForAlertField(fp, "status", "acknowledged")
  *  - render-assert the row's status cell (data-cy="alerts-cell-status").
+ *
+ * Also pins the "dispose on new alert" toggle default: the modal must open in
+ * the "Keeping on new alerts" (false) state, and submitting WITHOUT touching
+ * the toggle must POST /alerts/enrich (the single-alert path this flow takes)
+ * with dispose_on_new_alert=false in the query string.
  */
 test.describe("[check:02] change-status", () => {
   test("changing an alert's status via the UI persists and re-renders", async ({
@@ -44,6 +49,17 @@ test.describe("[check:02] change-status", () => {
     const modal = page.locator('[data-cy="alerts-change-status-modal"]');
     await expect(modal).toBeVisible();
 
+    // --- toggle default: dispose-on-new-alert opens OFF ----------------------
+    // The toggle is a plain button whose visible label IS the state contract:
+    // "Keeping on new alerts" (false) by default, never "Disposing on new
+    // alerts" on open.
+    await expect(
+      modal.getByRole("button", { name: "Keeping on new alerts" })
+    ).toBeVisible();
+    await expect(
+      modal.getByRole("button", { name: "Disposing on new alerts" })
+    ).toHaveCount(0);
+
     // The status picker is a react-select; focus its combobox, type to filter,
     // then choose the "Acknowledged" option from the portal-rendered menu.
     const statusCombo = modal.getByRole("combobox");
@@ -51,7 +67,18 @@ test.describe("[check:02] change-status", () => {
     await statusCombo.fill("Acknowledged");
     await page.getByRole("option", { name: "Acknowledged" }).click();
 
+    // Submit WITHOUT touching the toggle and assert the outgoing request
+    // carries dispose_on_new_alert=false. The single-alert flow POSTs
+    // /alerts/enrich (batch selections go to /alerts/batch_enrich instead).
+    const enrichRequest = page.waitForRequest(
+      (req) =>
+        req.method() === "POST" && req.url().includes("/alerts/enrich"),
+      { timeout: 15_000 }
+    );
     await modal.locator('[data-cy="alerts-change-status-submit-btn"]').click();
+    expect((await enrichRequest).url()).toContain(
+      "dispose_on_new_alert=false"
+    );
     await expect(modal).toBeHidden();
 
     // --- backend assert: status changed -------------------------------------
