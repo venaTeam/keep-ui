@@ -41,10 +41,8 @@ import { PaginationState } from "@/features/filter/pagination";
 import { CreateWorkflowModal } from "./create-workflow-modal";
 import { UploadWorkflowsModal } from "./upload-workflows-modal";
 
-const AssigneeLabel = ({ email }: { email: string }) => {
-  const user = useUser(email);
-  return user ? user.name : email;
-};
+// Render the author identifier directly (no roster fetch).
+const AssigneeLabel = ({ email }: { email: string }) => email;
 
 export function ExistingWorkflowsState({
   initialFacetsData,
@@ -187,7 +185,7 @@ export function ExistingWorkflowsState({
       },
       ["Created by"]: {
         renderOptionIcon: (facetOption) => (
-          <UserStatefulAvatar email={facetOption.display_name} size="xs" />
+          <UserStatefulAvatar email={facetOption.display_name} size="xs" emailOnly />
         ),
         renderOptionLabel: (facetOption) => {
           if (facetOption.display_name === "null") {

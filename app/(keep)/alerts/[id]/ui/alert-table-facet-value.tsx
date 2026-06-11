@@ -8,14 +8,11 @@ import clsx from "clsx";
 import { useIncidents } from "@/utils/hooks/useIncidents";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
 import { UserStatefulAvatar } from "@/entities/users/ui";
-import { useUser } from "@/entities/users/model/useUser";
 import { SeverityBorderIcon, UISeverity } from "@/shared/ui";
 import { DynamicImageProviderIcon } from "@/components/ui";
 
-const AssigneeLabel = ({ email }: { email: string }) => {
-  const user = useUser(email);
-  return user ? user.name : email;
-};
+// Render the assignee identifier directly (no roster fetch).
+const AssigneeLabel = ({ email }: { email: string }) => email;
 
 export const FacetValue: React.FC<FacetValueProps> = ({
   label,
@@ -92,7 +89,7 @@ export const FacetValue: React.FC<FacetValueProps> = ({
         return <SeverityBorderIcon severity={label as UISeverity} />;
       }
       if (facetKey === "assignee") {
-        return <UserStatefulAvatar email={label} size="xs" />;
+        return <UserStatefulAvatar email={label} size="xs" emailOnly />;
       }
       if (facetKey === "status") {
         return (

@@ -44,7 +44,6 @@ import {
   SeverityBorderIcon,
   UISeverity,
 } from "@/shared/ui";
-import { useUser } from "@/entities/users/model/useUser";
 import { UserStatefulAvatar } from "@/entities/users/ui";
 import { getStatusIcon, getStatusColor } from "@/shared/lib/status-utils";
 import { Icon } from "@tremor/react";
@@ -82,10 +81,8 @@ import { usePresetColumnState } from "@/entities/presets/model";
 import { STATIC_PRESET_IDS, STATIC_PRESETS_NAMES } from "@/entities/presets/model/constants";
 import { useHydratedSession } from "@/shared/lib/hooks/useHydratedSession";
 
-const AssigneeLabel = ({ email }: { email: string }) => {
-  const user = useUser(email);
-  return user?.name || email;
-};
+// Render the assignee identifier directly (no roster fetch).
+const AssigneeLabel = ({ email }: { email: string }) => email;
 
 interface PresetTab {
   name: string;
@@ -455,7 +452,7 @@ export function AlertTableServerSide({
       },
       ["Assignee"]: {
         renderOptionIcon: (facetOption) => (
-          <UserStatefulAvatar email={facetOption.display_name} size="xs" />
+          <UserStatefulAvatar email={facetOption.display_name} size="xs" emailOnly />
         ),
         renderOptionLabel: (facetOption) => {
           if (facetOption.display_name === "null") {

@@ -2,6 +2,8 @@ import { Button, Title, Subtitle, Textarea } from "@tremor/react";
 import Modal from "@/components/ui/Modal";
 import { useState, useEffect } from "react";
 import { Status } from "@/entities/incidents/model";
+import { DEFAULT_DISPOSE_ON_NEW_ALERT } from "@/entities/alerts/model";
+import { DisposeOnNewAlertToggle } from "@/entities/alerts/ui";
 import { STATUS_ICONS } from "@/entities/incidents/ui";
 import { useIncidentActions } from "@/entities/incidents/model";
 import { Select, showErrorToast } from "@/shared/ui";
@@ -25,7 +27,9 @@ export function IncidentChangeStatusModal({
     onClose,
     onSuccess,
 }: Props) {
-    const [disposeOnNewAlert, setDisposeOnNewAlert] = useState(false);
+    const [disposeOnNewAlert, setDisposeOnNewAlert] = useState(
+        DEFAULT_DISPOSE_ON_NEW_ALERT
+    );
     const [selectedStatus, setSelectedStatus] = useState<Status | null>(initialStatus ?? null);
     const [noteContent, setNoteContent] = useState<string>("");
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -52,7 +56,7 @@ export function IncidentChangeStatusModal({
     const clearAndClose = () => {
         setSelectedStatus(null);
         setNoteContent("");
-        setDisposeOnNewAlert(false);
+        setDisposeOnNewAlert(DEFAULT_DISPOSE_ON_NEW_ALERT);
         onClose();
     };
 
@@ -112,22 +116,13 @@ export function IncidentChangeStatusModal({
                     }}
                     data-cy="incidents-change-status-modal-select"
                 />
-                <Button
-                    variant={disposeOnNewAlert ? "primary" : "secondary"}
+                <DisposeOnNewAlertToggle
+                    value={disposeOnNewAlert}
+                    onChange={setDisposeOnNewAlert}
+                    entityLabel="status"
                     className="ml-4"
-                    size="xs"
-                    onClick={() => setDisposeOnNewAlert(!disposeOnNewAlert)}
-                    tooltip={
-                        disposeOnNewAlert
-                            ? "Dispose the status when a new alert comes in."
-                            : "Keep the status when a new alert comes in."
-                    }
                     data-cy="incidents-change-status-dispose-toggle-btn"
-                >
-                    {disposeOnNewAlert
-                        ? "Disposing on new alerts"
-                        : "Keeping on new alerts"}
-                </Button>
+                />
             </div>
             <div className="mt-4">
                 <Subtitle>Add Note</Subtitle>
