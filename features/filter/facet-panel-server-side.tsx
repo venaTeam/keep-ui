@@ -39,6 +39,11 @@ export interface FacetsPanelProps {
   persistenceKey?: string;
   /** Callback to handle the change of the CEL when options toggle */
   onCelChange?: (cel: string) => void;
+  /** When provided, renders a collapse button on the same line as "Add Facet" */
+  onCollapse?: () => void;
+  /** When this value changes, all facets re-expand (used to open facets when the
+   * sidebar is opened). */
+  expandToken?: string;
 }
 
 export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
@@ -53,6 +58,8 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
   facetsConfig,
   persistenceKey,
   isSilentReloading,
+  onCollapse,
+  expandToken,
 }) => {
   const [isModalOpen, setIsModalOpen] = useLocalStorage<boolean>(
     `addFacetModalOpen-${entityName}`,
@@ -111,6 +118,8 @@ export const FacetsPanelServerSide: React.FC<FacetsPanelProps> = ({
         facetsConfig={facetsConfig}
         persistenceKey={persistenceKey}
         onCelChange={onCelChange}
+        onCollapse={onCollapse}
+        expandToken={expandToken}
         onAddFacet={() => setIsModalOpen(true)}
         onLoadFacetOptions={(facetId) =>
           setFacetQueriesState({ ...facetQueriesState, [facetId]: "" })

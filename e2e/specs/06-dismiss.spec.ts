@@ -22,6 +22,14 @@ import { loadFeed, celFingerprint } from "../fixtures/ui";
  * Render assert: a dismissed alert leaves the default feed and/or surfaces the
  * restore affordance — when re-selected its menu shows "Restore"
  * (data-cy="menu-item-restore") instead of "Dismiss".
+ *
+ * Also pins the "dispose on new alert" toggle default on the permanent path:
+ *  - the modal opens in the "Keeping on new alerts" (false) state;
+ *  - flipping it to "Disposing on new alerts" and cancelling
+ *    (data-cy="alerts-dismiss-cancel-btn") resets it — reopening shows
+ *    "Keeping on new alerts" again;
+ *  - submitting WITHOUT touching the toggle POSTs /alerts/batch_enrich with
+ *    dispose_on_new_alert=false in the query string.
  */
 test.describe("[check:06] dismiss", () => {
   async function openDismissModal(
@@ -58,9 +66,42 @@ test.describe("[check:06] dismiss", () => {
 
     // --- #1 permanent (Dismiss Forever) ------------------------------------
     const modal1 = await openDismissModal(page, a1.fingerprint);
+
+    // Toggle default: the dispose-on-new-alert toggle is a plain button whose
+    // visible label IS the state contract — it must open as "Keeping on new
+    // alerts" (false), never "Disposing on new alerts".
+    const keepingToggle = modal1.getByRole("button", {
+      name: "Keeping on new alerts",
+    });
+    const disposingToggle = modal1.getByRole("button", {
+      name: "Disposing on new alerts",
+    });
+    await expect(keepingToggle).toBeVisible();
+    await expect(disposingToggle).toHaveCount(0);
+
+    // Reset path: flip the toggle, cancel the modal, reopen — the toggle must
+    // be back at its "Keeping on new alerts" default (cancel discards state).
+    await keepingToggle.click();
+    await expect(disposingToggle).toBeVisible();
+    await modal1.locator('[data-cy="alerts-dismiss-cancel-btn"]').click();
+    await expect(modal1).toBeHidden();
+    await openDismissModal(page, a1.fingerprint);
+    await expect(keepingToggle).toBeVisible();
+    await expect(disposingToggle).toHaveCount(0);
+
     // Tab 0 ("Dismiss Forever") is the default. A comment is required.
     await modal1.locator("textarea").fill(`permanent dismiss ${stamp}`);
+    // Submit WITHOUT touching the toggle and assert the outgoing
+    // POST /alerts/batch_enrich carries dispose_on_new_alert=false.
+    const batchEnrichRequest = page.waitForRequest(
+      (req) =>
+        req.method() === "POST" && req.url().includes("/alerts/batch_enrich"),
+      { timeout: 15_000 }
+    );
     await modal1.locator('[data-cy="alerts-dismiss-submit-btn"]').click();
+    expect((await batchEnrichRequest).url()).toContain(
+      "dispose_on_new_alert=false"
+    );
     await expect(modal1).toBeHidden();
 
     // Permanent dismiss enriches dismiss_mode="permanent" (and the derived

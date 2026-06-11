@@ -1,7 +1,11 @@
 import { Button, Title, Subtitle, Textarea } from "@tremor/react";
 import Modal from "@/components/ui/Modal";
 import { useState } from "react";
-import { AlertDto } from "@/entities/alerts/model";
+import {
+    AlertDto,
+    DEFAULT_DISPOSE_ON_NEW_ALERT,
+} from "@/entities/alerts/model";
+import { DisposeOnNewAlertToggle } from "@/entities/alerts/ui";
 import { toast } from "react-toastify";
 import { useAlerts } from "@/entities/alerts/model/useAlerts";
 import { useApi } from "@/shared/lib/hooks/useApi";
@@ -21,7 +25,9 @@ export function AlertAssignModal({
     presetName,
 }: Props) {
     const api = useApi();
-    const [disposeOnNewAlert, setDisposeOnNewAlert] = useState(false);
+    const [disposeOnNewAlert, setDisposeOnNewAlert] = useState(
+        DEFAULT_DISPOSE_ON_NEW_ALERT
+    );
     const revalidateMultiple = useRevalidateMultiple();
     const { alertsMutator } = useAlerts();
     const presetsMutator = () => revalidateMultiple(["/preset"]);
@@ -31,7 +37,7 @@ export function AlertAssignModal({
 
     const clearAndClose = () => {
         setNoteContent("");
-        setDisposeOnNewAlert(false);
+        setDisposeOnNewAlert(DEFAULT_DISPOSE_ON_NEW_ALERT);
         handleClose();
     };
 const handleAssign = async () => {
@@ -69,14 +75,11 @@ const handleAssign = async () => {
                 <Subtitle className="flex items-center bold mr-4">
                     Assign to me
                 </Subtitle>
-                <Button
-                    variant={disposeOnNewAlert ? "primary" : "secondary"}
-                    size="xs"
-                    onClick={() => setDisposeOnNewAlert(!disposeOnNewAlert)}
-                    tooltip={disposeOnNewAlert ? "Dispose the assignment when a new alert comes in." : "Keep the assignment when a new alert comes in."}
-                >
-                    {disposeOnNewAlert ? "Disposing on new alerts" : "Keeping on new alerts"}
-                </Button>
+                <DisposeOnNewAlertToggle
+                    value={disposeOnNewAlert}
+                    onChange={setDisposeOnNewAlert}
+                    entityLabel="assignment"
+                />
             </div>
             <div className="mt-4">
                 <Subtitle>Add Note</Subtitle>

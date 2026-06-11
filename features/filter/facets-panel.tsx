@@ -6,7 +6,8 @@ import {
   FacetOptionsQueries,
   FacetsConfig,
 } from "./models";
-import { PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { ChevronLeftIcon, PlusIcon } from "@heroicons/react/24/outline";
+import { FiFilter } from "react-icons/fi";
 import "react-loading-skeleton/dist/skeleton.css";
 import clsx from "clsx";
 import { FacetStoreProvider, useFacetsConfig, useNewFacetStore } from "./store";
@@ -41,6 +42,11 @@ export interface FacetsPanelProps {
   onDeleteFacet: (facetId: string) => void;
   onLoadFacetOptions: (facetId: string) => void;
   onReloadFacetOptions: (facetsQuery: FacetOptionsQueries) => void;
+  /** When provided, renders a collapse button (orange filter icon) on the same
+   * line as the "Add Facet" button. */
+  onCollapse?: () => void;
+  /** When this value changes, all facets re-expand. */
+  expandToken?: string;
 }
 
 export const FacetsPanel: React.FC<FacetsPanelProps> = ({
@@ -57,6 +63,8 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
   onDeleteFacet = undefined,
   onLoadFacetOptions = undefined,
   onReloadFacetOptions = undefined,
+  onCollapse = undefined,
+  expandToken = undefined,
 }) => {
   const facetOptionsRef = useRef<Record<string, FacetOptionDto[]>>(facetOptions);
   facetOptionsRef.current = facetOptions;
@@ -113,23 +121,34 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
       data-cy="facets-panel"
     >
       <div className="space-y-2">
-        <div className="flex justify-between">
+        <div
+          className={clsx(
+            "flex items-center",
+            onCollapse ? "justify-between" : "justify-end"
+          )}
+        >
+          {/* Collapse button (orange filter icon) */}
+          {onCollapse && (
+            <button
+              onClick={() => onCollapse()}
+              title="Hide filters"
+              aria-label="Hide filters"
+              className="p-1 hover:bg-gray-100 rounded flex items-center gap-1"
+              data-cy="facets-panel-collapse-btn"
+            >
+              <FiFilter className="text-orange-500" size={16} />
+              <ChevronLeftIcon className="h-4 w-4 text-orange-500" />
+            </button>
+          )}
           {/* Facet button */}
           <button
             onClick={() => onAddFacet && onAddFacet()}
-            className="p-1 pr-2 text-sm text-gray-600 hover:bg-gray-100 rounded flex items-center gap-1"
+            title="Add facet"
+            aria-label="Add facet"
+            className="p-1 hover:bg-gray-100 rounded flex items-center"
             data-cy="facet-add-btn"
           >
-            <PlusIcon className="h-4 w-4" />
-            Add Facet
-          </button>
-          <button
-            onClick={() => clearFilters()}
-            className="p-1 pr-2 text-sm text-gray-600 hover:bg-gray-100 rounded flex items-center gap-1"
-            data-cy="facet-reset-btn"
-          >
-            <XMarkIcon className="h-4 w-4" />
-            Reset
+            <PlusIcon className="h-4 w-4 text-orange-500" />
           </button>
         </div>
         <FacetStoreProvider store={store}>
@@ -153,6 +172,7 @@ export const FacetsPanel: React.FC<FacetsPanelProps> = ({
                 key={facet.id}
                 facet={facet}
                 options={facetOptions?.[facet.id]}
+                expandToken={expandToken}
                 onLoadOptions={() =>
                   onLoadFacetOptions && onLoadFacetOptions(facet.id)
                 }

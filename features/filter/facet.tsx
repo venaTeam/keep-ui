@@ -15,6 +15,8 @@ export interface FacetProps {
   isOpenByDefault?: boolean;
   options?: FacetOptionDto[];
   showIcon?: boolean;
+  /** When this value changes, the facet re-expands. */
+  expandToken?: string;
   onLoadOptions?: () => void;
   onDelete?: () => void;
 }
@@ -23,6 +25,7 @@ export const Facet: React.FC<FacetProps> = ({
   facet,
   options,
   showIcon = true,
+  expandToken,
   onLoadOptions,
   onDelete,
 }) => {
@@ -119,6 +122,14 @@ export const Facet: React.FC<FacetProps> = ({
     // disabling as the effect has to only run on options change"
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [options]);
+
+  // Re-expand the facet when the sidebar is (re)opened. The empty initial token
+  // is ignored so this doesn't fight a user's manual collapse before any open.
+  useEffect(() => {
+    if (expandToken) {
+      setIsOpen(true);
+    }
+  }, [expandToken]);
 
   // Store filter value in localStorage per preset and facet
   const [filter, setFilter] = useLocalStorage<string>(
