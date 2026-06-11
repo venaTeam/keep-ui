@@ -14,7 +14,6 @@ import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 import React from "react";
 import { CorrelationFormType } from "./types";
 import { useTenantConfiguration } from "@/utils/hooks/useTenantConfiguration";
-import { useUsers } from "@/entities/users/model/useUsers";
 import { Input } from "@/shared/ui";
 
 type CorrelationFormProps = {
@@ -53,7 +52,6 @@ export const CorrelationForm = ({
   } = useFormContext<CorrelationFormType>();
 
   const { data: tenantConfiguration } = useTenantConfiguration();
-  const { data: users = [] } = useUsers();
 
   const keys = ALERT_ATTRIBUTE_KEYS;
 
@@ -318,18 +316,12 @@ export const CorrelationForm = ({
             control={control}
             name="assignee"
             render={({ field: { value, onChange } }) => (
-              <Select
+              <TextInput
                 value={value || ""}
                 onValueChange={onChange}
+                placeholder="Email of the user to auto-assign (optional)"
                 className="mt-2"
-              >
-                <SelectItem value="">No assignment</SelectItem>
-                {users.map((user) => (
-                  <SelectItem key={user.email} value={user.email}>
-                    {user.name || user.email}
-                  </SelectItem>
-                ))}
-              </Select>
+              />
             )}
           />
         </div>

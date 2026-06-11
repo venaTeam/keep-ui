@@ -25,7 +25,6 @@ import {
 import { BellIcon, BellSlashIcon } from "@heroicons/react/24/outline";
 import { UserStatefulAvatar } from "@/entities/users/ui";
 import { getStatusIcon, getStatusColor } from "@/shared/lib/status-utils";
-import { useUser } from "@/entities/users/model/useUser";
 import {
   reverseSeverityMapping,
   severityMapping,
@@ -55,10 +54,8 @@ import { PaginationState } from "@/features/filter/pagination";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { recordPageLoad } from "@/utils/metrics";
 
-const AssigneeLabel = ({ email }: { email: string }) => {
-  const user = useUser(email);
-  return user ? user.name : email;
-};
+// Render the assignee identifier directly (no roster fetch).
+const AssigneeLabel = ({ email }: { email: string }) => email;
 
 export function IncidentList({
   initialFacetsData,
@@ -190,7 +187,7 @@ export function IncidentList({
       },
       ["Assignee"]: {
         renderOptionIcon: (facetOption) => (
-          <UserStatefulAvatar email={facetOption.display_name} size="xs" />
+          <UserStatefulAvatar email={facetOption.display_name} size="xs" emailOnly />
         ),
         renderOptionLabel: (facetOption) => {
           if (!facetOption.display_name) {
