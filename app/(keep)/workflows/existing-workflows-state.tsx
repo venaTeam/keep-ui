@@ -28,7 +28,11 @@ import {
   MagnifyingGlassIcon,
   FunnelIcon,
   ArrowPathIcon,
+  ChevronRightIcon,
 } from "@heroicons/react/24/outline";
+import { FiFilter } from "react-icons/fi";
+import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
+import { useUser } from "@/entities/users/model/useUser";
 import { Pagination, SearchInput } from "@/features/filter";
 import { FacetsPanelServerSide } from "@/features/filter/facet-panel-server-side";
 import { InitialFacetsData } from "@/features/filter/api";
@@ -54,6 +58,19 @@ export function ExistingWorkflowsState({
   );
   const [filterCel, setFilterCel] = useState<string | null>(null);
   const [searchedValue, setSearchedValue] = useState<string | null>(null);
+
+  // Collapsible facets sidebar — open by default, persisted across reloads.
+  const [isFacetsCollapsed, setIsFacetsCollapsed] = useLocalStorage<boolean>(
+    "facets-collapsed-workflows",
+    false
+  );
+  // Re-expand all facets whenever the sidebar is opened.
+  const [facetsExpandToken, setFacetsExpandToken] = useState<string>("");
+  useEffect(() => {
+    if (!isFacetsCollapsed) {
+      setFacetsExpandToken(Date.now().toString());
+    }
+  }, [isFacetsCollapsed]);
   const [paginationState, setPaginationState] = useState<PaginationState>(
     DEFAULT_WORKFLOWS_PAGINATION
   );
@@ -301,16 +318,37 @@ export function ExistingWorkflowsState({
                 value={searchedValue as string}
                 onValueChange={setSearchedValue}
               />
-              <div className="flex gap-6">
-                <FacetsPanelServerSide
-                  entityName={"workflows"}
-                  facetsConfig={facetsConfig}
-                  facetOptionsCel={searchCel}
-                  usePropertyPathsSuggestions={true}
-                  clearFiltersToken={clearFiltersToken}
-                  initialFacetsData={initialFacetsData}
-                  onCelChange={(cel) => setFilterCel(cel)}
-                />
+              <div className="flex gap-6 items-start">
+                {/* Collapsed state: a button to reopen the facets sidebar */}
+                {isFacetsCollapsed && (
+                  <div className="flex-none">
+                    <button
+                      onClick={() => setIsFacetsCollapsed(false)}
+                      title="Show filters"
+                      aria-label="Show filters"
+                      className="p-2 hover:bg-gray-100 rounded flex items-center gap-1"
+                      data-cy="facets-panel-expand-btn"
+                    >
+                      <FiFilter className="text-orange-500" size={16} />
+                      <ChevronRightIcon className="h-4 w-4 text-orange-500" />
+                    </button>
+                  </div>
+                )}
+                {/* Keep the panel mounted when collapsed (just hidden) so added/
+                    edited facets and selections are preserved. */}
+                <div className={isFacetsCollapsed ? "hidden" : ""}>
+                  <FacetsPanelServerSide
+                    entityName={"workflows"}
+                    facetsConfig={facetsConfig}
+                    facetOptionsCel={searchCel}
+                    usePropertyPathsSuggestions={true}
+                    clearFiltersToken={clearFiltersToken}
+                    initialFacetsData={initialFacetsData}
+                    onCelChange={(cel) => setFilterCel(cel)}
+                    onCollapse={() => setIsFacetsCollapsed(true)}
+                    expandToken={facetsExpandToken}
+                  />
+                </div>
 
                 <div className="flex flex-col flex-1 relative">
                   {isFirstLoading && (

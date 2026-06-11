@@ -50,6 +50,7 @@ import { Icon } from "@tremor/react";
 import {
   BellIcon,
   BellSlashIcon,
+  ChevronRightIcon,
   FireIcon,
   FunnelIcon,
   MagnifyingGlassIcon,
@@ -63,6 +64,7 @@ import { TimeFormatOption } from "@/widgets/alerts-table/lib/alert-table-time-fo
 import { PushAlertToServerModal } from "@/features/alerts/simulate-alert";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { GrTest } from "react-icons/gr";
+import { FiFilter } from "react-icons/fi";
 import { PlusIcon } from "@heroicons/react/20/solid";
 import { DynamicImageProviderIcon } from "@/components/ui";
 import { useAlertRowStyle, useAlertTableTheme } from "@/entities/alerts/model";
@@ -149,6 +151,19 @@ export function AlertTableServerSide({
   const [clearFiltersToken, setClearFiltersToken] = useState<string | null>(
     null
   );
+  // Persist the facets sidebar collapsed state per user/preset. Open by default.
+  const [isFacetsCollapsed, setIsFacetsCollapsed] = useLocalStorage<boolean>(
+    `facets-collapsed-${userPrefix}${presetName}`,
+    false
+  );
+  // Signal that re-expands all facets whenever the sidebar is opened, so opening
+  // the sidebar always shows the facets expanded.
+  const [facetsExpandToken, setFacetsExpandToken] = useState<string>("");
+  useEffect(() => {
+    if (!isFacetsCollapsed) {
+      setFacetsExpandToken(Date.now().toString());
+    }
+  }, [isFacetsCollapsed]);
   // Persist grouping state per user/preset
   const [grouping, setGrouping] = useLocalStorage<GroupingState>(
     `column-grouping-${userPrefix}${presetName}`,
@@ -805,27 +820,61 @@ export function AlertTableServerSide({
       </div>
 
       <div className="pb-4">
-        <div className="flex gap-4">
+        {/* items-start so the alerts box sizes to its own content (the alerts),
+            instead of stretching to match the facets sidebar's height */}
+        <div className="flex items-start gap-2">
           {/* Facets sidebar */}
           {!isFeedAwaitingQuery && (
-            <div className="w-33 min-w-[12rem] overflow-y-auto">
-              <FacetsPanelServerSide
-                usePropertyPathsSuggestions={true}
-                entityName={"alerts"}
-                facetOptionsCel={facetsCel}
-                clearFiltersToken={clearFiltersToken}
-                initialFacetsData={{ facets: initialFacets, facetOptions: null }}
-                facetsConfig={facetsConfig}
-                persistenceKey={
-                  presetName === "feed"
-                    ? undefined
-                    : `facets-${userPrefix}${presetName}`
+            <>
+              {/* Collapsed state: a thin bar with a button to reopen the panel */}
+              {isFacetsCollapsed && (
+                <div className="flex-none">
+                  <button
+                    onClick={() => setIsFacetsCollapsed(false)}
+                    title="Show filters"
+                    aria-label="Show filters"
+                    className="p-2 hover:bg-gray-100 rounded flex items-center gap-1"
+                    data-cy="facets-panel-expand-btn"
+                  >
+                    <FiFilter className="text-orange-500" size={16} />
+                    <ChevronRightIcon className="h-4 w-4 text-orange-500" />
+                  </button>
+                </div>
+              )}
+              {/*
+                Keep the panel mounted even when collapsed (just hidden) so that
+                any added/edited facets and selections are preserved when the
+                sidebar is closed and reopened.
+              */}
+              <div
+                className={
+                  "w-33 min-w-[12rem] overflow-y-auto" +
+                  (isFacetsCollapsed ? " hidden" : "")
                 }
-                onCelChange={setFilterCel}
-                revalidationToken={facetsPanelRefreshToken}
-                isSilentReloading={isAsyncLoading}
-              />
-            </div>
+              >
+                <FacetsPanelServerSide
+                  usePropertyPathsSuggestions={true}
+                  entityName={"alerts"}
+                  facetOptionsCel={facetsCel}
+                  clearFiltersToken={clearFiltersToken}
+                  initialFacetsData={{
+                    facets: initialFacets,
+                    facetOptions: null,
+                  }}
+                  facetsConfig={facetsConfig}
+                  persistenceKey={
+                    presetName === "feed"
+                      ? undefined
+                      : `facets-${userPrefix}${presetName}`
+                  }
+                  onCelChange={setFilterCel}
+                  onCollapse={() => setIsFacetsCollapsed(true)}
+                  expandToken={facetsExpandToken}
+                  revalidationToken={facetsPanelRefreshToken}
+                  isSilentReloading={isAsyncLoading}
+                />
+              </div>
+            </>
           )}
 
           {/* Table section */}

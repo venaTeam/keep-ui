@@ -1,6 +1,6 @@
 "use client";
 import { Card, Title, Subtitle, Button, Badge } from "@tremor/react";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import type {
   IncidentDto,
   PaginatedIncidentsDto,
@@ -22,7 +22,13 @@ import {
   SeverityBorderIcon,
   UISeverity,
 } from "@/shared/ui";
-import { BellIcon, BellSlashIcon } from "@heroicons/react/24/outline";
+import {
+  BellIcon,
+  BellSlashIcon,
+  ChevronRightIcon,
+} from "@heroicons/react/24/outline";
+import { FiFilter } from "react-icons/fi";
+import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
 import { UserStatefulAvatar } from "@/entities/users/ui";
 import { getStatusIcon, getStatusColor } from "@/shared/lib/status-utils";
 import {
@@ -80,6 +86,19 @@ export function IncidentList({
   ]);
 
   const [filterCel, setFilterCel] = useState<string | null>(null);
+
+  // Collapsible facets sidebar — open by default, persisted across reloads.
+  const [isFacetsCollapsed, setIsFacetsCollapsed] = useLocalStorage<boolean>(
+    "facets-collapsed-incidents",
+    false
+  );
+  // Re-expand all facets whenever the sidebar is opened.
+  const [facetsExpandToken, setFacetsExpandToken] = useState<string>("");
+  useEffect(() => {
+    if (!isFacetsCollapsed) {
+      setFacetsExpandToken(Date.now().toString());
+    }
+  }, [isFacetsCollapsed]);
 
   const [dateRange, setDateRange] = useTimeframeState({
     enableQueryParams: true,
@@ -341,18 +360,39 @@ export function IncidentList({
               <IncidentListError incidentError={incidentsError} />
             ) : null}
             {incidentsError ? null : (
-              <div className="flex flex-row gap-5">
-                <FacetsPanelServerSide
-                  className="mt-14"
-                  entityName={"incidents"}
-                  facetsConfig={facetsConfig}
-                  facetOptionsCel={facetsCel}
-                  usePropertyPathsSuggestions={true}
-                  clearFiltersToken={clearFiltersToken}
-                  initialFacetsData={initialFacetsData}
-                  onCelChange={setFilterCel}
-                  revalidationToken={filterRevalidationToken}
-                />
+              <div className="flex flex-row gap-5 items-start">
+                {/* Collapsed state: a button to reopen the facets sidebar */}
+                {isFacetsCollapsed && (
+                  <div className="flex-none mt-14">
+                    <button
+                      onClick={() => setIsFacetsCollapsed(false)}
+                      title="Show filters"
+                      aria-label="Show filters"
+                      className="p-2 hover:bg-gray-100 rounded flex items-center gap-1"
+                      data-cy="facets-panel-expand-btn"
+                    >
+                      <FiFilter className="text-orange-500" size={16} />
+                      <ChevronRightIcon className="h-4 w-4 text-orange-500" />
+                    </button>
+                  </div>
+                )}
+                {/* Keep the panel mounted when collapsed (just hidden) so added/
+                    edited facets and selections are preserved. */}
+                <div className={isFacetsCollapsed ? "hidden" : ""}>
+                  <FacetsPanelServerSide
+                    className="mt-14"
+                    entityName={"incidents"}
+                    facetsConfig={facetsConfig}
+                    facetOptionsCel={facetsCel}
+                    usePropertyPathsSuggestions={true}
+                    clearFiltersToken={clearFiltersToken}
+                    initialFacetsData={initialFacetsData}
+                    onCelChange={setFilterCel}
+                    onCollapse={() => setIsFacetsCollapsed(true)}
+                    expandToken={facetsExpandToken}
+                    revalidationToken={filterRevalidationToken}
+                  />
+                </div>
                 <div className="flex flex-col gap-5 flex-1 min-w-0">
                   {renderIncidents()}
                 </div>
