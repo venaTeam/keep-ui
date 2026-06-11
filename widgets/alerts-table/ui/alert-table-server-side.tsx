@@ -825,7 +825,7 @@ export function AlertTableServerSide({
       <div className="pb-4">
         {/* items-start so the alerts box sizes to its own content (the alerts),
             instead of stretching to match the facets sidebar's height */}
-        <div className="flex items-start gap-4">
+        <div className="flex items-start gap-2">
           {/* Facets sidebar */}
           {!isFeedAwaitingQuery && (
             <>
