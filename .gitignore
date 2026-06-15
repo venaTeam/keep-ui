@@ -41,7 +41,7 @@ jspm_packages
 
 .env.local
 
-app/topology/mock-topology-data.tsx
+src/app/topology/mock-topology-data.tsx
 .vercel
 
 # Sentry Config File
