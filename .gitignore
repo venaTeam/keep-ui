@@ -39,6 +39,9 @@ jspm_packages
 .node_repl_history
 .next
 
+# TypeScript incremental build cache (generated)
+tsconfig.tsbuildinfo
+
 .env.local
 
 src/app/topology/mock-topology-data.tsx
