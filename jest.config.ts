@@ -11,8 +11,11 @@ const createJestConfig = nextJest({
 const config: Config = {
   coverageProvider: "v8",
   testEnvironment: "jsdom",
+  // Bare absolute imports (e.g. "utils/hooks/useConfig") resolve under src/.
+  // Mirrors tsconfig baseUrl: "src"; keep in sync if baseUrl changes.
+  modulePaths: ["<rootDir>/src"],
   moduleNameMapper: {
-    // Handle module aliases
+    // Handle module aliases — keep "/src/" in sync with tsconfig baseUrl: "src"
     "^@/(.*)$": "<rootDir>/src/$1",
     // Force module uuid to resolve with the CJS entry point, because Jest does not support package.json.exports. See https://github.com/uuidjs/uuid/issues/451
     uuid: require.resolve("uuid"),
