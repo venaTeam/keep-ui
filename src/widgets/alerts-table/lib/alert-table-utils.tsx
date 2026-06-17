@@ -64,6 +64,10 @@ function isHttpUrl(value: unknown): value is string {
   }
 }
 
+export const SORT_FIELD_BY_COLUMN_ID: Record<string, string> = {
+  lastReceived: "last_received",
+};
+
 export const DEFAULT_COLS = [
   "severity",
   "checkbox",

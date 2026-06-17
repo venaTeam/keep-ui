@@ -28,6 +28,7 @@ import {
   DEFAULT_COLS_VISIBILITY,
   DEFAULT_COLS,
   useAlertTableCols,
+  SORT_FIELD_BY_COLUMN_ID,
 } from "@/widgets/alerts-table/lib/alert-table-utils";
 import AlertActions from "@/widgets/alerts-table/ui/alert-actions";
 import {
@@ -259,7 +260,7 @@ export function AlertTableServerSide({
           limit: paginationState.limit,
           offset: paginationState.offset,
           sortOptions: sorting.map((s) => ({
-            sortBy: s.id,
+            sortBy: SORT_FIELD_BY_COLUMN_ID[s.id] ?? s.id,
             sortDirection: s.desc ? "DESC" : "ASC",
           })),
         };

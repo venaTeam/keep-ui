@@ -20,13 +20,13 @@ function getDateRangeCel(timeFrame: TimeFrameV2 | null): string | null {
   }
 
   if (timeFrame.type === "relative") {
-    return `lastReceived >= '${new Date(
+    return `last_received >= '${new Date(
       new Date().getTime() - timeFrame.deltaMs
     ).toISOString()}'`;
   } else if (timeFrame.type === "absolute") {
     return [
-      `lastReceived >= '${timeFrame.start.toISOString()}'`,
-      `lastReceived <= '${timeFrame.end.toISOString()}'`,
+      `last_received >= '${timeFrame.start.toISOString()}'`,
+      `last_received <= '${timeFrame.end.toISOString()}'`,
     ].join(" && ");
   }
 

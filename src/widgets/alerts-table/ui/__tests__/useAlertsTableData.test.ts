@@ -127,7 +127,7 @@ describe("useAlertsTableData", () => {
       })
     );
     expect(result.current.facetsCel).toBe(
-      "(name == 'foo') && (lastReceived >= '1970-01-01T00:00:00.000Z' && lastReceived <= '1970-01-01T00:00:01.000Z')"
+      "(name == 'foo') && (last_received >= '1970-01-01T00:00:00.000Z' && last_received <= '1970-01-01T00:00:01.000Z')"
     );
   });
 
@@ -148,7 +148,7 @@ describe("useAlertsTableData", () => {
     const { result } = renderHook(() => useAlertsTableData(query));
     expect(mockUseLastAlerts).toHaveBeenCalledWith(
       {
-        cel: "(name == 'foo') && (lastReceived >= '1970-01-01T00:00:00.000Z' && lastReceived <= '1970-01-01T00:00:01.000Z') && (description in ['bar', 'baz'])",
+        cel: "(name == 'foo') && (last_received >= '1970-01-01T00:00:00.000Z' && last_received <= '1970-01-01T00:00:01.000Z') && (description in ['bar', 'baz'])",
         limit: 10,
         offset: 200,
         sortOptions: [{ sortBy: "name", sortDirection: "ASC" }],
@@ -320,7 +320,7 @@ describe("useAlertsTableData", () => {
       })
     );
     expect(result.current.facetsCel).toBe(
-      "(lastReceived >= '2025-07-02T10:28:27.289Z' && lastReceived <= '2025-07-02T10:29:24.640Z')"
+      "(last_received >= '2025-07-02T10:28:27.289Z' && last_received <= '2025-07-02T10:29:24.640Z')"
     );
   });
 
@@ -339,7 +339,7 @@ describe("useAlertsTableData", () => {
       })
     );
     expect(result.current.facetsCel).toContain(
-      "(name == 'foo') && (lastReceived >= '2025-07-02T10:28:27.289Z' && lastReceived <= '2025-07-02T10:29:24.640Z')"
+      "(name == 'foo') && (last_received >= '2025-07-02T10:28:27.289Z' && last_received <= '2025-07-02T10:29:24.640Z')"
     );
   });
 });
