@@ -64,10 +64,6 @@ function isHttpUrl(value: unknown): value is string {
   }
 }
 
-// Some table column ids are camelCase (e.g. `lastReceived`) while the backend
-// query/sort fields use snake_case (`last_received`, renamed in gateway migration
-// 20d5647ff365). Translate the column id to the backend sort field at the API
-// boundary. Ids not listed here already match the backend and pass through unchanged.
 export const SORT_FIELD_BY_COLUMN_ID: Record<string, string> = {
   lastReceived: "last_received",
 };
