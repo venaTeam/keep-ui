@@ -1,5 +1,6 @@
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
+import type { ActionLabel, PageLabel } from "@/metrics/labels";
 
 const HEARTBEAT_INTERVAL_MS = 30_000;
 let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
@@ -38,35 +39,16 @@ export function stopHeartbeat() {
   }
 }
 
-// Types
-export type ActionLabel = 
-  | "change_status"
-  | "self_assign"
-  | "dismiss_alert"
-  | "create_preset"
-  | "create_incident"
-  | "create_dashboard"
-  | "add_note"
-  | "timeline_loading";
+// Re-export the canonical (server-validated) label types.
+export type { ActionLabel, PageLabel } from "@/metrics/labels";
 
-export type PageLabel = 
-  | "incidents"
-  | "incidents_detail"
-  | "alerts_feed"
-  | "alerts_detail"
-  | "dashboard"
-  | "dashboard_detail"
-  | string;
-
-const recordedPages = new Set<string>();
-
-// Record Page Load
-export async function recordPageLoad(label: PageLabel, latencySeconds: number) {
-  if (recordedPages.has(label)) return; // Deduplicate
-  
-  recordedPages.add(label);
+// Record Page Load.
+// No client-side dedup: every page load is counted (the old `recordedPages`
+// Set undercounted within a session). Latency is intentionally not sent —
+// callers had no real value to report (they always passed 0).
+export async function recordPageLoad(label: PageLabel) {
   try {
-    await axios.post("/api/metrics/page", { label, latency: latencySeconds });
+    await axios.post("/api/metrics/page", { label });
   } catch (err) {
     // Silently fail
   }

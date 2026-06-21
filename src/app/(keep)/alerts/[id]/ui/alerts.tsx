@@ -49,8 +49,10 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
 
   // Record page load time - call directly since useEffect may not fire reliably in Next.js
   if (typeof window !== "undefined") {
-    const pageLabel = presetName === "feed" ? "alerts_feed" : `preset:${presetName}`;
-    recordPageLoad(pageLabel, 0);
+    // Collapse per-preset views to a single bounded label to avoid
+    // unbounded cardinality from free-text preset names.
+    const pageLabel = presetName === "feed" ? "alerts_feed" : "alerts_preset";
+    recordPageLoad(pageLabel);
   }
   const [alertsQueryState, setAlertsQueryState] = useState<
     AlertsQuery | undefined

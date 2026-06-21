@@ -39,7 +39,7 @@ const DashboardPage = () => {
 
   // Record page load time - call directly since useEffect may not fire reliably in Next.js React 19
   if (typeof window !== "undefined") {
-    recordPageLoad("dashboard_detail", 0);
+    recordPageLoad("dashboard_detail");
   }
   const api = useApi();
   const allPresets = useDashboardPreset();

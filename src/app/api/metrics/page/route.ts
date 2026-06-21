@@ -1,18 +1,22 @@
-import { NextRequest, NextResponse } from "next/server";
-import { pageloadLatency, pageloads } from "@/metrics/metrics";
+import { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
+import { pageloads } from "@/metrics/metrics";
+import { isValidPage } from "@/metrics/labels";
+import { getMetricsSession, unauthorized, badRequest } from "@/metrics/server";
 
 export async function POST(req: NextRequest) {
-  const body = await req.json().catch(() => ({}));
-  const { label, latency } = body as { label?: string; latency?: number };
+  const session = await getMetricsSession();
+  if (!session) return unauthorized();
 
-  if (!label || typeof latency !== "number") {
-    return NextResponse.json(
-      { error: "Missing or invalid 'label' or 'latency' field" },
-      { status: 400 }
-    );
+  const body = await req.json().catch(() => ({}));
+  const { label } = body as { label?: string };
+
+  // Server-side allow-list (cardinality firewall): reject unknown pages.
+  if (!isValidPage(label)) {
+    return badRequest("Missing or invalid 'label' field");
   }
 
-  pageloadLatency.observe({ page: label }, latency);
+  // No per-session dedup and no zero-latency observation: count every load.
   pageloads.inc({ page: label });
 
   return NextResponse.json({ ok: true });
