@@ -12,7 +12,10 @@ jest.mock("@/auth", () => ({ auth: jest.fn() }));
 
 const mockedAuth = auth as unknown as jest.Mock;
 
-const FAKE_SESSION = { user: { email: "test@example.com" } };
+const FAKE_SESSION = {
+  user: { email: "test@example.com" },
+  accessToken: "test-token",
+};
 
 function jsonReq(body: unknown) {
   return { json: async () => body } as any;
@@ -41,8 +44,17 @@ beforeEach(() => {
 
 describe("POST /api/metrics/page", () => {
   let POST: any;
+  const ORIG_API_URL = process.env.API_URL;
   beforeAll(async () => {
     POST = (await import("@/app/api/metrics/page/route")).POST;
+  });
+  beforeEach(() => {
+    process.env.API_URL = "http://gw:8080";
+    (global as any).fetch = jest.fn().mockResolvedValue({ ok: true });
+  });
+  afterAll(() => {
+    if (ORIG_API_URL === undefined) delete process.env.API_URL;
+    else process.env.API_URL = ORIG_API_URL;
   });
 
   it("returns 401 without a session", async () => {
@@ -51,23 +63,22 @@ describe("POST /api/metrics/page", () => {
     expect(res.status).toBe(401);
   });
 
-  it("returns 400 for an unknown page label", async () => {
+  it("returns 400 for an unknown page label (no forward)", async () => {
     mockedAuth.mockResolvedValue(FAKE_SESSION);
     const res = await POST(jsonReq({ label: "preset:secret-name" }));
     expect(res.status).toBe(400);
+    expect((global as any).fetch).not.toHaveBeenCalled();
   });
 
-  it("increments the counter for a valid page label", async () => {
+  it("forwards a valid page view to the gateway /ui/page-view", async () => {
     mockedAuth.mockResolvedValue(FAKE_SESSION);
-    const before = await counterValue("keep_ui_page_loads_total", {
-      page: "incidents",
-    });
     const res = await POST(jsonReq({ label: "incidents" }));
     expect(res.status).toBe(200);
-    const after = await counterValue("keep_ui_page_loads_total", {
-      page: "incidents",
-    });
-    expect(after).toBe(before + 1);
+    expect((global as any).fetch).toHaveBeenCalledTimes(1);
+    const [url, init] = (global as any).fetch.mock.calls[0];
+    expect(url).toBe("http://gw:8080/ui/page-view");
+    expect(JSON.parse(init.body)).toEqual({ route: "incidents" });
+    expect(init.headers["X-Keep-Source"]).toBe("ui");
   });
 });
 

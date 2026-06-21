@@ -5,11 +5,16 @@ describe("keep-ui metric definitions", () => {
   it("exposes the fixed metrics as Counters (not Gauges)", async () => {
     const output = await register.metrics();
 
-    // These three were Gauges in the RUM PR and are now true Counters so that
+    // These were Gauges in the RUM PR and are now true Counters so that
     // rate()/increase() survive process restarts.
-    expect(output).toContain("# TYPE keep_ui_page_loads_total counter");
     expect(output).toContain("# TYPE keep_ui_errors_total counter");
     expect(output).toContain("# TYPE keep_ui_global_errors_total counter");
+  });
+
+  it("no longer owns keep_ui_page_loads_total (moved to the gateway)", async () => {
+    const output = await register.metrics();
+    // Page views are forwarded to the gateway's POST /ui/page-view in Phase 2.
+    expect(output).not.toContain("keep_ui_page_loads_total");
   });
 
   it("drops the always-zero page-load latency histogram", async () => {

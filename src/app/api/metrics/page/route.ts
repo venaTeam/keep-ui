@@ -1,9 +1,13 @@
 import { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { pageloads } from "@/metrics/metrics";
 import { isValidPage } from "@/metrics/labels";
 import { getMetricsSession, unauthorized, badRequest } from "@/metrics/server";
+import { getApiURL } from "@/utils/apiUrl";
 
+// Page views moved server-side (BI Phase 2): keep_ui_page_loads_total now lives
+// on the gateway. The client beacon is unchanged; this route validates the
+// bounded route label and forwards it (with the user's token) to the gateway's
+// POST /ui/page-view, which owns the counter.
 export async function POST(req: NextRequest) {
   const session = await getMetricsSession();
   if (!session) return unauthorized();
@@ -11,13 +15,23 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
   const { label } = body as { label?: string };
 
-  // Server-side allow-list (cardinality firewall): reject unknown pages.
   if (!isValidPage(label)) {
     return badRequest("Missing or invalid 'label' field");
   }
 
-  // No per-session dedup and no zero-latency observation: count every load.
-  pageloads.inc({ page: label });
+  try {
+    await fetch(`${getApiURL()}/ui/page-view`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${(session as any).accessToken}`,
+        "X-Keep-Source": "ui",
+      },
+      body: JSON.stringify({ route: label }),
+    });
+  } catch {
+    // Fire-and-forget: metrics must never affect the user.
+  }
 
   return NextResponse.json({ ok: true });
 }
