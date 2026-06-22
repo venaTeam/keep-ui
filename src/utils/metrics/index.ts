@@ -78,9 +78,16 @@ export async function timeAction<T>(
 }
 
 // Record Specific Error
-export async function recordError(action: ActionLabel) {
+export async function recordError(
+  action: ActionLabel,
+  statusCode?: string | number
+) {
   try {
-    await axios.post("/api/metrics/errors", { action });
+    await axios.post("/api/metrics/errors", {
+      action,
+      // Optional HTTP status code; the server buckets unknown codes to "other".
+      ...(statusCode !== undefined ? { status_code: statusCode } : {}),
+    });
   } catch {
     // Fire-and-forget
   }

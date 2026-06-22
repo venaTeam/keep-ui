@@ -25,10 +25,16 @@ describe("keep-ui metric definitions", () => {
   it("pre-initializes only the pruned action labels for errors", async () => {
     const output = await register.metrics();
     // Dead labels were removed.
-    expect(output).not.toContain('keep_ui_errors_total{action="create_preset"}');
-    expect(output).not.toContain('keep_ui_errors_total{action="timeline_loading"}');
-    // Live labels are pre-initialized to 0.
-    expect(output).toContain('keep_ui_errors_total{action="change_status"} 0');
+    expect(output).not.toContain(
+      'keep_ui_errors_total{action="create_preset"}'
+    );
+    expect(output).not.toContain(
+      'keep_ui_errors_total{action="timeline_loading"}'
+    );
+    // Live labels are pre-initialized to 0, seeded with status_code="other".
+    expect(output).toContain(
+      'keep_ui_errors_total{action="change_status",status_code="other"} 0'
+    );
   });
 
   it("keeps the allow-lists in sync (no dead labels)", () => {

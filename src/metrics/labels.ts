@@ -35,8 +35,29 @@ export const PAGE_LABELS = [
 
 export type PageLabel = (typeof PAGE_LABELS)[number];
 
+// Bounded HTTP status-code labels for error metrics (powers the "UI error
+// codes" pie chart). Any code outside this allow-list collapses to "other" so
+// cardinality stays bounded.
+export const STATUS_CODE_LABELS = [
+  "400",
+  "401",
+  "403",
+  "404",
+  "409",
+  "422",
+  "429",
+  "500",
+  "502",
+  "503",
+  "504",
+  "other",
+] as const;
+
+export type StatusCodeLabel = (typeof STATUS_CODE_LABELS)[number];
+
 const ACTION_SET: ReadonlySet<string> = new Set(ACTION_LABELS);
 const PAGE_SET: ReadonlySet<string> = new Set(PAGE_LABELS);
+const STATUS_CODE_SET: ReadonlySet<string> = new Set(STATUS_CODE_LABELS);
 
 export function isValidAction(value: unknown): value is ActionLabel {
   return typeof value === "string" && ACTION_SET.has(value);
@@ -44,4 +65,13 @@ export function isValidAction(value: unknown): value is ActionLabel {
 
 export function isValidPage(value: unknown): value is PageLabel {
   return typeof value === "string" && PAGE_SET.has(value);
+}
+
+// Normalize an arbitrary client-supplied status code to a bounded label.
+// Unknown / missing codes bucket to "other".
+export function normalizeStatusCode(value: unknown): StatusCodeLabel {
+  const code = typeof value === "number" ? String(value) : value;
+  return typeof code === "string" && STATUS_CODE_SET.has(code)
+    ? (code as StatusCodeLabel)
+    : "other";
 }
