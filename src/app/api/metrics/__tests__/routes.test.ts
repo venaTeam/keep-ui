@@ -150,6 +150,40 @@ describe("POST /api/metrics/errors", () => {
     });
     expect(after).toBe(before + 1);
   });
+
+  it("records an allow-listed status_code on its own series", async () => {
+    mockedAuth.mockResolvedValue(FAKE_SESSION);
+    const before = await counterValue("keep_ui_errors_total", {
+      action: "change_status",
+      status_code: "500",
+    });
+    const res = await POST(
+      jsonReq({ action: "change_status", status_code: 500 })
+    );
+    expect(res.status).toBe(200);
+    const after = await counterValue("keep_ui_errors_total", {
+      action: "change_status",
+      status_code: "500",
+    });
+    expect(after).toBe(before + 1);
+  });
+
+  it("buckets an unknown status_code to 'other'", async () => {
+    mockedAuth.mockResolvedValue(FAKE_SESSION);
+    const before = await counterValue("keep_ui_errors_total", {
+      action: "self_assign",
+      status_code: "other",
+    });
+    const res = await POST(
+      jsonReq({ action: "self_assign", status_code: 418 })
+    );
+    expect(res.status).toBe(200);
+    const after = await counterValue("keep_ui_errors_total", {
+      action: "self_assign",
+      status_code: "other",
+    });
+    expect(after).toBe(before + 1);
+  });
 });
 
 describe("POST /api/metrics/global-errors", () => {
@@ -194,9 +228,9 @@ describe("GET /api/metrics (scrape)", () => {
   it("rejects a missing/wrong bearer token when configured", async () => {
     process.env.KEEP_METRICS_SCRAPE_TOKEN = "s3cret";
     expect((await GET(getReq())).status).toBe(401);
-    expect(
-      (await GET(getReq({ authorization: "Bearer wrong" }))).status
-    ).toBe(401);
+    expect((await GET(getReq({ authorization: "Bearer wrong" }))).status).toBe(
+      401
+    );
   });
 
   it("accepts the correct bearer token when configured", async () => {

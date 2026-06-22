@@ -30,13 +30,15 @@ export const activeUsers = new Gauge({
   registers: [register],
 });
 
-// Count of errors by action type.
+// Count of errors by action type and HTTP status code.
 // Counter (not Gauge): error counts are monotonic and must survive restarts.
+// `status_code` is bounded (see STATUS_CODE_LABELS) and powers the error-codes
+// pie chart.
 export const errors = new Counter({
   name: "keep_ui_errors_total",
   help: "Total number of errors in keep-ui",
   registers: [register],
-  labelNames: ["action"],
+  labelNames: ["action", "status_code"],
 });
 
 // Global errors counter (uncaught JS errors + unhandled promise rejections).
@@ -48,7 +50,8 @@ export const globalErrors = new Counter({
 });
 
 // Pre-initialize all action labels to 0 so the series exist before the first
-// increment. Uses the shared allow-list (pruned of dead labels).
+// increment. Uses the shared allow-list (pruned of dead labels). status_code is
+// seeded as "other"; specific codes are created on first real error.
 for (const action of ACTION_LABELS) {
-  errors.inc({ action }, 0);
+  errors.inc({ action, status_code: "other" }, 0);
 }
