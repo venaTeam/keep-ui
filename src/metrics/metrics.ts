@@ -12,14 +12,8 @@ export const actionLatency = new Histogram({
   buckets: [0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 15, 30],
 });
 
-// Count of page loads.
-// Counter (not Gauge): rate()/increase() must survive process restarts.
-export const pageloads = new Counter({
-  name: "keep_ui_page_loads_total",
-  help: "Total number of page loads in keep-ui",
-  registers: [register],
-  labelNames: ["page"],
-});
+// keep_ui_page_loads_total moved server-side to the gateway (BI Phase 2):
+// keep-ui forwards page views to POST /ui/page-view, which owns the counter.
 
 // Count of action executions
 export const actionExecutions = new Gauge({
