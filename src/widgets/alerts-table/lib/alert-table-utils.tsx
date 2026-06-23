@@ -75,6 +75,7 @@ export const DEFAULT_COLS = [
   "source",
   "status",
   "name",
+  "environment",
   "description",
   "lastReceived",
   "alertMenu",
