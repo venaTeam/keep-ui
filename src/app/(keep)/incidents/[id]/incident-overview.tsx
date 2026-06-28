@@ -197,7 +197,7 @@ function MergedCallout({
 export function IncidentOverview({ incident: initialIncidentData }: Props) {
   // Record page load time - call directly since useEffect may not fire reliably in Next.js React 19
   if (typeof window !== "undefined") {
-    recordPageLoad("incidents_detail", 0);
+    recordPageLoad("incidents_detail");
   }
   const router = useRouter();
   const { data: fetchedIncident, mutate } = useIncident(

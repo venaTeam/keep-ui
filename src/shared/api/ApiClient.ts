@@ -49,6 +49,9 @@ export class ApiClient {
     return {
       Authorization: `Bearer ${this.session.accessToken}`,
       "ngrok-skip-browser-warning": true,
+      // Mark every UI-originated request so the gateway can label product
+      // metrics (keep_user_action_total) with source="ui" vs "api" (BI Phase 2).
+      "X-Keep-Source": "ui",
       ...this.additionalHeaders,
     };
   }

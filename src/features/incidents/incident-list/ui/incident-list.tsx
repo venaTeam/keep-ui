@@ -72,7 +72,7 @@ export function IncidentList({
 
   // Record page load time - call directly since useEffect may not fire reliably in Next.js
   if (typeof window !== "undefined") {
-    recordPageLoad("incidents", 0);
+    recordPageLoad("incidents");
   }
 
   const [incidentsPagination, setIncidentsPagination] =

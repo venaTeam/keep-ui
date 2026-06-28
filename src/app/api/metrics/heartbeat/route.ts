@@ -1,5 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { activeUsers } from "@/metrics/metrics";
+import { getMetricsSession, unauthorized, badRequest } from "@/metrics/server";
 
 const userHeartbeats = new Map<string, number>();
 
@@ -27,12 +29,18 @@ function startCleanup() {
   }, CLEANUP_INTERVAL_MS);
 }
 
+// NOTE: this in-memory heartbeat tracking is replica-unsafe and is slated for
+// replacement by the SSE-driven connected-users gauge (Phase 1). For now it is
+// at least authenticated so it cannot be driven by anonymous callers.
 export async function POST(req: NextRequest) {
+  const session = await getMetricsSession();
+  if (!session) return unauthorized();
+
   const body = await req.json().catch(() => ({}));
   const { userId } = body as { userId?: string };
 
   if (!userId) {
-    return NextResponse.json({ error: "Missing userId" }, { status: 400 });
+    return badRequest("Missing userId");
   }
 
   const isNew = !userHeartbeats.has(userId);
