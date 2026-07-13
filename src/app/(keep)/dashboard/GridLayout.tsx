@@ -1,5 +1,5 @@
-import React from "react";
-import { Responsive, WidthProvider, Layout } from "react-grid-layout";
+import React, { useCallback, useMemo, useRef, useState } from "react";
+import { Responsive, WidthProvider, Layout, Layouts } from "react-grid-layout";
 import GridItemContainer from "./GridItemContainer";
 import { LayoutItem, WidgetData } from "./types";
 import "react-grid-layout/css/styles.css";
@@ -7,6 +7,33 @@ import { MetricsWidget } from "@/utils/hooks/useDashboardMetricWidgets";
 import { Preset } from "@/entities/presets/model/types";
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
+
+const BREAKPOINTS = { lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 };
+
+const COLS = { lg: 24, md: 24, sm: 1, xs: 1, xxs: 1 };
+
+const STACKED_COLS = 1;
+
+const EDITABLE_BREAKPOINTS = ["lg", "md"];
+
+const isEditableBreakpoint = (breakpoint: string) => EDITABLE_BREAKPOINTS.includes(breakpoint);
+
+const buildStackedLayout = (layout: LayoutItem[]): LayoutItem[] => {
+  let nextY = 0;
+  return [...layout]
+    .sort((a, b) => a.y - b.y || a.x - b.x)
+    .map((item) => {
+      const stackedItem: LayoutItem = {
+        ...item,
+        x: 0,
+        y: nextY,
+        w: STACKED_COLS,
+        minW: STACKED_COLS,
+      };
+      nextY += item.h;
+      return stackedItem;
+    });
+};
 
 interface GridLayoutProps {
   layout: LayoutItem[];
@@ -29,34 +56,55 @@ const GridLayout: React.FC<GridLayoutProps> = ({
   presets,
   metrics,
 }) => {
-  const layouts = { lg: layout };
+  const breakpointRef = useRef<string>("lg");
+  const [isEditable, setIsEditable] = useState(true);
+
+  const layouts = useMemo<Layouts>(() => {
+    const stacked = buildStackedLayout(layout);
+    return { lg: layout, md: layout, sm: stacked, xs: stacked, xxs: stacked };
+  }, [layout]);
+
+  const handleBreakpointChange = useCallback((breakpoint: string) => {
+    breakpointRef.current = breakpoint;
+    setIsEditable(isEditableBreakpoint(breakpoint));
+  }, []);
+
+  const handleLayoutChange = useCallback(
+    (currentLayout: Layout[]) => {
+
+      if (!isEditableBreakpoint(breakpointRef.current)) {
+        return;
+      }
+
+      const updatedLayout = currentLayout.map((item) => ({
+        ...item,
+        static: item.static ?? false, 
+      }));
+      onLayoutChange(updatedLayout as LayoutItem[]);
+    },
+    [onLayoutChange]
+  );
 
   return (
     <>
       <ResponsiveGridLayout
         className="layout"
         layouts={layouts}
-        onLayoutChange={(currentLayout: Layout[]) => {
-          const updatedLayout = currentLayout.map((item) => ({
-            ...item,
-            static: item.static ?? false, // Ensure static is a boolean
-          }));
-          onLayoutChange(updatedLayout as LayoutItem[]);
-        }}
-        breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-        cols={{ lg: 24, md: 20, sm: 12, xs: 8, xxs: 4 }}
+        onLayoutChange={handleLayoutChange}
+        onBreakpointChange={handleBreakpointChange}
+        breakpoints={BREAKPOINTS}
+        cols={COLS}
         rowHeight={30}
         containerPadding={[0, 0]}
         margin={[10, 10]}
         useCSSTransforms={true}
-        isDraggable={true}
-        isResizable={true}
+        isDraggable={isEditable}
+        isResizable={isEditable}
         compactType={null}
         draggableHandle=".grid-item__widget"
         transformScale={1}
       >
         {data.map((item) => {
-          //Updating the static hardcode db value.
           if (item.preset) {
             const preset = presets?.find((p) => p?.id === item?.preset?.id);
             item.preset = {
@@ -70,7 +118,7 @@ const GridLayout: React.FC<GridLayoutProps> = ({
             }
           }
           return (
-            <div key={item.i} data-grid={item} data-cy={`dashboard-widget-cell-${item.i}`}>
+            <div key={item.i} data-cy={`dashboard-widget-cell-${item.i}`}>
               <GridItemContainer
                 key={item.i}
                 item={item}

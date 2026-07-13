@@ -1,4 +1,4 @@
-.grid-item__widget:hover {
+.react-draggable .grid-item__widget:hover {
   cursor: move;
 }
 .grid-item__widget .panel {

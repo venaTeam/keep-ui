@@ -175,7 +175,7 @@ const DashboardPage = () => {
 
   return (
     <div className="flex flex-col h-full" data-cy="dashboard-page">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
         <div className="relative">
           {isEditingName ? (
             <TextInput
@@ -229,7 +229,10 @@ const DashboardPage = () => {
           </div>
         </Card>
       ) : (
-        <Card className="w-full h-full" data-cy="dashboard-grid-container">
+        <Card
+          className="w-full h-full overflow-auto"
+          data-cy="dashboard-grid-container"
+        >
           <GridLayout
             layout={layout}
             onLayoutChange={handleLayoutChange}
