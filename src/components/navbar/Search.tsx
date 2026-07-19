@@ -32,6 +32,7 @@ import { useConfig } from "utils/hooks/useConfig";
 import { Session } from "next-auth";
 import { signIn } from "next-auth/react";
 import KeepPng from "../../keep.png";
+import "./Search.css";
 
 const NAVIGATION_OPTIONS = [
   {
@@ -330,6 +331,11 @@ export const Search = ({ session }: SearchProps) => {
   const tenantLogoUrl = currentTenant?.tenant_logo_url;
   const hasTenantLogo = Boolean(tenantLogoUrl);
 
+  // TODO: IMPLEMENT AFTER MULTI TENANCY
+  const isSuperAdmin = true
+  const isTenantAdmin = true
+
+
   return (
     <div
       className="flex items-center w-full py-3 px-2 border-b border-gray-300"
@@ -341,7 +347,7 @@ export const Search = ({ session }: SearchProps) => {
             {({ open }) => (
               <>
                 <Popover.Button
-                  className="focus:outline-none flex items-center gap-4"
+                  className="focus:outline-none flex items-center gap-4 tenant-switcher"
                   disabled={isLoading}
                   data-cy="nav-tenant-switcher-trigger"
                 >
@@ -397,6 +403,10 @@ export const Search = ({ session }: SearchProps) => {
             )}
           </Link>
         )}
+
+        {isSuperAdmin && <span className="create-update-tenant">&#43;</span>}
+        {isTenantAdmin && <span className="create-update-tenant">&#9998;</span>}
+
       </div>
 
       <div className="flex-grow ml-6">
