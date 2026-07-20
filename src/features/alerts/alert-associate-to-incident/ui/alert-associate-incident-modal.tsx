@@ -30,10 +30,6 @@ export const AlertAssociateIncidentModal = ({
   const [createIncident, setCreateIncident] = useState(false);
   const [isAssociating, setIsAssociating] = useState(false);
 
-  // Only active incidents are valid association targets. Filter by status
-  // server-side (via CEL) so the `limit` applies to active incidents rather
-  // than being spent on the full, mostly-resolved incident history — otherwise
-  // active-but-not-recently-created incidents fall outside the fetched window.
   const activeStatusCel = `status in [${DEFAULT_INCIDENTS_CHECKED_OPTIONS.map(
     (status) => `'${status}'`
   ).join(", ")}]`;
