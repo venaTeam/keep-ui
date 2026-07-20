@@ -12,7 +12,7 @@ import {
 } from "@/entities/incidents/lib/utils";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { Select, showErrorToast } from "@/shared/ui";
-import { IncidentDto, Status } from "@/entities/incidents/model";
+import { DEFAULT_INCIDENTS_CHECKED_OPTIONS } from "@/entities/incidents/model/models";
 
 interface AlertAssociateIncidentModalProps {
   isOpen: boolean;
@@ -30,11 +30,24 @@ export const AlertAssociateIncidentModal = ({
   const [createIncident, setCreateIncident] = useState(false);
   const [isAssociating, setIsAssociating] = useState(false);
 
+  // Only active incidents are valid association targets. Filter by status
+  // server-side (via CEL) so the `limit` applies to active incidents rather
+  // than being spent on the full, mostly-resolved incident history — otherwise
+  // active-but-not-recently-created incidents fall outside the fetched window.
+  const activeStatusCel = `status in [${DEFAULT_INCIDENTS_CHECKED_OPTIONS.map(
+    (status) => `'${status}'`
+  ).join(", ")}]`;
+
   const {
     data: incidents,
     isLoading,
     mutate,
-  } = useIncidents({ candidate: false, predicted: null, limit: 100 });
+  } = useIncidents({
+    candidate: false,
+    predicted: null,
+    limit: 100,
+    cel: activeStatusCel,
+  });
   usePollIncidents(mutate);
 
   const [selectedIncident, setSelectedIncident] = useState<
@@ -87,13 +100,6 @@ export const AlertAssociateIncidentModal = ({
     [associateAlertsHandler, handleClose, hideCreateIncidentForm]
   );
 
-  const filterIncidents = (incident: IncidentDto) => {
-    return (
-      incident.status === Status.Firing ||
-      incident.status === Status.Acknowledged
-    );
-  };
-
   // reset modal state after closing
   useEffect(() => {
     if (!isOpen) {
@@ -134,6 +140,9 @@ export const AlertAssociateIncidentModal = ({
         <Select
           className="my-2.5"
           placeholder="Select incident"
+          isSearchable
+          maxMenuHeight={300}
+          menuPlacement="auto"
           value={
             selectedIncidentInstance
               ? {
@@ -145,7 +154,7 @@ export const AlertAssociateIncidentModal = ({
           onChange={(selectedOption) =>
             setSelectedIncident(selectedOption?.value)
           }
-          options={incidents.items?.filter(filterIncidents).map((incident) => ({
+          options={incidents.items?.map((incident) => ({
             value: incident.id,
             label: getIncidentNameWithCreationTime(incident),
           }))}
