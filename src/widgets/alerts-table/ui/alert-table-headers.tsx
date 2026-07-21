@@ -4,11 +4,14 @@ import {
   RefObject,
   useCallback,
   useMemo,
+  useRef,
+  useState,
 } from "react";
 import {
   closestCenter,
   DndContext,
   DragEndEvent,
+  DragOverEvent,
   PointerSensor,
   TouchSensor,
   useSensor,
@@ -32,16 +35,20 @@ import { TableHead, TableHeaderCell, TableRow } from "@tremor/react";
 import { AlertDto } from "@/entities/alerts/model";
 import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
 import { getColumnsIds } from "@/widgets/alerts-table/lib/alert-table-utils";
+import { getAutofitColumnWidth } from "@/widgets/alerts-table/lib/column-autofit";
 import {
   ChevronDownIcon,
   ArrowsUpDownIcon,
   XMarkIcon,
   ArrowLeftIcon,
   ArrowRightIcon,
+  ArrowsPointingOutIcon,
+  ArrowUturnLeftIcon,
 } from "@heroicons/react/24/outline";
 import { ArrowDownIcon, ArrowUpIcon } from "@heroicons/react/24/solid";
 import { BsSortAlphaDown } from "react-icons/bs";
 import { BsSortAlphaDownAlt } from "react-icons/bs";
+import { RxDragHandleDots2 } from "react-icons/rx";
 
 import clsx from "clsx";
 import { getCommonPinningStylesAndClassNames } from "@/shared/ui";
@@ -81,6 +88,7 @@ interface DraggableHeaderCellProps {
   setColumnOrder: (order: ColumnOrderState) => Promise<void> | void;
   columnVisibility: VisibilityState;
   setColumnVisibility: (visibility: VisibilityState) => Promise<void> | void;
+  dropIndicatorSide?: "left" | "right" | null;
 }
 
 const DraggableHeaderCell = ({
@@ -100,6 +108,7 @@ const DraggableHeaderCell = ({
   setColumnOrder,
   columnVisibility,
   setColumnVisibility,
+  dropIndicatorSide,
 }: DraggableHeaderCellProps) => {
   const { column, getResizeHandler } = header;
   const [rowStyle] = useAlertRowStyle();
@@ -120,13 +129,37 @@ const DraggableHeaderCell = ({
     return column.getToggleSortingHandler();
   }, [column]);
 
-  const handleColumnNameClick = useCallback(
-    (event: React.MouseEvent<HTMLButtonElement>) => {
-      listeners?.onClick?.(event);
-      handleSortingMenuClick?.(event);
+  const headerCellRef = useRef<HTMLTableCellElement | null>(null);
+
+  const setRefs = useCallback(
+    (node: HTMLTableCellElement | null) => {
+      setNodeRef(node);
+      headerCellRef.current = node;
     },
-    [listeners, handleSortingMenuClick]
+    [setNodeRef]
   );
+
+  const handleAutofit = useCallback(() => {
+    const tableEl = headerCellRef.current?.closest("table");
+    if (!tableEl) {
+      return;
+    }
+    const width = getAutofitColumnWidth(tableEl as HTMLElement, column.id, {
+      minSize: column.columnDef.minSize,
+      maxSize: column.columnDef.maxSize,
+    });
+    if (width != null) {
+      table.setColumnSizing((prev) => ({ ...prev, [column.id]: width }));
+    }
+  }, [column, table]);
+
+  const handleResetWidth = useCallback(() => {
+    table.setColumnSizing((prev) => {
+      const next = { ...prev };
+      delete next[column.id];
+      return next;
+    });
+  }, [column.id, table]);
 
   const moveColumn = async (direction: "left" | "right") => {
     const currentIndex = columnOrder.indexOf(column.id);
@@ -239,7 +272,7 @@ const DraggableHeaderCell = ({
         className
       )}
       style={{ ...dragStyle, ...style }}
-      ref={setNodeRef}
+      ref={setRefs}
     >
       <div
         data-testid={`header-cell-${column.id}`}
@@ -250,6 +283,24 @@ const DraggableHeaderCell = ({
           column.id === "checkbox" ? "justify-center" : "justify-between"
         )}
       >
+        {column.getIsPinned() === false && (
+          <button
+            type="button"
+            className={clsx(
+              "flex-none flex items-center cursor-grab active:cursor-grabbing touch-none",
+              "text-gray-400 hover:text-gray-600 dark:hover:text-gray-200",
+              "opacity-0 group-hover:opacity-100 transition-opacity"
+            )}
+            title="Drag to reorder column"
+            aria-label={`Reorder ${column.id} column`}
+            data-testid={`drag-handle-${column.id}`}
+            onClick={(event) => event.stopPropagation()}
+            {...attributes}
+            {...listeners}
+          >
+            <RxDragHandleDots2 className="w-3.5 h-3.5" />
+          </button>
+        )}
         <button
           className={clsx(
             "flex items-center flex-1 min-w-0",
@@ -258,9 +309,7 @@ const DraggableHeaderCell = ({
             column.id !== "checkbox" && "flex-1",
             column.id === "checkbox" && "justify-center"
           )}
-          {...listeners}
-          onClick={handleColumnNameClick}
-          {...attributes}
+          onClick={(event) => handleSortingMenuClick?.(event)}
         >
           <span className="inline-block truncate text-ellipsis [&>*]:truncate">
             {children}
@@ -366,6 +415,20 @@ const DraggableHeaderCell = ({
                 )}
               </>
             )}
+            {column.getCanResize() && (
+              <>
+                <DropdownMenu.Item
+                  icon={ArrowsPointingOutIcon}
+                  label="Auto-fit column"
+                  onClick={handleAutofit}
+                />
+                <DropdownMenu.Item
+                  icon={ArrowUturnLeftIcon}
+                  label="Reset width"
+                  onClick={handleResetWidth}
+                />
+              </>
+            )}
             {column.getCanPin() && (
               <>
                 <DropdownMenu.Item
@@ -404,17 +467,51 @@ const DraggableHeaderCell = ({
         )}
       </div>
 
-      {column.getIsPinned() === false && (
+      {dropIndicatorSide && (
+        <span
+          className={clsx(
+            "absolute top-0 bottom-0 w-0.5 bg-blue-500 z-30 pointer-events-none",
+            dropIndicatorSide === "left" ? "left-0" : "right-0"
+          )}
+          aria-hidden
+        />
+      )}
+
+      {column.getIsPinned() === false && column.getCanResize() && (
         <div
           className={clsx(
-            "h-full absolute top-0 right-0 w-0.5 cursor-col-resize inline-block opacity-0 group-hover:opacity-100",
-            {
-              "hover:w-2 bg-blue-100": column.getIsResizing() === false,
-              "w-2 bg-blue-400": column.getIsResizing(),
-            }
+            "absolute top-0 right-0 h-full w-3 flex justify-end items-stretch",
+            "cursor-col-resize touch-none select-none z-20",
+            "opacity-0 group-hover:opacity-100"
           )}
-          onMouseDown={getResizeHandler()}
-        />
+          title="Drag to resize · double-click to auto-fit"
+          data-testid={`resize-handle-${column.id}`}
+          role="separator"
+          aria-orientation="vertical"
+          onMouseDown={(event) => {
+            event.stopPropagation();
+            getResizeHandler()(event);
+          }}
+          onTouchStart={(event) => {
+            event.stopPropagation();
+            getResizeHandler()(event);
+          }}
+          onClick={(event) => event.stopPropagation()}
+          onDoubleClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            handleAutofit();
+          }}
+        >
+          <span
+            className={clsx(
+              "h-full w-0.5 rounded-full",
+              column.getIsResizing()
+                ? "bg-blue-400"
+                : "bg-blue-200 group-hover:bg-blue-400"
+            )}
+          />
+        </div>
       )}
     </TableHeaderCell>
   );
@@ -456,19 +553,42 @@ export default function AlertsTableHeaders({
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        delay: 250,
-        tolerance: 5,
+        distance: 4,
       },
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 250,
-        tolerance: 5,
+        delay: 200,
+        tolerance: 8,
       },
     })
   );
 
+  const [dropTarget, setDropTarget] = useState<{
+    columnId: string;
+    side: "left" | "right";
+  } | null>(null);
+
+  const onDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) {
+      setDropTarget(null);
+      return;
+    }
+    const fromIndex = columnOrder.indexOf(active.id as string);
+    const toIndex = columnOrder.indexOf(over.id as string);
+    if (toIndex === -1) {
+      setDropTarget(null);
+      return;
+    }
+    setDropTarget({
+      columnId: over.id as string,
+      side: fromIndex < toIndex ? "right" : "left",
+    });
+  };
+
   const onDragEnd = async (event: DragEndEvent) => {
+    setDropTarget(null);
     const { active, over } = event;
 
     if (over?.id == null) return;
@@ -498,7 +618,9 @@ export default function AlertsTableHeaders({
           key={headerGroup.id}
           sensors={sensors}
           collisionDetection={closestCenter}
+          onDragOver={onDragOver}
           onDragEnd={onDragEnd}
+          onDragCancel={() => setDropTarget(null)}
           accessibility={{
             container: a11yContainerRef.current ?? undefined,
           }}
@@ -554,6 +676,11 @@ export default function AlertsTableHeaders({
                     setColumnOrder={setColumnOrder}
                     columnVisibility={columnVisibility}
                     setColumnVisibility={setColumnVisibility}
+                    dropIndicatorSide={
+                      dropTarget?.columnId === header.column.id
+                        ? dropTarget.side
+                        : null
+                    }
                   >
                     {displayHeader}
                   </DraggableHeaderCell>

@@ -150,6 +150,7 @@ export default function ColumnSelection({
         columnTimeFormats: {},
         columnListFormats: {},
       });
+      table.resetColumnSizing();
       setLocalColumnVisibility(DEFAULT_COLS_VISIBILITY);
       // Also reset grouping and facets if callbacks provided
       onResetGrouping?.();
