@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { FacetDto } from "@/features/filter";
 import { AlertTableServerSide } from "@/widgets/alerts-table/ui/alert-table-server-side";
 import { useAlertTableCols } from "@/widgets/alerts-table/lib/alert-table-utils";
 import {
@@ -12,7 +11,6 @@ import { Preset } from "@/entities/presets/model/types";
 import { AlertsTableDataQuery } from "@/widgets/alerts-table/ui/useAlertsTableData";
 
 interface Props {
-  initialFacets: FacetDto[];
   alerts: AlertDto[];
   alertsTotalCount: number;
   facetsCel: string | null;
@@ -32,7 +30,6 @@ interface Props {
 }
 
 export default function AlertTableTabPanelServerSide({
-  initialFacets,
   alerts,
   alertsTotalCount,
   preset,
@@ -101,7 +98,6 @@ export default function AlertTableTabPanelServerSide({
     <AlertTableServerSide
       facetsCel={facetsCel}
       facetsPanelRefreshToken={facetsPanelRefreshToken}
-      initialFacets={initialFacets}
       alerts={alerts}
       alertsTotalCount={alertsTotalCount}
       columns={alertTableColumns}
