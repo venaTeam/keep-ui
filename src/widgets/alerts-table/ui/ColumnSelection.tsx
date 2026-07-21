@@ -111,7 +111,7 @@ export default function ColumnSelection({
   const columnsOptions = [
     // Include columns from table data
     ...tableColumns
-      .filter((col) => col.getIsPinned() === false)
+      .filter((col) => col.getIsPinned() === false || col.id === "source")
       .map((col) => col.id),
     // Include common enrichment fields that might not be in current data
     ...COMMON_ENRICHMENT_FIELDS.filter(field =>
