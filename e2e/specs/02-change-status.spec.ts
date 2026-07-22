@@ -1,21 +1,21 @@
 import { test, expect } from "../fixtures/test-base";
-import { loadFeedRow } from "../fixtures/ui";
+import { celFingerprintIn } from "../pages";
 
 /**
  * [check:02] change-status
  *
- * Drives the per-row "Change Status" UI flow on the alerts feed:
- *   open the row action menu (ellipsis) → click the "Change Status" menu item
- *   (DropdownMenu.Item auto-generates data-cy="menu-item-change-status") →
- *   the change-status modal (data-cy="alerts-change-status-modal") opens →
- *   pick "Acknowledged" from the react-select control → submit
- *   (data-cy="alerts-change-status-submit-btn").
+ * Drives the "Change Status" UI flow on the alerts feed, single-row and bulk:
+ *   single: open the row action menu (ellipsis) → "Change Status" menu item →
+ *     the change-status modal opens → pick "Acknowledged" → submit
+ *     (POST /alerts/enrich).
+ *   bulk:   select every alert → open the actions-toolbar "Change Status" →
+ *     the same modal → pick "Acknowledged" → submit (POST /alerts/batch_enrich).
  *
  * Hybrid:
- *  - seed via api.sendAlert
- *  - mutate via the real UI
- *  - backend-assert via api.waitForAlertField(fp, "status", "acknowledged")
- *  - render-assert the row's status cell (data-cy="alerts-cell-status").
+ *  - seed via api.alerts.sendAlert
+ *  - mutate via the real UI (AlertsFeedPage / AlertRow / ChangeStatusModal)
+ *  - backend-assert via api.alerts.waitForAlertField(fp, "status", "acknowledged")
+ *  - render-assert the row's status cell.
  *
  * Also pins the "dispose on new alert" toggle default: the modal must open in
  * the "Keeping on new alerts" (false) state, and submitting WITHOUT touching
@@ -24,75 +24,91 @@ import { loadFeedRow } from "../fixtures/ui";
  */
 test.describe("[check:02] change-status", () => {
   test("changing an alert's status via the UI persists and re-renders", async ({
+    alertsFeed,
     page,
     api,
   }) => {
-    // --- seed: one firing alert ---------------------------------------------
-    const { fingerprint } = await api.sendAlert({ name: "sanity-status" });
-    await api.waitForAlert(fingerprint);
+    const { fingerprint } = await api.alerts.sendAlert({ name: "sanity-status" });
+    await api.alerts.waitForAlert(fingerprint);
 
-    // --- locate its row in the feed -----------------------------------------
-    // The feed only lists alerts once a CEL query is submitted; filter to this fp.
-    const row = await loadFeedRow(page, fingerprint);
-    await expect(row).toBeVisible();
+    const row = await alertsFeed.loadFeedRow(fingerprint);
+    await expect(row.root).toBeVisible();
 
-    // --- open the row action menu and pick "Change Status" ------------------
-    // The ellipsis trigger lives inside the row's alerts-menu wrapper.
-    await row
-      .locator('[data-cy="alerts-menu"] [data-testid="dropdown-menu-button"]')
-      .click();
-    // The menu renders into a FloatingPortal at the document root, so target
-    // the item page-wide by its auto-generated data-cy.
-    await page.locator('[data-cy="menu-item-change-status"]').click();
+    const modal = await row.openChangeStatusModal();
 
-    // --- drive the change-status modal --------------------------------------
-    const modal = page.locator('[data-cy="alerts-change-status-modal"]');
-    await expect(modal).toBeVisible();
+    await expect(modal.keepingToggle).toBeVisible();
+    await expect(modal.disposingToggle).toHaveCount(0);
 
-    // --- toggle default: dispose-on-new-alert opens OFF ----------------------
-    // The toggle is a plain button whose visible label IS the state contract:
-    // "Keeping on new alerts" (false) by default, never "Disposing on new
-    // alerts" on open.
-    await expect(
-      modal.getByRole("button", { name: "Keeping on new alerts" })
-    ).toBeVisible();
-    await expect(
-      modal.getByRole("button", { name: "Disposing on new alerts" })
-    ).toHaveCount(0);
+    await modal.selectStatus("Resolved");
 
-    // The status picker is a react-select; focus its combobox, type to filter,
-    // then choose the "Acknowledged" option from the portal-rendered menu.
-    const statusCombo = modal.getByRole("combobox");
-    await statusCombo.click();
-    await statusCombo.fill("Acknowledged");
-    await page.getByRole("option", { name: "Acknowledged" }).click();
-
-    // Submit WITHOUT touching the toggle and assert the outgoing request
-    // carries dispose_on_new_alert=false. The single-alert flow POSTs
-    // /alerts/enrich (batch selections go to /alerts/batch_enrich instead).
     const enrichRequest = page.waitForRequest(
       (req) =>
         req.method() === "POST" && req.url().includes("/alerts/enrich"),
       { timeout: 15_000 }
     );
-    await modal.locator('[data-cy="alerts-change-status-submit-btn"]').click();
-    expect((await enrichRequest).url()).toContain(
-      "dispose_on_new_alert=false"
-    );
-    await expect(modal).toBeHidden();
+    await modal.submit();
+    expect((await enrichRequest).url()).toContain("dispose_on_new_alert=false");
+    await expect(modal.root).toBeHidden();
 
-    // --- backend assert: status changed -------------------------------------
-    await api.waitForAlertField(fingerprint, "status", "acknowledged");
+    await api.alerts.waitForAlertField(fingerprint, "status", "resolved");
 
-    // --- render assert: the status cell reflects the new status -------------
-    // The status cell renders a Tremor <Icon tooltip={status}> — the status text
-    // is exposed as a hover tooltip (role="tooltip"), NOT a static title/aria
-    // attribute. Hover the icon and assert the tooltip surfaces "acknowledged".
-    const statusCell = row.locator('[data-cy="alerts-cell-status"]');
+    const statusCell = row.cell("status");
     await expect(statusCell).toBeVisible();
     await statusCell.hover();
     await expect(
-      page.getByRole("tooltip").filter({ hasText: /acknowledged/i })
+      page.getByRole("tooltip").filter({ hasText: /resolved/i })
     ).toBeVisible();
+  });
+
+  test("bulk-changing status across all selected alerts persists for every one", async ({
+    alertsFeed,
+    page,
+    api,
+  }) => {
+    const stamp = Date.now();
+
+    const seeds = await Promise.all(
+      [0, 1, 2].map((i) =>
+        api.alerts.sendAlert({ name: `sanity-bulk-status-${stamp}-${i}` })
+      )
+    );
+    const fingerprints = seeds.map((s) => s.fingerprint);
+    await Promise.all(fingerprints.map((fp) => api.alerts.waitForAlert(fp)));
+
+    // --- load the feed filtered to exactly the three seeded alerts ----------
+    await alertsFeed.loadFeed(celFingerprintIn(fingerprints), fingerprints);
+    await alertsFeed.selectAll();
+    await expect(alertsFeed.actionsToolbar).toBeVisible();
+    const modal = await alertsFeed.openBulkChangeStatusModal();
+    await modal.selectStatus("Resolved");
+
+    // Submit and assert the bulk path is taken: a multi-alert selection POSTs
+    // /alerts/batch_enrich (the single-alert flow uses /alerts/enrich).
+    const batchEnrichRequest = page.waitForRequest(
+      (req) =>
+        req.method() === "POST" && req.url().includes("/alerts/batch_enrich"),
+      { timeout: 15_000 }
+    );
+    await modal.submit();
+    await batchEnrichRequest;
+    await expect(modal.root).toBeHidden();
+
+    // --- backend assert: every selected alert changed to resolved -------
+    for (const fp of fingerprints) {
+      await api.alerts.waitForAlertField(fp, "status", "resolved");
+    }
+
+    // --- render assert: each row's status cell reflects the new status ------
+    for (const fp of fingerprints) {
+      const statusCell = alertsFeed.row(fp).cell("status");
+      await expect(statusCell).toBeVisible();
+      // Move the mouse off the table first: the previous row's status tooltip is
+      // a portal that can overlap the next status cell and intercept the hover.
+      await page.mouse.move(0, 0);
+      await statusCell.hover();
+      await expect(
+        page.getByRole("tooltip").filter({ hasText: /resolved/i }).first()
+      ).toBeVisible();
+    }
   });
 });
