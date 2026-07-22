@@ -1,6 +1,4 @@
-import { createServerApiClient } from "@/shared/api/server";
 import AlertsPage from "./ui/alerts";
-import { getInitialFacets } from "@/features/filter/api";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -9,9 +7,7 @@ type PageProps = {
 
 export default async function Page(props: PageProps) {
   const params = await props.params;
-  const api = await createServerApiClient();
-  const initialFacets = await getInitialFacets(api, "alerts");
-  return <AlertsPage presetName={params.id} initialFacets={initialFacets} />;
+  return <AlertsPage presetName={params.id} />;
 }
 
 export const metadata = {

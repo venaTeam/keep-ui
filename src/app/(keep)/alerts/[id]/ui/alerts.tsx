@@ -13,7 +13,6 @@ import { AlertDismissModal } from "@/features/alerts/dismiss-alert";
 import { AlertChangeStatusModal } from "@/features/alerts/alert-change-status";
 import { AlertAssignModal } from "@/features/alerts/alert-assign";
 import { ViewAlertModal } from "@/features/alerts/view-alert";
-import { FacetDto } from "@/features/filter";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepLoader, showErrorToast } from "@/shared/ui";
 import NotFound from "@/app/(keep)/not-found";
@@ -40,11 +39,10 @@ const defaultPresets: Preset[] = [
 ];
 
 type AlertsProps = {
-  initialFacets: FacetDto[];
   presetName: string;
 };
 
-export default function Alerts({ presetName, initialFacets }: AlertsProps) {
+export default function Alerts({ presetName }: AlertsProps) {
   const api = useApi();
 
   // Record page load time - call directly since useEffect may not fire reliably in Next.js
@@ -174,7 +172,6 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
   return (
     <>
       <AlertTableTabPanelServerSide
-        initialFacets={initialFacets}
         key={selectedPreset.name}
         facetsPanelRefreshToken={facetsPanelRefreshToken}
         preset={selectedPreset}

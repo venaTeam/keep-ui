@@ -57,7 +57,7 @@ import {
   FunnelIcon,
   MagnifyingGlassIcon,
 } from "@heroicons/react/24/outline";
-import { FacetDto, Pagination } from "@/features/filter";
+import { Pagination } from "@/features/filter";
 import { ShortNumber } from "@/components/ui";
 import { GroupingState, getGroupedRowModel } from "@tanstack/react-table";
 import { v4 as uuidV4 } from "uuid";
@@ -100,7 +100,6 @@ interface Tab {
 
 interface Props {
   alerts: AlertDto[];
-  initialFacets: FacetDto[];
   alertsTotalCount: number;
   columns: ColumnDef<AlertDto>[];
   isAsyncLoading?: boolean;
@@ -127,7 +126,6 @@ export function AlertTableServerSide({
   alerts,
   alertsTotalCount,
   columns,
-  initialFacets,
   isAsyncLoading = false,
   presetName,
   presetId,
@@ -860,10 +858,6 @@ export function AlertTableServerSide({
                   entityName={"alerts"}
                   facetOptionsCel={facetsCel}
                   clearFiltersToken={clearFiltersToken}
-                  initialFacetsData={{
-                    facets: initialFacets,
-                    facetOptions: null,
-                  }}
                   facetsConfig={facetsConfig}
                   persistenceKey={
                     presetName === "feed"
