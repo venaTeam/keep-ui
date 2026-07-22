@@ -17,6 +17,7 @@ import { AlertMenu } from "@/features/alerts/alert-menu";
 import { isSameDay, isValid, isWithinInterval } from "date-fns";
 import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
 import { getNestedValue } from "@/shared/lib/object-utils";
+import { ALERT_COLUMN_SIZE } from "@/widgets/alerts-table/lib/alert-table-column-consts";
 import {
   isListColumn,
   formatList,
@@ -277,7 +278,8 @@ export const useAlertTableCols = (
       {
         id: colName,
         header: getColumnDisplayName(colName, colName, columnRenameMapping),
-        minSize: 100,
+        minSize: ALERT_COLUMN_SIZE.generated.min,
+        maxSize: ALERT_COLUMN_SIZE.generated.max,
         enableGrouping: true,
         getGroupingValue: (row) => {
           const value = getNestedValue(row, colName);
@@ -589,10 +591,10 @@ export const useAlertTableCols = (
         enableResizing: true,
         getGroupingValue: (row) => row.name,
         // Set fixed maximum size to prevent overflow
-        minSize: 150,
-        maxSize: 200, // Reduce from 250 to 200 to constrain more tightly
+        minSize: ALERT_COLUMN_SIZE.name.min,
+        maxSize: ALERT_COLUMN_SIZE.name.max,
         // Use a consistent width for all row states
-        size: 180, // Add a fixed size to ensure consistent width
+        size: ALERT_COLUMN_SIZE.name.size, // Add a fixed size to ensure consistent width
         cell: (context) => {
           const row = context.row;
           const expanded = isRowExpandedRef.current?.(row.original.fingerprint);
@@ -625,7 +627,8 @@ export const useAlertTableCols = (
         ),
         enableGrouping: true,
         // Increase default minSize to give description more space
-        minSize: 200,
+        minSize: ALERT_COLUMN_SIZE.description.min,
+        maxSize: ALERT_COLUMN_SIZE.description.max,
         // Let it grow more when expanded
         cell: (context) => {
           const value = context.getValue();
@@ -668,8 +671,8 @@ export const useAlertTableCols = (
           columnRenameMapping
         ),
         filterFn: isDateWithinRange,
-        minSize: 80,
-        maxSize: 80,
+        minSize: ALERT_COLUMN_SIZE.lastReceived.min,
+        maxSize: ALERT_COLUMN_SIZE.lastReceived.max,
         cell: (context) => {
           const value = context.getValue();
           const date = value instanceof Date ? value : new Date(value);
@@ -693,13 +696,15 @@ export const useAlertTableCols = (
         header: getColumnDisplayName("assignee", "Assignee", columnRenameMapping),
         enableGrouping: true,
         getGroupingValue: (row) => row.assignee,
-        minSize: 100,
+        minSize: ALERT_COLUMN_SIZE.assignee.min,
+        maxSize: ALERT_COLUMN_SIZE.assignee.max,
         cell: (context) => <AlertAssignee assignee={context.getValue()} />,
       }),
       columnHelper.display({
         id: "extraPayload",
         header: "Extra Payload",
-        minSize: 200,
+        minSize: ALERT_COLUMN_SIZE.extraPayload.min,
+        maxSize: ALERT_COLUMN_SIZE.extraPayload.max,
         cell: (context) => (
           <AlertExtraPayload
             alert={context.row.original}

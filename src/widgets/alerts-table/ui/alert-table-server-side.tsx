@@ -21,6 +21,7 @@ import {
 } from "@tanstack/react-table";
 import { ListFormatOption } from "@/widgets/alerts-table/lib/alert-table-list-format";
 import AlertsTableHeaders from "@/widgets/alerts-table/ui/alert-table-headers";
+import { ColumnResizeIndicator } from "@/widgets/alerts-table/ui/column-resize-indicator";
 import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
 import {
   getColumnsIds,
@@ -222,6 +223,7 @@ export function AlertTableServerSide({
     `table-sizes-${userPrefix}${presetName}`,
     {}
   );
+  const tableContainerRef = useRef<HTMLDivElement>(null);
 
   const [sorting, setSorting] = useState<SortingState>(
     noisyAlertsEnabled ? [{ id: "noise", desc: true }] : []
@@ -313,7 +315,7 @@ export function AlertTableServerSide({
     getPaginationRowModel: getPaginationRowModel(),
     onColumnSizingChange: setColumnSizing,
     enableColumnPinning: true,
-    columnResizeMode: "onChange",
+    columnResizeMode: "onEnd",
     autoResetPageIndex: false,
     enableGlobalFilter: true,
     enableSorting: true,
@@ -881,13 +883,17 @@ export function AlertTableServerSide({
           {/* Table section */}
           <div className="flex-1 flex flex-col min-w-0 gap-4">
             <Card className="flex-1 flex flex-col p-0 overflow-x-auto">
-              <div className="flex-1 flex flex-col">
+              <div ref={tableContainerRef} className="relative flex-1 flex flex-col">
                 <div ref={a11yContainerRef} className="sr-only" />
 
                 {/* Make table wrapper scrollable */}
                 <div data-testid="alerts-table" data-cy="alerts-table-wrapper" className="flex-1">
                   {renderTable()}
                 </div>
+                <ColumnResizeIndicator
+                  table={table}
+                  containerRef={tableContainerRef}
+                />
               </div>
             </Card>
             {/* Pagination footer - fixed height */}
