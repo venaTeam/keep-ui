@@ -6,7 +6,6 @@
 
 .create-update-tenant {
     display: inline-flex;
-    background-color: rgb(255, 129, 83);
     border-radius: 8px;
     cursor: pointer;
     width: 1.5rem;
@@ -15,7 +14,18 @@
     position: relative;
     align-items: center;
     justify-content: center;
-    font-weight: 500;
+    font-weight: 200;
     color: white;
     background-color: rgba(249, 115, 22);
+}
+
+.create-update-tenant:hover {
+    background-color: rgb(255, 195, 173);
+    color: rgb(0, 0, 0);
+}
+
+.required-fields {
+    display: flex;
+    flex-direction: row;
+    min-width: 35rem !important;
 }

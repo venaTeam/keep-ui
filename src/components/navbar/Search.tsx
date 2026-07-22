@@ -32,6 +32,7 @@ import { useConfig } from "utils/hooks/useConfig";
 import { Session } from "next-auth";
 import { signIn } from "next-auth/react";
 import KeepPng from "../../keep.png";
+import TenantButton from "./manage-tenants/TenantButton";
 import "./Search.css";
 
 const NAVIGATION_OPTIONS = [
@@ -335,7 +336,6 @@ export const Search = ({ session }: SearchProps) => {
   const isSuperAdmin = true
   const isTenantAdmin = true
 
-
   return (
     <div
       className="flex items-center w-full py-3 px-2 border-b border-gray-300"
@@ -404,8 +404,8 @@ export const Search = ({ session }: SearchProps) => {
           </Link>
         )}
 
-        {isSuperAdmin && <span className="create-update-tenant">&#43;</span>}
-        {isTenantAdmin && <span className="create-update-tenant">&#9998;</span>}
+        {isSuperAdmin && <TenantButton icon="&#43;" modalType="create" />}
+        {isTenantAdmin && <TenantButton icon="&#9998;" modalType="update" tenantData={currentTenant} />}
 
       </div>
 
