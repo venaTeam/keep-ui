@@ -1,18 +1,19 @@
-import { useState } from "react";
 import ".././Search.css";
-import TenantFormModal from "./TenantFormModal";
 import { errors } from "@/metrics/metrics";
 import { TextInput } from "@tremor/react";
-import { required } from "zod/v4/core/util";
+import { get } from "react-hook-form";
 
 interface FormFieldProps {
     title: string;
     required: boolean;
     disabled: boolean;
     placeholder: string;
+    register: any;
+    isSubmitted: boolean;
+    errors: any;
 }
 
-export default function FormField({title, required, disabled, placeholder}: FormFieldProps) {
+export default function FormField({title, required, disabled, placeholder, register, isSubmitted, errors}: FormFieldProps) {
 
 
   return (
@@ -23,11 +24,12 @@ export default function FormField({title, required, disabled, placeholder}: Form
                 disabled={disabled}
                 placeholder={placeholder}
                 className="mt-2"
-                {...register("name", {
-                required: { message: "Name is required", value: true },})}
-                error={isSubmitted && !!get(errors, "name.message")}
-                errorMessage={isSubmitted ? get(errors, "name.message") : undefined}
-                data-cy="rules-form-name-input"/>
+                {...register(title, {
+                required: { message: `${title} is required`, value: true },})}
+                error={isSubmitted && !!get(errors, `${title}.message`)}
+                errorMessage={isSubmitted ? get(errors, `${title}.message`) : undefined}
+                data-cy={`rules-form-${title}-input`}
+            />
         </label>
     </fieldset>
 

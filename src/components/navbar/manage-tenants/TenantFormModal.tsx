@@ -5,6 +5,7 @@ import { FormProvider, useForm, useFormContext } from "react-hook-form";
 import { TextInput } from "@/components/ui/TextInput";
 import { get } from "lodash";
 import ".././Search.css";
+import FormField from "./FormField";
 
 type TenantModalProps = {
     modalType: string;
@@ -29,7 +30,19 @@ type TenantFormType = {
 export default function TenantFormModal({modalType, openModal, setOpenModal, tenantData}: TenantModalProps) {
 
     console.log(tenantData);
-
+    
+    const modal_fields: Record<string, Record<string, { required: boolean; disabled: boolean; placeholder: string | undefined }>> = 
+    {"create":
+        {"name":
+            {"required": true, "disabled": false, "placeholder": "tenant name"},
+        "admin":
+            {"required": true, "disabled": false, "placeholder": "admin"}
+        },
+    "update":
+        {"name":
+            {"required": false, "disabled": true, "placeholder": tenantData?.tenant_name},
+    }}
+    
     const methods = useForm<TenantFormType>({
         mode: "onChange",
       });
@@ -53,41 +66,20 @@ export default function TenantFormModal({modalType, openModal, setOpenModal, ten
                 <div className="flex-1 min-h-0 overflow-y-auto">
                   <div className="mb-10">
                     <div className="required-fields">
-                    <fieldset className="grid grid-cols-2">
-                        <label className="text-tremor-default mr-10 font-medium text-tremor-content-strong">tenant name {!tenantData?.tenant_name && <span className="text-gray-500">*</span>}
-                            <TextInput
-                                type="text"
-                                disabled={tenantData?.tenant_name ? true : false}
-                                placeholder={tenantData?.tenant_name ? tenantData.tenant_name : "tenant name"}
-                                className="mt-2"
-                                {...register("name", {
-                                required: { message: "Name is required", value: true },
-                                })}
-                                error={isSubmitted && !!get(errors, "name.message")}
-                                errorMessage={isSubmitted ? get(errors, "name.message") : undefined}
-                                data-cy="rules-form-name-input"
-                        />
-                        </label>
-                    </fieldset>
-                    {modalType === "create" && 
-                     <fieldset className="grid grid-cols-2">
-                        <label className="text-tremor-default mr-10 font-medium text-tremor-content-strong">admin <span className="text-gray-500">*</span>
-                            <TextInput
-                                type="text"
-                                disabled={tenantData?.tenant_name ? true : false}
-                                placeholder={tenantData?.tenant_name ? tenantData.tenant_name : "tenant name"}
-                                className="mt-2"
-                                {...register("name", {
-                                required: { message: "Name is required", value: true },
-                                })}
-                                error={isSubmitted && !!get(errors, "name.message")}
-                                errorMessage={isSubmitted ? get(errors, "name.message") : undefined}
-                                data-cy="rules-form-name-input"
-                        />
-                        </label>
-                    </fieldset>}
+                        {Object.keys(modal_fields[modalType]).map((field) => (
+                            <FormField
+                                key={field}
+                                title={field}
+                                required={modal_fields[modalType][field].required}
+                                disabled={modal_fields[modalType][field].disabled}
+                                placeholder={modal_fields[modalType][field].placeholder || ""}
+                                register={register}
+                                isSubmitted={isSubmitted}
+                                errors={errors}
+                            />
+                        ))}
                     </div>
-                    
+
                   </div>
                 </div>
               </form>
