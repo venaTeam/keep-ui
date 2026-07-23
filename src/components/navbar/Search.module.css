@@ -1,0 +1,75 @@
+.tenantSwitcher:hover {
+    background-color: coral;
+    border-radius: 15px;
+    cursor: pointer;
+}
+
+.createUpdateTenant {
+    display: inline-flex;
+    border-radius: 8px;
+    cursor: pointer;
+    width: 1.5rem;
+    height: 1.5rem;
+    margin-left: 15px;
+    position: relative;
+    align-items: center;
+    justify-content: center;
+    font-weight: 200;
+    color: white;
+    background-color: rgba(249, 115, 22);
+}
+
+.createUpdateTenant:hover {
+    background-color: rgb(255, 195, 173);
+    color: rgb(0, 0, 0);
+}
+
+.requiredFields {
+    display: flex;
+    flex-direction: row;
+}
+
+.fieldInput {
+    width: 12rem !important;
+}
+
+.userGroup {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    margin-left: 10px;
+    margin-top: 5px;
+    background-color:rgb(121, 121, 121);
+    border-radius: 4px;
+    width: 7rem;
+    margin-top: 0;
+    margin-right: 2px;
+}
+
+.userGroupChosen {
+    background-color: rgb(64, 64, 64);
+    color: white;
+    border-radius: 4px;
+    width: 50%;
+
+}
+
+.userGroupNotChosen {
+    background-color:rgb(121, 121, 121);
+    color: white;
+    border-radius: 4px;
+    width: 50%;
+}
+
+.fieldLabel {
+    display: flex;
+    flex-direction: row;
+    height: 1.5rem;
+    justify-content: flex-start;
+}
+
+.fieldset {
+    display: flex;
+    flex-direction: column;
+    width: 20rem;
+}

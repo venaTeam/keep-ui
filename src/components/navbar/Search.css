@@ -27,5 +27,10 @@
 .required-fields {
     display: flex;
     flex-direction: row;
-    min-width: 35rem !important;
+    /* min-width: 35rem !important; */
+    background-color: aqua;
+}
+
+.field-input {
+    width: 10rem !important;
 }

@@ -23,6 +23,8 @@ import {
   UserGroupIcon,
   EnvelopeIcon,
   KeyIcon,
+  PlusIcon,
+  PencilIcon as EditIcon,
 } from "@heroicons/react/24/outline";
 import { VscDebugDisconnect } from "react-icons/vsc";
 import { LuWorkflow } from "react-icons/lu";
@@ -33,7 +35,7 @@ import { Session } from "next-auth";
 import { signIn } from "next-auth/react";
 import KeepPng from "../../keep.png";
 import TenantButton from "./manage-tenants/TenantButton";
-import "./Search.css";
+import styles from "./Search.module.css";
 
 const NAVIGATION_OPTIONS = [
   {
@@ -347,7 +349,7 @@ export const Search = ({ session }: SearchProps) => {
             {({ open }) => (
               <>
                 <Popover.Button
-                  className="focus:outline-none flex items-center gap-4 tenant-switcher"
+                  className={`focus:outline-none flex items-center gap-4 ${styles.tenantSwitcher}`}
                   disabled={isLoading}
                   data-cy="nav-tenant-switcher-trigger"
                 >
@@ -404,8 +406,9 @@ export const Search = ({ session }: SearchProps) => {
           </Link>
         )}
 
-        {isSuperAdmin && <TenantButton icon="&#43;" modalType="create" />}
-        {isTenantAdmin && <TenantButton icon="&#9998;" modalType="update" tenantData={currentTenant} />}
+        <TenantButton icon={KeyIcon} modalType="apiKey" />
+        {isSuperAdmin && <TenantButton icon={PlusIcon} modalType="create" />}
+        {isTenantAdmin && <TenantButton icon={EditIcon} modalType="update" tenantData={currentTenant} />}
 
       </div>
 

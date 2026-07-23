@@ -1,11 +1,13 @@
 import { useState } from "react";
 import Modal from "@/components/ui/Modal";
-import ".././Search.css";
+import styles from "../Search.module.css";
 import { FormProvider, useForm, useFormContext } from "react-hook-form";
 import { TextInput } from "@/components/ui/TextInput";
 import { get } from "lodash";
-import ".././Search.css";
 import FormField from "./FormField";
+import AsyncSelect from "react-select/async";
+import Select from "react-select";
+
 
 type TenantModalProps = {
     modalType: string;
@@ -29,19 +31,48 @@ type TenantFormType = {
 
 export default function TenantFormModal({modalType, openModal, setOpenModal, tenantData}: TenantModalProps) {
 
-    console.log(tenantData);
-    
-    const modal_fields: Record<string, Record<string, { required: boolean; disabled: boolean; placeholder: string | undefined }>> = 
+    // GULI TODO: change options and select to loadOptions and AsyncSelect when we have the API for it
+    const modal_fields: Record<string, Record<string, { field_type: any; required: boolean; disabled: boolean; placeholder: string | undefined; other?: any }>> = 
     {"create":
         {"name":
-            {"required": true, "disabled": false, "placeholder": "tenant name"},
+            {"field_type": TextInput,"required": true, "disabled": false, "placeholder": "tenant name"},
         "admin":
-            {"required": true, "disabled": false, "placeholder": "admin"}
+            {"field_type": Select, "required": true, "disabled": false, "placeholder": "admin",
+                "other": {
+                "options": [{value: "label1", label: "Label 1"}, {value: "label2", label: "Label 2"}]
+                }
+            }
         },
     "update":
         {"name":
-            {"required": false, "disabled": true, "placeholder": tenantData?.tenant_name},
-    }}
+            {"field_type": TextInput, "required": false, "disabled": true, "placeholder": tenantData?.tenant_name}
+        }
+    }
+
+    const operator_data = ["guli", "guli2", "guli3"];
+
+
+    // // GULI TODO: change values to real operator data connected to the tenant + update values in ADD!
+    // const modal_fields_with_values: Record<string, Record<string, { values: any[]; field_type: any; required: boolean; disabled: boolean; placeholder: string | undefined; other?: any }>> = 
+    // {"create":
+    //     {"operator":
+    //         {
+    //             "values": [],
+    //             "field_type": TextInput , "required": false, "disabled": false, "placeholder": "operator"
+    //         }
+    //     },
+    // "update":
+    //     {"operator":
+    //         {
+    //             "values": operator_data,
+    //             "field_type": TextInput , "required": false, "disabled": true, "placeholder": tenantData?.operator
+    //         }
+    //     }
+    // }
+
+
+    const [adminIsUser, setAdminIsUser] = useState(true);
+
     
     const methods = useForm<TenantFormType>({
         mode: "onChange",
@@ -65,9 +96,10 @@ export default function TenantFormModal({modalType, openModal, setOpenModal, ten
               >
                 <div className="flex-1 min-h-0 overflow-y-auto">
                   <div className="mb-10">
-                    <div className="required-fields">
+                    <div className={styles.requiredFields}>
                         {Object.keys(modal_fields[modalType]).map((field) => (
                             <FormField
+                                field_type={modal_fields[modalType][field].field_type}
                                 key={field}
                                 title={field}
                                 required={modal_fields[modalType][field].required}
@@ -76,10 +108,16 @@ export default function TenantFormModal({modalType, openModal, setOpenModal, ten
                                 register={register}
                                 isSubmitted={isSubmitted}
                                 errors={errors}
+                                other={modal_fields[modalType][field].other}
+                                children={field === "admin" && (
+                                    <div className={styles.userGroup}>
+                                        <span className={`${adminIsUser ? styles.userGroupChosen : styles.userGroupNotChosen}`} onClick={() => setAdminIsUser(true)}> &nbsp; user &thinsp;</span>
+                                        <span className={`${!adminIsUser ? styles.userGroupChosen : styles.userGroupNotChosen}`} onClick={() => setAdminIsUser(false)}>&nbsp; group &thinsp;</span>
+                                    </div>
+                                )}
                             />
                         ))}
                     </div>
-
                   </div>
                 </div>
               </form>

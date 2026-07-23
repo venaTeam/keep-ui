@@ -1,9 +1,10 @@
 import { useState } from "react";
-import ".././Search.css";
+import styles from "../Search.module.css";
 import TenantFormModal from "./TenantFormModal";
+import { Button } from "@/components/ui";
 
 interface TenantButtonProps {
-    icon: string;
+    icon: any;
     modalType: string;
     tenantData?: any;
 }
@@ -14,7 +15,7 @@ export default function TenantButton({icon, modalType, tenantData}: TenantButton
 
   return (
     <>
-    <span className="create-update-tenant" onClick={() => setOpenModal(true)}>{icon}</span>
+    <Button icon={icon} className={styles.createUpdateTenant} onClick={() => setOpenModal(true)} variant={undefined} />
     {openModal && <TenantFormModal modalType={modalType} openModal={openModal} setOpenModal={setOpenModal} tenantData={tenantData}/>}
     </>
 
