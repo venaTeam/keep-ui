@@ -3,7 +3,7 @@ import styles from "../Search.module.css";
 import { get } from "react-hook-form";
 
 interface FormFieldProps {
-    title: string;
+    title?: string;
     required: boolean;
     disabled: boolean;
     placeholder: string;
@@ -13,21 +13,24 @@ interface FormFieldProps {
     other?: any;
     field_type: React.ElementType;
     children?: React.ReactNode;
+    fieldClassName?: any;
+    fieldsetClassName?: any;
 }
 
-export default function FormField({field_type: FieldComponent, title, required, disabled, placeholder, register, isSubmitted, errors, other, children}: FormFieldProps) {
+export default function FormField({fieldClassName, fieldsetClassName, field_type: FieldComponent, title, required, disabled, placeholder, register, isSubmitted, errors, other, children}: FormFieldProps) {
 
   return (
-    <fieldset className={`grid grid-cols-2 ${styles.fieldset}`} >
-        <label className={`text-tremor-default mr-10 font-medium text-tremor-content-strong ${styles.fieldLabel}`}>{title}
-            {required&& <span className="text-gray-500">*</span>}
+    <fieldset className={`grid grid-cols-2 ${fieldsetClassName || styles.fieldset}`} >
+        { title && <label className={`text-tremor-default mr-10 font-medium text-tremor-content-strong ${styles.fieldLabel}`}>{title}
             {children}
-        </label>
+            {required&& <div className={`text-red-500 ${styles.requiredField}`}> &nbsp; *</div>}
+
+        </label>}
          <FieldComponent
                 type="text"
                 disabled={disabled}
                 placeholder={placeholder}
-                className={`mt-2 ${styles.fieldInput}`}
+                className={`mt-2 ${fieldClassName || styles.fieldInput}`}
                 {...register(title, {
                 required: { message: `${title} is required`, value: true },})}
                 error={isSubmitted && !!get(errors, `${title}.message`)}

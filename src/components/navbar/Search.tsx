@@ -406,59 +406,12 @@ export const Search = ({ session }: SearchProps) => {
           </Link>
         )}
 
-        <TenantButton icon={KeyIcon} modalType="apiKey" />
-        {isSuperAdmin && <TenantButton icon={PlusIcon} modalType="create" />}
-        {isTenantAdmin && <TenantButton icon={EditIcon} modalType="update" tenantData={currentTenant} />}
+        <TenantButton icon={KeyIcon} modalType="create api key" />
+        {isSuperAdmin && <TenantButton icon={PlusIcon} modalType="create tenant" />}
+        {isTenantAdmin && <TenantButton icon={EditIcon} modalType="update tenant" tenantData={currentTenant} />}
 
       </div>
 
-      <div className="flex-grow ml-6">
-        <Combobox
-          value={query}
-          onChange={onOptionSelection}
-          as="div"
-          className="relative w-full"
-          immediate
-        >
-          {({ open }) => (
-            <>
-              {open && (
-                <div
-                  className="fixed inset-0 bg-black/40 z-10"
-                  aria-hidden="true"
-                />
-              )}
-
-              <ComboboxInput
-                className="z-20 tremor-TextInput-root relative flex items-center w-full outline-none rounded-tremor-default transition duration-100 border shadow-tremor-input dark:shadow-dark-tremor-input bg-tremor-background dark:bg-dark-tremor-background hover:bg-tremor-background-muted dark:hover:bg-dark-tremor-background-muted text-tremor-content dark:text-dark-tremor-content border-tremor-border dark:border-dark-tremor-border tremor-TextInput-input bg-transparent focus:outline-none focus:ring-0 text-tremor-default py-2 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none pr-3 pl-3 placeholder:text-tremor-content dark:placeholder:text-dark-tremor-content"
-                placeholder={placeholderText}
-                color="orange"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                ref={comboboxInputRef}
-                data-cy="nav-search-input"
-              />
-
-              <Transition
-                as={Fragment}
-                beforeLeave={onLeave}
-                leave="transition ease-in duration-100"
-                leaveFrom="opacity-100"
-                leaveTo="opacity-0"
-              >
-                <ComboboxOptions
-                  className="absolute mt-1 max-h-screen overflow-auto rounded-md bg-white shadow-lg ring-1 ring-black/5 focus:outline-none z-20 w-96"
-                  as={List}
-                >
-                  <NoQueriesFoundResult />
-                  <FilteredResults />
-                  <DefaultResults />
-                </ComboboxOptions>
-              </Transition>
-            </>
-          )}
-        </Combobox>
-      </div>
-    </div>
+         </div>
   );
 };

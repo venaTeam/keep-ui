@@ -7,6 +7,8 @@ import { get } from "lodash";
 import FormField from "./FormField";
 import AsyncSelect from "react-select/async";
 import Select from "react-select";
+import { Button } from "@/components/ui";
+import RoleMapping from "./RoleMapping";
 
 
 type TenantModalProps = {
@@ -31,9 +33,9 @@ type TenantFormType = {
 
 export default function TenantFormModal({modalType, openModal, setOpenModal, tenantData}: TenantModalProps) {
 
-    // GULI TODO: change options and select to loadOptions and AsyncSelect when we have the API for it
+    // GULI TODO: change options and select to loadOptions and AsyncSelect when we have the API for it + Move to CONST
     const modal_fields: Record<string, Record<string, { field_type: any; required: boolean; disabled: boolean; placeholder: string | undefined; other?: any }>> = 
-    {"create":
+    {"create tenant":
         {"name":
             {"field_type": TextInput,"required": true, "disabled": false, "placeholder": "tenant name"},
         "admin":
@@ -43,32 +45,17 @@ export default function TenantFormModal({modalType, openModal, setOpenModal, ten
                 }
             }
         },
-    "update":
+    "update tenant":
         {"name":
             {"field_type": TextInput, "required": false, "disabled": true, "placeholder": tenantData?.tenant_name}
+        },
+    "create api key":
+        {"name":
+            {"field_type": TextInput, "required": true, "disabled": false, "placeholder": "api key name"}
         }
+    
     }
 
-    const operator_data = ["guli", "guli2", "guli3"];
-
-
-    // // GULI TODO: change values to real operator data connected to the tenant + update values in ADD!
-    // const modal_fields_with_values: Record<string, Record<string, { values: any[]; field_type: any; required: boolean; disabled: boolean; placeholder: string | undefined; other?: any }>> = 
-    // {"create":
-    //     {"operator":
-    //         {
-    //             "values": [],
-    //             "field_type": TextInput , "required": false, "disabled": false, "placeholder": "operator"
-    //         }
-    //     },
-    // "update":
-    //     {"operator":
-    //         {
-    //             "values": operator_data,
-    //             "field_type": TextInput , "required": false, "disabled": true, "placeholder": tenantData?.operator
-    //         }
-    //     }
-    // }
 
 
     const [adminIsUser, setAdminIsUser] = useState(true);
@@ -86,7 +73,7 @@ export default function TenantFormModal({modalType, openModal, setOpenModal, ten
       } = methods;
 
   return (
-    <Modal isOpen={openModal} onClose={() => {setOpenModal(false)}} data-cy="cy-modal" title={`${modalType} tenant`}>
+    <Modal className={styles.tenantFormModal} isOpen={openModal} onClose={() => {setOpenModal(false)}} data-cy="cy-modal" title={`${modalType}`}>
       <FormProvider {...methods}>
               <form
                 className="flex flex-col flex-1 min-h-0"
@@ -95,7 +82,7 @@ export default function TenantFormModal({modalType, openModal, setOpenModal, ten
                 })}
               >
                 <div className="flex-1 min-h-0 overflow-y-auto">
-                  <div className="mb-10">
+                  <div className={`mb-10 ${styles.modalContent}`}>
                     <div className={styles.requiredFields}>
                         {Object.keys(modal_fields[modalType]).map((field) => (
                             <FormField
@@ -118,6 +105,26 @@ export default function TenantFormModal({modalType, openModal, setOpenModal, ten
                             />
                         ))}
                     </div>
+
+                    {modalType != "create api key" && (
+                        <div className={styles.rolesMapping}>
+                            <label className={`text-tremor-default mr-10 font-medium text-tremor-content-strong ${styles.fieldLabelRM}`}>roles mapping</label>
+                            <div className={styles.rolesMappingContent}>
+                                <div className={styles.rolesMappingPart}>
+                                    <label className={`text-tremor-default mr-10 font-medium text-tremor-content-strong ${styles.fieldLabelSubject}`}>users</label>
+                                    <RoleMapping subjectType="user" />
+                            </div>
+                            <div className={styles.rolesMappingPart}>
+                            <label className={`text-tremor-default mr-10 font-medium text-tremor-content-strong ${styles.fieldLabelSubject}`}>groups</label>
+                            <RoleMapping subjectType="group" />
+                            </div>
+                        </div>
+                    </div>)}
+                  </div>
+                  <div className={`flex justify-end ${styles.modalFooter}`}>
+                    <Button variant={undefined} className={styles.submitButton}>
+                        {modalType}
+                    </Button>
                   </div>
                 </div>
               </form>
