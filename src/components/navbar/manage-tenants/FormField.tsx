@@ -1,23 +1,26 @@
-import { useState } from "react";
 import styles from "../Search.module.css";
-import { get } from "react-hook-form";
+import { Controller, get, useFormContext } from "react-hook-form";
 
 interface FormFieldProps {
     title?: string;
+    name?: string;
     required: boolean;
     disabled: boolean;
     placeholder: string;
-    register: any;
     isSubmitted: boolean;
     errors: any;
     other?: any;
     field_type: React.ElementType;
+    isSelect?: boolean;
     children?: React.ReactNode;
     fieldClassName?: any;
     fieldsetClassName?: any;
 }
 
-export default function FormField({fieldClassName, fieldsetClassName, field_type: FieldComponent, title, required, disabled, placeholder, register, isSubmitted, errors, other, children}: FormFieldProps) {
+export default function FormField({fieldClassName, fieldsetClassName, field_type: FieldComponent, title, name, required, disabled, placeholder, isSubmitted, errors, other, isSelect = false, children}: FormFieldProps) {
+  const { control } = useFormContext();
+  const fieldName = name || title || "";
+  const errorMessage = isSubmitted ? get(errors, `${fieldName}.message`) : undefined;
 
   return (
     <fieldset className={`grid grid-cols-2 ${fieldsetClassName || styles.fieldset}`} >
@@ -26,18 +29,46 @@ export default function FormField({fieldClassName, fieldsetClassName, field_type
             {required&& <div className={`text-red-500 ${styles.requiredField}`}> &nbsp; *</div>}
 
         </label>}
-         <FieldComponent
-                type="text"
-                disabled={disabled}
+        <Controller
+          name={fieldName}
+          control={control}
+          rules={required ? { required: { message: `${title} is required`, value: true } } : undefined}
+          render={({ field }) => {
+            const baseProps = {
+              className: `mt-2 ${fieldClassName || styles.fieldInput}`,
+              onBlur: field.onBlur,
+              "data-cy": `rules-form-${title}-input`,
+            };
+
+            const fieldProps = isSelect ? {
+              value: other?.options?.find((opt: any) => opt.value === field.value) ?? null,
+              onChange: (option: any) => field.onChange(option?.value),
+              isDisabled: disabled,
+              options: other?.options,
+              menuPortalTarget: typeof document !== "undefined" ? document.body : undefined,
+              menuPosition: "fixed",
+              styles: { menuPortal: (base: any) => ({ ...base, zIndex: 9999 }) },
+            } : {
+              type: "text",
+              disabled,
+              value: field.value ?? "",
+              onChange: (event: any) => field.onChange(event.target.value),
+              error: isSubmitted && required && !!errorMessage,
+              errorMessage,
+            };
+
+            return (
+              <FieldComponent
                 placeholder={placeholder}
-                className={`mt-2 ${fieldClassName || styles.fieldInput}`}
-                {...register(title, {
-                required: { message: `${title} is required`, value: true },})}
-                error={isSubmitted && !!get(errors, `${title}.message`)}
-                errorMessage={isSubmitted ? get(errors, `${title}.message`) : undefined}
-                data-cy={`rules-form-${title}-input`}
-                options={other?.options}
-            />
+                {...baseProps}
+                {...fieldProps}
+              />
+            );
+          }}
+        />
+        {/* For select fields, the underlying FieldComponent doesn't render errors,
+            so show the message here. For non-selects the child receives the message. */}
+        {isSelect && errorMessage && <div className="text-red-500 mt-1">{errorMessage}</div>}
     </fieldset>
   )
 }

@@ -1,6 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import styles from "../Search.module.css";
-import TenantFormModal from "./TenantFormModal";
 import FormField from "./FormField";
 import { TextInput } from "@/components/ui/TextInput";
 import Select from "react-select";
@@ -17,8 +16,11 @@ export default function RoleMapping({ subjectType }: RoleMappingProps) {
   const [addNewMapping, setAddNewMapping] = useState(false);
   const [newCount, setNewCount] = useState(0);
 
-  const existingValues: Record<string, string>[] = [{"name": "value1", "role": "viewer"}, {"name": "value2", "role": "editor"}, {"name": "value3", "role": "admin"}];
+  const [existingValues, setExistingValues] = useState<Record<string, string>[]>([{"name": "value1", "role": "viewer"}, {"name": "value2", "role": "editor"}]);
+  const [toRemove, setToRemove] = useState<Record<string, string>[]>([]);
 
+
+  // const existingValues = []
 const existingValuesFields: Record<string, any> = {
   "name": {
     "field_type": TextInput,
@@ -42,13 +44,13 @@ const existingValuesFields: Record<string, any> = {
 const newFields: Record<string, any> = {
   "name": {
     "field_type": TextInput,
-    "required": true,
+    "required": false,
     "disabled": false,
     "placeholder": `${subjectType} name`,
   },
   "role": {
     "field_type": Select,
-    "required": true,
+    "required": false,
     "disabled": false,
     "placeholder": "role",
     "other": {
@@ -67,10 +69,18 @@ const newFields: Record<string, any> = {
     }
   })
 
+  useEffect(() => {
+    console.log("hereee");
+    console.log(toRemove)
+  }, [toRemove])
+
+
   return (
     <div>
       <div className={`${styles.fieldsWrapper}`} ref={containerRef}>
       {existingValues.map((value, index) => (
+        <div className={styles.existingRow}>
+          
         <div key={index} className={`grid grid-cols-2 ${styles.existingFieldset}`}>
           {Object.keys(existingValuesFields).map((field) => (
             <FormField
@@ -78,8 +88,9 @@ const newFields: Record<string, any> = {
               field_type={existingValuesFields[field].field_type}
               required={existingValuesFields[field].required}
               disabled={existingValuesFields[field].disabled}
+              name={`${subjectType}.existing.${index}.${field}`}
               placeholder={value[field]}
-              register={() => {}}
+              isSelect={field === "role"}
               isSubmitted={false}
               errors={{}}
               other={existingValuesFields[field].other}
@@ -87,10 +98,22 @@ const newFields: Record<string, any> = {
               fieldsetClassName={styles.existingFieldSetClassName}
             />
           ))}
+      </div>
+      <div key={`${index}.${value.name}.${subjectType}`} className={styles.removeIcon} onClick={() => {
+            setExistingValues((prevExistingValues) => prevExistingValues.filter(item => {
+              return item.name !== value.name;
+          }))
+            setToRemove(prevToRemove => [...prevToRemove, value])  
+          }}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 6 6 18"/>
+            <path d="M6 6l12 12"/>
+        </svg>
+        </div>
         </div>
       ))}
-       {addNewMapping && (
-        Array.from({ length: newCount }).map((_, index) => (
+       {(
+        Array.from({ length: newCount + (3 - existingValues.length) }).map((_, index) => (
         <div key={index} ref={newMappingRef} className={`grid grid-cols-2 ${styles.newFieldset}`}>
           {Object.keys(newFields).map((field) => (
             <FormField
@@ -98,9 +121,10 @@ const newFields: Record<string, any> = {
               field_type={newFields[field].field_type}
               required={newFields[field].required}
               disabled={newFields[field].disabled}
+              name={`new.${subjectType}.${index}.${field}`}
               placeholder={newFields[field].placeholder || ""}
-              register={() => {}}
               isSubmitted={false}
+              isSelect={field === "role"}
               errors={{}}
               other={newFields[field].other}
               fieldClassName={styles.existingFieldInput}

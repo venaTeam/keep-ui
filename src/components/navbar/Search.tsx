@@ -36,6 +36,8 @@ import { signIn } from "next-auth/react";
 import KeepPng from "../../keep.png";
 import TenantButton from "./manage-tenants/TenantButton";
 import styles from "./Search.module.css";
+import OperatorModal from "./manage-tenants/OperatorModal";
+import TenantFormModal from "./manage-tenants/TenantFormModal";
 
 const NAVIGATION_OPTIONS = [
   {
@@ -406,9 +408,9 @@ export const Search = ({ session }: SearchProps) => {
           </Link>
         )}
 
-        <TenantButton icon={KeyIcon} modalType="create api key" />
-        {isSuperAdmin && <TenantButton icon={PlusIcon} modalType="create tenant" />}
-        {isTenantAdmin && <TenantButton icon={EditIcon} modalType="update tenant" tenantData={currentTenant} />}
+        <TenantButton modalCompType={OperatorModal} icon={KeyIcon} modalType="operator" />
+        {isSuperAdmin && <TenantButton modalCompType={TenantFormModal} icon={PlusIcon} modalType="create tenant" />}
+        {isTenantAdmin && <TenantButton modalCompType={TenantFormModal} icon={EditIcon} modalType="update tenant" tenantData={currentTenant} />}
 
       </div>
 

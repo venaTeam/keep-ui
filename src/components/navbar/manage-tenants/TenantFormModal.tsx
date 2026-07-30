@@ -3,9 +3,7 @@ import Modal from "@/components/ui/Modal";
 import styles from "../Search.module.css";
 import { FormProvider, useForm, useFormContext } from "react-hook-form";
 import { TextInput } from "@/components/ui/TextInput";
-import { get } from "lodash";
 import FormField from "./FormField";
-import AsyncSelect from "react-select/async";
 import Select from "react-select";
 import { Button } from "@/components/ui";
 import RoleMapping from "./RoleMapping";
@@ -26,9 +24,8 @@ type Role = {
 type TenantFormType = {
   name: string;
   admin?: string;
-  operator: string;
-  groupsRoles: Role[];
-  usersRoles: Role[];
+  groupsRoles?: Role[];
+  usersRoles?: Role[];
 };
 
 export default function TenantFormModal({modalType, openModal, setOpenModal, tenantData}: TenantModalProps) {
@@ -48,10 +45,6 @@ export default function TenantFormModal({modalType, openModal, setOpenModal, ten
     "update tenant":
         {"name":
             {"field_type": TextInput, "required": false, "disabled": true, "placeholder": tenantData?.tenant_name}
-        },
-    "create api key":
-        {"name":
-            {"field_type": TextInput, "required": true, "disabled": false, "placeholder": "api key name"}
         }
     
     }
@@ -77,9 +70,13 @@ export default function TenantFormModal({modalType, openModal, setOpenModal, ten
       <FormProvider {...methods}>
               <form
                 className="flex flex-col flex-1 min-h-0"
-                onSubmit={methods.handleSubmit((data) => {
-                    console.log(data);
-                })}
+                onSubmit={(e) => {
+                  methods.handleSubmit((data) => {
+                    console.log('handleSubmit callback running with data:', data);
+                    methods.reset();
+                    setOpenModal(false);
+                  })(e);
+                }}
               >
                 <div className="flex-1 min-h-0 overflow-y-auto">
                   <div className={`mb-10 ${styles.modalContent}`}>
@@ -92,9 +89,10 @@ export default function TenantFormModal({modalType, openModal, setOpenModal, ten
                                 required={modal_fields[modalType][field].required}
                                 disabled={modal_fields[modalType][field].disabled}
                                 placeholder={modal_fields[modalType][field].placeholder || ""}
-                                register={register}
+                                isSelect={field === "admin"}
                                 isSubmitted={isSubmitted}
                                 errors={errors}
+                                fieldsetClassName={styles.fieldset}
                                 other={modal_fields[modalType][field].other}
                                 children={field === "admin" && (
                                     <div className={styles.userGroup}>
@@ -105,8 +103,6 @@ export default function TenantFormModal({modalType, openModal, setOpenModal, ten
                             />
                         ))}
                     </div>
-
-                    {modalType != "create api key" && (
                         <div className={styles.rolesMapping}>
                             <label className={`text-tremor-default mr-10 font-medium text-tremor-content-strong ${styles.fieldLabelRM}`}>roles mapping</label>
                             <div className={styles.rolesMappingContent}>
@@ -119,11 +115,15 @@ export default function TenantFormModal({modalType, openModal, setOpenModal, ten
                             <RoleMapping subjectType="group" />
                             </div>
                         </div>
-                    </div>)}
+                    </div>
                   </div>
                   <div className={`flex justify-end ${styles.modalFooter}`}>
-                    <Button variant={undefined} className={styles.submitButton}>
-                        {modalType}
+                    <Button
+                      variant={undefined}
+                      className={styles.submitButton}
+                      type="submit"
+                    >
+                      {modalType}
                     </Button>
                   </div>
                 </div>

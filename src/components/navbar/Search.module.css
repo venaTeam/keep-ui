@@ -151,7 +151,116 @@
 }
 
 .fieldsWrapper {
-    max-height: 9rem;
+    max-height: 8rem;
     overflow-y: scroll;
     min-width: 23rem;
+}
+
+.operatorFieldSetClassName {
+    display: flex;
+    flex-direction: column;
+    width: 14rem;
+    padding: 10px;
+}
+
+
+.existingOperators {
+    display: flex;
+    flex-direction: column;
+    max-height: 18rem;
+    height: 18rem;
+    overflow-y: scroll;
+    background-color: rgb(255, 255, 255);
+    border-radius: 5px;
+    padding: 8px;
+    border-color: rgb(30, 30, 53, 0.1);
+    border-width: 1px;
+    margin-bottom: 2rem;
+    width: 30rem;
+
+}
+
+.existingOperators:hover {
+    background-color: rgb(255, 247, 245);
+    cursor: pointer;
+
+}
+
+.existingOperator {
+    display: flex;
+    flex-direction: row;
+    padding: 8px;
+    height: 4rem;
+}
+
+.operatorName {
+    display: flex;
+    justify-content: center;
+    padding: 8px;
+    border-radius: 10px;
+    width: 6rem;
+}
+
+.apiKey {
+    display: flex;
+    justify-content: center;
+    padding: 8px;
+    cursor: pointer;
+    background-color: rgb(255, 255, 255);
+    border-radius: 10px;
+    width: 20rem;
+}
+
+.createOperator {
+    display: flex;
+    align-items: flex-start;
+    color: rgb(255, 104, 50);
+    margin-left: 10px;
+}
+
+.requiredOperatorFields {
+    display: flex;
+    flex-direction: column;
+}
+
+.operatorModalContent {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    width: 50rem;
+}
+
+.noOperators {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: black;
+    background-color: rgb(255, 247, 245);
+    height: 18rem;
+    border-radius: 5px;
+    border-color: rgb(30, 30, 53, 0.1);
+    border-width: 1px;
+    width: 30rem;
+}
+
+.existingRow {
+    display: flex;
+    flex-direction: row;
+}
+
+.removeIcon {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    height: 3rem;
+    width: 3rem;
+    cursor: pointer;
+}
+
+.removeIcon:hover {
+    color: red;
+}
+
+.newFieldset {
+    margin-right: 3rem;
 }
