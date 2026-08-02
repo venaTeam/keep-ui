@@ -66,9 +66,7 @@ export default function FormField({fieldClassName, fieldsetClassName, field_type
             );
           }}
         />
-        {/* For select fields, the underlying FieldComponent doesn't render errors,
-            so show the message here. For non-selects the child receives the message. */}
-        {isSelect && errorMessage && <div className="text-red-500 mt-1">{errorMessage}</div>}
+        {isSelect && errorMessage && <div className="text-red-500 mt-1 text-sm">{errorMessage}</div>}
     </fieldset>
   )
 }
