@@ -1,4 +1,4 @@
-import { type Locator, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 
 /** Dismiss modal (data-cy="alerts-dismiss-modal") — permanent + dismiss-until. */
 export class DismissModal {
@@ -39,6 +39,20 @@ export class DismissModal {
     return this.locators.comment;
   }
 
+  /**
+   * Choose the dispose-on-new-alert mode. The toggle is ONE button whose label
+   * is its current state ("Keeping on new alerts" = false / "Disposing on new
+   * alerts" = true) — only that label is in the DOM — and clicking flips it.
+   * Idempotent: clicks only when the current state differs from `dispose`.
+   */
+  async setDisposeOnNewAlert(dispose: boolean): Promise<void> {
+    const desired = dispose ? this.locators.disposingToggle : this.locators.keepingToggle;
+    const other = dispose ? this.locators.keepingToggle : this.locators.disposingToggle;
+    if ((await desired.count()) === 0) {
+      await other.click();
+    }
+    await expect(desired).toBeVisible();
+  }
 
   async selectUntilTab(): Promise<void> {
     await this.locators.untilTab.click();

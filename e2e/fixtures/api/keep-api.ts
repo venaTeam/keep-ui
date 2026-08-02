@@ -4,6 +4,9 @@ import { IncidentsApi } from "./incidents.api";
 import { PresetsApi } from "./presets.api";
 import { DashboardsApi } from "./dashboards.api";
 import { WorkflowsApi } from "./workflows.api";
+import { MaintenanceApi } from "./maintenance.api";
+import { RulesApi } from "./rules.api";
+import { DeduplicationApi } from "./deduplication.api";
 
 /**
  * Snapshot of resource ids that already existed before a test ran. Cleanup diffs
@@ -17,6 +20,9 @@ export interface ResourceSnapshot {
   presets?: Set<string>;
   dashboards?: Set<string>;
   workflows?: Set<string>;
+  maintenance?: Set<string>;
+  rules?: Set<string>;
+  deduplications?: Set<string>;
 }
 
 /**
@@ -32,6 +38,9 @@ export class KeepApi extends HttpClient {
   readonly presets: PresetsApi;
   readonly dashboards: DashboardsApi;
   readonly workflows: WorkflowsApi;
+  readonly maintenance: MaintenanceApi;
+  readonly rules: RulesApi;
+  readonly deduplication: DeduplicationApi;
 
   constructor(opts: KeepApiOptions) {
     super(opts);
@@ -40,6 +49,9 @@ export class KeepApi extends HttpClient {
     this.presets = new PresetsApi(opts);
     this.dashboards = new DashboardsApi(opts);
     this.workflows = new WorkflowsApi(opts);
+    this.maintenance = new MaintenanceApi(opts);
+    this.rules = new RulesApi(opts);
+    this.deduplication = new DeduplicationApi(opts);
   }
 
   // ---- per-test cleanup ---------------------------------------------------
@@ -61,13 +73,17 @@ export class KeepApi extends HttpClient {
         return undefined;
       }
     };
-    const [incidents, presets, dashboards, workflows] = await Promise.all([
-      ids(() => this.incidents.getIncidents()),
-      ids(() => this.presets.getPresets()),
-      ids(() => this.dashboards.getDashboards()),
-      ids(() => this.workflows.listWorkflows()),
-    ]);
-    return { incidents, presets, dashboards, workflows };
+    const [incidents, presets, dashboards, workflows, maintenance, rules, deduplications] =
+      await Promise.all([
+        ids(() => this.incidents.getIncidents()),
+        ids(() => this.presets.getPresets()),
+        ids(() => this.dashboards.getDashboards()),
+        ids(() => this.workflows.listWorkflows()),
+        ids(() => this.maintenance.getMaintenanceRules()),
+        ids(() => this.rules.getRules()),
+        ids(() => this.deduplication.getDeduplicationRules()),
+      ]);
+    return { incidents, presets, dashboards, workflows, maintenance, rules, deduplications };
   }
 
   /**
@@ -95,6 +111,11 @@ export class KeepApi extends HttpClient {
     await purge(baseline.presets, () => this.presets.getPresets(), (id) => this.presets.deletePreset(id));
     await purge(baseline.dashboards, () => this.dashboards.getDashboards(), (id) => this.dashboards.deleteDashboard(id));
     await purge(baseline.workflows, () => this.workflows.listWorkflows(), (id) => this.workflows.deleteWorkflow(id));
+    await purge(baseline.maintenance, () => this.maintenance.getMaintenanceRules(), (id) => this.maintenance.deleteMaintenanceRule(id));
+    await purge(baseline.rules, () => this.rules.getRules(), (id) => this.rules.deleteRule(id));
+    // The built-in default rule isn't in any test's created-set, so it's never purged;
+    // deleting it would 4xx anyway (best-effort del swallows that).
+    await purge(baseline.deduplications, () => this.deduplication.getDeduplicationRules(), (id) => this.deduplication.deleteDeduplicationRule(id));
 
     await this.alerts.deleteCreated();
   }

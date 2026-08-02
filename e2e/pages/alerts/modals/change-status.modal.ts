@@ -64,6 +64,21 @@ class BaseChangeStatusModal {
     return this.locators.cancelButton;
   }
 
+  /**
+   * Choose the dispose-on-new-alert mode. The toggle is ONE button whose label
+   * is its current state ("Keeping on new alerts" = false / "Disposing on new
+   * alerts" = true) — only that label is in the DOM — and clicking flips it.
+   * Idempotent: clicks only when the current state differs from `dispose`.
+   */
+  async setDisposeOnNewAlert(dispose: boolean): Promise<void> {
+    const desired = dispose ? this.locators.disposingToggle : this.locators.keepingToggle;
+    const other = dispose ? this.locators.keepingToggle : this.locators.disposingToggle;
+    if ((await desired.count()) === 0) {
+      await other.click();
+    }
+    await expect(desired).toBeVisible();
+  }
+
   /** Pick a status from the react-select combobox (portal-rendered options). */
   async selectStatus(status: string): Promise<void> {
     await this.locators.combobox.click();

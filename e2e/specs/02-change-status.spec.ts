@@ -1,5 +1,5 @@
 import { test, expect } from "../fixtures/test-base";
-import { celFingerprintIn } from "../pages";
+import { AlertsFeedPage, celFingerprintIn } from "../pages";
 
 /**
  * [check:02] change-status
@@ -111,4 +111,62 @@ test.describe("[check:02] change-status", () => {
       ).toBeVisible();
     }
   });
+
+  test('change status keeping on new alerts', async({alertsFeed, page, api}) => {
+    const { fingerprint }= await api.alerts.sendAlert({name: "change status - keeping on new alerts test"})
+    await api.alerts.waitForAlert(fingerprint)
+
+    // Action via UI: change status -> Resolved, "Keeping on new alerts".
+    const row = await alertsFeed.loadFeedRow(fingerprint)
+    const modal = await row.openChangeStatusModal()
+    await modal.setDisposeOnNewAlert(false)
+    await modal.selectStatus("Resolved")
+    await modal.submit()
+    await expect(modal.root).toBeHidden()
+    await api.alerts.waitForAlertField(fingerprint, "status", "resolved")
+
+    // A new alert arrives on the same fingerprint (trigger; no UI equivalent).
+    await api.alerts.sendAlert({fingerprint: fingerprint})
+    const originalStatus = await api.alerts.waitForAlertField(fingerprint, "status", "resolved")
+    expect(originalStatus.status).toBe('resolved')
+
+    await alertsFeed.loadFeedRow(fingerprint)
+    const statusCell = alertsFeed.row(fingerprint).cell("status")
+    await page.mouse.move(0, 0)
+    await statusCell.hover()
+    await expect(
+      page.getByRole("tooltip").filter({ hasText: /resolved/i }).first()
+    ).toBeVisible()
+
+
+  })
+
+  test('change status dispose on new alerts', async ({alertsFeed, page, api}) => {
+    const { fingerprint } = await api.alerts.sendAlert({name: "change status - disposing test"})
+    await api.alerts.waitForAlert(fingerprint)
+
+    // Action via UI: change status -> Resolved, "Disposing on new alerts".
+    const row = await alertsFeed.loadFeedRow(fingerprint)
+    const modal = await row.openChangeStatusModal()
+    await modal.setDisposeOnNewAlert(true)
+    await modal.selectStatus("Resolved")
+    await modal.submit()
+    await expect(modal.root).toBeHidden()
+    await api.alerts.waitForAlertField(fingerprint, "status", "resolved")
+
+    // A new alert arrives on the same fingerprint (trigger; no UI equivalent).
+    await api.alerts.sendAlert({fingerprint: fingerprint})
+
+    const newStatus = await api.alerts.waitForAlertField(fingerprint, "status", "firing")
+    expect(newStatus.status).toBe('firing')
+
+    await alertsFeed.loadFeedRow(fingerprint)
+    const statusCell = alertsFeed.row(fingerprint).cell('status')
+    await page.mouse.move(0, 0)
+    await statusCell.hover()
+    await expect(
+      page.getByRole("tooltip").filter({hasText: /firing/i }).first()
+    ).toBeVisible()
+
+  })
 });

@@ -93,13 +93,33 @@ export class AlertsApi extends HttpClient {
   }
 
   // ---- mutate -------------------------------------------------------------
-  async enrich(fingerprint: string, enrichments: Record<string, unknown>): Promise<void> {
-    const res = await this.req(this.gateway, "POST", "/alerts/enrich", { fingerprint, enrichments });
+  /**
+   * Enrich an alert. `disposeOnNewAlert` selects the enrichment lifecycle via the
+   * gateway's `dispose_on_new_alert` query param (defaults to false):
+   *   - false → "keeping": the enrichment persists across future alerts on this
+   *     fingerprint (enrich_entity).
+   *   - true  → "disposing": the enrichment is cleared when a new alert arrives on
+   *     this fingerprint (disposable_enrich_entity).
+   */
+  async enrich(
+    fingerprint: string,
+    enrichments: Record<string, unknown>,
+    opts: { disposeOnNewAlert?: boolean } = {}
+  ): Promise<void> {
+    const query = opts.disposeOnNewAlert ? "?dispose_on_new_alert=true" : "";
+    const res = await this.req(this.gateway, "POST", `/alerts/enrich${query}`, {
+      fingerprint,
+      enrichments,
+    });
     await this.json(res, "enrich");
   }
 
-  changeStatus(fingerprint: string, status: string): Promise<void> {
-    return this.enrich(fingerprint, { status });
+  changeStatus(
+    fingerprint: string,
+    status: string,
+    opts: { disposeOnNewAlert?: boolean } = {}
+  ): Promise<void> {
+    return this.enrich(fingerprint, { status }, opts);
   }
 
   async addNote(fingerprint: string, note: string): Promise<void> {
@@ -107,12 +127,27 @@ export class AlertsApi extends HttpClient {
     await this.json(res, "addNote");
   }
 
-  async assign(fingerprint: string, lastReceived: string, note?: string): Promise<void> {
+  /**
+   * Self-assign an alert to the current session user (also sets status ->
+   * acknowledged). `disposeOnNewAlert` maps to the `AssignAlertRequestBody`
+   * body flag (defaults to false). NOTE: on this endpoint disposing applies to
+   * the acknowledged STATUS only (typed `status_disposable`) — the assignee is a
+   * per-fingerprint column that is never cleared automatically.
+   */
+  async assign(
+    fingerprint: string,
+    lastReceived: string,
+    opts: { note?: string; disposeOnNewAlert?: boolean } = {}
+  ): Promise<void> {
+    const body: Record<string, unknown> = {
+      dispose_on_new_alert: opts.disposeOnNewAlert ?? false,
+    };
+    if (opts.note) body.note = opts.note;
     const res = await this.req(
       this.gateway,
       "POST",
       `/alerts/${encodeURIComponent(fingerprint)}/assign/${encodeURIComponent(lastReceived)}`,
-      note ? { note } : {}
+      body
     );
     await this.json(res, "assign");
   }
@@ -126,16 +161,29 @@ export class AlertsApi extends HttpClient {
     await this.json(res, "batchEnrich");
   }
 
-  dismiss(fingerprint: string, mode: DismissMode, until?: string): Promise<void> {
+  /**
+   * Dismiss an alert (status -> suppressed). `disposeOnNewAlert` is forwarded to
+   * `enrich` (the `dispose_on_new_alert` query param, defaults to false):
+   *   - false → "keeping": the alert stays suppressed across future alerts.
+   *   - true  → "disposing": the suppressed STATUS is disposed and reverts when a
+   *     new (non-resolved) alert arrives on this fingerprint.
+   */
+  dismiss(
+    fingerprint: string,
+    mode: DismissMode,
+    opts: { until?: string; disposeOnNewAlert?: boolean } = {}
+  ): Promise<void> {
     const enrichments: Record<string, unknown> =
       mode === "permanent"
         ? { status: "suppressed", dismiss_mode: "permanent", dismissed: true }
         : {
             status: "suppressed",
             dismiss_mode: "dismiss_until",
-            dismissed_until: until ?? new Date(Date.now() + 3_600_000).toISOString(),
+            dismissed_until: opts.until ?? new Date(Date.now() + 3_600_000).toISOString(),
           };
-    return this.enrich(fingerprint, enrichments);
+    return this.enrich(fingerprint, enrichments, {
+      disposeOnNewAlert: opts.disposeOnNewAlert,
+    });
   }
 
   async getHistory(fingerprint: string): Promise<{ occurrences: any[]; activity: any[] }> {

@@ -12,4 +12,7 @@ export * from "./api/incidents.api";
 export * from "./api/presets.api";
 export * from "./api/dashboards.api";
 export * from "./api/workflows.api";
+export * from "./api/maintenance.api";
+export * from "./api/rules.api";
+export * from "./api/deduplication.api";
 export * from "./api/keep-api";

@@ -5,6 +5,9 @@ import {
   IncidentsPage,
   DashboardPage,
   WorkflowsPage,
+  CreateMwPage,
+  CorrelationPage,
+  DeduplicationPage,
 } from "../pages";
 
 export const env = {
@@ -31,9 +34,33 @@ type Fixtures = {
   incidents: IncidentsPage;
   dashboard: DashboardPage;
   workflows: WorkflowsPage;
+  mw: CreateMwPage;
+  correlation: CorrelationPage;
+  deduplication: DeduplicationPage;
 };
 
 export const test = base.extend<Fixtures>({
+  // Hide the Next.js dev-mode overlay on every page. When the UI is served by
+  // `next dev`, the dev-tools indicator / error overlay render inside a
+  // <nextjs-portal> fixed to a screen corner that INTERCEPTS pointer events —
+  // Playwright then can't click controls beneath it (e.g. the correlation
+  // sidebar's "Create correlation" submit button), the click times out, and the
+  // action silently no-ops. The portal is dev-only (absent in production), so
+  // hiding it makes tests behave like the real build. addInitScript re-runs on
+  // every navigation; the injected <style> persists across client-side routing.
+  page: async ({ page }, use) => {
+    await page.addInitScript(() => {
+      const inject = () => {
+        const style = document.createElement("style");
+        style.setAttribute("data-e2e-hide-nextjs-overlay", "");
+        style.textContent = "nextjs-portal{display:none !important;}";
+        document.head?.appendChild(style);
+      };
+      if (document.head) inject();
+      else document.addEventListener("DOMContentLoaded", inject);
+    });
+    await use(page);
+  },
   api: async ({}, use) => {
     const api = new KeepApi({ gateway: env.gateway, workflows: env.workflows, apiKey: env.apiKey });
     // Snapshot existing resources, run the test, then delete whatever it created
@@ -53,6 +80,15 @@ export const test = base.extend<Fixtures>({
   },
   workflows: async ({ page }, use) => {
     await use(new WorkflowsPage(page));
+  },
+  mw: async ({ page }, use) => {
+    await use(new CreateMwPage(page))
+  },
+  correlation: async ({ page }, use) => {
+    await use(new CorrelationPage(page));
+  },
+  deduplication: async ({ page }, use) => {
+    await use(new DeduplicationPage(page));
   },
 });
 

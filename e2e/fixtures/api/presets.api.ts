@@ -16,4 +16,18 @@ export class PresetsApi extends HttpClient {
   deletePreset(id: string): Promise<void> {
     return this.del(this.gateway, `/preset/${encodeURIComponent(id)}`, "deletePreset");
   }
+
+  /**
+   * GET a preset (by name) and return the raw HTTP status. There is no
+   * GET /preset/{id}; this by-name alerts endpoint is the preset read that 404s
+   * once the preset is deleted (routes/preset.py -> 404 "Preset not found").
+   */
+  async getPresetStatus(name: string): Promise<number> {
+    const res = await this.req(
+      this.gateway,
+      "GET",
+      `/preset/${encodeURIComponent(name)}/alerts`
+    );
+    return res.status;
+  }
 }

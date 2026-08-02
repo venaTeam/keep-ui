@@ -21,6 +21,7 @@ export class IncidentsPage {
     table: Locator;
     rows: Locator;
     rowsByName: (name: string) => Locator;
+    rowById: (id: string) => Locator;
     createButton: Locator;
     facetsPanel: Locator;
     facetValues: Locator;
@@ -34,6 +35,8 @@ export class IncidentsPage {
       rows: page.locator('[data-cy="incidents-row"]'),
       rowsByName: (name) =>
         page.locator('[data-cy="incidents-row"]', { hasText: name }),
+      rowById: (id) =>
+        page.locator(`[data-cy="incidents-row"][data-cy-id="${id}"]`),
       createButton: page.locator('[data-cy="incidents-action-create-btn"]'),
       facetsPanel,
       facetValues: facetsPanel.locator('[data-cy="facet-value"]'),
@@ -64,9 +67,43 @@ export class IncidentsPage {
   async gotoAndExpectRow(name: string): Promise<void> {
     await expect(async () => {
       await this.goto();
-      await expect(this.table).toBeVisible({ timeout: 6_000 });
-      await expect(this.rows(name)).toBeVisible({ timeout: 6_000 });
-    }).toPass({ timeout: 60_000, intervals: [1_000, 2_000, 3_000, 5_000] });
+      // Wait patiently on each attempt: the list shows a "getting your data"
+      // placeholder while /incidents loads, and re-navigating before it settles
+      // restarts the fetch (thrash) so the table never renders. Keep the per-
+      // attempt table wait generous enough for the initial fetch to complete.
+      await expect(this.table).toBeVisible({ timeout: 25_000 });
+      await expect(this.rows(name)).toBeVisible({ timeout: 10_000 });
+    }).toPass({ timeout: 120_000, intervals: [2_000, 5_000] });
+  }
+
+  /**
+   * Like `gotoAndExpectRow` but matches the row by incident id (data-cy-id) rather
+   * than name — rule-generated incidents often have no stable display name, so id
+   * is the reliable key. Re-navigates each attempt to recover from the dev stack's
+   * intermittent client-side crash and to pick up the freshly created row.
+   */
+  async gotoAndExpectRowById(id: string): Promise<void> {
+    await expect(async () => {
+      await this.goto();
+      await expect(this.table).toBeVisible({ timeout: 25_000 });
+      await expect(this.locators.rowById(id)).toBeVisible({ timeout: 10_000 });
+    }).toPass({ timeout: 120_000, intervals: [2_000, 5_000] });
+  }
+
+  /**
+   * Open an incident's detail page by clicking its name link in the row (the name
+   * cell is a <Link href="/incidents/<id>/alerts">). Returns the detail page built
+   * from the id parsed out of the resulting URL. Call `gotoAndExpectRow(name)` first
+   * so the row is present.
+   */
+  async openIncident(name: string): Promise<IncidentDetailPage> {
+    await this.locators.rowsByName(name).getByRole("link", { name }).first().click();
+    await this.page.waitForURL(/\/incidents\/[^/?#]+/, { timeout: 30_000 });
+    const id = this.page.url().match(/\/incidents\/([^/?#]+)/)?.[1];
+    if (!id) {
+      throw new Error(`could not parse incident id from URL: ${this.page.url()}`);
+    }
+    return new IncidentDetailPage(this.page, id);
   }
 
   /**
@@ -78,6 +115,51 @@ export class IncidentsPage {
     const form = new IncidentForm(this.page);
     await expect(form.root).toBeVisible();
     return form;
+  }
+
+  /**
+   * Open the edit form for a specific incident via its row action menu
+   * (ellipsis → "Edit"). Rows are keyed by `data-cy-id={incident.id}`; the menu
+   * items render into a portal, so the "Edit" item is targeted page-wide. Loads
+   * the same modal component as create, in edit mode (submit reads "Update").
+   */
+  async openEditForm(id: string): Promise<IncidentForm> {
+    const row = this.page.locator(
+      `[data-cy="incidents-row"][data-cy-id="${id}"]`
+    );
+    await expect(row).toBeVisible();
+    const menuButton = row.locator('[data-cy="incidents-row-menu-btn"]');
+    const editItem = this.page.locator('[data-cy="incidents-row-menu-edit"]');
+    // The dropdown opens on mousedown (floating-ui useClick) and its items render
+    // into a portal; retry the open until the Edit item actually appears, then
+    // click it. This tolerates a click that lands before the menu is interactive.
+    await expect(async () => {
+      await menuButton.click();
+      await expect(editItem).toBeVisible({ timeout: 2_000 });
+    }).toPass({ timeout: 15_000, intervals: [500, 1_000] });
+    await editItem.click();
+    const form = new IncidentForm(this.page);
+    await expect(form.root).toBeVisible();
+    return form;
+  }
+
+  /**
+   * Delete an incident via its row action menu (ellipsis → "Delete"). The delete
+   * handler fires a native confirm() dialog, so the CALLER must register a dialog
+   * handler (e.g. `page.once("dialog", d => d.accept())`) before invoking this.
+   */
+  async deleteFromRow(id: string): Promise<void> {
+    const row = this.page.locator(
+      `[data-cy="incidents-row"][data-cy-id="${id}"]`
+    );
+    await expect(row).toBeVisible();
+    const menuButton = row.locator('[data-cy="incidents-row-menu-btn"]');
+    const deleteItem = this.page.locator('[data-cy="incidents-row-menu-delete"]');
+    await expect(async () => {
+      await menuButton.click();
+      await expect(deleteItem).toBeVisible({ timeout: 2_000 });
+    }).toPass({ timeout: 15_000, intervals: [500, 1_000] });
+    await deleteItem.click();
   }
 
   // --- facets (the group-by surface) ----------------------------------------

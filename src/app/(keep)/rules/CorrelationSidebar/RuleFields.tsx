@@ -171,6 +171,7 @@ const Field = ({
                 errorMessage={
                   ruleField.value ? undefined : "Rule value is required"
                 }
+                data-cy="rules-form-condition-value-input"
               />
             </div>
           )}

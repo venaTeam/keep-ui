@@ -98,7 +98,7 @@ test.describe("[check:06] dismiss", () => {
     // Action via API: dismiss for a short real window (the UI datetime picker only
     // steps in 15-minute jumps, so the action is API-driven and only validated in UI).
     const dismissedUntil = new Date(Date.now() + DISMISS_MS).toISOString();
-    await api.alerts.dismiss(fingerprint, "dismiss_until", dismissedUntil);
+    await api.alerts.dismiss(fingerprint, "dismiss_until", { until: dismissedUntil });
 
     // Backend assert: the alert is suppressed with a dismissed_until set.
     await api.alerts.waitForEnrichment(
@@ -120,4 +120,78 @@ test.describe("[check:06] dismiss", () => {
     await alertsFeed.loadFeed(celFingerprint(fingerprint), [fingerprint]);
     await expectRowStatus(page, alertsFeed.row(fingerprint), /firing/i);
   });
+
+  test('dismiss alert keeping on new alerts', async({alertsFeed, page, api}) => {
+    const { fingerprint } = await api.alerts.sendAlert({name: "dismiss alert - keeping"})
+    await api.alerts.waitForAlert(fingerprint)
+
+    // Action via UI: dismiss "forever", "Keeping on new alerts".
+    const row = await alertsFeed.loadFeedRow(fingerprint)
+    const modal = await row.openDismissModal()
+    await modal.setDisposeOnNewAlert(false)
+    await modal.comment.fill("keeping dismiss")
+    await modal.submit()
+    await expect(modal.root).toBeHidden()
+    await api.alerts.waitForAlertField(fingerprint, "status", "suppressed")
+
+    // A new alert arrives on the same fingerprint (trigger; no UI equivalent).
+    await api.alerts.sendAlert({fingerprint: fingerprint})
+    const newStatus = await api.alerts.waitForAlertField(fingerprint, "status", "suppressed")
+    expect(newStatus.status).toBe("suppressed")
+
+    // UI: keeping -> still suppressed. Read in place (a fresh feed load lags for
+    // a freshly-suppressed alert — see the file header).
+    await expectRowStatus(page, row, /suppressed/i)
+  })
+
+  test('dismiss alert disposing on new alerts', async({alertsFeed, page, api}) => {
+    const { fingerprint } = await api.alerts.sendAlert({name: "dismiss alert - disposing"})
+    await api.alerts.waitForAlert(fingerprint)
+
+    // Action via UI: dismiss "forever", "Disposing on new alerts".
+    const row = await alertsFeed.loadFeedRow(fingerprint)
+    const modal = await row.openDismissModal()
+    await modal.setDisposeOnNewAlert(true)
+    await modal.comment.fill("disposing dismiss")
+    await modal.submit()
+    await expect(modal.root).toBeHidden()
+    await api.alerts.waitForAlertField(fingerprint, "status", "suppressed")
+
+    // A new alert arrives on the same fingerprint (trigger; no UI equivalent).
+    await api.alerts.sendAlert({fingerprint: fingerprint})
+    const newStatus = await api.alerts.waitForAlertField(fingerprint, "status", "firing")
+    expect(newStatus.status).toBe("firing")
+
+    // UI: disposing -> the suppressed status is disposed and reverts to firing.
+    // A firing alert indexes normally, so a fresh feed load surfaces it.
+    await alertsFeed.loadFeed(celFingerprint(fingerprint), [fingerprint])
+    await expectRowStatus(page, alertsFeed.row(fingerprint), /firing/i)
+  })
+
+  test('restore alert', async({alertsFeed, page, api}) => {
+    const { fingerprint } = await api.alerts.sendAlert({name: "restore alert test", status: "suppressed"})
+    await api.alerts.waitForAlertField(fingerprint, "status", "suppressed")
+
+    // Action via UI: a suppressed alert's row menu shows "Restore" (not
+    // "Dismiss"), opening the shared modal in its restore branch. Pick the new
+    // status to restore to, add a note, and restore.
+    const row = await alertsFeed.loadFeedRow(fingerprint)
+    const modal = await row.openRestoreModal()
+    await modal.selectStatus("Firing")
+    await modal.note.fill("restore note")
+    await modal.submit()
+    await expect(modal.root).toBeHidden()
+
+    // Backend assert: the dismiss columns are cleared and the status is restored.
+    await api.alerts.waitForEnrichment(
+      fingerprint,
+      (a) => a.status === "firing" && !a.dismiss_mode && !a.dismissed_until,
+      30_000,
+      "restore → status=firing, dismiss cleared"
+    )
+
+    // UI assert: the row shows firing again (a firing alert indexes normally).
+    await alertsFeed.loadFeed(celFingerprint(fingerprint), [fingerprint])
+    await expectRowStatus(page, alertsFeed.row(fingerprint), /firing/i)
+  })
 });

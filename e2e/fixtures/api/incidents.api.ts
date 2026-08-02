@@ -17,6 +17,12 @@ export class IncidentsApi extends HttpClient {
     await this.json(res, "addAlertsToIncident");
   }
 
+  /** Fetch a single incident by id (GET /incidents/{id} -> IncidentDto). */
+  async getIncident(id: string): Promise<any> {
+    const res = await this.req(this.gateway, "GET", `/incidents/${encodeURIComponent(id)}`);
+    return this.json(res, "getIncident");
+  }
+
   async getIncidents(): Promise<any[]> {
     // /incidents is paginated (default limit 25). Request a high limit so freshly
     // seeded incidents aren't missed on a stack that has accumulated many.

@@ -2,9 +2,11 @@ import { expect, type Locator, type Page } from "@playwright/test";
 import { celFingerprint } from "../../components/cel";
 import { ChangeStatusModal, BulkChangeStatusModal } from "./modals/change-status.modal";
 import { DismissModal } from "./modals/dismiss.modal";
+import { RestoreModal } from "./modals/restore.modal";
 import { NoteModal } from "./modals/note.modal";
 import { AssignModal } from "./modals/assign.modal";
 import { CreatePresetModal } from "./modals/create-preset.modal";
+import { PresetForm } from "./modals/preset-form.modal";
 import { AlertDetailSidebar } from "./alert-detail-sidebar";
 
 /**
@@ -109,6 +111,19 @@ export class AlertRow {
     return modal;
   }
 
+  /**
+   * Open the restore modal for a SUPPRESSED alert. The row menu shows "Restore"
+   * (not "Dismiss") once the alert is suppressed (alert-menu.tsx:520), opening
+   * the shared dismiss-modal component in its restore branch. Wait on the
+   * restore-variant submit button, since the root data-cy is shared with dismiss.
+   */
+  async openRestoreModal(): Promise<RestoreModal> {
+    await this.openMenuItem("restore");
+    const modal = new RestoreModal(this.page);
+    await expect(modal.submitButton).toBeVisible();
+    return modal;
+  }
+
   async openAssignModal(): Promise<AssignModal> {
     await this.openMenuItem("self-assign");
     const modal = new AssignModal(this.page);
@@ -157,6 +172,7 @@ export class AlertsFeedPage {
     selectAllCheckbox: Locator;
     bulkChangeStatusButton: Locator;
     createPresetButton: Locator;
+    presetLink: (name: string | RegExp) => Locator;
     groupHeaders: Locator;
     groupHeader: (text: string | RegExp) => Locator;
     columnHeader: (columnId: string) => Locator;
@@ -170,6 +186,7 @@ export class AlertsFeedPage {
     columnCheckbox: (columnId: string) => Locator;
     columnsSaveButton: Locator;
     resetToDefaultButton: Locator;
+    presetDeleteButton: Locator;
     // feed-loader internals
     celInput: Locator;
     applyHint: Locator;
@@ -191,6 +208,9 @@ export class AlertsFeedPage {
       createPresetButton: page.locator(
         '[data-cy="alerts-action-create-preset-btn"]'
       ),
+      // Sidebar preset links, filtered by their visible name.
+      presetLink: (name) =>
+        page.locator('[data-cy="preset-link"]').filter({ hasText: name }),
       groupHeaders: page.locator('[data-cy="alerts-group-header"]'),
       groupHeader: (text) =>
         page.locator('[data-cy="alerts-group-header"]').filter({ hasText: text }),
@@ -209,6 +229,7 @@ export class AlertsFeedPage {
         page.locator(`[data-cy="column-checkbox-${columnId}"]`),
       columnsSaveButton: page.locator('[data-cy="alerts-columns-save-btn"]'),
       resetToDefaultButton: page.locator('[data-cy="reset-to-default-button"]'),
+      presetDeleteButton: page.locator('[data-cy="preset-delete-btn"]'),
       celInput: page.locator('[data-cy="cel-input"]'),
       applyHint: page.getByText("Enter to apply", { exact: false }),
       appError: page.getByText("Application error"),
@@ -359,6 +380,65 @@ export class AlertsFeedPage {
     const modal = new CreatePresetModal(this.page);
     await expect(modal.root).toBeVisible();
     return modal;
+  }
+
+  // --- preset page (/alerts/<name>) -----------------------------------------
+
+  /** The CEL editor (Monaco) on the feed / preset page. */
+  get celInput(): Locator {
+    return this.locators.celInput;
+  }
+
+  /** A sidebar preset link, filtered by its visible name. */
+  presetLink(name: string | RegExp): Locator {
+    return this.locators.presetLink(name);
+  }
+
+  /** The "Delete preset" button on a dynamic preset's page. */
+  get presetDeleteButton(): Locator {
+    return this.locators.presetDeleteButton;
+  }
+
+  /**
+   * Delete the currently-open preset via its "Delete preset" button. The button
+   * fires a native confirm() dialog, so the CALLER must register a dialog handler
+   * (e.g. `page.once("dialog", d => d.accept())`) before invoking this. On
+   * confirm, the app deletes the preset and navigates to /alerts/feed.
+   */
+  async deletePreset(): Promise<void> {
+    await this.locators.presetDeleteButton.click();
+  }
+
+  /** Navigate to a saved preset's page (/alerts/<name>). */
+  async gotoPreset(name: string): Promise<void> {
+    await this.page.goto(`/alerts/${encodeURIComponent(name)}`);
+  }
+
+  /**
+   * Replace the CEL in the preset page's CEL field. Typing updates the builder's
+   * live CEL state (onValueChange), which the toolbar "Edit preset" button then
+   * captures into the preset form — so no Enter/apply is needed here.
+   */
+  async setCel(cel: string): Promise<void> {
+    // Clicking the [data-cy="cel-input"] wrapper doesn't focus Monaco — click the
+    // Monaco editor itself. Insert the whole string at once: per-key typing drops
+    // characters and triggers auto-close, whereas insertText is atomic and exact.
+    await this.locators.celInput.locator(".monaco-editor").first().click();
+    await this.page.keyboard.press("ControlOrMeta+A");
+    await this.page.keyboard.press("Backspace");
+    await this.page.keyboard.insertText(cel);
+  }
+
+  /**
+   * Open the edit-preset modal via the toolbar "Edit preset" button. That button
+   * captures the current CEL into the form. Its data-cy is shared with the form's
+   * Save button, but only the toolbar one exists while the modal is closed.
+   */
+  async openEditPresetForm(): Promise<PresetForm> {
+    await this.page.locator('[data-cy="save-preset-button"]').click();
+    const form = new PresetForm(this.page);
+    await expect(form.root).toBeVisible();
+    return form;
   }
 
   // --- internals ------------------------------------------------------------

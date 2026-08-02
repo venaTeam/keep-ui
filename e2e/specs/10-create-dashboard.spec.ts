@@ -44,4 +44,143 @@ test.describe("[check:10] create-dashboard", () => {
     // Sidebar link for the saved dashboard (DashboardLink renders the name).
     await expect(dashboard.navLink(dashboardName).first()).toBeVisible();
   });
+
+  test('add preset widget to dashboard', async ({ dashboard, api }) => {
+    const stamp = Date.now();
+    const dashboardName = `add-widget-dashboard-${stamp}`;
+    const widgetName = `preset-widget-${stamp}`;
+    const count = 7;
+
+    // --- seed a preset (so the widget form has a selectable preset) ---------
+    const preset = await api.presets.createPreset({
+      name: `widget-preset-${stamp}`,
+      options: [{ label: "CEL", value: `name == "widgetcel${stamp}"` }],
+      is_noisy: false,
+      is_private: false,
+      tags: [],
+    });
+
+    // --- create the dashboard via API with NO widgets -----------------------
+    await api.dashboards.createDashboard({
+      dashboard_name: dashboardName,
+      dashboard_config: { layout: [], widget_data: [] },
+    });
+
+    // --- open the dashboard and add a Preset widget through the UI ----------
+    await dashboard.goto(dashboardName);
+    const widget = await dashboard.openAddWidget();
+    await widget.fillName(widgetName);
+    await widget.selectType("Preset");
+    await widget.selectPreset(preset.name);
+    // Panel Type defaults to "Alert Table"; set how many alerts to display.
+    await widget.fillCountOfLastAlerts(count);
+    await widget.submit();
+    await expect(widget.root).toBeHidden();
+
+    // --- validate the widget NAME through the UI ----------------------------
+    await expect(dashboard.widgetTitle).toHaveText(widgetName);
+
+    // --- save the dashboard (re-click until the widget is persisted) --------
+    await expect(async () => {
+      await dashboard.saveButton.click();
+      const d = (await api.dashboards.getDashboards()).find(
+        (x: any) => x.dashboard_name === dashboardName
+      );
+      expect(d?.dashboard_config?.widget_data?.length ?? 0).toBeGreaterThan(0);
+    }).toPass({ timeout: 30_000, intervals: [1_500, 3_000, 5_000] });
+
+    // --- validate the rest of the widget through the API --------------------
+    const saved = (await api.dashboards.getDashboards()).find(
+      (x: any) => x.dashboard_name === dashboardName
+    );
+    const savedWidget = saved.dashboard_config.widget_data[0];
+    expect(savedWidget.name).toBe(widgetName);
+    expect(savedWidget.widgetType).toBe("PRESET");
+    expect(savedWidget.presetPanelType).toBe("ALERT_TABLE");
+    expect(savedWidget.preset.id).toBe(preset.id);
+    expect(savedWidget.preset.name).toBe(preset.name);
+    expect(savedWidget.preset.countOfLastAlerts).toBe(count);
+  })
+
+  test('edit dashboard widget', async ({ dashboard, api }) => {
+    const stamp = Date.now();
+    const dashboardName = `edit-widget-dashboard-${stamp}`;
+    const originalWidgetName = `preset-widget-orig-${stamp}`;
+    const newWidgetName = `preset-widget-new-${stamp}`;
+    const newCount = 12;
+
+    // --- seed two presets (edit will switch from the first to the second) ---
+    const mkPreset = (label: string) =>
+      api.presets.createPreset({
+        name: `widget-preset-${label}-${stamp}`,
+        options: [{ label: "CEL", value: `name == "wcel-${label}-${stamp}"` }],
+        is_noisy: false,
+        is_private: false,
+        tags: [],
+      });
+    const preset1 = await mkPreset("a");
+    const preset2 = await mkPreset("b");
+
+    // --- create the dashboard via API WITH a preset (Alert Table) widget ----
+    const widget = {
+      i: `w-${stamp}`,
+      x: 0, y: 0, w: 8, h: 6, minW: 4, minH: 4, static: false,
+      name: originalWidgetName,
+      widgetType: "PRESET",
+      preset: { id: preset1.id, name: preset1.name, countOfLastAlerts: 5 },
+      presetPanelType: "ALERT_TABLE",
+      thresholds: [
+        { value: 0, color: "#10b981" },
+        { value: 20, color: "#dc2626" },
+      ],
+      showFiringOnly: false,
+      customLink: "",
+    };
+    await api.dashboards.createDashboard({
+      dashboard_name: dashboardName,
+      dashboard_config: { layout: [widget], widget_data: [widget] },
+    });
+
+    // --- open the dashboard, edit the widget via its hamburger menu ----------
+    await dashboard.goto(dashboardName);
+    await expect(dashboard.widgetTitle).toHaveText(originalWidgetName);
+
+    const modal = await dashboard.openWidgetEdit();
+    // Keep it a Preset widget; change the rest of the values.
+    await modal.fillName(newWidgetName);
+    await modal.selectPreset(preset2.name);
+    await modal.fillCountOfLastAlerts(newCount);
+    await modal.submit();
+    await expect(modal.root).toBeHidden();
+
+    // --- validate the NAME changed through the UI ---------------------------
+    await expect(dashboard.widgetTitle).toHaveText(newWidgetName);
+
+    // --- save the dashboard (one click) -------------------------------------
+    await dashboard.saveButton.click();
+
+    // --- validate the rest of the widget through the API --------------------
+    await expect
+      .poll(
+        async () => {
+          const d = (await api.dashboards.getDashboards()).find(
+            (x: any) => x.dashboard_name === dashboardName
+          );
+          return d?.dashboard_config?.widget_data?.[0]?.name;
+        },
+        { timeout: 30_000, message: "widget edit to persist" }
+      )
+      .toBe(newWidgetName);
+
+    const saved = (await api.dashboards.getDashboards()).find(
+      (x: any) => x.dashboard_name === dashboardName
+    );
+    const savedWidget = saved.dashboard_config.widget_data[0];
+    expect(savedWidget.name).toBe(newWidgetName);
+    expect(savedWidget.widgetType).toBe("PRESET");
+    expect(savedWidget.presetPanelType).toBe("ALERT_TABLE");
+    expect(savedWidget.preset.id).toBe(preset2.id);
+    expect(savedWidget.preset.name).toBe(preset2.name);
+    expect(savedWidget.preset.countOfLastAlerts).toBe(newCount);
+  })
 });

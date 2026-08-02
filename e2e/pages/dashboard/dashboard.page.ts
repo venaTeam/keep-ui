@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page } from "@playwright/test";
+import { AddWidgetModal } from "./modals/add-widget.modal";
 
 /**
  * The dashboard surface.
@@ -17,7 +18,11 @@ export class DashboardPage {
     root: Locator;
     name: Locator;
     addButton: Locator;
+    addWidgetButton: Locator;
     saveButton: Locator;
+    widgetTitle: Locator;
+    widgetMenuButton: Locator;
+    widgetMenuEdit: Locator;
     navLink: (name: string) => Locator;
   };
 
@@ -27,7 +32,14 @@ export class DashboardPage {
       name: page.locator('[data-cy="dashboard-name"]'),
       // Sidebar "Add Dashboard" button (DashboardLinks renders it in the nav).
       addButton: page.locator('[data-cy="nav-btn-add-dashboard"]'),
+      // Header "Add Widget" button on a dashboard page (opens the widget modal).
+      addWidgetButton: page.locator('[data-cy="dashboard-add-widget-btn"]'),
       saveButton: page.locator('[data-cy="dashboard-save-layout-btn"]'),
+      // A rendered widget's title on the grid (GridItem).
+      widgetTitle: page.locator('[data-cy="dashboard-widget-title"]'),
+      // A widget's hamburger menu (MenuButton) and its "Edit" item.
+      widgetMenuButton: page.locator('[data-cy="dashboard-widget-menu-btn"]'),
+      widgetMenuEdit: page.locator('[data-cy="dashboard-widget-menu-edit"]'),
       // Sidebar nav link for a saved dashboard (DashboardLink renders the name).
       navLink: (name) =>
         page
@@ -75,7 +87,39 @@ export class DashboardPage {
   get saveButton(): Locator {
     return this.locators.saveButton;
   }
+  /** A rendered widget's title on the grid. */
+  get widgetTitle(): Locator {
+    return this.locators.widgetTitle;
+  }
   navLink(name: string): Locator {
     return this.locators.navLink(name);
+  }
+
+  /** Navigate directly to an existing dashboard by name (/dashboard/<name>). */
+  async goto(name: string): Promise<void> {
+    await this.page.goto(`/dashboard/${encodeURIComponent(name)}`);
+    await expect(this.locators.addWidgetButton).toBeVisible();
+  }
+
+  /** Open the Add Widget modal from this dashboard's header button. */
+  async openAddWidget(): Promise<AddWidgetModal> {
+    const modal = new AddWidgetModal(this.page);
+    await modal.open();
+    return modal;
+  }
+
+  /**
+   * Open a widget's Edit modal via its hamburger menu (retrying the menu open
+   * until the "Edit" item appears). Assumes a single widget on the dashboard.
+   */
+  async openWidgetEdit(): Promise<AddWidgetModal> {
+    await expect(async () => {
+      await this.locators.widgetMenuButton.click();
+      await expect(this.locators.widgetMenuEdit).toBeVisible({ timeout: 2_000 });
+    }).toPass({ timeout: 15_000, intervals: [500, 1_000] });
+    await this.locators.widgetMenuEdit.click();
+    const modal = new AddWidgetModal(this.page);
+    await expect(modal.root).toBeVisible();
+    return modal;
   }
 }
