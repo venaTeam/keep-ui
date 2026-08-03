@@ -1,134 +1,202 @@
 import { useState } from "react";
 import Modal from "@/components/ui/Modal";
 import styles from "../Search.module.css";
-import { FormProvider, useForm, useFormContext } from "react-hook-form";
+import { FormProvider, useForm } from "react-hook-form";
 import { TextInput } from "@/components/ui/TextInput";
 import FormField from "./FormField";
-import Select from "react-select";
 import { Button } from "@/components/ui";
 import RoleMapping from "./RoleMapping";
-
+import { useApi } from "@/shared/lib/hooks/useApi";
+import { showErrorToast, showSuccessToast } from "@/shared/ui";
+import {
+  useTenants,
+  useTenant,
+  RoleAssignment,
+  SubjectType,
+  Role,
+} from "./useManageTenants";
 
 type TenantModalProps = {
-    modalType: string;
-    openModal: boolean;
-    setOpenModal: (open: boolean) => void;
-    tenantData?: any;
-}
-
-type Role = {
-    name: string;
-    role: "viewer" | "editor" | "admin";
-}
+  modalType: string;
+  openModal: boolean;
+  setOpenModal: (open: boolean) => void;
+  tenantData?: any;
+};
 
 type TenantFormType = {
   name: string;
-  admin?: string;
-  groupsRoles?: Role[];
-  usersRoles?: Role[];
 };
 
-export default function TenantFormModal({modalType, openModal, setOpenModal, tenantData}: TenantModalProps) {
+export default function TenantFormModal({
+  modalType,
+  openModal,
+  setOpenModal,
+  tenantData,
+}: TenantModalProps) {
+  const api = useApi();
+  const { mutate: mutateTenants } = useTenants();
+  const [removed, setRemoved] = useState<
+    { subject: string; subject_type: SubjectType }[]
+  >([]);
 
-    // GULI TODO: change options and select to loadOptions and AsyncSelect when we have the API for it + Move to CONST
-    const modal_fields: Record<string, Record<string, { field_type: any; required: boolean; disabled: boolean; placeholder: string | undefined; other?: any }>> = 
-    {"create tenant":
-        {"name":
-            {"field_type": TextInput,"required": true, "disabled": false, "placeholder": "tenant name"},
-        "admin":
-            {"field_type": Select, "required": true, "disabled": false, "placeholder": "admin",
-                "other": {
-                "options": [{value: "label1", label: "Label 1"}, {value: "label2", label: "Label 2"}]
-                }
-            }
-        },
-    "update tenant":
-        {"name":
-            {"field_type": TextInput, "required": false, "disabled": true, "placeholder": tenantData?.tenant_name}
+  const isUpdate = modalType === "update tenant";
+  const tenantId = tenantData?.id ?? tenantData?.tenant_id;
+
+  // On update, load the tenant's current grants so they can be edited/removed.
+  const { data: tenantDetail, mutate: mutateTenant } = useTenant(
+    isUpdate ? tenantId : undefined
+  );
+  const grants = tenantDetail?.roles ?? [];
+  const userGrants = grants
+    .filter((g) => g.subject_type === "user")
+    .map((g) => ({ name: g.subject, role: g.role }));
+  const groupGrants = grants
+    .filter((g) => g.subject_type === "group")
+    .map((g) => ({ name: g.subject, role: g.role }));
+
+  const methods = useForm<TenantFormType>({ mode: "onChange" });
+  const {
+    formState: { errors, isSubmitted, isSubmitting },
+  } = methods;
+
+  // Build role_mappings from the typed user/group rows (react-hook-form nests
+  // them as new.user.N / new.group.N). The admin field is a mapping too, on create.
+  const collectMappings = (data: any): RoleAssignment[] => {
+    const out: RoleAssignment[] = [];
+    const seen = new Set<string>();
+    const push = (subject?: string, subject_type?: SubjectType, role?: string) => {
+      if (!subject || !role || seen.has(subject)) return;
+      seen.add(subject);
+      out.push({ subject, subject_type: subject_type!, role: role as Role });
+    };
+    Object.values(data?.new?.user ?? {}).forEach((r: any) =>
+      push(r?.name, "user", r?.role)
+    );
+    Object.values(data?.new?.group ?? {}).forEach((r: any) =>
+      push(r?.name, "group", r?.role)
+    );
+    return out;
+  };
+
+  const onSubmit = methods.handleSubmit(async (data) => {
+    const mappings = collectMappings(data);
+    try {
+      if (!isUpdate) {
+        if (!mappings.some((m) => m.role === "admin")) {
+          showErrorToast(new Error("At least one admin is required"));
+          return;
         }
-    
+        await api.post("/tenants", { name: data.name, role_mappings: mappings });
+        showSuccessToast("Tenant created");
+      } else {
+        // Remove the grants the user deleted, then add the new ones.
+        for (const r of removed) {
+          await api.delete(
+            `/tenants/${tenantId}/roles?subject=${encodeURIComponent(r.subject)}`
+          );
+        }
+        for (const m of mappings) {
+          await api.post(`/tenants/${tenantId}/roles`, m);
+        }
+        showSuccessToast("Tenant updated");
+        await mutateTenant();
+      }
+      await mutateTenants();
+      methods.reset();
+      setRemoved([]);
+      setOpenModal(false);
+    } catch (error) {
+      showErrorToast(error);
     }
-
-
-
-    const [adminIsUser, setAdminIsUser] = useState(true);
-
-    
-    const methods = useForm<TenantFormType>({
-        mode: "onChange",
-      });
-
-      const {
-        control,
-        register,
-        watch,
-        formState: { errors, isSubmitted },
-      } = methods;
+  });
 
   return (
-    <Modal className={styles.tenantFormModal} isOpen={openModal} onClose={() => {setOpenModal(false)}} data-cy="cy-modal" title={`${modalType}`}>
+    <Modal
+      className={styles.tenantFormModal}
+      isOpen={openModal}
+      onClose={() => setOpenModal(false)}
+      data-cy="cy-modal"
+      title={`${modalType}`}
+    >
       <FormProvider {...methods}>
-              <form
-                className="flex flex-col flex-1 min-h-0"
-                onSubmit={(e) => {
-                  methods.handleSubmit((data) => {
-                    console.log('handleSubmit callback running with data:', data);
-                    methods.reset();
-                    setOpenModal(false);
-                  })(e);
-                }}
-              >
-                <div className="flex-1 min-h-0 overflow-y-auto">
-                  <div className={`mb-10 ${styles.modalContent}`}>
-                    <div className={styles.requiredFields}>
-                        {Object.keys(modal_fields[modalType]).map((field) => (
-                            <FormField
-                                field_type={modal_fields[modalType][field].field_type}
-                                key={field}
-                                title={field}
-                                required={modal_fields[modalType][field].required}
-                                disabled={modal_fields[modalType][field].disabled}
-                                placeholder={modal_fields[modalType][field].placeholder || ""}
-                                isSelect={field === "admin"}
-                                isSubmitted={isSubmitted}
-                                errors={errors}
-                                fieldsetClassName={styles.fieldset}
-                                other={modal_fields[modalType][field].other}
-                                children={field === "admin" && (
-                                    <div className={styles.userGroup}>
-                                        <span className={`${adminIsUser ? styles.userGroupChosen : styles.userGroupNotChosen}`} onClick={() => setAdminIsUser(true)}> &nbsp; user &thinsp;</span>
-                                        <span className={`${!adminIsUser ? styles.userGroupChosen : styles.userGroupNotChosen}`} onClick={() => setAdminIsUser(false)}>&nbsp; group &thinsp;</span>
-                                    </div>
-                                )}
-                            />
-                        ))}
-                    </div>
-                        <div className={styles.rolesMapping}>
-                            <label className={`text-tremor-default mr-10 font-medium text-tremor-content-strong ${styles.fieldLabelRM}`}>roles mapping</label>
-                            <div className={styles.rolesMappingContent}>
-                                <div className={styles.rolesMappingPart}>
-                                    <label className={`text-tremor-default mr-10 font-medium text-tremor-content-strong ${styles.fieldLabelSubject}`}>users</label>
-                                    <RoleMapping subjectType="user" />
-                            </div>
-                            <div className={styles.rolesMappingPart}>
-                            <label className={`text-tremor-default mr-10 font-medium text-tremor-content-strong ${styles.fieldLabelSubject}`}>groups</label>
-                            <RoleMapping subjectType="group" />
-                            </div>
-                        </div>
-                    </div>
+        <form className="flex flex-col flex-1 min-h-0" onSubmit={onSubmit}>
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <div className={`mb-10 ${styles.modalContent}`}>
+              <div className={styles.requiredFields}>
+                <FormField
+                  field_type={TextInput}
+                  title="name"
+                  required={!isUpdate}
+                  disabled={isUpdate}
+                  placeholder={isUpdate ? tenantData?.tenant_name : "tenant name"}
+                  isSelect={false}
+                  isSubmitted={isSubmitted}
+                  errors={errors}
+                  fieldsetClassName={styles.fieldset}
+                />
+              </div>
+              <div className={styles.rolesMapping}>
+                <label
+                  className={`text-tremor-default mr-10 font-medium text-tremor-content-strong ${styles.fieldLabelRM}`}
+                >
+                  roles mapping
+                </label>
+                {!isUpdate && (
+                  <div className="text-sm text-tremor-content mb-2">
+                    choose at least one admin
                   </div>
-                  <div className={`flex justify-end ${styles.modalFooter}`}>
-                    <Button
-                      variant={undefined}
-                      className={styles.submitButton}
-                      type="submit"
+                )}
+                <div className={styles.rolesMappingContent}>
+                  <div className={styles.rolesMappingPart}>
+                    <label
+                      className={`text-tremor-default mr-10 font-medium text-tremor-content-strong ${styles.fieldLabelSubject}`}
                     >
-                      {modalType}
-                    </Button>
+                      users
+                    </label>
+                    <RoleMapping
+                      subjectType="user"
+                      initialValues={userGrants}
+                      onRemove={(v) =>
+                        setRemoved((prev) => [
+                          ...prev,
+                          { subject: v.name, subject_type: "user" },
+                        ])
+                      }
+                    />
+                  </div>
+                  <div className={styles.rolesMappingPart}>
+                    <label
+                      className={`text-tremor-default mr-10 font-medium text-tremor-content-strong ${styles.fieldLabelSubject}`}
+                    >
+                      groups
+                    </label>
+                    <RoleMapping
+                      subjectType="group"
+                      initialValues={groupGrants}
+                      onRemove={(v) =>
+                        setRemoved((prev) => [
+                          ...prev,
+                          { subject: v.name, subject_type: "group" },
+                        ])
+                      }
+                    />
                   </div>
                 </div>
-              </form>
-            </FormProvider>
+              </div>
+            </div>
+            <div className={`flex justify-end ${styles.modalFooter}`}>
+              <Button
+                variant={undefined}
+                className={styles.submitButton}
+                type="submit"
+                disabled={isSubmitting}
+              >
+                {modalType}
+              </Button>
+            </div>
+          </div>
+        </form>
+      </FormProvider>
     </Modal>
-  )
+  );
 }

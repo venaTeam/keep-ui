@@ -38,6 +38,7 @@ import TenantButton from "./manage-tenants/TenantButton";
 import styles from "./Search.module.css";
 import OperatorModal from "./manage-tenants/OperatorModal";
 import TenantFormModal from "./manage-tenants/TenantFormModal";
+import { useTenants, useWhoami } from "./manage-tenants/useManageTenants";
 
 const NAVIGATION_OPTIONS = [
   {
@@ -322,23 +323,42 @@ export const Search = ({ session }: SearchProps) => {
     setPlaceholderText("Search (or ⌘K)");
   }, []);
 
-  // Check if tenant switching is available - with null/undefined check safety
-  const hasTenantSwitcher =
-    session &&
-    session.user &&
-    session.user.tenantIds &&
-    session.user.tenantIds.length > 1;
+  // The user's tenants come from the new Keep model (GET /tenants) -- the tenants
+  // created via POST /tenants. Fall back to the Keycloak-org list if empty.
+  const { data: apiTenants = [] } = useTenants();
+  const tenantList =
+    apiTenants.length > 0
+      ? apiTenants.map((t) => ({
+          tenant_id: t.id,
+          tenant_name: t.name,
+          tenant_logo_url: undefined as string | undefined,
+        }))
+      : session?.user?.tenantIds ?? [];
 
-  // Get current tenant logo URL if available - this now works even with just one tenant
-  const currentTenant = session?.user?.tenantIds?.find(
-    (tenant) => tenant.tenant_id === session.tenantId
-  );
+  // Show the tenant switcher whenever the user has at least one tenant.
+  const hasTenantSwitcher = tenantList.length >= 1;
+
+  // Current tenant = the active one, defaulting to the first the user has when
+  // the session's active tenant isn't among them (e.g. the "keep" default).
+  const currentTenant =
+    tenantList.find((tenant) => tenant.tenant_id === session?.tenantId) ??
+    tenantList[0];
+  const activeTenantId = currentTenant?.tenant_id;
   const tenantLogoUrl = currentTenant?.tenant_logo_url;
   const hasTenantLogo = Boolean(tenantLogoUrl);
 
-  // TODO: IMPLEMENT AFTER MULTI TENANCY
-  const isSuperAdmin = true
-  const isTenantAdmin = true
+  // Button visibility by role (VENA-5596):
+  //  - create operator: any tenant member (>= viewer)
+  //  - edit tenant: admin (or superadmin)
+  //  - add tenant: superadmin only
+  // Use the BACKEND-resolved role (/whoami) -- it reflects the env superadmin
+  // allowlist, which the Keycloak token claim does not. Fall back to the claim.
+  const { data: whoami } = useWhoami();
+  const role =
+    whoami?.role ?? session?.userRole ?? session?.user?.role;
+  const isSuperAdmin = role === "superadmin";
+  const isTenantAdmin = role === "admin" || role === "superadmin";
+  const isTenantMember = Boolean(role);
 
   return (
     <div
@@ -372,17 +392,15 @@ export const Search = ({ session }: SearchProps) => {
                     <div className="px-3 py-2 text-xs font-medium text-gray-500">
                       Switch Tenant
                     </div>
-                    {session.user.tenantIds?.map((tenant) => (
+                    {tenantList.map((tenant) => (
                       <button
                         key={tenant.tenant_id}
-                        className={`block w-full text-left px-4 py-2 text-sm ${tenant.tenant_id === session.tenantId
+                        className={`block w-full text-left px-4 py-2 text-sm ${tenant.tenant_id === activeTenantId
                           ? "bg-orange-50 text-orange-700 font-medium"
                           : "text-gray-700 hover:bg-gray-50"
                           }`}
                         onClick={() => switchTenant(tenant.tenant_id)}
-                        disabled={
-                          tenant.tenant_id === session.tenantId || isLoading
-                        }
+                        disabled={tenant.tenant_id === activeTenantId || isLoading}
                         data-cy={`nav-tenant-option-${tenant.tenant_id}`}
                       >
                         {tenant.tenant_name}
@@ -408,7 +426,7 @@ export const Search = ({ session }: SearchProps) => {
           </Link>
         )}
 
-        <TenantButton modalCompType={OperatorModal} icon={KeyIcon} modalType="operator" />
+        {isTenantMember && <TenantButton modalCompType={OperatorModal} icon={KeyIcon} modalType="operator" />}
         {isSuperAdmin && <TenantButton modalCompType={TenantFormModal} icon={PlusIcon} modalType="create tenant" />}
         {isTenantAdmin && <TenantButton modalCompType={TenantFormModal} icon={EditIcon} modalType="update tenant" tenantData={currentTenant} />}
 

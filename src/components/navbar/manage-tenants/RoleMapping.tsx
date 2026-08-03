@@ -3,144 +3,168 @@ import styles from "../Search.module.css";
 import FormField from "./FormField";
 import { TextInput } from "@/components/ui/TextInput";
 import Select from "react-select";
-
+import SubjectSelect from "./SubjectSelect";
 
 interface RoleMappingProps {
   subjectType: "group" | "user";
+  // Existing grants for this subject type (empty on create; the tenant's current
+  // grants on update). Shape: { name, role }.
+  initialValues?: Record<string, string>[];
+  // Called when an existing grant is removed, so the parent can DELETE it.
+  onRemove?: (removed: Record<string, string>) => void;
 }
 
-export default function RoleMapping({ subjectType }: RoleMappingProps) {
-
+export default function RoleMapping({
+  subjectType,
+  initialValues = [],
+  onRemove,
+}: RoleMappingProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const newMappingRef = useRef<HTMLDivElement>(null);
   const [addNewMapping, setAddNewMapping] = useState(false);
   const [newCount, setNewCount] = useState(0);
 
-  const [existingValues, setExistingValues] = useState<Record<string, string>[]>([{"name": "value1", "role": "viewer"}, {"name": "value2", "role": "editor"}]);
+  const [existingValues, setExistingValues] = useState<Record<string, string>[]>(
+    initialValues
+  );
   const [toRemove, setToRemove] = useState<Record<string, string>[]>([]);
 
+  // Existing grants arrive asynchronously (fetched on update) -- sync them in.
+  useEffect(() => {
+    setExistingValues(initialValues);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(initialValues)]);
 
-  // const existingValues = []
-const existingValuesFields: Record<string, any> = {
-  "name": {
-    "field_type": TextInput,
-    "required": false,
-    "disabled": true,
-  },
-  "role": {
-    "field_type": Select,
-    "required": false,
-    "disabled": false,
-    "other": {
-      "options": [
+  const existingValuesFields: Record<string, any> = {
+    name: { field_type: TextInput, required: false, disabled: true },
+    role: {
+      field_type: Select,
+      required: false,
+      disabled: false,
+      other: {
+        options: [
+          { value: "viewer", label: "viewer" },
+          { value: "editor", label: "editor" },
+          { value: "admin", label: "admin" },
+        ],
+      },
+    },
+  };
+
+  const roleField = {
+    field_type: Select,
+    required: false,
+    disabled: false,
+    placeholder: "role",
+    other: {
+      options: [
         { value: "viewer", label: "viewer" },
         { value: "editor", label: "editor" },
         { value: "admin", label: "admin" },
       ],
     },
-  },
-};
-
-const newFields: Record<string, any> = {
-  "name": {
-    "field_type": TextInput,
-    "required": false,
-    "disabled": false,
-    "placeholder": `${subjectType} name`,
-  },
-  "role": {
-    "field_type": Select,
-    "required": false,
-    "disabled": false,
-    "placeholder": "role",
-    "other": {
-      "options": [
-        { value: "viewer", label: "viewer" },
-        { value: "editor", label: "editor" },
-        { value: "admin", label: "admin" },
-      ],
-    },
-  },
-};
+  };
 
   useEffect(() => {
     if (addNewMapping && newMappingRef.current) {
       newMappingRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  })
-
-  useEffect(() => {
-    console.log("hereee");
-    console.log(toRemove)
-  }, [toRemove])
-
+  });
 
   return (
     <div>
       <div className={`${styles.fieldsWrapper}`} ref={containerRef}>
-      {existingValues.map((value, index) => (
-        <div className={styles.existingRow}>
-          
-        <div key={index} className={`grid grid-cols-2 ${styles.existingFieldset}`}>
-          {Object.keys(existingValuesFields).map((field) => (
+        {existingValues.map((value, index) => (
+          <div className={styles.existingRow} key={`${subjectType}.${value.name}`}>
+            <div className={`grid grid-cols-2 ${styles.existingFieldset}`}>
+              {Object.keys(existingValuesFields).map((field) => (
+                <FormField
+                  key={field}
+                  field_type={existingValuesFields[field].field_type}
+                  required={existingValuesFields[field].required}
+                  disabled={existingValuesFields[field].disabled}
+                  name={`${subjectType}.existing.${index}.${field}`}
+                  placeholder={
+                    field === "name" && subjectType === "group"
+                      ? (value[field] || "").replace(/^\//, "")
+                      : value[field]
+                  }
+                  isSelect={field === "role"}
+                  isSubmitted={false}
+                  errors={{}}
+                  other={existingValuesFields[field].other}
+                  fieldClassName={styles.existingFieldInput}
+                  fieldsetClassName={styles.existingFieldSetClassName}
+                />
+              ))}
+            </div>
+            <div
+              className={styles.removeIcon}
+              onClick={() => {
+                setExistingValues((prev) =>
+                  prev.filter((item) => item.name !== value.name)
+                );
+                setToRemove((prev) => [...prev, value]);
+                onRemove?.(value);
+              }}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M18 6 6 18" />
+                <path d="M6 6l12 12" />
+              </svg>
+            </div>
+          </div>
+        ))}
+        {Array.from({
+          length: newCount + Math.max(0, 3 - existingValues.length),
+        }).map((_, index) => (
+          <div
+            key={index}
+            ref={newMappingRef}
+            className={`grid grid-cols-2 ${styles.newFieldset}`}
+          >
+            {/* subject: async dropdown of Keycloak users/groups */}
+            <SubjectSelect
+              subjectType={subjectType}
+              name={`new.${subjectType}.${index}.name`}
+              placeholder={`${subjectType} name`}
+            />
+            {/* role */}
             <FormField
-              key={field}
-              field_type={existingValuesFields[field].field_type}
-              required={existingValuesFields[field].required}
-              disabled={existingValuesFields[field].disabled}
-              name={`${subjectType}.existing.${index}.${field}`}
-              placeholder={value[field]}
-              isSelect={field === "role"}
+              field_type={roleField.field_type}
+              required={roleField.required}
+              disabled={roleField.disabled}
+              name={`new.${subjectType}.${index}.role`}
+              placeholder={roleField.placeholder}
               isSubmitted={false}
+              isSelect={true}
               errors={{}}
-              other={existingValuesFields[field].other}
+              other={roleField.other}
               fieldClassName={styles.existingFieldInput}
               fieldsetClassName={styles.existingFieldSetClassName}
             />
-          ))}
+          </div>
+        ))}
       </div>
-      <div key={`${index}.${value.name}.${subjectType}`} className={styles.removeIcon} onClick={() => {
-            setExistingValues((prevExistingValues) => prevExistingValues.filter(item => {
-              return item.name !== value.name;
-          }))
-            setToRemove(prevToRemove => [...prevToRemove, value])  
-          }}>
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M18 6 6 18"/>
-            <path d="M6 6l12 12"/>
-        </svg>
-        </div>
-        </div>
-      ))}
-       {(
-        Array.from({ length: newCount + (3 - existingValues.length) }).map((_, index) => (
-        <div key={index} ref={newMappingRef} className={`grid grid-cols-2 ${styles.newFieldset}`}>
-          {Object.keys(newFields).map((field) => (
-            <FormField
-              key={field}
-              field_type={newFields[field].field_type}
-              required={newFields[field].required}
-              disabled={newFields[field].disabled}
-              name={`new.${subjectType}.${index}.${field}`}
-              placeholder={newFields[field].placeholder || ""}
-              isSubmitted={false}
-              isSelect={field === "role"}
-              errors={{}}
-              other={newFields[field].other}
-              fieldClassName={styles.existingFieldInput}
-              fieldsetClassName={styles.existingFieldSetClassName}
-            />
-          ))}
-        </div>
-      )))}
-      </div>
-      <div className={styles.addMapping} onClick={() => {
-        setAddNewMapping(true);
-        setNewCount(newCount + 1);
-      }} >
+      <div
+        className={styles.addMapping}
+        onClick={() => {
+          setAddNewMapping(true);
+          setNewCount(newCount + 1);
+        }}
+      >
         add {subjectType} mapping
       </div>
-     
     </div>
   );
 }
