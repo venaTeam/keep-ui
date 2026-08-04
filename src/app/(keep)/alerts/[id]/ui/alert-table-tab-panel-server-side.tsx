@@ -17,6 +17,8 @@ interface Props {
   facetsPanelRefreshToken: string | undefined;
   preset: Preset;
   isAsyncLoading: boolean;
+  /** The applied CEL was rejected by the alerts query API. */
+  isCelRejected?: boolean;
   setTicketModalAlert: (alert: AlertDto | null) => void;
   setNoteModalAlert: (alert: AlertDto | null) => void;
   setRunWorkflowModalAlert: (alert: AlertDto | null) => void;
@@ -36,6 +38,7 @@ export default function AlertTableTabPanelServerSide({
   facetsCel,
   facetsPanelRefreshToken,
   isAsyncLoading,
+  isCelRejected,
   setTicketModalAlert,
   setNoteModalAlert,
   setRunWorkflowModalAlert,
@@ -103,6 +106,7 @@ export default function AlertTableTabPanelServerSide({
       columns={alertTableColumns}
       setDismissedModalAlert={setDismissModalAlert}
       isAsyncLoading={isAsyncLoading}
+      isCelRejected={isCelRejected}
       presetName={preset.name}
       presetId={preset.id}
       counterShowsFiringOnly={preset.counter_shows_firing_only}

@@ -103,6 +103,8 @@ interface Props {
   alertsTotalCount: number;
   columns: ColumnDef<AlertDto>[];
   isAsyncLoading?: boolean;
+  /** The applied CEL was rejected by the alerts query API. */
+  isCelRejected?: boolean;
   presetName: string;
   presetId?: string;
   counterShowsFiringOnly?: boolean;
@@ -127,6 +129,7 @@ export function AlertTableServerSide({
   alertsTotalCount,
   columns,
   isAsyncLoading = false,
+  isCelRejected = false,
   presetName,
   presetId,
   counterShowsFiringOnly = false,
@@ -812,6 +815,7 @@ export function AlertTableServerSide({
             presetName={presetName}
             celValue={searchCel}
             onCelChanges={setSearchCel}
+            isCelRejected={isCelRejected}
             table={table}
             isGroupingActive={isGroupingActive}
             onToggleAllGroups={toggleAll}

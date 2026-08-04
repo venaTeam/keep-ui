@@ -15,6 +15,7 @@ interface CelInputProps {
   onKeyDown?: (e: KeyboardEvent) => void;
   onFocus?: () => void;
   onIsValidChange?: (isValid: boolean) => void;
+  onIsValidatingChange?: (isValidating: boolean) => void;
   placeholder?: string;
   disabled?: boolean;
   readOnly?: boolean;
@@ -27,6 +28,7 @@ const CelInput: FC<CelInputProps> = ({
   fieldsForSuggestions = [],
   onValueChange,
   onIsValidChange,
+  onIsValidatingChange,
   onClearValue,
   onKeyDown,
   onFocus,
@@ -52,6 +54,7 @@ const CelInput: FC<CelInputProps> = ({
         fieldsForSuggestions={fieldsForSuggestions}
         onValueChange={onValueChange || ((value: string) => {})}
         onIsValidChange={onIsValidChange}
+        onIsValidatingChange={onIsValidatingChange}
         onKeyDown={onKeyDown}
         onFocus={onFocus}
       />

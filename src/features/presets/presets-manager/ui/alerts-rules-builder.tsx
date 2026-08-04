@@ -147,6 +147,8 @@ type AlertsRulesBuilderProps = {
   showToast?: boolean;
   shouldSetQueryParam?: boolean;
   applyOnTyping?: boolean;
+  /** The applied CEL was rejected by the alerts query API. */
+  isCelRejected?: boolean;
 };
 
 const SQL_QUERY_PLACEHOLDER = `SELECT *
@@ -195,6 +197,7 @@ export const AlertsRulesBuilder = ({
   shouldSetQueryParam = true,
   onCelChanges,
   applyOnTyping = false,
+  isCelRejected = false,
 }: AlertsRulesBuilderProps) => {
   const router = useRouter();
   const pathname = usePathname();
@@ -228,7 +231,10 @@ export const AlertsRulesBuilder = ({
 
   const [query, setQuery] = useState<RuleGroupType>(parsedCELRulesToQuery);
   const [isValidCEL, setIsValidCEL] = useState(true);
+  const [isValidatingCEL, setIsValidatingCEL] = useState(false);
   const [sqlError, setSqlError] = useState<string | null>(null);
+  // CEL entered with Enter before validation had settled; applied once it does.
+  const pendingCelToApplyRef = useRef<string | null>(null);
 
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -280,18 +286,52 @@ export const AlertsRulesBuilder = ({
     adjustTextAreaHeight();
   }, [celRules]);
 
+  const applyCel = useCallback(
+    (cel: string) => {
+      setAppliedCel(cel);
+      if (showToast)
+        toast.success("Condition applied", { position: "top-right" });
+    },
+    [setAppliedCel, showToast]
+  );
+
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === "Enter") {
       e.preventDefault(); // Prevents the default action of Enter key in a form
       // close the menu
       setShowSuggestions(false);
+
+      // CEL is validated against the backend on a debounce, so right after
+      // typing `isValidCEL` still describes the previous expression. Applying it
+      // now would send an unchecked expression to the API; wait for the verdict
+      // instead so an invalid one just surfaces the inline error.
+      if (isValidatingCEL) {
+        pendingCelToApplyRef.current = celRules;
+        return;
+      }
+
       if (isValidCEL) {
-        setAppliedCel(celRules);
-        if (showToast)
-          toast.success("Condition applied", { position: "top-right" });
+        applyCel(celRules);
       }
     }
   };
+
+  // Resolve an Enter that arrived while validation was still in flight. The
+  // expression is dropped if the user kept typing - that Enter no longer refers
+  // to what is in the input.
+  useEffect(() => {
+    const pendingCel = pendingCelToApplyRef.current;
+
+    if (isValidatingCEL || pendingCel === null) {
+      return;
+    }
+
+    pendingCelToApplyRef.current = null;
+
+    if (isValidCEL && pendingCel === celRules) {
+      applyCel(pendingCel);
+    }
+  }, [isValidatingCEL, isValidCEL, celRules, applyCel]);
 
   useEffect(() => {
     updateOutputCEL?.(appliedCel);
@@ -301,14 +341,14 @@ export const AlertsRulesBuilder = ({
   // When applyOnTyping is enabled, auto-apply valid CEL as the user types
   // and clear it when the CEL becomes invalid so the parent form can disable submission.
   useEffect(() => {
-    if (applyOnTyping) {
+    if (applyOnTyping && !isValidatingCEL) {
       if (isValidCEL) {
         setAppliedCel(celRules);
       } else {
         setAppliedCel("");
       }
     }
-  }, [applyOnTyping, celRules, isValidCEL]);
+  }, [applyOnTyping, celRules, isValidCEL, isValidatingCEL]);
 
   const onGenerateQuery = () => {
     setCELRules(formatQuery(query, "cel"));
@@ -366,8 +406,15 @@ export const AlertsRulesBuilder = ({
     setIsModalOpen?.(true);
   };
 
+  // `/cel/validate` only checks syntax, so an expression that parses can still be
+  // rejected when the query runs (unknown field, non-boolean result). Treat that
+  // rejection as invalid too, but only while the input still holds the applied
+  // expression - once the user edits it, the verdict no longer describes it.
+  const isCelUsable =
+    isValidCEL && !(isCelRejected && celRules === appliedCel);
+
   function getSaveFilterTooltipText(): string {
-    if (!isValidCEL) {
+    if (!isCelUsable) {
       return "You can only save a valid CEL expression.";
     }
 
@@ -392,6 +439,7 @@ export const AlertsRulesBuilder = ({
                   fieldsForSuggestions={alertFields}
                   onValueChange={setCELRules}
                   onIsValidChange={setIsValidCEL}
+                  onIsValidatingChange={setIsValidatingCEL}
                   onClearValue={handleClearInput}
                   onKeyDown={handleKeyDown}
                   onFocus={() => setShowSuggestions(true)}
@@ -423,7 +471,7 @@ export const AlertsRulesBuilder = ({
                   />
                 </div>
               )}
-              {!isValidCEL && (
+              {!isCelUsable && (
                 <div className="text-red-500 text-sm relative top-1">
                   Invalid Common Expression Logic expression.
                 </div>
@@ -448,7 +496,7 @@ export const AlertsRulesBuilder = ({
               color="orange"
               variant="secondary"
               size="sm"
-              disabled={!celRules.length || !isValidCEL}
+              disabled={!celRules.length || !isCelUsable}
               onClick={() => openSaveModal(celRules)}
               tooltip={getSaveFilterTooltipText()}
             ></Button>

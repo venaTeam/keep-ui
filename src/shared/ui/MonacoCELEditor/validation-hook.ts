@@ -1,7 +1,7 @@
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { useDebouncedValue } from "@/utils/hooks/useDebouncedValue";
 import { editor } from "monaco-editor";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import useSWR from "swr";
 
 interface CelExpressionValidationMarker {
@@ -9,21 +9,30 @@ interface CelExpressionValidationMarker {
   columnEnd: number;
 }
 
-export function useCelValidation(
-  cel: string | undefined
-): editor.IMarkerData[] {
+export interface CelValidationState {
+  markers: editor.IMarkerData[];
+  /**
+   * True while the current `cel` has not been validated yet - the debounce
+   * window is still open, or the request is in flight. `markers` describes an
+   * older expression while this is true, so an empty array must not be read as
+   * "the current expression is valid".
+   */
+  isValidating: boolean;
+}
+
+export function useCelValidation(cel: string | undefined): CelValidationState {
   const api = useApi();
   const uri = `/cel/validate`;
   const [debouncedCel] = useDebouncedValue(cel, 500);
 
-  const { data, error, isLoading } = useSWR<CelExpressionValidationMarker[]>(
+  const { data, isLoading } = useSWR<CelExpressionValidationMarker[]>(
     () => (api.isReady() && debouncedCel ? uri + debouncedCel : null),
     () => {
       if (!debouncedCel) {
         return [];
       }
 
-      return api.post(uri, { cel });
+      return api.post(uri, { cel: debouncedCel });
     },
     {
       revalidateOnFocus: false,
@@ -32,7 +41,11 @@ export function useCelValidation(
     }
   );
 
-  const validationErrors: editor.IMarkerData[] = useMemo(() => {
+  // The SWR key follows the debounced value, so anything typed since then has
+  // not reached the backend yet.
+  const isValidating = cel !== debouncedCel || isLoading;
+
+  const markers: editor.IMarkerData[] = useMemo(() => {
     if (!data || !debouncedCel) {
       return [];
     }
@@ -48,5 +61,8 @@ export function useCelValidation(
     }));
   }, [data, debouncedCel]);
 
-  return isLoading ? [] : validationErrors;
+  return {
+    markers: isValidating ? [] : markers,
+    isValidating,
+  };
 }
