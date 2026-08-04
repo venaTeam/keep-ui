@@ -66,9 +66,8 @@ export function MonacoCelEditor(props: MonacoCelProps) {
     onIsValidChangeRef.current?.(validationErrors.length === 0);
   }, [isEditorMounted, validationErrors]);
 
-  // Reported separately from validity so consumers can tell "valid" apart from
-  // "not checked yet" - the latter still reports valid to avoid flagging an
-  // expression as broken while the user is mid-keystroke.
+  // Separate from validity, which stays true while validating so no error
+  // flashes mid-keystroke.
   useEffect(() => {
     onIsValidatingChangeRef.current?.(isValidating);
   }, [isValidating]);

@@ -22,7 +22,6 @@ interface Props {
   table?: Table<AlertDto>;
   celValue?: string | null;
   onCelChanges?: (cel: string) => void;
-  /** The applied CEL was rejected by the alerts query API. */
   isCelRejected?: boolean;
   // Group expansion controls
   isGroupingActive?: boolean;

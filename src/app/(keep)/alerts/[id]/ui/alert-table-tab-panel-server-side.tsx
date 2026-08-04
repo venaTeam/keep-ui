@@ -17,7 +17,6 @@ interface Props {
   facetsPanelRefreshToken: string | undefined;
   preset: Preset;
   isAsyncLoading: boolean;
-  /** The applied CEL was rejected by the alerts query API. */
   isCelRejected?: boolean;
   setTicketModalAlert: (alert: AlertDto | null) => void;
   setNoteModalAlert: (alert: AlertDto | null) => void;

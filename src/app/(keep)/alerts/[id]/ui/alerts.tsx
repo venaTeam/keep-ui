@@ -161,11 +161,8 @@ export default function Alerts({ presetName }: AlertsProps) {
     return <KeepLoader />;
   }
 
-  // A rejected alerts query means the request itself was malformed - in practice
-  // an invalid CEL filter, which can reach the API via the ?cel= param or a stale
-  // preset. Keep the page mounted so the user can fix the expression in place;
-  // the CEL input renders the inline validation error. Anything else (auth,
-  // server, network) is a real failure, so error.tsx still handles it.
+  // A rejected query means a bad CEL filter - keep the page mounted so the user
+  // can fix it inline. Anything else is a real failure for error.tsx to catch.
   const isRejectedQuery =
     alertsError instanceof KeepApiError &&
     (alertsError.statusCode === 400 || alertsError.statusCode === 422);

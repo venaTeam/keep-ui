@@ -103,7 +103,6 @@ interface Props {
   alertsTotalCount: number;
   columns: ColumnDef<AlertDto>[];
   isAsyncLoading?: boolean;
-  /** The applied CEL was rejected by the alerts query API. */
   isCelRejected?: boolean;
   presetName: string;
   presetId?: string;

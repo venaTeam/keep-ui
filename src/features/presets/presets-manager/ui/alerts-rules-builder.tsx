@@ -233,7 +233,7 @@ export const AlertsRulesBuilder = ({
   const [isValidCEL, setIsValidCEL] = useState(true);
   const [isValidatingCEL, setIsValidatingCEL] = useState(false);
   const [sqlError, setSqlError] = useState<string | null>(null);
-  // CEL entered with Enter before validation had settled; applied once it does.
+  // Entered with Enter before validation settled; applied once it does.
   const pendingCelToApplyRef = useRef<string | null>(null);
 
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
@@ -301,10 +301,8 @@ export const AlertsRulesBuilder = ({
       // close the menu
       setShowSuggestions(false);
 
-      // CEL is validated against the backend on a debounce, so right after
-      // typing `isValidCEL` still describes the previous expression. Applying it
-      // now would send an unchecked expression to the API; wait for the verdict
-      // instead so an invalid one just surfaces the inline error.
+      // Validation is debounced, so right after typing `isValidCEL` still
+      // describes the previous expression. Wait rather than send an unchecked one.
       if (isValidatingCEL) {
         pendingCelToApplyRef.current = celRules;
         return;
@@ -316,9 +314,8 @@ export const AlertsRulesBuilder = ({
     }
   };
 
-  // Resolve an Enter that arrived while validation was still in flight. The
-  // expression is dropped if the user kept typing - that Enter no longer refers
-  // to what is in the input.
+  // Resolve an Enter that arrived mid-validation, dropping it if the user kept
+  // typing - that Enter no longer refers to what is in the input.
   useEffect(() => {
     const pendingCel = pendingCelToApplyRef.current;
 
@@ -407,11 +404,9 @@ export const AlertsRulesBuilder = ({
   };
 
   // `/cel/validate` only checks syntax, so an expression that parses can still be
-  // rejected when the query runs (unknown field, non-boolean result). Treat that
-  // rejection as invalid too, but only while the input still holds the applied
-  // expression - once the user edits it, the verdict no longer describes it.
-  const isCelUsable =
-    isValidCEL && !(isCelRejected && celRules === appliedCel);
+  // rejected when the query runs. The rejection describes the applied expression,
+  // so it stops counting once the user edits it.
+  const isCelUsable = isValidCEL && !(isCelRejected && celRules === appliedCel);
 
   function getSaveFilterTooltipText(): string {
     if (!isCelUsable) {

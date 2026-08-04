@@ -29,14 +29,13 @@ describe("useCelValidation", () => {
       { initialProps: { cel: "" } }
     );
 
-    // Nothing typed yet - settled and valid.
     expect(result.current.isValidating).toBe(false);
     expect(result.current.markers).toEqual([]);
 
     rerender({ cel: "severity ==" });
 
-    // Still inside the debounce window: the expression is unchecked, so the
-    // caller must not read the empty marker list as "valid".
+    // Inside the debounce window the expression is unchecked, so the empty
+    // marker list must not read as "valid".
     expect(result.current.isValidating).toBe(true);
     expect(mockPost).not.toHaveBeenCalled();
 

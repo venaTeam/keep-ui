@@ -11,12 +11,8 @@ interface CelExpressionValidationMarker {
 
 export interface CelValidationState {
   markers: editor.IMarkerData[];
-  /**
-   * True while the current `cel` has not been validated yet - the debounce
-   * window is still open, or the request is in flight. `markers` describes an
-   * older expression while this is true, so an empty array must not be read as
-   * "the current expression is valid".
-   */
+  /** While true, `markers` describes an older expression, so an empty
+   * array does not mean "valid". */
   isValidating: boolean;
 }
 

@@ -264,7 +264,7 @@ const useLastAlertsCount = (
       data: results,
       queryTimeInSeconds: swrValue.data?.queryTimeInSeconds,
       // A rejected request never produces a queryResult, so without the error
-      // check the table would stay in its loading state forever.
+      // check this would stay true forever.
       isLoading:
         !swrValue.error && (swrValue.isLoading || !swrValue.data?.queryResult),
       totalCount: swrValue.data?.queryResult?.count as number,
