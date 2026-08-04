@@ -136,16 +136,18 @@ export default function TenantFormModal({
                 />
               </div>
               <div className={styles.rolesMapping}>
+                <div className={styles.rolesMappingHeader}>
                 <label
                   className={`text-tremor-default mr-10 font-medium text-tremor-content-strong ${styles.fieldLabelRM}`}
                 >
                   roles mapping
                 </label>
                 {!isUpdate && (
-                  <div className="text-sm text-tremor-content mb-2">
+                  <div className="text-sm text-red-500">
                     choose at least one admin
                   </div>
                 )}
+                </div>
                 <div className={styles.rolesMappingContent}>
                   <div className={styles.rolesMappingPart}>
                     <label

@@ -67,7 +67,7 @@ export default function SubjectSelect({
       control={control}
       render={({ field }) => (
         <AsyncSelect
-          className="mt-2"
+          className="mt-2 w-40 mr-8"
           placeholder={placeholder}
           isDisabled={disabled}
           isClearable

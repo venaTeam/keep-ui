@@ -101,6 +101,12 @@
     width: 6rem !important;
 }
 
+.rolesMappingHeader {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
 .rolesMappingContent {
     display: flex;
     flex-direction: row;
