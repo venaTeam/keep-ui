@@ -8,6 +8,7 @@ import { MinimizeMenuButton } from "@/components/navbar/MinimizeMenuButton";
 import { DashboardLinks } from "@/components/navbar/DashboardLinks";
 import { IncidentsLinks } from "@/components/navbar/IncidentLinks";
 import { SetSentryUser } from "./SetSentryUser";
+// @ts-ignore: CSS import type declarations are handled by the bundler
 import "./Navbar.css";
 
 export default async function NavbarInner() {
