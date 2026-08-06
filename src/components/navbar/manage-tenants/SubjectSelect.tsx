@@ -1,6 +1,11 @@
 import AsyncSelect from "react-select/async";
 import { Controller, useFormContext } from "react-hook-form";
-import { useKeycloakUsers, useKeycloakGroups } from "./useManageTenants";
+import { useApi } from "@/shared/lib/hooks/useApi";
+import {
+  KeycloakUser,
+  KeycloakGroup,
+  SEARCH_MIN_CHARS as MIN_CHARS,
+} from "./useManageTenants";
 
 interface SubjectSelectProps {
   subjectType: "user" | "group";
@@ -11,15 +16,13 @@ interface SubjectSelectProps {
 
 type Option = { value: string; label: string };
 
-// Only start matching once the user has typed this many characters.
-const MIN_CHARS = 2;
-
 /**
- * An async, searchable dropdown of Keycloak users (by email) or groups (by full
- * path), loaded from /auth/users and /auth/groups. Nothing is offered until at
- * least MIN_CHARS are typed; then the (SWR-deduped) list is filtered client-side.
- * The stored value is the identifier the token carries -- email for a user, group
- * path for a group -- so it matches tenant_role_grant.subject (VENA-5596).
+ * An async, searchable dropdown of Keycloak users (by username) or groups (by
+ * full path). Searches SERVER-SIDE: once MIN_CHARS are typed it queries
+ * /auth/users?search= or /auth/groups?search=, which returns only the matches.
+ * (Fetching the whole directory times out on large LDAP setups.) The stored
+ * value is the identifier the token carries -- username for a user, group path
+ * for a group -- so it matches tenant_role_grant.subject (VENA-5596).
  */
 export default function SubjectSelect({
   subjectType,
@@ -28,38 +31,29 @@ export default function SubjectSelect({
   disabled = false,
 }: SubjectSelectProps) {
   const { control } = useFormContext();
-  const { data: users = [] } = useKeycloakUsers();
-  const { data: groups = [] } = useKeycloakGroups();
+  const api = useApi();
 
-  const options: Option[] =
-    subjectType === "user"
-      ? // Store users by their username (= the token's preferred_username), which
-        // is what a grant is matched on. DISPLAY the person's name, not the email.
-        users.map((u) => ({
-          value: u.username || u.email,
-          label: u.name || u.username || u.email,
-        }))
-      : // Store groups by full path (matches the token); display without the "/".
-        groups.map((g) => ({ value: g.path ?? `/${g.name}`, label: g.name }));
-
-  // For a selected user, show the name that matches the stored username.
-  const displayLabel = (val: string): string => {
-    if (subjectType === "group") return val.replace(/^\//, "");
-    const u = users.find((usr) => (usr.username || usr.email) === val);
-    return u?.name || val;
+  const loadOptions = async (input: string): Promise<Option[]> => {
+    const q = input.trim();
+    if (q.length < MIN_CHARS || !api.isReady()) return [];
+    const query = `?search=${encodeURIComponent(q)}`;
+    if (subjectType === "user") {
+      const users = await api.get<KeycloakUser[]>(`/auth/users${query}`);
+      return (users ?? []).map((u) => ({
+        value: u.username || u.email,
+        label: u.name || u.username || u.email, // show the name, not the email
+      }));
+    }
+    const groups = await api.get<KeycloakGroup[]>(`/auth/groups${query}`);
+    return (groups ?? []).map((g) => ({
+      value: g.path ?? `/${g.name}`, // stored with the "/" (matches the token)
+      label: g.name, // displayed without it
+    }));
   };
 
-  const loadOptions = (input: string): Promise<Option[]> => {
-    const q = input.trim().toLowerCase();
-    if (q.length < MIN_CHARS) return Promise.resolve([]);
-    return Promise.resolve(
-      options.filter(
-        (o) =>
-          o.label.toLowerCase().includes(q) ||
-          o.value.toLowerCase().includes(q)
-      )
-    );
-  };
+  // Selected-value display: groups without the "/", users as the stored username.
+  const displayLabel = (val: string): string =>
+    subjectType === "group" ? val.replace(/^\//, "") : val;
 
   return (
     <Controller

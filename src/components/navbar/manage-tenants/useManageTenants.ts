@@ -20,6 +20,11 @@ export type RoleAssignment = {
 
 const DEFAULT: SWRConfiguration = { revalidateOnFocus: false };
 
+// Minimum characters before the async user/group pickers query Keycloak.
+// The directory is large (thousands of entries) and each search is capped
+// server-side, so a slightly higher threshold keeps the first results relevant.
+export const SEARCH_MIN_CHARS = 3;
+
 /** Tenants the caller can see (superadmin -> all; others -> their tenants). */
 export function useTenants(options: SWRConfiguration = DEFAULT) {
   const api = useApi();
