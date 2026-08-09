@@ -5,6 +5,7 @@ import {
   KeycloakUser,
   KeycloakGroup,
   SEARCH_MIN_CHARS as MIN_CHARS,
+  asyncSelectStyles,
 } from "./useManageTenants";
 
 interface SubjectSelectProps {
@@ -83,7 +84,7 @@ export default function SubjectSelect({
             typeof document !== "undefined" ? document.body : undefined
           }
           menuPosition="fixed"
-          styles={{ menuPortal: (base: any) => ({ ...base, zIndex: 9999 }) }}
+          styles={asyncSelectStyles}
         />
       )}
     />

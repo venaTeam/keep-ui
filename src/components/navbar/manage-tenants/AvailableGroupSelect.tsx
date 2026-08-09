@@ -1,7 +1,10 @@
 import AsyncSelect from "react-select/async";
 import { Controller, useFormContext } from "react-hook-form";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { SEARCH_MIN_CHARS as MIN_CHARS } from "./useManageTenants";
+import {
+  SEARCH_MIN_CHARS as MIN_CHARS,
+  asyncSelectStyles,
+} from "./useManageTenants";
 
 type Option = { value: string; label: string };
 
@@ -60,7 +63,7 @@ export default function AvailableGroupSelect({
             typeof document !== "undefined" ? document.body : undefined
           }
           menuPosition="fixed"
-          styles={{ menuPortal: (base: any) => ({ ...base, zIndex: 9999 }) }}
+          styles={asyncSelectStyles}
         />
       )}
     />
