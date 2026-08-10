@@ -38,6 +38,18 @@ export default function TenantFormModal({
   const [removed, setRemoved] = useState<
     { subject: string; subject_type: SubjectType }[]
   >([]);
+  // In-place role edits to existing grants, keyed by `${subject_type}:${subject}`
+  // so re-editing the same row overwrites rather than piles up.
+  const [edits, setEdits] = useState<Record<string, RoleAssignment>>({});
+  const recordEdit = (subject_type: SubjectType) => (name: string, role: string) =>
+    setEdits((prev) => ({
+      ...prev,
+      [`${subject_type}:${name}`]: {
+        subject: name,
+        subject_type,
+        role: role as Role,
+      },
+    }));
 
   const isUpdate = modalType === "update tenant";
   const tenantId = tenantData?.id ?? tenantData?.tenant_id;
@@ -89,13 +101,30 @@ export default function TenantFormModal({
         await api.post("/tenants", { name: data.name, role_mappings: mappings });
         showSuccessToast("Tenant created");
       } else {
-        // Remove the grants the user deleted, then add the new ones.
+        // Remove the grants the user deleted first.
+        const removedKeys = new Set(
+          removed.map((r) => `${r.subject_type}:${r.subject}`)
+        );
         for (const r of removed) {
           await api.delete(
             `/tenants/${tenantId}/roles?subject=${encodeURIComponent(r.subject)}`
           );
         }
-        for (const m of mappings) {
+        // POST both in-place edits to existing grants AND newly added rows.
+        // The backend upserts on (tenant_id, subject), so re-POSTing an edited
+        // grant updates its role. Skip anything that was just removed, and
+        // dedupe so a subject isn't POSTed twice.
+        const editList = Object.values(edits).filter(
+          (e) => !removedKeys.has(`${e.subject_type}:${e.subject}`)
+        );
+        const seenPost = new Set<string>();
+        const toPost = [...editList, ...mappings].filter((m) => {
+          const key = `${m.subject_type}:${m.subject}`;
+          if (seenPost.has(key)) return false;
+          seenPost.add(key);
+          return true;
+        });
+        for (const m of toPost) {
           await api.post(`/tenants/${tenantId}/roles`, m);
         }
         showSuccessToast("Tenant updated");
@@ -104,6 +133,7 @@ export default function TenantFormModal({
       await mutateTenants();
       methods.reset();
       setRemoved([]);
+      setEdits({});
       setOpenModal(false);
     } catch (error) {
       showErrorToast(error);
@@ -114,7 +144,12 @@ export default function TenantFormModal({
     <Modal
       className={styles.tenantFormModal}
       isOpen={openModal}
-      onClose={() => setOpenModal(false)}
+      onClose={() => {
+        setOpenModal(false);
+        setRemoved([]);
+        setEdits({});
+        methods.reset();
+      }}
       data-cy="cy-modal"
       title={`${modalType}`}
     >
@@ -158,6 +193,7 @@ export default function TenantFormModal({
                     <RoleMapping
                       subjectType="user"
                       initialValues={userGrants}
+                      onEdit={recordEdit("user")}
                       onRemove={(v) =>
                         setRemoved((prev) => [
                           ...prev,
@@ -175,6 +211,7 @@ export default function TenantFormModal({
                     <RoleMapping
                       subjectType="group"
                       initialValues={groupGrants}
+                      onEdit={recordEdit("group")}
                       onRemove={(v) =>
                         setRemoved((prev) => [
                           ...prev,
