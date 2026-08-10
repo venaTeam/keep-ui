@@ -18,7 +18,6 @@ interface MonacoCelProps {
   fieldsForSuggestions?: string[];
   readOnly?: boolean;
   onIsValidChange?: (isValid: boolean) => void;
-  onIsValidatingChange?: (isValidating: boolean) => void;
   onValueChange: (value: string) => void;
   onKeyDown?: (e: KeyboardEvent) => void;
   onFocus?: () => void;
@@ -36,10 +35,6 @@ export function MonacoCelEditor(props: MonacoCelProps) {
     props.onIsValidChange
   );
   onIsValidChangeRef.current = props.onIsValidChange;
-  const onIsValidatingChangeRef = useRef<
-    MonacoCelProps["onIsValidatingChange"]
-  >(props.onIsValidatingChange);
-  onIsValidatingChangeRef.current = props.onIsValidatingChange;
   const onFocusRef = useRef<MonacoCelProps["onFocus"]>(props.onFocus);
   onFocusRef.current = props.onFocus;
   const fieldsForSuggestionsRef =
@@ -49,9 +44,7 @@ export function MonacoCelEditor(props: MonacoCelProps) {
   const suggestionsShownRef = useRef<boolean>(false);
   const [value, setValue] = useState<string>(props.value);
 
-  const { markers: validationErrors, isValidating } = useCelValidation(
-    props.readOnly ? undefined : value
-  );
+  const validationErrors = useCelValidation(props.readOnly ? undefined : value);
 
   useEffect(() => {
     if (!isEditorMounted) {
@@ -65,12 +58,6 @@ export function MonacoCelEditor(props: MonacoCelProps) {
     );
     onIsValidChangeRef.current?.(validationErrors.length === 0);
   }, [isEditorMounted, validationErrors]);
-
-  // Separate from validity, which stays true while validating so no error
-  // flashes mid-keystroke.
-  useEffect(() => {
-    onIsValidatingChangeRef.current?.(isValidating);
-  }, [isValidating]);
 
   function monacoLoadedCallback(
     monacoInstance: typeof import("monaco-editor")

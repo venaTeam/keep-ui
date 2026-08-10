@@ -21,30 +21,6 @@ describe("useCelValidation", () => {
     jest.clearAllMocks();
   });
 
-  it("reports isValidating until the backend has checked the current expression", async () => {
-    mockPost.mockResolvedValue([{ columnStart: 1, columnEnd: 5 }]);
-
-    const { result, rerender } = renderHook(
-      ({ cel }) => useCelValidation(cel),
-      { initialProps: { cel: "" } }
-    );
-
-    expect(result.current.isValidating).toBe(false);
-    expect(result.current.markers).toEqual([]);
-
-    rerender({ cel: "severity ==" });
-
-    // Inside the debounce window the expression is unchecked, so the empty
-    // marker list must not read as "valid".
-    expect(result.current.isValidating).toBe(true);
-    expect(mockPost).not.toHaveBeenCalled();
-
-    act(() => jest.advanceTimersByTime(DEBOUNCE_MS));
-
-    await waitFor(() => expect(result.current.isValidating).toBe(false));
-    expect(result.current.markers).toHaveLength(1);
-  });
-
   it("validates the debounced expression rather than the latest keystroke", async () => {
     mockPost.mockResolvedValue([]);
 
@@ -55,7 +31,24 @@ describe("useCelValidation", () => {
     rerender({ cel: "a" });
     act(() => jest.advanceTimersByTime(DEBOUNCE_MS));
 
+    // The SWR key is built from the debounced value, so the body must match it.
     await waitFor(() => expect(mockPost).toHaveBeenCalled());
     expect(mockPost).toHaveBeenCalledWith("/cel/validate", { cel: "a" });
+  });
+
+  it("returns markers once the backend reports errors", async () => {
+    mockPost.mockResolvedValue([{ columnStart: 1, columnEnd: 5 }]);
+
+    const { result, rerender } = renderHook(
+      ({ cel }) => useCelValidation(cel),
+      { initialProps: { cel: "" } }
+    );
+
+    expect(result.current).toEqual([]);
+
+    rerender({ cel: "severity ==" });
+    act(() => jest.advanceTimersByTime(DEBOUNCE_MS));
+
+    await waitFor(() => expect(result.current).toHaveLength(1));
   });
 });

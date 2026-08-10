@@ -9,14 +9,9 @@ interface CelExpressionValidationMarker {
   columnEnd: number;
 }
 
-export interface CelValidationState {
-  markers: editor.IMarkerData[];
-  /** While true, `markers` describes an older expression, so an empty
-   * array does not mean "valid". */
-  isValidating: boolean;
-}
-
-export function useCelValidation(cel: string | undefined): CelValidationState {
+export function useCelValidation(
+  cel: string | undefined
+): editor.IMarkerData[] {
   const api = useApi();
   const uri = `/cel/validate`;
   const [debouncedCel] = useDebouncedValue(cel, 500);
@@ -28,6 +23,7 @@ export function useCelValidation(cel: string | undefined): CelValidationState {
         return [];
       }
 
+      // Must match the SWR key, or the result caches against the wrong expression.
       return api.post(uri, { cel: debouncedCel });
     },
     {
@@ -37,11 +33,7 @@ export function useCelValidation(cel: string | undefined): CelValidationState {
     }
   );
 
-  // The SWR key follows the debounced value, so anything typed since then has
-  // not reached the backend yet.
-  const isValidating = cel !== debouncedCel || isLoading;
-
-  const markers: editor.IMarkerData[] = useMemo(() => {
+  const validationErrors: editor.IMarkerData[] = useMemo(() => {
     if (!data || !debouncedCel) {
       return [];
     }
@@ -57,8 +49,5 @@ export function useCelValidation(cel: string | undefined): CelValidationState {
     }));
   }, [data, debouncedCel]);
 
-  return {
-    markers: isValidating ? [] : markers,
-    isValidating,
-  };
+  return isLoading ? [] : validationErrors;
 }

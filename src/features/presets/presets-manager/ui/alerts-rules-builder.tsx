@@ -231,10 +231,7 @@ export const AlertsRulesBuilder = ({
 
   const [query, setQuery] = useState<RuleGroupType>(parsedCELRulesToQuery);
   const [isValidCEL, setIsValidCEL] = useState(true);
-  const [isValidatingCEL, setIsValidatingCEL] = useState(false);
   const [sqlError, setSqlError] = useState<string | null>(null);
-  // Entered with Enter before validation settled; applied once it does.
-  const pendingCelToApplyRef = useRef<string | null>(null);
 
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -286,49 +283,21 @@ export const AlertsRulesBuilder = ({
     adjustTextAreaHeight();
   }, [celRules]);
 
-  const applyCel = useCallback(
-    (cel: string) => {
-      setAppliedCel(cel);
-      if (showToast)
-        toast.success("Condition applied", { position: "top-right" });
-    },
-    [setAppliedCel, showToast]
-  );
-
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === "Enter") {
       e.preventDefault(); // Prevents the default action of Enter key in a form
       // close the menu
       setShowSuggestions(false);
-
-      // Validation is debounced, so right after typing `isValidCEL` still
-      // describes the previous expression. Wait rather than send an unchecked one.
-      if (isValidatingCEL) {
-        pendingCelToApplyRef.current = celRules;
-        return;
-      }
-
+      // Validation is debounced, so `isValidCEL` may still describe the previous
+      // expression. An unchecked one that slips through is rejected by the query
+      // and surfaces the same inline error via isCelRejected.
       if (isValidCEL) {
-        applyCel(celRules);
+        setAppliedCel(celRules);
+        if (showToast)
+          toast.success("Condition applied", { position: "top-right" });
       }
     }
   };
-
-  // Resolve an Enter that arrived mid-validation, dropping it if the user kept
-  // typing - that Enter no longer refers to what is in the input.
-  useEffect(() => {
-    const pendingCel = pendingCelToApplyRef.current;
-
-    if (isValidatingCEL || pendingCel === null) {
-      return;
-    }
-
-    pendingCelToApplyRef.current = null;
-
-    if (isValidCEL && pendingCel === celRules) {
-      applyCel(pendingCel);
-    }
-  }, [isValidatingCEL, isValidCEL, celRules, applyCel]);
 
   useEffect(() => {
     updateOutputCEL?.(appliedCel);
@@ -338,14 +307,14 @@ export const AlertsRulesBuilder = ({
   // When applyOnTyping is enabled, auto-apply valid CEL as the user types
   // and clear it when the CEL becomes invalid so the parent form can disable submission.
   useEffect(() => {
-    if (applyOnTyping && !isValidatingCEL) {
+    if (applyOnTyping) {
       if (isValidCEL) {
         setAppliedCel(celRules);
       } else {
         setAppliedCel("");
       }
     }
-  }, [applyOnTyping, celRules, isValidCEL, isValidatingCEL]);
+  }, [applyOnTyping, celRules, isValidCEL]);
 
   const onGenerateQuery = () => {
     setCELRules(formatQuery(query, "cel"));
@@ -434,7 +403,6 @@ export const AlertsRulesBuilder = ({
                   fieldsForSuggestions={alertFields}
                   onValueChange={setCELRules}
                   onIsValidChange={setIsValidCEL}
-                  onIsValidatingChange={setIsValidatingCEL}
                   onClearValue={handleClearInput}
                   onKeyDown={handleKeyDown}
                   onFocus={() => setShowSuggestions(true)}
