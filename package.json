@@ -111,7 +111,8 @@
     "zod": "^3.24.4",
     "zod-to-json-schema": "^3.24.3",
     "zod-validation-error": "^3.4.1",
-    "zustand": "^5.0.3"
+    "zustand": "^5.0.3",
+    "react-remove-scroll": "^2.6.3"
   },
   "devDependencies": {
     "@next/bundle-analyzer": "15.2.1",
