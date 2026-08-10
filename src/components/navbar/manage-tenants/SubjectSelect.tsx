@@ -41,8 +41,10 @@ export default function SubjectSelect({
     if (subjectType === "user") {
       const users = await api.get<KeycloakUser[]>(`/auth/users${query}`);
       return (users ?? []).map((u) => ({
+        // Show the username (the identifier stored as the grant subject), not the
+        // first name -- so the dropdown matches what you see on the user.
         value: u.username || u.email,
-        label: u.name || u.username || u.email, // show the name, not the email
+        label: u.username || u.email,
       }));
     }
     const groups = await api.get<KeycloakGroup[]>(`/auth/groups${query}`);
