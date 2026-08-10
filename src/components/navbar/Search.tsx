@@ -348,7 +348,8 @@ export const Search = ({ session }: SearchProps) => {
   const hasTenantLogo = Boolean(tenantLogoUrl);
 
   // Button visibility by role (VENA-5596):
-  //  - create operator: any tenant member (>= viewer)
+  //  - create operator: editor, admin, or superadmin (NOT viewer -- viewers are
+  //    read-only and the backend rejects operator creation for them)
   //  - edit tenant: admin (or superadmin)
   //  - add tenant: superadmin only
   // Use the BACKEND-resolved role (/whoami) -- it reflects the env superadmin
@@ -358,7 +359,8 @@ export const Search = ({ session }: SearchProps) => {
     whoami?.role ?? session?.userRole ?? session?.user?.role;
   const isSuperAdmin = role === "superadmin";
   const isTenantAdmin = role === "admin" || role === "superadmin";
-  const isTenantMember = Boolean(role);
+  const isTenantEditor =
+    role === "editor" || role === "admin" || role === "superadmin";
 
   return (
     <div
@@ -426,7 +428,7 @@ export const Search = ({ session }: SearchProps) => {
           </Link>
         )}
 
-        {isTenantMember && <TenantButton modalCompType={OperatorModal} icon={KeyIcon} modalType="operator" />}
+        {isTenantEditor && <TenantButton modalCompType={OperatorModal} icon={KeyIcon} modalType="operator" />}
         {isSuperAdmin && <TenantButton modalCompType={TenantFormModal} icon={PlusIcon} modalType="create tenant" />}
         {isTenantAdmin && <TenantButton modalCompType={TenantFormModal} icon={EditIcon} modalType="update tenant" tenantData={currentTenant} />}
 
