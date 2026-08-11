@@ -463,16 +463,28 @@ export const config = {
       return token;
     },
     session: async ({ session, token, user }) => {
+      // Rebuild the keepActiveTenant= prefix from the durable token.tenantId on
+      // every session read -- a token refresh drops it from the access token,
+      // which otherwise makes server-rendered pages resolve to the wrong tenant.
+      const rawAccessToken = (token.accessToken as string)?.replace(
+        /^keepActiveTenant=[\w-]+&/,
+        ""
+      );
+      const tenantId = token.tenantId as string;
+      const accessToken =
+        tenantId && tenantId !== "keep"
+          ? `keepActiveTenant=${tenantId}&${rawAccessToken}`
+          : rawAccessToken;
       return {
         ...session,
-        accessToken: token.accessToken as string,
+        accessToken,
         refreshToken: token.refreshToken,
-        tenantId: token.tenantId as string,
+        tenantId,
         userRole: token.role as string,
         user: {
           ...session.user,
-          accessToken: token.accessToken as string,
-          tenantId: token.tenantId as string,
+          accessToken,
+          tenantId,
           role: token.role as string,
           tenantIds: token.tenantIds || [],
         },
