@@ -463,13 +463,9 @@ export const config = {
       return token;
     },
     session: async ({ session, token, user }) => {
-      // The active tenant is durable in token.tenantId, but the keepActiveTenant=
-      // prefix that the backends actually read lives inside the access-token
-      // string -- and a token refresh replaces the access token, dropping it.
-      // Rebuild the prefix from token.tenantId on every session read so the
-      // active tenant is never silently lost. Without this, server-rendered
-      // pages (e.g. the workflow detail page) fall back to the "keep" tenant and
-      // 404 after a refresh, while client requests still carry it. (VENA-5596)
+      // Rebuild the keepActiveTenant= prefix from the durable token.tenantId on
+      // every session read -- a token refresh drops it from the access token,
+      // which otherwise makes server-rendered pages resolve to the wrong tenant.
       const rawAccessToken = (token.accessToken as string)?.replace(
         /^keepActiveTenant=[\w-]+&/,
         ""
