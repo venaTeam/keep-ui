@@ -9,7 +9,7 @@ import { Button } from "@/components/ui";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { showErrorToast, showSuccessToast } from "@/shared/ui";
-import { useOperators } from "./useManageTenants";
+import { useOperators, useWhoami } from "./useManageTenants";
 
 type OperatorModalProps = {
   modalType: string;
@@ -44,11 +44,30 @@ export default function OperatorModal({
   const { data: operators = [], mutate: mutateOperators } =
     useOperators(currentTenantId);
 
-  // Existing operators for the current tenant (name + apikey), from the API.
+  const { data: whoami } = useWhoami();
+  const isSuperAdmin = whoami?.role === "superadmin";
+
+  // Existing operators for the current tenant (id + name + apikey), from the API.
   const existingValues = operators.map((o) => ({
+    id: o.id,
     operator_name: o.name,
     api_key: o.apikey,
   }));
+
+  // Superadmin-only: delete an operator via the API. Removing the operator row
+  // also removes its tenant link (tenant_id lives on the operator).
+  const handleDeleteOperator = async (operatorId: string) => {
+    if (!window.confirm("Delete this operator? It will be removed from the tenant.")) {
+      return;
+    }
+    try {
+      await api.delete(`/operators/${operatorId}`);
+      showSuccessToast("Operator deleted");
+      await mutateOperators();
+    } catch (error) {
+      showErrorToast(error);
+    }
+  };
 
   const handleCopyApiKey = (apiKey: string) => {
     navigator.clipboard
@@ -145,6 +164,28 @@ export default function OperatorModal({
                             )}
                           </div>
                         </div>
+                        {isSuperAdmin && (
+                          <div
+                            onClick={() => handleDeleteOperator(value.id)}
+                            className="ml-2 p-1 hover:bg-red-100 rounded cursor-pointer"
+                            title="Delete operator"
+                          >
+                            <svg
+                              width="20"
+                              height="20"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="red"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M3 6h18" />
+                              <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                              <path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14" />
+                            </svg>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

@@ -433,7 +433,7 @@ export const Search = ({ session }: SearchProps) => {
 
         {isTenantEditor && !isGeneralTenant && <TenantButton modalCompType={OperatorModal} icon={KeyIcon} modalType="operator" />}
         {isSuperAdmin && <TenantButton modalCompType={TenantFormModal} icon={PlusIcon} modalType="create tenant" />}
-        {isTenantAdmin && <TenantButton modalCompType={TenantFormModal} icon={EditIcon} modalType="update tenant" tenantData={currentTenant} />}
+        {isTenantAdmin && !isGeneralTenant && <TenantButton modalCompType={TenantFormModal} icon={EditIcon} modalType="update tenant" tenantData={currentTenant} />}
 
       </div>
 
