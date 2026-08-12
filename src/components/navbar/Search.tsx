@@ -344,6 +344,9 @@ export const Search = ({ session }: SearchProps) => {
     tenantList.find((tenant) => tenant.tenant_id === session?.tenantId) ??
     tenantList[0];
   const activeTenantId = currentTenant?.tenant_id;
+  // Operators route alerts into a specific tenant, so they don't apply to the
+  // general ("keep") tenant -- hide the operator button there.
+  const isGeneralTenant = activeTenantId === "keep";
   const tenantLogoUrl = currentTenant?.tenant_logo_url;
   const hasTenantLogo = Boolean(tenantLogoUrl);
 
@@ -428,9 +431,9 @@ export const Search = ({ session }: SearchProps) => {
           </Link>
         )}
 
-        {isTenantEditor && <TenantButton modalCompType={OperatorModal} icon={KeyIcon} modalType="operator" />}
-        {isSuperAdmin && <TenantButton modalCompType={TenantFormModal} icon={PlusIcon} modalType="create tenant" />}
-        {isTenantAdmin && <TenantButton modalCompType={TenantFormModal} icon={EditIcon} modalType="update tenant" tenantData={currentTenant} />}
+        {isTenantEditor && !isGeneralTenant && <TenantButton modalCompType={OperatorModal} icon={KeyIcon} modalType="operator" />}
+        {isSuperAdmin && !isGeneralTenant && <TenantButton modalCompType={TenantFormModal} icon={PlusIcon} modalType="create tenant" />}
+        {isTenantAdmin && !isGeneralTenant && <TenantButton modalCompType={TenantFormModal} icon={EditIcon} modalType="update tenant" tenantData={currentTenant} />}
 
       </div>
 

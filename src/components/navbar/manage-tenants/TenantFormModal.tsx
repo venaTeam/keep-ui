@@ -101,10 +101,22 @@ export default function TenantFormModal({
         await api.post("/tenants", { name: data.name, role_mappings: mappings });
         showSuccessToast("Tenant created");
       } else {
-        // Remove the grants the user deleted first.
         const removedKeys = new Set(
           removed.map((r) => `${r.subject_type}:${r.subject}`)
         );
+        // The tenant must still have at least one admin after the edit.
+        const finalGrants = grants
+          .filter((g) => !removedKeys.has(`${g.subject_type}:${g.subject}`))
+          .map((g) => ({
+            ...g,
+            role: edits[`${g.subject_type}:${g.subject}`]?.role ?? g.role,
+          }))
+          .concat(mappings);
+        if (!finalGrants.some((g) => g.role === "admin")) {
+          showErrorToast(new Error("At least one admin is required"));
+          return;
+        }
+        // Remove the grants the user deleted first.
         for (const r of removed) {
           await api.delete(
             `/tenants/${tenantId}/roles?subject=${encodeURIComponent(r.subject)}`
