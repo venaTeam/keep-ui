@@ -180,9 +180,8 @@ export default function OperatorModal({
                               strokeLinecap="round"
                               strokeLinejoin="round"
                             >
-                              <path d="M3 6h18" />
-                              <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                              <path d="M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14" />
+                              <path d="M18 6 6 18" />
+                              <path d="M6 6l12 12" />
                             </svg>
                           </div>
                         )}
