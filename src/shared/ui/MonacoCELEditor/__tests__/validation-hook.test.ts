@@ -2,7 +2,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { useCelValidation } from "../validation-hook";
 
-// Matches the debounce inside useCelValidation.
+/** Matches the debounce inside useCelValidation. */
 const DEBOUNCE_MS = 500;
 
 describe("useCelValidation", () => {
@@ -31,7 +31,7 @@ describe("useCelValidation", () => {
     rerender({ cel: "a" });
     act(() => jest.advanceTimersByTime(DEBOUNCE_MS));
 
-    // The SWR key is built from the debounced value, so the body must match it.
+    /** The SWR key uses the debounced value, so the body must match it. */
     await waitFor(() => expect(mockPost).toHaveBeenCalled());
     expect(mockPost).toHaveBeenCalledWith("/cel/validate", { cel: "a" });
   });

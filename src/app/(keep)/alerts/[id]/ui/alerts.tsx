@@ -161,8 +161,10 @@ export default function Alerts({ presetName }: AlertsProps) {
     return <KeepLoader />;
   }
 
-  // A rejected query means a bad CEL filter - keep the page mounted so the user
-  // can fix it inline. Anything else is a real failure for error.tsx to catch.
+  /**
+   * A rejected query means a bad CEL filter, so keep the page mounted for the
+   * user to fix it inline. Anything else is a real failure for error.tsx.
+   */
   const isRejectedQuery =
     alertsError instanceof KeepApiError &&
     (alertsError.statusCode === 400 || alertsError.statusCode === 422);

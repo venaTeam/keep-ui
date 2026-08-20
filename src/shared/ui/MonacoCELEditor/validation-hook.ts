@@ -23,7 +23,7 @@ export function useCelValidation(
         return [];
       }
 
-      // Must match the SWR key, or the result caches against the wrong expression.
+      /** Must match the SWR key, or the result caches against the wrong expression. */
       return api.post(uri, { cel: debouncedCel });
     },
     {

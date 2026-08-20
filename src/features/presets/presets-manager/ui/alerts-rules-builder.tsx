@@ -288,9 +288,11 @@ export const AlertsRulesBuilder = ({
       e.preventDefault(); // Prevents the default action of Enter key in a form
       // close the menu
       setShowSuggestions(false);
-      // Validation is debounced, so `isValidCEL` may still describe the previous
-      // expression. An unchecked one that slips through is rejected by the query
-      // and surfaces the same inline error via isCelRejected.
+      /**
+       * Validation is debounced, so `isValidCEL` may still describe the previous
+       * expression. An unchecked one that slips through is rejected by the query
+       * and surfaces the same inline error via isCelRejected.
+       */
       if (isValidCEL) {
         setAppliedCel(celRules);
         if (showToast)
@@ -372,9 +374,11 @@ export const AlertsRulesBuilder = ({
     setIsModalOpen?.(true);
   };
 
-  // `/cel/validate` only checks syntax, so an expression that parses can still be
-  // rejected when the query runs. The rejection describes the applied expression,
-  // so it stops counting once the user edits it.
+  /**
+   * `/cel/validate` only checks syntax, so an expression that parses can still be
+   * rejected when the query runs. The rejection describes the applied expression,
+   * so it stops counting once the user edits it.
+   */
   const isCelUsable = isValidCEL && !(isCelRejected && celRules === appliedCel);
 
   function getSaveFilterTooltipText(): string {
