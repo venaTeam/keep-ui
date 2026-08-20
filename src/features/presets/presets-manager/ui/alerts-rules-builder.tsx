@@ -147,6 +147,8 @@ type AlertsRulesBuilderProps = {
   showToast?: boolean;
   shouldSetQueryParam?: boolean;
   applyOnTyping?: boolean;
+  /** The applied CEL was rejected by the alerts query API. */
+  isCelRejected?: boolean;
 };
 
 const SQL_QUERY_PLACEHOLDER = `SELECT *
@@ -195,6 +197,7 @@ export const AlertsRulesBuilder = ({
   shouldSetQueryParam = true,
   onCelChanges,
   applyOnTyping = false,
+  isCelRejected = false,
 }: AlertsRulesBuilderProps) => {
   const router = useRouter();
   const pathname = usePathname();
@@ -285,6 +288,11 @@ export const AlertsRulesBuilder = ({
       e.preventDefault(); // Prevents the default action of Enter key in a form
       // close the menu
       setShowSuggestions(false);
+      /**
+       * Validation is debounced, so `isValidCEL` may still describe the previous
+       * expression. An unchecked one that slips through is rejected by the query
+       * and surfaces the same inline error via isCelRejected.
+       */
       if (isValidCEL) {
         setAppliedCel(celRules);
         if (showToast)
@@ -366,8 +374,15 @@ export const AlertsRulesBuilder = ({
     setIsModalOpen?.(true);
   };
 
+  /**
+   * `/cel/validate` only checks syntax, so an expression that parses can still be
+   * rejected when the query runs. The rejection describes the applied expression,
+   * so it stops counting once the user edits it.
+   */
+  const isCelUsable = isValidCEL && !(isCelRejected && celRules === appliedCel);
+
   function getSaveFilterTooltipText(): string {
-    if (!isValidCEL) {
+    if (!isCelUsable) {
       return "You can only save a valid CEL expression.";
     }
 
@@ -423,7 +438,7 @@ export const AlertsRulesBuilder = ({
                   />
                 </div>
               )}
-              {!isValidCEL && (
+              {!isCelUsable && (
                 <div className="text-red-500 text-sm relative top-1">
                   Invalid Common Expression Logic expression.
                 </div>
@@ -448,7 +463,7 @@ export const AlertsRulesBuilder = ({
               color="orange"
               variant="secondary"
               size="sm"
-              disabled={!celRules.length || !isValidCEL}
+              disabled={!celRules.length || !isCelUsable}
               onClick={() => openSaveModal(celRules)}
               tooltip={getSaveFilterTooltipText()}
             ></Button>

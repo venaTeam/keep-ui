@@ -1,7 +1,7 @@
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { useDebouncedValue } from "@/utils/hooks/useDebouncedValue";
 import { editor } from "monaco-editor";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import useSWR from "swr";
 
 interface CelExpressionValidationMarker {
@@ -16,14 +16,15 @@ export function useCelValidation(
   const uri = `/cel/validate`;
   const [debouncedCel] = useDebouncedValue(cel, 500);
 
-  const { data, error, isLoading } = useSWR<CelExpressionValidationMarker[]>(
+  const { data, isLoading } = useSWR<CelExpressionValidationMarker[]>(
     () => (api.isReady() && debouncedCel ? uri + debouncedCel : null),
     () => {
       if (!debouncedCel) {
         return [];
       }
 
-      return api.post(uri, { cel });
+      /** Must match the SWR key, or the result caches against the wrong expression. */
+      return api.post(uri, { cel: debouncedCel });
     },
     {
       revalidateOnFocus: false,

@@ -22,6 +22,7 @@ interface Props {
   table?: Table<AlertDto>;
   celValue?: string | null;
   onCelChanges?: (cel: string) => void;
+  isCelRejected?: boolean;
   // Group expansion controls
   isGroupingActive?: boolean;
   onToggleAllGroups?: () => void;
@@ -33,6 +34,7 @@ export function AlertPresetManager({
   table,
   celValue,
   onCelChanges,
+  isCelRejected,
   isGroupingActive = false,
   onToggleAllGroups,
   areAllGroupsExpanded,
@@ -140,6 +142,7 @@ export function AlertPresetManager({
           setIsModalOpen={setIsPresetModalOpen}
           setPresetCEL={setPresetCEL}
           onCelChanges={onCelChanges}
+          isCelRejected={isCelRejected}
         />
 
         <Button

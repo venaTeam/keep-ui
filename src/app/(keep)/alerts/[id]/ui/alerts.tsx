@@ -14,6 +14,7 @@ import { AlertChangeStatusModal } from "@/features/alerts/alert-change-status";
 import { AlertAssignModal } from "@/features/alerts/alert-assign";
 import { ViewAlertModal } from "@/features/alerts/view-alert";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { KeepApiError } from "@/shared/api";
 import { KeepLoader, showErrorToast } from "@/shared/ui";
 import NotFound from "@/app/(keep)/not-found";
 import AlertTableTabPanelServerSide from "./alert-table-tab-panel-server-side";
@@ -160,8 +161,15 @@ export default function Alerts({ presetName }: AlertsProps) {
     return <KeepLoader />;
   }
 
-  // if we have an error, throw it, error.tsx will catch it
-  if (alertsError) {
+  /**
+   * A rejected query means a bad CEL filter, so keep the page mounted for the
+   * user to fix it inline. Anything else is a real failure for error.tsx.
+   */
+  const isRejectedQuery =
+    alertsError instanceof KeepApiError &&
+    (alertsError.statusCode === 400 || alertsError.statusCode === 422);
+
+  if (alertsError && !isRejectedQuery) {
     throw alertsError;
   }
 
@@ -179,6 +187,7 @@ export default function Alerts({ presetName }: AlertsProps) {
         alertsTotalCount={totalCount}
         facetsCel={facetsCel}
         isAsyncLoading={alertsLoading}
+        isCelRejected={isRejectedQuery}
         setTicketModalAlert={setTicketModalAlert}
         setNoteModalAlert={setNoteModalAlert}
         setRunWorkflowModalAlert={setRunWorkflowModalAlert}
