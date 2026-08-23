@@ -40,21 +40,16 @@ const tenantSwitchProvider = Credentials({
       }
     }
 
-    if (!user || !user.tenantIds) {
+    if (!user) {
       console.error("Cannot switch tenant: User information not available");
-      throw new Error("User not authenticated or missing tenant information");
+      throw new Error("User not authenticated");
     }
 
-    // Verify the tenant ID is valid for this user
-    const validTenant = user.tenantIds.find(
-      (t: { tenant_id: string }) => t.tenant_id === credentials.tenantId
-    );
-
-    if (!validTenant) {
-      console.error(`Invalid tenant ID: ${credentials.tenantId}`);
-      throw new Error("Invalid tenant ID for this user");
-    }
-
+    // The requested tenant is NOT validated against the (Keycloak-org) tenantIds
+    // list here: with the new Keep tenant model that list can be stale/empty. The
+    // backend is the real gate -- it re-validates the active tenant against the
+    // grant store (or superadmin) when it receives the keepActiveTenant= prefix,
+    // and returns 401/403 if the user isn't actually allowed there.
     console.log(`Switching to tenant: ${credentials.tenantId}`);
 
     // if user aleady have keepActiveTenant as prefix - remove it
