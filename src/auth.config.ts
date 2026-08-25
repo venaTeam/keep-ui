@@ -462,19 +462,27 @@ export const config = {
 
       return token;
     },
+    /**
+     * Rebuild the keepActiveTenant= prefix from the durable token.tenantId on
+     * every session read -- a token refresh drops it from the access token,
+     * which otherwise makes server-rendered pages resolve to the wrong tenant.
+     *
+     * The prefix is sent for every tenant, the general one ("Single Tenant",
+     * id `keep`) included. Exempting it left the backend with no active-tenant
+     * signal, so it re-derived the tenant from the caller's Keycloak org groups
+     * and silently resolved them into a different tenant -- which, among other
+     * things, subscribed their SSE stream to the wrong tenant and stopped
+     * real-time alert updates from ever reaching the feed. (VENA-5596)
+     */
     session: async ({ session, token, user }) => {
-      // Rebuild the keepActiveTenant= prefix from the durable token.tenantId on
-      // every session read -- a token refresh drops it from the access token,
-      // which otherwise makes server-rendered pages resolve to the wrong tenant.
       const rawAccessToken = (token.accessToken as string)?.replace(
         /^keepActiveTenant=[\w-]+&/,
         ""
       );
       const tenantId = token.tenantId as string;
-      const accessToken =
-        tenantId && tenantId !== "keep"
-          ? `keepActiveTenant=${tenantId}&${rawAccessToken}`
-          : rawAccessToken;
+      const accessToken = tenantId
+        ? `keepActiveTenant=${tenantId}&${rawAccessToken}`
+        : rawAccessToken;
       return {
         ...session,
         accessToken,
