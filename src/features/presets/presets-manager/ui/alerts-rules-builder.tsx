@@ -29,6 +29,7 @@ import { usePresetActions } from "@/entities/presets/model/usePresetActions";
 import CelInput from "@/features/cel-input/cel-input";
 import { useFacetPotentialFields } from "@/features/filter";
 import { useCelState } from "@/features/cel-input/use-cel-state";
+import { isStandaloneCelStringLiteral } from "@/shared/ui/MonacoCELEditor/validation-hook";
 
 const staticOptions = [
   { value: 'severity > "info"', label: 'severity > "info"' },
@@ -293,7 +294,7 @@ export const AlertsRulesBuilder = ({
        * expression. An unchecked one that slips through is rejected by the query
        * and surfaces the same inline error via isCelRejected.
        */
-      if (isValidCEL) {
+      if (isValidCEL && !isStandaloneCelStringLiteral(celRules)) {
         setAppliedCel(celRules);
         if (showToast)
           toast.success("Condition applied", { position: "top-right" });
@@ -310,7 +311,7 @@ export const AlertsRulesBuilder = ({
   // and clear it when the CEL becomes invalid so the parent form can disable submission.
   useEffect(() => {
     if (applyOnTyping) {
-      if (isValidCEL) {
+      if (isValidCEL && !isStandaloneCelStringLiteral(celRules)) {
         setAppliedCel(celRules);
       } else {
         setAppliedCel("");
@@ -379,7 +380,10 @@ export const AlertsRulesBuilder = ({
    * rejected when the query runs. The rejection describes the applied expression,
    * so it stops counting once the user edits it.
    */
-  const isCelUsable = isValidCEL && !(isCelRejected && celRules === appliedCel);
+  const isCelUsable =
+    isValidCEL &&
+    !isStandaloneCelStringLiteral(celRules) &&
+    !(isCelRejected && celRules === appliedCel);
 
   function getSaveFilterTooltipText(): string {
     if (!isCelUsable) {
