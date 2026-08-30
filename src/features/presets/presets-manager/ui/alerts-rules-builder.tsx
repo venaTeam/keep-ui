@@ -235,6 +235,7 @@ export const AlertsRulesBuilder = ({
 
   const [query, setQuery] = useState<RuleGroupType>(parsedCELRulesToQuery);
   const [isValidCEL, setIsValidCEL] = useState(true);
+  const [lastAttemptedCel, setLastAttemptedCel] = useState<string | null>(null);
   const [sqlError, setSqlError] = useState<string | null>(null);
 
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
@@ -250,14 +251,20 @@ export const AlertsRulesBuilder = ({
     onCelChanges && onCelChanges("");
     table?.resetGlobalFilter();
     setIsValidCEL(true);
+    setLastAttemptedCel(null);
   }, [table]);
+
+  const handleCelRulesChange = (cel: string) => {
+    setCELRules(cel);
+    setLastAttemptedCel(null);
+  };
 
   const toggleSuggestions = () => {
     setShowSuggestions(!showSuggestions);
   };
 
   const handleSelectChange = (selectedOption: any) => {
-    setCELRules(selectedOption.value);
+    handleCelRulesChange(selectedOption.value);
     toggleSuggestions();
   };
 
@@ -292,6 +299,7 @@ export const AlertsRulesBuilder = ({
       e.preventDefault(); // Prevents the default action of Enter key in a form
       // close the menu
       setShowSuggestions(false);
+      setLastAttemptedCel(celRules);
       /**
        * Validation is debounced, so `isValidCEL` may still describe the previous
        * expression. An unchecked one that slips through is rejected by the query
@@ -387,6 +395,11 @@ export const AlertsRulesBuilder = ({
     isValidCEL &&
     !isStandaloneCelStringLiteral(celRules) &&
     !(isCelRejected && celRules === appliedCel);
+  const showCelError = applyOnTyping
+    ? !isCelUsable
+    : ((!isValidCEL || isStandaloneCelStringLiteral(celRules)) &&
+        lastAttemptedCel === celRules) ||
+      (isCelRejected && celRules === appliedCel);
 
   function getSaveFilterTooltipText(): string {
     if (!isCelUsable) {
@@ -412,7 +425,7 @@ export const AlertsRulesBuilder = ({
                   placeholder='Use CEL to filter your alerts e.g. source.contains("kibana").'
                   value={celRules}
                   fieldsForSuggestions={alertFields}
-                  onValueChange={setCELRules}
+                  onValueChange={handleCelRulesChange}
                   onIsValidChange={setIsValidCEL}
                   onClearValue={handleClearInput}
                   onKeyDown={handleKeyDown}
@@ -445,7 +458,7 @@ export const AlertsRulesBuilder = ({
                   />
                 </div>
               )}
-              {!isCelUsable && (
+              {showCelError && (
                 <div className="text-red-500 text-sm relative top-1">
                   Invalid Common Expression Logic expression.
                 </div>
