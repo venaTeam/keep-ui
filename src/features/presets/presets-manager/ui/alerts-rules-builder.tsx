@@ -35,7 +35,10 @@ const staticOptions = [
   { value: 'severity > "info"', label: 'severity > "info"' },
   { value: 'status=="firing"', label: 'status == "firing"' },
   { value: 'source=="grafana"', label: 'source == "grafana"' },
-  { value: 'message.contains("CPU")', label: 'message.contains("CPU")' },
+  {
+    value: 'description.contains("CPU")',
+    label: 'description.contains("CPU")',
+  },
 ];
 
 const CustomOption = (props: any) => {
