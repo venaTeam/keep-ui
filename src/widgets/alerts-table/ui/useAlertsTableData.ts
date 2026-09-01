@@ -4,6 +4,7 @@ import { useAlertPolling } from "@/utils/hooks/useAlertPolling";
 import { useConfig } from "@/utils/hooks/useConfig";
 import {
   RefetchTimers,
+  clearRefetchTimers,
   scheduleRefetchWithMaxWait,
 } from "@/widgets/alerts-table/lib/refetch-scheduler";
 import { v4 as uuidv4 } from "uuid";
@@ -157,6 +158,11 @@ export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
     debounce: null,
     maxWait: null,
   });
+
+  useEffect(() => {
+    const timers = refetchTimersRef.current;
+    return () => clearRefetchTimers(timers);
+  }, []);
 
   // Simple alert polling - append incoming SSE events to the local cache
   useAlertPolling(!isPaused, (data) => {

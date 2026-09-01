@@ -2,6 +2,7 @@ import {
   ALERT_REFETCH_DEBOUNCE_MS,
   ALERT_REFETCH_MAX_WAIT_MS,
   RefetchTimers,
+  clearRefetchTimers,
   scheduleRefetchWithMaxWait,
 } from "../refetch-scheduler";
 
@@ -100,5 +101,27 @@ describe("scheduleRefetchWithMaxWait", () => {
     jest.advanceTimersByTime(ALERT_REFETCH_DEBOUNCE_MS + 1);
     expect(first).not.toHaveBeenCalled();
     expect(second).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses the latest refetch callback for a storm-driven max-wait flush", () => {
+    const first = jest.fn();
+    const second = jest.fn();
+    const eventIntervalMs = 200;
+    scheduleRefetchWithMaxWait(timers, first);
+    for (let t = 0; t < ALERT_REFETCH_MAX_WAIT_MS; t += eventIntervalMs) {
+      jest.advanceTimersByTime(eventIntervalMs);
+      scheduleRefetchWithMaxWait(timers, second);
+    }
+    expect(first).not.toHaveBeenCalled();
+    expect(second).toHaveBeenCalledTimes(1);
+  });
+
+  it("clearRefetchTimers cancels every pending flush", () => {
+    schedule();
+    clearRefetchTimers(timers);
+    jest.advanceTimersByTime(ALERT_REFETCH_MAX_WAIT_MS * 2);
+    expect(refetch).not.toHaveBeenCalled();
+    expect(timers.debounce).toBeNull();
+    expect(timers.maxWait).toBeNull();
   });
 });
