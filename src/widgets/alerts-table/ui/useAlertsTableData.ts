@@ -1,6 +1,7 @@
 import { TimeFrameV2 } from "@/components/ui/DateRangePickerV2";
 import { AlertDto, AlertsQuery, useAlerts } from "@/entities/alerts/model";
 import { useAlertPolling } from "@/utils/hooks/useAlertPolling";
+import { useConfig } from "@/utils/hooks/useConfig";
 import {
   RefetchTimers,
   scheduleRefetchWithMaxWait,
@@ -40,6 +41,7 @@ function getDateRangeCel(timeFrame: TimeFrameV2 | null): string | null {
 export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
   const { useLastAlerts } = useAlerts();
   const { mutate: mutateGlobal } = useSWRConfig();
+  const { data: config } = useConfig();
 
   const [canRevalidate, setCanRevalidate] = useState<boolean>(false);
   const [dateRangeCel, setDateRangeCel] = useState<string | null>(null);
@@ -159,8 +161,11 @@ export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
   // Simple alert polling - append incoming SSE events to the local cache
   useAlertPolling(!isPaused, (data) => {
     const triggerRefetch = () =>
-      scheduleRefetchWithMaxWait(refetchTimersRef.current, () =>
-        mutateAlerts()
+      scheduleRefetchWithMaxWait(
+        refetchTimersRef.current,
+        () => mutateAlerts(),
+        config?.ALERT_REFETCH_DEBOUNCE_MS,
+        config?.ALERT_REFETCH_MAX_WAIT_MS
       );
 
     if (data?.alerts && Array.isArray(data.alerts)) {

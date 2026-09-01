@@ -72,6 +72,26 @@ describe("scheduleRefetchWithMaxWait", () => {
     expect(refetch).toHaveBeenCalledTimes(2);
   });
 
+  it("honors custom debounce and max-wait intervals", () => {
+    const eventIntervalMs = 50;
+    for (let t = 0; t < 300; t += eventIntervalMs) {
+      scheduleRefetchWithMaxWait(timers, refetch, 100, 300);
+      jest.advanceTimersByTime(eventIntervalMs);
+    }
+    expect(refetch).toHaveBeenCalledTimes(1);
+    scheduleRefetchWithMaxWait(timers, refetch, 100, 300);
+    jest.advanceTimersByTime(100);
+    expect(refetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("falls back to the default intervals when overrides are undefined", () => {
+    scheduleRefetchWithMaxWait(timers, refetch, undefined, undefined);
+    jest.advanceTimersByTime(ALERT_REFETCH_DEBOUNCE_MS - 1);
+    expect(refetch).not.toHaveBeenCalled();
+    jest.advanceTimersByTime(1);
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
   it("uses the latest refetch callback armed for the pending debounce", () => {
     const first = jest.fn();
     const second = jest.fn();

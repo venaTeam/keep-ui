@@ -89,5 +89,24 @@ export function getConfig(): InternalConfig {
       process.env.KEEP_TICKETING_ENABLED?.toLowerCase() === "true",
     KEEP_WF_LIST_EXTENDED_INFO:
       process.env.KEEP_WF_LIST_EXTENDED_INFO?.toLowerCase() === "true",
+    ALERT_REFETCH_DEBOUNCE_MS: parsePositiveIntEnv(
+      process.env.ALERT_REFETCH_DEBOUNCE_MS
+    ),
+    ALERT_REFETCH_MAX_WAIT_MS: parsePositiveIntEnv(
+      process.env.ALERT_REFETCH_MAX_WAIT_MS
+    ),
   };
+}
+
+/**
+ * A positive integer from an env var, or undefined so the client-side
+ * default applies. Rejects garbage and non-positive values instead of
+ * letting them disable the feed refetch timers.
+ */
+function parsePositiveIntEnv(value: string | undefined): number | undefined {
+  if (!value) {
+    return undefined;
+  }
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
 }
