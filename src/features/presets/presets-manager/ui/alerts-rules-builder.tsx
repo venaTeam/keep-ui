@@ -234,7 +234,9 @@ export const AlertsRulesBuilder = ({
   const action = isDynamic ? "update" : "create";
 
   const [query, setQuery] = useState<RuleGroupType>(parsedCELRulesToQuery);
-  const [isValidCEL, setIsValidCEL] = useState(true);
+  const [isEditorValidCEL, setIsEditorValidCEL] = useState(true);
+  const isValidCEL =
+    isEditorValidCEL && !isStandaloneCelStringLiteral(celRules);
   const [lastAttemptedCel, setLastAttemptedCel] = useState<string | null>(null);
   const [sqlError, setSqlError] = useState<string | null>(null);
 
@@ -250,7 +252,7 @@ export const AlertsRulesBuilder = ({
     setAppliedCel("");
     onCelChanges && onCelChanges("");
     table?.resetGlobalFilter();
-    setIsValidCEL(true);
+    setIsEditorValidCEL(true);
     setLastAttemptedCel(null);
   }, [table]);
 
@@ -305,7 +307,7 @@ export const AlertsRulesBuilder = ({
        * expression. An unchecked one that slips through is rejected by the query
        * and surfaces the same inline error via isCelRejected.
        */
-      if (isValidCEL && !isStandaloneCelStringLiteral(celRules)) {
+      if (isValidCEL) {
         setAppliedCel(celRules);
         if (showToast)
           toast.success("Condition applied", { position: "top-right" });
@@ -322,7 +324,7 @@ export const AlertsRulesBuilder = ({
   // and clear it when the CEL becomes invalid so the parent form can disable submission.
   useEffect(() => {
     if (applyOnTyping) {
-      if (isValidCEL && !isStandaloneCelStringLiteral(celRules)) {
+      if (isValidCEL) {
         setAppliedCel(celRules);
       } else {
         setAppliedCel("");
@@ -393,12 +395,10 @@ export const AlertsRulesBuilder = ({
    */
   const isCelUsable =
     isValidCEL &&
-    !isStandaloneCelStringLiteral(celRules) &&
     !(isCelRejected && celRules === appliedCel);
   const showCelError = applyOnTyping
     ? !isCelUsable
-    : ((!isValidCEL || isStandaloneCelStringLiteral(celRules)) &&
-        lastAttemptedCel === celRules) ||
+    : (!isValidCEL && lastAttemptedCel === celRules) ||
       (isCelRejected && celRules === appliedCel);
 
   function getSaveFilterTooltipText(): string {
@@ -426,7 +426,7 @@ export const AlertsRulesBuilder = ({
                   value={celRules}
                   fieldsForSuggestions={alertFields}
                   onValueChange={handleCelRulesChange}
-                  onIsValidChange={setIsValidCEL}
+                  onIsValidChange={setIsEditorValidCEL}
                   onClearValue={handleClearInput}
                   onKeyDown={handleKeyDown}
                   onFocus={() => setShowSuggestions(true)}
