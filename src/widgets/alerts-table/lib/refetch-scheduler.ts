@@ -1,5 +1,7 @@
-export const ALERT_REFETCH_DEBOUNCE_MS = 800;
-export const ALERT_REFETCH_MAX_WAIT_MS = 2000;
+import {
+  ALERT_REFETCH_DEBOUNCE_MS,
+  ALERT_REFETCH_MAX_WAIT_MS,
+} from "@/shared/constants";
 
 export interface RefetchTimers {
   debounce: NodeJS.Timeout | null;
