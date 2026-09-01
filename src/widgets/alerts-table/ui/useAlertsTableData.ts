@@ -1,6 +1,10 @@
 import { TimeFrameV2 } from "@/components/ui/DateRangePickerV2";
 import { AlertDto, AlertsQuery, useAlerts } from "@/entities/alerts/model";
 import { useAlertPolling } from "@/utils/hooks/useAlertPolling";
+import {
+  RefetchTimers,
+  scheduleRefetchWithMaxWait,
+} from "@/widgets/alerts-table/lib/refetch-scheduler";
 import { v4 as uuidv4 } from "uuid";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSWRConfig } from "swr";
@@ -147,18 +151,17 @@ export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
     revalidateOnMount: true,
   });
 
-  const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const refetchTimersRef = useRef<RefetchTimers>({
+    debounce: null,
+    maxWait: null,
+  });
 
   // Simple alert polling - append incoming SSE events to the local cache
   useAlertPolling(!isPaused, (data) => {
-    const triggerRefetch = () => {
-      if (fetchTimeoutRef.current) {
-        clearTimeout(fetchTimeoutRef.current);
-      }
-      fetchTimeoutRef.current = setTimeout(() => {
-        mutateAlerts();
-      }, 800);
-    };
+    const triggerRefetch = () =>
+      scheduleRefetchWithMaxWait(refetchTimersRef.current, () =>
+        mutateAlerts()
+      );
 
     if (data?.alerts && Array.isArray(data.alerts)) {
       // Check if we're on the first page by looking at the query offset
