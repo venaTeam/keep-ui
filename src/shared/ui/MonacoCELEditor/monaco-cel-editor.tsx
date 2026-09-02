@@ -117,38 +117,24 @@ export function MonacoCelEditor(props: MonacoCelProps) {
       onKeyDownRef.current?.(e.browserEvent);
     });
     editor.onDidFocusEditorText(() => onFocusRef.current?.());
-    const editorDomNode = editor.getDomNode();
-    const handlePaste = (event: ClipboardEvent) => {
-      const pastedValue = event.clipboardData?.getData("text/plain");
-      if (!pastedValue || !/[\r\n]/.test(pastedValue)) {
+    editor.onDidPaste(({ range }) => {
+      const model = editor.getModel();
+      if (!model || range.startLineNumber === range.endLineNumber) {
         return;
       }
 
-      const selection = editor.getSelection();
-      if (!selection) {
-        return;
-      }
-
-      event.preventDefault();
-      event.stopPropagation();
-
-      const normalizedValue = normalizeCelPaste(pastedValue);
+      const normalizedValue = normalizeCelPaste(model.getValueInRange(range));
       const endPosition = {
-        lineNumber: selection.startLineNumber,
-        column: selection.startColumn + normalizedValue.length,
+        lineNumber: range.startLineNumber,
+        column: range.startColumn + normalizedValue.length,
       };
 
       editor.executeEdits(
         "cel.multilinePaste",
-        [{ range: selection, text: normalizedValue }],
+        [{ range, text: normalizedValue }],
         [monaco.Selection.fromPositions(endPosition)]
       );
-    };
-
-    editorDomNode?.addEventListener("paste", handlePaste, true);
-    editor.onDidDispose(() =>
-      editorDomNode?.removeEventListener("paste", handlePaste, true)
-    );
+    });
     editor.onDidChangeModelContent(() => {
       const model = editor.getModel();
       if (!model) return;
