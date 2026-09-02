@@ -46,9 +46,12 @@ LOGDIR="$UI_DIR/.dev-run"
 PIDFILE="$LOGDIR/pids.txt"
 mkdir -p "$LOGDIR"
 
-stop_services() {
+stop_services() {  # kill the whole process GROUP each service was started in
+  # (start_svc launches under `setsid`, so $pid is also its process group id) —
+  # a plain `kill $pid` only hits e.g. `npm`, not the `next dev`/`next-server`
+  # children it forked, which npm doesn't forward signals to.
   if [[ -f "$PIDFILE" ]]; then
-    while read -r pid; do [[ -n "$pid" ]] && kill "$pid" 2>/dev/null || true; done < "$PIDFILE"
+    while read -r pid; do [[ -n "$pid" ]] && kill -- "-$pid" 2>/dev/null || true; done < "$PIDFILE"
     rm -f "$PIDFILE"
   fi
 }
@@ -97,7 +100,7 @@ start_svc() {  # name  dir  cmd...
   (
     cd "$dir"
     set -a; [[ -f .env ]] && . ./.env; set +a
-    nohup "$@" >"$LOGDIR/$name.out.log" 2>"$LOGDIR/$name.err.log" &
+    setsid nohup "$@" >"$LOGDIR/$name.out.log" 2>"$LOGDIR/$name.err.log" &
     echo $! >> "$PIDFILE"
   )
   echo "[$name] started -> $LOGDIR/$name.out.log"
