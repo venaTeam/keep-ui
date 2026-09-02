@@ -8,6 +8,7 @@ import { MonacoCelBase } from "./MonacoCel";
 import { editor, Token } from "monaco-editor";
 import "./editor.scss";
 import { useCelValidation } from "./validation-hook";
+import { normalizeCelPaste } from "./paste-utils";
 
 const Loader = <KeepLoader loadingText="Loading Code Editor ..." />;
 
@@ -37,8 +38,9 @@ export function MonacoCelEditor(props: MonacoCelProps) {
   onIsValidChangeRef.current = props.onIsValidChange;
   const onFocusRef = useRef<MonacoCelProps["onFocus"]>(props.onFocus);
   onFocusRef.current = props.onFocus;
-  const fieldsForSuggestionsRef =
-    useRef<MonacoCelProps["fieldsForSuggestions"] | null>(null);
+  const fieldsForSuggestionsRef = useRef<
+    MonacoCelProps["fieldsForSuggestions"] | null
+  >(null);
   fieldsForSuggestionsRef.current = props.fieldsForSuggestions;
   const enteredTokensRef = useRef<Token[]>([]);
   const suggestionsShownRef = useRef<boolean>(false);
@@ -115,14 +117,29 @@ export function MonacoCelEditor(props: MonacoCelProps) {
       onKeyDownRef.current?.(e.browserEvent);
     });
     editor.onDidFocusEditorText(() => onFocusRef.current?.());
+    editor.onDidPaste(({ range }) => {
+      const model = editor.getModel();
+      if (!model || range.startLineNumber === range.endLineNumber) {
+        return;
+      }
+
+      const normalizedValue = normalizeCelPaste(model.getValueInRange(range));
+      const endPosition = {
+        lineNumber: range.startLineNumber,
+        column: range.startColumn + normalizedValue.length,
+      };
+
+      editor.executeEdits(
+        "cel.multilinePaste",
+        [{ range, text: normalizedValue }],
+        [monaco.Selection.fromPositions(endPosition)]
+      );
+    });
     editor.onDidChangeModelContent(() => {
       const model = editor.getModel();
       if (!model) return;
 
       const value = model.getValue();
-      if (value.includes("\n")) {
-        model.setValue(value.replace(/\n/g, " "));
-      }
       enteredTokensRef.current = monaco.editor.tokenize(value, "cel")[0];
     });
 
