@@ -107,11 +107,31 @@ start_svc api-gateway   "$GATEWAY" poetry run gunicorn src.main:get_app \
 start_svc event-handler "$HANDLER" poetry run python -m src.consumer_main
 start_svc ui            "$UI_DIR"  npm run dev
 
+# Both compose files hardcode container_name, so a container from a
+# DIFFERENT checkout (e.g. another clone of this same repo on this machine)
+# collides on the name with "Conflict: ... already in use" — docker compose
+# won't touch a container it doesn't consider part of its own project. This
+# script assumes one dev stack per machine, so on that specific conflict,
+# remove the stale container and retry once rather than failing outright.
+up_with_retry() {  # name  container_name  cmd...
+  local name="$1" cname="$2"; shift 2
+  local out
+  if out="$("$@" 2>&1)"; then echo "$out"; return 0; fi
+  if echo "$out" | grep -q "Conflict.*container name .*$cname"; then
+    echo "[$name] a container named $cname exists from a different project — removing it and retrying" >&2
+    docker rm -f "$cname" >/dev/null 2>&1 || true
+    "$@"
+  else
+    echo "$out" >&2
+    return 1
+  fi
+}
+
 echo "[mock] starting hossted-survey-api..."
-( cd "$MOCK" && docker compose up -d --build )
+up_with_retry mock hossted-survey-api bash -c "cd '$MOCK' && docker compose up -d --build"
 
 echo "[hossted-cache] starting the widget proxy's redis..."
-( cd "$UI_DIR" && docker compose -f docker-compose.hossted.yml up -d )
+up_with_retry hossted-cache keep-hossted-cache bash -c "cd '$UI_DIR' && docker compose -f docker-compose.hossted.yml up -d"
 
 wait_health() {  # name  url
   local name="$1" url="$2"
