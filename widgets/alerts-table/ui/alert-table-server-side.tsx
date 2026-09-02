@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { Table, Card, Button, Badge } from "@tremor/react";
+import { HosstedWrapper } from "@hossted/keep-integration";
+import "@hossted/keep-integration/styles.css";
 import { AlertsTableBody } from "@/widgets/alerts-table/ui/alerts-table-body";
 import {
   AlertDto,
@@ -238,16 +240,9 @@ export function AlertTableServerSide({
   );
   const [lastViewedAlert, setLastViewedAlert] = useState<string | null>(null);
 
-  const isFeedAwaitingQuery =
-    presetName === "feed" && !searchCel && !filterCel;
-
   useEffect(
     function whenQueryChange() {
       if (filterCel === null || searchCel === null || timeFrame === null) {
-        return;
-      }
-
-      if (isFeedAwaitingQuery) {
         return;
       }
 
@@ -266,7 +261,7 @@ export function AlertTableServerSide({
         onQueryChange(query);
       }
     },
-    [filterCel, searchCel, paginationState, sorting, timeFrame, onQueryChange, isFeedAwaitingQuery]
+    [filterCel, searchCel, paginationState, sorting, timeFrame, onQueryChange]
   );
 
   const [selectedAlert, setSelectedAlert] = useState<AlertDto | null>(null);
@@ -600,21 +595,6 @@ export function AlertTableServerSide({
   );
 
   function renderTable() {
-    if (isFeedAwaitingQuery) {
-      return (
-        <div className="flex-1 flex items-center w-full">
-          <div className="flex flex-col justify-center items-center w-full p-4">
-            <EmptyStateCard
-              noCard
-              title="Query Your Alerts"
-              description="Use the CEL search bar above to filter alerts, or select facets from the panel on the left."
-              icon={MagnifyingGlassIcon}
-            />
-          </div>
-        </div>
-      );
-    }
-
     if (
       !showSkeleton &&
       table.getPageCount() === 0 &&
@@ -747,6 +727,7 @@ export function AlertTableServerSide({
   const widgetName = searchParams?.get("widgetName");
 
   return (
+    <HosstedWrapper>
     <div className="flex flex-col gap-4">
       <div className="flex-none">
         <div className="flex justify-between">
@@ -824,58 +805,54 @@ export function AlertTableServerSide({
             instead of stretching to match the facets sidebar's height */}
         <div className="flex items-start gap-2">
           {/* Facets sidebar */}
-          {!isFeedAwaitingQuery && (
-            <>
-              {/* Collapsed state: a thin bar with a button to reopen the panel */}
-              {isFacetsCollapsed && (
-                <div className="flex-none">
-                  <button
-                    onClick={() => setIsFacetsCollapsed(false)}
-                    title="Show filters"
-                    aria-label="Show filters"
-                    className="p-2 hover:bg-gray-100 rounded flex items-center gap-1"
-                    data-cy="facets-panel-expand-btn"
-                  >
-                    <FiFilter className="text-orange-500" size={16} />
-                    <ChevronRightIcon className="h-4 w-4 text-orange-500" />
-                  </button>
-                </div>
-              )}
-              {/*
-                Keep the panel mounted even when collapsed (just hidden) so that
-                any added/edited facets and selections are preserved when the
-                sidebar is closed and reopened.
-              */}
-              <div
-                className={
-                  "w-33 min-w-[12rem] overflow-y-auto" +
-                  (isFacetsCollapsed ? " hidden" : "")
-                }
+          {/* Collapsed state: a thin bar with a button to reopen the panel */}
+          {isFacetsCollapsed && (
+            <div className="flex-none">
+              <button
+                onClick={() => setIsFacetsCollapsed(false)}
+                title="Show filters"
+                aria-label="Show filters"
+                className="p-2 hover:bg-gray-100 rounded flex items-center gap-1"
+                data-cy="facets-panel-expand-btn"
               >
-                <FacetsPanelServerSide
-                  usePropertyPathsSuggestions={true}
-                  entityName={"alerts"}
-                  facetOptionsCel={facetsCel}
-                  clearFiltersToken={clearFiltersToken}
-                  initialFacetsData={{
-                    facets: initialFacets,
-                    facetOptions: null,
-                  }}
-                  facetsConfig={facetsConfig}
-                  persistenceKey={
-                    presetName === "feed"
-                      ? undefined
-                      : `facets-${userPrefix}${presetName}`
-                  }
-                  onCelChange={setFilterCel}
-                  onCollapse={() => setIsFacetsCollapsed(true)}
-                  expandToken={facetsExpandToken}
-                  revalidationToken={facetsPanelRefreshToken}
-                  isSilentReloading={isAsyncLoading}
-                />
-              </div>
-            </>
+                <FiFilter className="text-orange-500" size={16} />
+                <ChevronRightIcon className="h-4 w-4 text-orange-500" />
+              </button>
+            </div>
           )}
+          {/*
+            Keep the panel mounted even when collapsed (just hidden) so that
+            any added/edited facets and selections are preserved when the
+            sidebar is closed and reopened.
+          */}
+          <div
+            className={
+              "w-33 min-w-[12rem] overflow-y-auto" +
+              (isFacetsCollapsed ? " hidden" : "")
+            }
+          >
+            <FacetsPanelServerSide
+              usePropertyPathsSuggestions={true}
+              entityName={"alerts"}
+              facetOptionsCel={facetsCel}
+              clearFiltersToken={clearFiltersToken}
+              initialFacetsData={{
+                facets: initialFacets,
+                facetOptions: null,
+              }}
+              facetsConfig={facetsConfig}
+              persistenceKey={
+                presetName === "feed"
+                  ? undefined
+                  : `facets-${userPrefix}${presetName}`
+              }
+              onCelChange={setFilterCel}
+              onCollapse={() => setIsFacetsCollapsed(true)}
+              expandToken={facetsExpandToken}
+              revalidationToken={facetsPanelRefreshToken}
+              isSilentReloading={isAsyncLoading}
+            />
+          </div>
 
           {/* Table section */}
           <div className="flex-1 flex flex-col min-w-0 gap-4">
@@ -927,5 +904,6 @@ export function AlertTableServerSide({
         }}
       />
     </div>
+    </HosstedWrapper>
   );
 }

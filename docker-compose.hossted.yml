@@ -1,0 +1,29 @@
+# Redis cache for the Hossted proxy route (app/api/hossted/route.ts), which
+# caches Hossted analysis responses keyed by alert fingerprint so they survive
+# a page reload. Separate from keep-event-handler's infra redis (different
+# purpose, different container). Not part of the default dev-stack compose —
+# start it explicitly when you're ready:
+#
+#   docker compose -f docker-compose.hossted.yml up -d
+#
+# HOSSTED_REDIS_URL=redis://keep-hossted-cache:6379 (see keep-ui/.env) reaches
+# this container by its service name, which requires keep-ui itself to be on
+# this compose network — add `container_name: keep-hossted-cache` port 6379
+# to your hosts file (127.0.0.1 keep-hossted-cache) if you run keep-ui via
+# `npm run dev` on the host instead of in this compose network.
+services:
+  keep-hossted-cache:
+    image: redis:7
+    container_name: keep-hossted-cache
+    ports:
+      - "6381:6379"
+    volumes:
+      - hossted_cache_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  hossted_cache_data:

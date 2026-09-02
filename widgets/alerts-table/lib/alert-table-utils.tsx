@@ -14,6 +14,7 @@ import { AlertName } from "@/entities/alerts/ui";
 import AlertAssignee from "../ui/alert-assignee";
 import AlertExtraPayload from "../ui/alert-extra-payload";
 import { AlertMenu } from "@/features/alerts/alert-menu";
+import { HosstedButton } from "@hossted/keep-integration";
 import { isSameDay, isValid, isWithinInterval } from "date-fns";
 import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
 import { getNestedValue } from "@/shared/lib/object-utils";
@@ -73,6 +74,7 @@ export const DEFAULT_COLS = [
   "name",
   "description",
   "lastReceived",
+  "hossted",
   "alertMenu",
 ];
 export const DEFAULT_COLS_VISIBILITY = DEFAULT_COLS.reduce<VisibilityState>(
@@ -714,6 +716,20 @@ export const useAlertTableCols = (
                   : context.row.id]: newValue,
               })
             }
+          />
+        ),
+      }),
+      columnHelper.display({
+        id: "hossted",
+        header: "Hossted",
+        minSize: 100,
+        cell: (context) => (
+          <HosstedButton
+            request={{
+              fingerprint: context.row.original.fingerprint,
+              payload: context.row.original,
+            }}
+            disableHosstedSidePanel
           />
         ),
       }),
