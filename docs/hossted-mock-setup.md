@@ -1,82 +1,54 @@
 # Running keep-ui against the Hossted mock server
 
-This is the minimum set of branches and steps to go from a clean clone of
-each repo to a working setup: the Hossted mock server firing alert events,
-Keep's pipeline ingesting them, and keep-ui's Feed table displaying them
-with the Hossted widget column.
+The minimum steps to go from a clean clone of each repo to a working setup:
+the Hossted mock server firing alert events, Keep's pipeline ingesting them,
+and keep-ui's Feed table displaying them with the Hossted widget column.
+
+None of this requires Keep's own `docker-compose.dev.yml` stack (the
+`keep-backend-dev`/`keep-frontend-dev` containers) — `keep-api-gateway` and
+`keep-event-handler` run as plain host processes, driven by
+`scripts/dev-up.sh` below.
 
 ## Branches
 
 | Repo | Branch | What it adds |
 |---|---|---|
-| `keep-ui` | `feat/hossted-integration-setup` | `@hossted/keep-integration` widget wiring + fixes the Feed table so it actually loads alerts |
-| `keep-api-gateway` | `fix/alert-field-mapping-casing` | Fixes CEL/facet field mapping for camelCase alert fields, merges alembic heads |
-| `keep-event-handler` | `feat/prometheus-provider-and-port-fix` | Adds the `prometheus_provider` the consumer needs to process mock alerts, moves a colliding Redis port |
-| `hossted-survey-api` | `feat/keep-backend-dev-routing` | Routes `keep-backend-dev` to the host backend, seeds a dev API key |
-
-None of this requires Keep's own `docker-compose.dev.yml` stack (the
-`keep-backend-dev`/`keep-frontend-dev` containers) — this setup runs
-`keep-api-gateway` and `keep-ui` as plain host processes instead.
+| `keep-ui` | `feat/hossted-integration-setup` | `@hossted/keep-integration` widget wiring, fixes the Feed table so it actually loads alerts, `scripts/dev-up.sh`/`verify-hossted-mock.sh` |
+| `keep-api-gateway` | `fix/alert-field-mapping-casing` | Fixes CEL/facet field mapping for camelCase alert fields, merges alembic heads, adds `env.example` |
+| `keep-event-handler` | `feat/prometheus-provider-and-port-fix` | Adds the `prometheus_provider` the consumer needs to process mock alerts, moves a colliding Redis port, adds `env.example` |
+| `hossted-survey-api` | `feat/keep-backend-dev-routing` | Routes `keep-backend-dev` to the host backend, seeds a dev API key, fixes the mock "keep" integration token to a known value |
 
 ## Steps
 
-1. **Clone each repo at its branch above.**
-
-2. **Infra containers** (from `keep-event-handler`):
+1. **Clone all four repos at their branches above, as siblings under one directory:**
    ```
-   docker compose -f docker-compose.infra.yml up -d
-   ```
-   This brings up Postgres, Kafka/Zookeeper, the infra Redis, and the
-   websocket server.
-
-3. **keep-api-gateway** (host process):
-   ```
-   poetry install
-   poetry run alembic upgrade head
-   poetry run gunicorn src.main:get_app --bind 0.0.0.0:8080 \
-     --workers 1 -k uvicorn.workers.UvicornWorker -c src/config/config.py
-   ```
-   Needs `DATABASE_CONNECTION_STRING=postgresql://keep:keep@localhost:5432/keep`
-   and `AUTH_TYPE=NOAUTH` in its env.
-
-4. **keep-event-handler** (host process):
-   ```
-   poetry install
-   poetry run python -m src.consumer_main
+   mkdir keep-dev && cd keep-dev
+   git clone --branch feat/hossted-integration-setup      <keep-ui remote>            keep-ui
+   git clone --branch fix/alert-field-mapping-casing       <keep-api-gateway remote>   keep-api-gateway
+   git clone --branch feat/prometheus-provider-and-port-fix <keep-event-handler remote> keep-event-handler
+   git clone --branch feat/keep-backend-dev-routing        <hossted-survey-api remote> hossted-survey-api
    ```
 
-5. **hossted-survey-api** (mock alert generator + mock Hossted analysis
-   endpoint):
+2. **Run the setup script from `keep-ui`:**
    ```
-   docker compose up -d --build
+   cd keep-ui
+   ./scripts/dev-up.sh
    ```
-   `KEEP_API_URL`/`KEEP_API_KEY` default to `http://keep-backend-dev:8080`
-   / `dev-noauth` (see `data/settings.json`), which works against the
-   NOAUTH backend from step 3 with no further setup.
+   This brings up Postgres/Kafka/Redis/Pusher, seeds `.env` in
+   `keep-api-gateway`/`keep-event-handler` from their `env.example` if
+   missing, runs `poetry install`/`npm install` if needed, runs migrations,
+   starts `keep-api-gateway`, `keep-event-handler`, `keep-ui`, and the
+   `hossted-survey-api` mock server (with its own Redis cache), then waits
+   for all of them to become healthy. Logs land in `keep-ui/.dev-run/`.
 
-   This same server also stands in for the real local Hossted platform —
-   its `/api/integrations` route (not `/api/v1/integrations`, that path is
-   only for mapping CRUD) returns a canned analysis response, gated by a
-   per-integration bearer token that's randomized on first boot. Fix it to
-   a known value so `.env` can hardcode it:
-   ```
-   curl -X POST http://localhost:4400/api/v1/integration-mappings \
-     -H 'Content-Type: application/json' \
-     -d '{"integration":"keep","tokenValue":"mock-keep-token","payloadIdField":"fingerprint"}'
-   ```
+   To tear everything down: `./scripts/dev-up.sh --down`.
 
-6. **keep-ui**:
-   ```
-   npm install
-   docker compose -f docker-compose.hossted.yml up -d   # Hossted proxy's Redis cache
-   npm run dev
-   ```
-   `.env`'s `HOSSTED_UPSTREAM_URL`/`HOSSTED_UPSTREAM_TOKEN` already point at
-   the mock server from step 5 (`http://localhost:4400/api/integrations` /
-   `mock-keep-token`) — **not** `http://localhost:7007/api/v1/integrations`
-   (that's the real local Hossted platform, hkb_rag; only switch to it
-   deliberately, it's a separate objective from testing against the mock).
-   Everything else in `.env` is already set for this local setup.
+3. **Open `http://localhost:3000/alerts/feed`.** NOAUTH signs you in
+   automatically.
+
+That's it — no manual `.env` editing, no manual token-syncing curl call (the
+mock server's default "keep" integration token is fixed, not randomized, so
+it already matches keep-ui's committed `HOSSTED_UPSTREAM_TOKEN`).
 
 ## Verifying
 
@@ -95,14 +67,26 @@ platform, and with a token the mock actually accepts):
 ```
 ./scripts/verify-hossted-mock.sh
 ```
-`OK: mock server responded with a usable summary/response.` means the
-exact request `HosstedButton` sends — through `app/api/hossted/route.ts`,
-with the `.env` URL and token — round-trips correctly. It fails loudly if
-`HOSSTED_UPSTREAM_URL` points at the real platform instead of the mock, or
-if the token doesn't match the mock's "keep" integration mapping (with the
-fix for the latter printed in the failure message).
+`OK: mock server responded with a usable summary/response.` means the exact
+request `HosstedButton` sends — through `app/api/hossted/route.ts`, with the
+`.env` URL and token — round-trips correctly. It fails loudly if
+`HOSSTED_UPSTREAM_URL` points at the real platform (`.env`'s default is the
+mock, `http://localhost:4400/api/integrations` — **not**
+`http://localhost:7007/api/v1/integrations`, that's the real local Hossted
+platform, hkb_rag; only switch to it deliberately, it's a separate objective
+from testing against the mock) or if the token doesn't match the mock's
+"keep" integration mapping.
 
-To see it rendered: open a debugged alert's row in the Feed and click its
-"Hossted" column — it should show a filled-in icon (not stuck loading) with
-`Analysis complete for this alert.` in the tooltip, and the alert's sidebar
-should show the same text under "Hossted".
+To see it rendered: open an alert's row in the Feed and click its "Hossted"
+column — it should show a filled-in icon (not stuck loading) with `Analysis
+complete for this alert.` in the tooltip, and the alert's sidebar should show
+the same text under "Hossted".
+
+## Restarting after changing `.env`
+
+Next.js (and the Python services) only read `.env` at process startup — an
+edit doesn't take effect until the process restarts. `./scripts/dev-up.sh
+--down` followed by `./scripts/dev-up.sh` again is the reliable way to pick
+up a `.env` change; killing by port number isn't enough; a supervisor or a
+leftover process on a different PID can end up still serving the old
+values.
