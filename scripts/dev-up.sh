@@ -93,7 +93,24 @@ done
 [[ "$pg_ready" == "1" ]] || { echo "Postgres did not become ready in time" >&2; exit 1; }
 
 echo "[db] running migrations..."
-( cd "$GATEWAY" && poetry run alembic upgrade head )
+migrate() { ( cd "$GATEWAY" && poetry run alembic upgrade head ) 2>&1; }
+if out="$(migrate)"; then
+  echo "$out"
+elif echo "$out" | grep -q "Can't locate revision identified by"; then
+  echo "[db] alembic_version in the Postgres volume doesn't match this checkout — wiping the volume and retrying" >&2
+  docker compose -f "$INFRA" down -v
+  docker compose -f "$INFRA" up -d
+  pg_ready=0
+  for _ in $(seq 1 30); do
+    if docker compose -f "$INFRA" exec -T postgres pg_isready -U keep >/dev/null 2>&1; then pg_ready=1; break; fi
+    sleep 2
+  done
+  [[ "$pg_ready" == "1" ]] || { echo "Postgres did not become ready in time" >&2; exit 1; }
+  migrate
+else
+  echo "$out" >&2
+  exit 1
+fi
 
 start_svc() {  # name  dir  cmd...
   local name="$1" dir="$2"; shift 2
