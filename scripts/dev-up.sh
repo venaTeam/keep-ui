@@ -45,13 +45,31 @@ INFRA="$HANDLER/docker-compose.infra.yml"
 LOGDIR="$UI_DIR/.dev-run"
 PIDFILE="$LOGDIR/pids.txt"
 mkdir -p "$LOGDIR"
+case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) IS_WINDOWS=1 ;; *) IS_WINDOWS=0 ;; esac
 
 stop_services() {  # kill the whole process GROUP each service was started in
   # (start_svc launches under `setsid`, so $pid is also its process group id) —
   # a plain `kill $pid` only hits e.g. `npm`, not the `next dev`/`next-server`
   # children it forked, which npm doesn't forward signals to.
   if [[ -f "$PIDFILE" ]]; then
-    while read -r pid; do [[ -n "$pid" ]] && kill -- "-$pid" 2>/dev/null || true; done < "$PIDFILE"
+    while IFS=: read -r kind pid; do
+      [[ -n "${pid:-}" ]] || { pid="$kind"; kind="legacy"; }
+      case "$kind" in
+        windows) taskkill.exe //PID "$pid" //T //F >/dev/null 2>&1 || true ;;
+        unix)    kill -- "-$pid" 2>/dev/null || true ;;
+        legacy) kill -- "-$pid" 2>/dev/null || kill "$pid" 2>/dev/null || true ;;
+      esac
+    done < "$PIDFILE"
+    if [[ "$IS_WINDOWS" == "1" ]]; then
+      # npm.cmd exits after spawning Next.js, so its recorded parent may already
+      # be gone. Clean up listeners owned by this stack's fixed host ports too.
+      for port in 3000 8080; do
+        while read -r pid; do
+          [[ -n "$pid" ]] && taskkill.exe //PID "$pid" //T //F >/dev/null 2>&1 || true
+        done < <(netstat -ano | awk -v suffix=":$port" \
+          '$1 == "TCP" && $2 ~ suffix "$" && $4 == "LISTENING" { print $5 }' | sort -u)
+      done
+    fi
     rm -f "$PIDFILE"
   fi
 }
@@ -113,7 +131,7 @@ else
 fi
 
 start_svc() {  # name  dir  cmd...
-  local name="$1" dir="$2"; shift 2
+  local name="$1" dir="$2" bgpid native_pid; shift 2
   (
     cd "$dir"
     set -a; [[ -f .env ]] && . ./.env; set +a
@@ -125,12 +143,30 @@ start_svc() {  # name  dir  cmd...
     else
       nohup "$@" >"$LOGDIR/$name.out.log" 2>"$LOGDIR/$name.err.log" &
     fi
-    echo $! >> "$PIDFILE"
+    bgpid=$!
+    if [[ "$IS_WINDOWS" == "1" ]]; then
+      # MSYS uses its own pid namespace; taskkill needs the native Windows pid.
+      native_pid="$(ps | awk -v pid="$bgpid" 'NR > 1 && $1 == pid { print $4 }')"
+      echo "windows:${native_pid:-$bgpid}" >> "$PIDFILE"
+    else
+      echo "unix:$bgpid" >> "$PIDFILE"
+    fi
   )
   echo "[$name] started -> $LOGDIR/$name.out.log"
 }
-start_svc api-gateway   "$GATEWAY" poetry run gunicorn src.main:get_app \
-  --bind 0.0.0.0:8080 --workers 1 -k uvicorn.workers.UvicornWorker -c src/config/config.py
+
+# Remove processes recorded by an earlier run before replacing the pid file.
+stop_services
+: > "$PIDFILE"
+
+if [[ "$IS_WINDOWS" == "1" ]]; then
+  # Gunicorn imports the Unix-only fcntl module. The gateway's native entrypoint
+  # runs Uvicorn directly and works on Windows.
+  start_svc api-gateway "$GATEWAY" poetry run python -m src.main
+else
+  start_svc api-gateway "$GATEWAY" poetry run gunicorn src.main:get_app \
+    --bind 0.0.0.0:8080 --workers 1 -k uvicorn.workers.UvicornWorker -c src/config/config.py
+fi
 start_svc event-handler "$HANDLER" poetry run python -m src.consumer_main
 start_svc ui            "$UI_DIR"  npm run dev
 
