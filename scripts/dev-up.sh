@@ -117,7 +117,14 @@ start_svc() {  # name  dir  cmd...
   (
     cd "$dir"
     set -a; [[ -f .env ]] && . ./.env; set +a
-    setsid nohup "$@" >"$LOGDIR/$name.out.log" 2>"$LOGDIR/$name.err.log" &
+    # setsid (util-linux) isn't available on Git Bash/MSYS2 on Windows —
+    # fall back to plain nohup there; --down's process-group kill then only
+    # gets the immediate pid, same as before setsid was added.
+    if command -v setsid >/dev/null 2>&1; then
+      setsid nohup "$@" >"$LOGDIR/$name.out.log" 2>"$LOGDIR/$name.err.log" &
+    else
+      nohup "$@" >"$LOGDIR/$name.out.log" 2>"$LOGDIR/$name.err.log" &
+    fi
     echo $! >> "$PIDFILE"
   )
   echo "[$name] started -> $LOGDIR/$name.out.log"
