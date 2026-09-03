@@ -9,6 +9,15 @@ interface CelExpressionValidationMarker {
   columnEnd: number;
 }
 
+/**
+ * CEL accepts string literals as expressions, but alert filters must evaluate
+ * to a boolean. The backend query endpoint currently reports these as a 500,
+ * so reject them before they can be submitted.
+ */
+export function isStandaloneCelStringLiteral(cel: string): boolean {
+  return /^\s*(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')\s*$/.test(cel);
+}
+
 export function useCelValidation(
   cel: string | undefined
 ): editor.IMarkerData[] {
@@ -34,6 +43,20 @@ export function useCelValidation(
   );
 
   const validationErrors: editor.IMarkerData[] = useMemo(() => {
+    if (debouncedCel && isStandaloneCelStringLiteral(debouncedCel)) {
+      return [
+        {
+          severity: 8,
+          startLineNumber: 1,
+          endLineNumber: 1,
+          startColumn: 1,
+          endColumn: debouncedCel.length + 1,
+          message: "A CEL filter must evaluate to true or false",
+          source: "CEL",
+        },
+      ];
+    }
+
     if (!data || !debouncedCel) {
       return [];
     }
@@ -49,5 +72,9 @@ export function useCelValidation(
     }));
   }, [data, debouncedCel]);
 
-  return isLoading ? [] : validationErrors;
+  // Local validation must remain visible while the server validation request
+  // is loading.
+  return isLoading && !isStandaloneCelStringLiteral(debouncedCel || "")
+    ? []
+    : validationErrors;
 }

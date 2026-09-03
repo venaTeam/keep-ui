@@ -167,7 +167,10 @@ export default function Alerts({ presetName }: AlertsProps) {
    */
   const isRejectedQuery =
     alertsError instanceof KeepApiError &&
-    (alertsError.statusCode === 400 || alertsError.statusCode === 422);
+    (alertsError.statusCode === 400 ||
+      alertsError.statusCode === 422 ||
+      (alertsError.statusCode === 500 &&
+        Boolean(alertsTableDataQuery?.searchCel)));
 
   if (alertsError && !isRejectedQuery) {
     throw alertsError;

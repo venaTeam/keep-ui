@@ -29,12 +29,16 @@ import { usePresetActions } from "@/entities/presets/model/usePresetActions";
 import CelInput from "@/features/cel-input/cel-input";
 import { useFacetPotentialFields } from "@/features/filter";
 import { useCelState } from "@/features/cel-input/use-cel-state";
+import { isStandaloneCelStringLiteral } from "@/shared/ui/MonacoCELEditor/validation-hook";
 
 const staticOptions = [
   { value: 'severity > "info"', label: 'severity > "info"' },
   { value: 'status=="firing"', label: 'status == "firing"' },
   { value: 'source=="grafana"', label: 'source == "grafana"' },
-  { value: 'message.contains("CPU")', label: 'message.contains("CPU")' },
+  {
+    value: 'description.contains("CPU")',
+    label: 'description.contains("CPU")',
+  },
 ];
 
 const CustomOption = (props: any) => {
@@ -230,7 +234,10 @@ export const AlertsRulesBuilder = ({
   const action = isDynamic ? "update" : "create";
 
   const [query, setQuery] = useState<RuleGroupType>(parsedCELRulesToQuery);
-  const [isValidCEL, setIsValidCEL] = useState(true);
+  const [isEditorValidCEL, setIsEditorValidCEL] = useState(true);
+  const isValidCEL =
+    isEditorValidCEL && !isStandaloneCelStringLiteral(celRules);
+  const [lastAttemptedCel, setLastAttemptedCel] = useState<string | null>(null);
   const [sqlError, setSqlError] = useState<string | null>(null);
 
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
@@ -245,15 +252,21 @@ export const AlertsRulesBuilder = ({
     setAppliedCel("");
     onCelChanges && onCelChanges("");
     table?.resetGlobalFilter();
-    setIsValidCEL(true);
+    setIsEditorValidCEL(true);
+    setLastAttemptedCel(null);
   }, [table]);
+
+  const handleCelRulesChange = (cel: string) => {
+    setCELRules(cel);
+    setLastAttemptedCel(null);
+  };
 
   const toggleSuggestions = () => {
     setShowSuggestions(!showSuggestions);
   };
 
   const handleSelectChange = (selectedOption: any) => {
-    setCELRules(selectedOption.value);
+    handleCelRulesChange(selectedOption.value);
     toggleSuggestions();
   };
 
@@ -288,6 +301,7 @@ export const AlertsRulesBuilder = ({
       e.preventDefault(); // Prevents the default action of Enter key in a form
       // close the menu
       setShowSuggestions(false);
+      setLastAttemptedCel(celRules);
       /**
        * Validation is debounced, so `isValidCEL` may still describe the previous
        * expression. An unchecked one that slips through is rejected by the query
@@ -379,7 +393,13 @@ export const AlertsRulesBuilder = ({
    * rejected when the query runs. The rejection describes the applied expression,
    * so it stops counting once the user edits it.
    */
-  const isCelUsable = isValidCEL && !(isCelRejected && celRules === appliedCel);
+  const isCelUsable =
+    isValidCEL &&
+    !(isCelRejected && celRules === appliedCel);
+  const showCelError = applyOnTyping
+    ? !isCelUsable
+    : (!isValidCEL && lastAttemptedCel === celRules) ||
+      (isCelRejected && celRules === appliedCel);
 
   function getSaveFilterTooltipText(): string {
     if (!isCelUsable) {
@@ -405,8 +425,8 @@ export const AlertsRulesBuilder = ({
                   placeholder='Use CEL to filter your alerts e.g. source.contains("kibana").'
                   value={celRules}
                   fieldsForSuggestions={alertFields}
-                  onValueChange={setCELRules}
-                  onIsValidChange={setIsValidCEL}
+                  onValueChange={handleCelRulesChange}
+                  onIsValidChange={setIsEditorValidCEL}
                   onClearValue={handleClearInput}
                   onKeyDown={handleKeyDown}
                   onFocus={() => setShowSuggestions(true)}
@@ -438,7 +458,7 @@ export const AlertsRulesBuilder = ({
                   />
                 </div>
               )}
-              {!isCelUsable && (
+              {showCelError && (
                 <div className="text-red-500 text-sm relative top-1">
                   Invalid Common Expression Logic expression.
                 </div>
