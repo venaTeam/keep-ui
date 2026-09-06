@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { getApiURL } from "@/utils/apiUrl";
 import { config as authConfig } from "@/auth.config";
 import NextAuth from "next-auth";
+import {
+  SESSION_HEADER,
+  serializeSession,
+} from "@/shared/lib/auth/sessionHeader";
 
 const { auth } = NextAuth(authConfig);
 
@@ -25,12 +29,18 @@ export const middleware = auth(async (request) => {
     return NextResponse.redirect(new URL("/mobile", request.url));
   }
 
-  const session = await auth();
+  const session = request.auth;
   const role = session?.userRole;
   const isAuthenticated = !!request.auth;
   // Keep it on header so it can be used in server components
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-url", request.url);
+  if (session) {
+    requestHeaders.set(SESSION_HEADER, serializeSession(session));
+  } else {
+    // Never forward a session header supplied by the client.
+    requestHeaders.delete(SESSION_HEADER);
+  }
   // Handle legacy /backend/ redirects (when API_URL is not set and frontend act as a proxy)
   if (pathname.startsWith("/backend/")) {
     const workflowsApiUrl = process.env.WORKFLOWS_API_URL || "http://localhost:8082";
@@ -94,24 +104,13 @@ export const middleware = auth(async (request) => {
   });
 });
 
-// Update the matcher to handle static files and public routes
 export const config = {
   matcher: [
     /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - keep_big.svg (logo)
-     * - keep.svg (logo)
-     * - gnip.webp (logo)
-     * - api/aws-marketplace (aws marketplace)
-     * - api/auth (auth)
-     * - monitoring (monitoring)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - icons (providers' logos)
-     * - api/provider-images (provider icons)
+     * Authenticate application pages while bypassing API handlers, Next.js
+     * internals, monitoring, and static files. The /backend proxy remains
+     * matched because it is handled by this middleware.
      */
-    "/((?!keep_big\\.svg$|gnip\\.webp|api/aws-marketplace$|api/auth|monitoring|_next/static|_next/image|favicon\\.ico|icons|keep\\.svg|api/provider-images).*)",
+    "/((?!api(?:/|$)|monitoring(?:/|$)|_next(?:/|$)|favicon\\.ico$|robots\\.txt$|sitemap\\.xml$|.*\\.(?:avif|css|gif|ico|jpeg|jpg|js|json|map|png|svg|txt|webmanifest|webp|woff|woff2)$).*)",
   ],
 };
