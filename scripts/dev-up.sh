@@ -219,6 +219,10 @@ if [[ "$ok" == "0" ]]; then
     -H "Content-Type: application/json" \
     --data '{"keepApiUrl":"http://keep-backend-dev:8080","keepApiKey":"dev-noauth"}' \
     >/dev/null
+  curl -fsS -X POST "http://localhost:4400/api/v1/integration-mappings" \
+    -H "Content-Type: application/json" \
+    --data '{"integration":"keep","tokenValue":"mock-keep-token","payloadIdField":"fingerprint"}' \
+    >/dev/null
   echo "[mock] Keep callback configured -> http://keep-backend-dev:8080"
 fi
 
