@@ -39,9 +39,12 @@ jspm_packages
 .node_repl_history
 .next
 
+# TypeScript incremental build cache (generated)
+tsconfig.tsbuildinfo
+
 .env.local
 
-app/topology/mock-topology-data.tsx
+src/app/topology/mock-topology-data.tsx
 .vercel
 
 # Sentry Config File

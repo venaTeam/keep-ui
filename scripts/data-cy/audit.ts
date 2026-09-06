@@ -33,7 +33,13 @@ const DESCRIPTIONS_PATH = path.join(
 );
 const SELECTORS_DOC_PATH = path.join(ROOT, "docs", "data-cy-selectors.md");
 
-const SOURCE_DIRS = ["app", "components", "widgets", "features", "shared"];
+const SOURCE_DIRS = [
+  "src/app",
+  "src/components",
+  "src/widgets",
+  "src/features",
+  "src/shared",
+];
 const SOURCE_EXTENSIONS = new Set([".tsx", ".jsx"]);
 
 interface SidecarEntry {

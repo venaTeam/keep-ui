@@ -1,5 +1,5 @@
 import { test, expect } from "../fixtures/test-base";
-import { loadFeed, celFingerprint } from "../fixtures/ui";
+import { celFingerprint } from "../pages";
 
 /**
  * [check:12] Create + trigger a workflow (the barbor workflow).
@@ -60,6 +60,8 @@ const BARBOR_YAML = `workflow:
 
 test.describe("[check:12] workflow", () => {
   test("barbor workflow runs and enriches its trigger alert to resolved", async ({
+    alertsFeed,
+    workflows,
     page,
     api,
   }) => {
@@ -68,7 +70,7 @@ test.describe("[check:12] workflow", () => {
     test.setTimeout(120_000);
 
     // 1) PRE-CLEAN the fixed-id collision: drop any prior "barbor" workflow.
-    await api.deleteWorkflowByName("barbor");
+    await api.workflows.deleteWorkflowByName("barbor");
 
     // 2) SEED the trigger alert with an ALREADY-LAPSED expiry so the workflow's
     //    `if` condition (lastReceived + expiry*60 < now) fires. lastReceived is
@@ -78,7 +80,7 @@ test.describe("[check:12] workflow", () => {
       .toISOString()
       .replace(/\.\d+Z$/, ".000Z");
 
-    await api.sendAlert({
+    await api.alerts.sendAlert({
       name: "barbor-trigger",
       operator: "bar",
       status: "firing",
@@ -87,15 +89,13 @@ test.describe("[check:12] workflow", () => {
       lastReceived: oneHourAgo,
       fingerprint: fp,
     });
-    await api.waitForAlert(fp);
+    await api.alerts.waitForAlert(fp);
 
     // 3) CREATE the workflow.
     //
     //    Primary path = UI, to prove the upload modal renders and accepts the
-    //    YAML. The modal exposes a plain <textarea data-cy="wf-upload-yaml-textarea">
-    //    (not Monaco), so it is reliably drivable: paste the YAML, click
-    //    "Load" (data-cy="wf-upload-yaml-load-btn"), and the component redirects
-    //    to /workflows/<id>.
+    //    YAML: paste it, click "Load", and the component redirects to
+    //    /workflows/<id>.
     //
     //    If the UI path does not land us on a detail page (selector drift, etc.),
     //    fall back to the deterministic API create and still assert the workflow
@@ -109,22 +109,10 @@ test.describe("[check:12] workflow", () => {
     let workflowId: string | undefined;
 
     try {
-      await page.goto("/workflows", { waitUntil: "domcontentloaded" });
-      const uploadBtn = page.locator('[data-cy="wf-upload-btn"]').first();
-      await uploadBtn.waitFor({ state: "visible", timeout: 20_000 });
-      await uploadBtn.click();
-
-      const modal = page.locator('[data-cy="wf-upload-modal"]');
-      await expect(modal).toBeVisible();
-
-      const yamlTextarea = modal.locator('[data-cy="wf-upload-yaml-textarea"]');
-      await yamlTextarea.fill(BARBOR_YAML);
-      await modal.locator('[data-cy="wf-upload-yaml-load-btn"]').click();
-
+      await workflows.goto();
+      await workflows.uploadYaml(BARBOR_YAML);
       // On a single successful upload the modal redirects to /workflows/<id>.
-      await page.waitForURL(/\/workflows\/[0-9a-f-]{8,}/i, { timeout: 15_000 });
-      const m = page.url().match(/\/workflows\/([0-9a-f-]{8,})/i);
-      workflowId = m?.[1];
+      workflowId = await workflows.waitForDetailId();
     } catch {
       // UI upload path unavailable (workflows page didn't load, or no redirect)
       // — fall back to the deterministic API create.
@@ -133,14 +121,14 @@ test.describe("[check:12] workflow", () => {
 
     if (!workflowId) {
       // Deterministic fallback: create via the workflows API.
-      await api.deleteWorkflowByName("barbor"); // guard against a partial UI create
-      await api.createWorkflowFromYaml(BARBOR_YAML);
+      await api.workflows.deleteWorkflowByName("barbor"); // guard against a partial UI create
+      await api.workflows.createWorkflowFromYaml(BARBOR_YAML);
     }
 
     // Resolve the workflow id from the listing by name (authoritative — works
     // for both the UI and API create paths).
-    const workflows = await api.listWorkflows();
-    const barbor = workflows.find(
+    const workflowList = await api.workflows.listWorkflows();
+    const barbor = workflowList.find(
       (w) => (w?.name ?? w?.workflow?.name) === "barbor"
     );
     expect(barbor, "barbor workflow should exist after create").toBeTruthy();
@@ -149,12 +137,12 @@ test.describe("[check:12] workflow", () => {
 
     // 4) TRIGGER manually (deterministic API run — no waiting on the 120s
     //    interval). Returns the execution id to poll on.
-    const run = await api.runWorkflow(workflowId!);
+    const run = await api.workflows.runWorkflow(workflowId!);
     const executionId = run.workflow_execution_id ?? run.execution_id ?? run.id;
     expect(executionId, "runWorkflow should return an execution id").toBeTruthy();
 
     // 5) ASSERT execution success (backend truth) and that no step errored.
-    const exec = await api.waitForExecution(executionId, 60_000);
+    const exec = await api.workflows.waitForExecution(executionId, 60_000);
     expect(String(exec.status ?? exec.workflow_status).toLowerCase()).toBe(
       "success"
     );
@@ -168,21 +156,18 @@ test.describe("[check:12] workflow", () => {
 
     // 6) ASSERT the enrichment actually landed — THE real proof of success:
     //    the python-step enriches the trigger alert to status=resolved.
-    await api.waitForAlertField(fp, "status", "resolved", 30_000);
+    await api.alerts.waitForAlertField(fp, "status", "resolved", 30_000);
 
     // 7) ASSERT the UI reflects the resolved status in the alerts feed.
     //    NOTE: the status cell renders an Icon whose human-readable status is in
     //    a Tremor tooltip (rendered on hover, not a static title attribute), so
     //    the status text is not reliably present as cell text content. We hover
     //    the status icon to surface the tooltip and assert on it; the API
-    //    enrichment assertion above remains the authoritative proof. See the
-    //    "data-cy GAPS" note returned with this spec.
+    //    enrichment assertion above remains the authoritative proof.
     // The feed only lists alerts once a CEL query is submitted; filter to this fp.
-    await loadFeed(page, celFingerprint(fp), [fp]);
+    await alertsFeed.loadFeed(celFingerprint(fp), [fp]);
 
-    const statusCell = page.locator(
-      `[data-cy-id="${fp}"] [data-cy="alerts-cell-status"]`
-    );
+    const statusCell = alertsFeed.row(fp).cell("status");
     await expect(statusCell).toBeVisible();
     await statusCell.hover();
 
