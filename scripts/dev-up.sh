@@ -98,7 +98,7 @@ echo "[deps] checking..."
 for r in "$GATEWAY" "$HANDLER"; do
   ( cd "$r" && poetry env info -p >/dev/null 2>&1 ) || ( cd "$r" && poetry install )
 done
-[[ -d "$UI_DIR/node_modules" ]] || ( cd "$UI_DIR" && npm install )
+[[ -d "$UI_DIR/node_modules/@hossted/keep-integration" ]] || ( cd "$UI_DIR" && npm install )
 
 echo "[infra] starting postgres + kafka + redis + pusher..."
 docker compose -f "$INFRA" up -d
@@ -211,6 +211,16 @@ ok=0
 wait_health api-gateway "http://localhost:8080/healthcheck" || ok=1
 wait_health ui          "http://localhost:3000"             || ok=1
 wait_health mock        "http://localhost:4400"             || ok=1
+
+if [[ "$ok" == "0" ]]; then
+  # The mock runs in Docker, where localhost is the mock container itself.
+  # Seed its callback settings after every container recreation.
+  curl -fsS -X POST "http://localhost:4400/admin/api/settings" \
+    -H "Content-Type: application/json" \
+    --data '{"keepApiUrl":"http://keep-backend-dev:8080","keepApiKey":"dev-noauth"}' \
+    >/dev/null
+  echo "[mock] Keep callback configured -> http://keep-backend-dev:8080"
+fi
 
 if [[ "$ok" == "0" ]]; then
   echo -e "\nAll services up.\n  UI:   http://localhost:3000/alerts/feed\n  Mock: http://localhost:4400"
