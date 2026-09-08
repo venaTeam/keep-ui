@@ -21,7 +21,6 @@ import "./CustomPresetAlertLink.css";
 import clsx from "clsx";
 import { Preset } from "@/entities/presets/model/types";
 import { usePresetActions } from "@/entities/presets/model/usePresetActions";
-import { usePresetPolling } from "@/entities/presets/model/usePresetPolling";
 
 import { PresetsNoise } from "./PresetsNoise";
 
@@ -130,7 +129,6 @@ export const CustomPresetAlertLinks = ({
     revalidateOnFocus: false,
   });
 
-  usePresetPolling();
 
   const pathname = usePathname();
   const router = useRouter();
