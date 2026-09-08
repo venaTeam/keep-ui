@@ -279,6 +279,94 @@ describe("sseConnectionManager — standalone stream resilience", () => {
 
     expect(fetchMock.mock.calls.length).toBe(callsBefore + 1);
   });
+
+  it("keeps growing the backoff when a stream dies before it is stable", async () => {
+    const streams = [scriptedStream(), scriptedStream(), scriptedStream()];
+    const { fetchMock } = fetchReturning(streams);
+    global.fetch = fetchMock as any;
+
+    ensureSSEConnected({ token: "tkn", apiUrl: API });
+    await flush();
+    streams[0].end();
+    await flush();
+    await advance(1_000);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    streams[1].end();
+    await flush();
+    await advance(1_999);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    await advance(1);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("resets the backoff after a stream that stayed open past the stable window", async () => {
+    const streams = [
+      scriptedStream(),
+      scriptedStream(),
+      scriptedStream(),
+      scriptedStream(),
+    ];
+    const { fetchMock } = fetchReturning(streams);
+    global.fetch = fetchMock as any;
+
+    ensureSSEConnected({ token: "tkn", apiUrl: API });
+    await flush();
+    streams[0].end();
+    await flush();
+    await advance(1_000);
+    streams[1].end();
+    await flush();
+    await advance(2_000);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+
+    await advance(10_000);
+    streams[2].end();
+    await flush();
+    await advance(999);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    await advance(1);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+  });
+
+  it("adds jitter proportional to the delay and keeps spreading retries at the maximum delay", async () => {
+    jest.spyOn(Math, "random").mockReturnValue(0.5);
+    const fetchMock = jest.fn(() =>
+      Promise.reject(new TypeError("Failed to fetch"))
+    );
+    global.fetch = fetchMock as any;
+    const measureNextWait = async () => {
+      const before = Date.now();
+      jest.advanceTimersToNextTimer();
+      await flush();
+      return Date.now() - before;
+    };
+    const nextWaitDrawnWith = async (random: number) => {
+      jest.spyOn(Math, "random").mockReturnValue(random);
+      await measureNextWait();
+      return measureNextWait();
+    };
+
+    ensureSSEConnected({ token: "tkn", apiUrl: API });
+    await flush();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    const waits: number[] = [];
+    for (let i = 0; i < 5; i++) {
+      waits.push(await measureNextWait());
+    }
+    expect(waits).toEqual([1_250, 2_500, 5_000, 10_000, 20_000]);
+
+    const first = await nextWaitDrawnWith(0.2);
+    const second = await nextWaitDrawnWith(0.8);
+
+    expect(fetchMock).toHaveBeenCalledTimes(10);
+    for (const wait of [first, second]) {
+      expect(wait).toBeGreaterThanOrEqual(30_000);
+      expect(wait).toBeLessThanOrEqual(44_999);
+    }
+    expect(first).not.toBe(second);
+  });
 });
 
 describe("sseConnectionManager — expired token on reconnect", () => {
@@ -543,5 +631,103 @@ describe("sseConnectionManager — leadership follows the visible tab", () => {
     await advance(5_000);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(locks.calls.map((c) => c.steal)).toEqual([false, true, false]);
+  });
+
+  it("a visible follower leaves the leader alone while its visibility is unknown", async () => {
+    locks.holders.set("keep-sse-leader:t1", { reject: () => {} });
+    global.fetch = jest.fn() as any;
+
+    ensureSSEConnected({ token: "tkn", apiUrl: API, tenantId: "t1" });
+    await flush();
+
+    setVisibility("visible");
+    await flush();
+
+    expect(locks.calls.map((c) => c.steal)).toEqual([false]);
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it("a follower that joins late asks the leader for its visibility and takes over from a hidden one", async () => {
+    locks.holders.set("keep-sse-leader:t1", { reject: () => {} });
+    Object.defineProperty(document, "visibilityState", {
+      value: "visible",
+      configurable: true,
+    });
+    const stream = scriptedStream();
+    const { fetchMock } = fetchReturning([stream]);
+    global.fetch = fetchMock as any;
+
+    ensureSSEConnected({ token: "tkn", apiUrl: API, tenantId: "t1" });
+    await flush();
+    const channel = MockBroadcastChannel.instances[0];
+    expect(channel.postMessage).toHaveBeenCalledWith({
+      kind: "keep-sse-leader-query",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    channel.emit({ kind: "keep-sse-leader-state", visible: false });
+    await flush();
+
+    expect(locks.calls.map((c) => c.steal)).toEqual([false, true]);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("a leader answers a visibility query with its current visibility", async () => {
+    const stream = scriptedStream();
+    const { fetchMock } = fetchReturning([stream]);
+    global.fetch = fetchMock as any;
+
+    ensureSSEConnected({ token: "tkn", apiUrl: API, tenantId: "t1" });
+    await flush();
+    const channel = MockBroadcastChannel.instances[0];
+    channel.postMessage.mockClear();
+
+    channel.emit({ kind: "keep-sse-leader-query" });
+
+    expect(channel.postMessage).toHaveBeenCalledTimes(1);
+    expect(channel.postMessage).toHaveBeenCalledWith({
+      kind: "keep-sse-leader-state",
+      visible: false,
+    });
+  });
+
+  it("after a tenant change a visible follower waits for the new leader's answer before claiming", async () => {
+    locks.holders.set("keep-sse-leader:t1", { reject: () => {} });
+    locks.holders.set("keep-sse-leader:t2", { reject: () => {} });
+    const stream = scriptedStream();
+    const { fetchMock } = fetchReturning([stream]);
+    global.fetch = fetchMock as any;
+    const lockCalls = () => locks.calls.map((c) => [c.name, c.steal]);
+
+    ensureSSEConnected({ token: "tkn", apiUrl: API, tenantId: "t1" });
+    await flush();
+    MockBroadcastChannel.instances[0].emit({
+      kind: "keep-sse-leader-state",
+      visible: false,
+    });
+
+    ensureSSEConnected({ token: "tkn", apiUrl: API, tenantId: "t2" });
+    await flush();
+    setVisibility("visible");
+    await flush();
+
+    expect(lockCalls()).toEqual([
+      ["keep-sse-leader:t1", false],
+      ["keep-sse-leader:t2", false],
+    ]);
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    MockBroadcastChannel.instances[1].emit({
+      kind: "keep-sse-leader-state",
+      visible: false,
+    });
+    await flush();
+
+    expect(lockCalls()).toEqual([
+      ["keep-sse-leader:t1", false],
+      ["keep-sse-leader:t2", false],
+      ["keep-sse-leader:t2", true],
+    ]);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

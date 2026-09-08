@@ -35,10 +35,11 @@ import {
   SSE_BROADCAST_CHANNEL_NAME,
   SSE_BROADCAST_KIND,
   SSE_LEADER_LOCK_NAME,
+  SSE_LEADER_QUERY_KIND,
   SSE_LEADER_STATE_KIND,
   SSE_RECONNECT_INITIAL_DELAY_MS,
-  SSE_RECONNECT_JITTER_MS,
   SSE_RECONNECT_MAX_DELAY_MS,
+  SSE_STABLE_CONNECTION_MS,
   SSE_STALE_AFTER_MS,
   SSE_WATCHDOG_INTERVAL_MS,
 } from "@/shared/constants";
@@ -62,6 +63,7 @@ let channel: BroadcastChannel | null = null;
 let isLeader = false;
 let hasConnectedBefore = false;
 let reconnectDelayMs = SSE_RECONNECT_INITIAL_DELAY_MS;
+let streamOpenedAt = 0;
 let staleAfterMs = SSE_STALE_AFTER_MS;
 let lastByteAt = 0;
 let watchdogTimer: ReturnType<typeof setInterval> | null = null;
@@ -140,6 +142,23 @@ function announceLeaderVisibility(): void {
 }
 
 /**
+ * A tab that queues up as a follower asks the current leader to announce its
+ * visibility, since a leader only announces on election and on its own
+ * visibility changes and a tab that joins later would otherwise never learn
+ * whether the leader is hidden.
+ */
+function askLeaderVisibility(): void {
+  if (!channel) {
+    return;
+  }
+  try {
+    channel.postMessage({ kind: SSE_LEADER_QUERY_KIND });
+  } catch (error) {
+    console.error("useSSE: failed to query leader visibility", error);
+  }
+}
+
+/**
  * Parse a raw SSE block ("event: x\ndata: y") and emit it. The server's
  * `connected` event may announce its keepalive interval; the stale threshold
  * follows it so the two never drift apart.
@@ -196,12 +215,26 @@ function stopWatchdog(): void {
 }
 
 /**
- * Wait out the current backoff and double it for next time. An `online` or
- * visibility event ends the wait early through `wakeBackoff`.
+ * Wait out the current backoff and double it for next time. The backoff only
+ * restarts from the initial delay once the stream that just died had stayed
+ * open for `SSE_STABLE_CONNECTION_MS`, so a gateway that accepts and at once
+ * drops connections is retried ever more slowly instead of once a second.
+ * Jitter is a share of the current delay so retries spread out at every
+ * step; only the base delay is capped at `SSE_RECONNECT_MAX_DELAY_MS`, so
+ * clients keep spreading out at the ceiling instead of reconnecting in
+ * lockstep. An `online` or visibility event ends the wait early through
+ * `wakeBackoff`.
  */
 function waitBeforeReconnect(): Promise<void> {
-  const waitMs =
-    reconnectDelayMs + Math.floor(Math.random() * SSE_RECONNECT_JITTER_MS);
+  if (
+    streamOpenedAt &&
+    Date.now() - streamOpenedAt >= SSE_STABLE_CONNECTION_MS
+  ) {
+    reconnectDelayMs = SSE_RECONNECT_INITIAL_DELAY_MS;
+  }
+  streamOpenedAt = 0;
+  const baseMs = Math.min(reconnectDelayMs, SSE_RECONNECT_MAX_DELAY_MS);
+  const waitMs = baseMs + Math.floor(Math.random() * baseMs * 0.5);
   reconnectDelayMs = Math.min(reconnectDelayMs * 2, SSE_RECONNECT_MAX_DELAY_MS);
   console.log(`useSSE: Reconnecting in ${waitMs}ms...`);
   return new Promise((resolve) => {
@@ -235,7 +268,7 @@ function installLifecycleListeners(): void {
     resume();
     if (isLeader) {
       announceLeaderVisibility();
-    } else if (channel && leaderVisible !== true) {
+    } else if (channel && leaderVisible === false) {
       claimLeadership();
     }
   });
@@ -303,7 +336,7 @@ async function runConnectionLoop(generation: number): Promise<void> {
       }
 
       console.log("useSSE: Connected successfully");
-      reconnectDelayMs = SSE_RECONNECT_INITIAL_DELAY_MS;
+      streamOpenedAt = Date.now();
       const isReconnect = hasConnectedBefore;
       hasConnectedBefore = true;
       emit("connected", { status: "connected" });
@@ -364,6 +397,8 @@ function setupChannel(): void {
       if (!isLeader && message.visible === false && isVisible()) {
         claimLeadership();
       }
+    } else if (message.kind === SSE_LEADER_QUERY_KIND && isLeader) {
+      announceLeaderVisibility();
     }
   };
 }
@@ -393,6 +428,9 @@ function requestLeadership(steal = false): void {
   const options = steal
     ? { mode: "exclusive" as const, steal: true }
     : { mode: "exclusive" as const, signal: abort.signal };
+  if (!steal) {
+    askLeaderVisibility();
+  }
   navigator.locks
     .request(scopedName(SSE_LEADER_LOCK_NAME), options, () => {
       generation = ++loopGeneration;
@@ -439,6 +477,7 @@ function rescopeLeadership(): void {
   loopGeneration++;
   connectionShouldRun = false;
   isLeader = false;
+  leaderVisible = undefined;
   leadershipAbort?.abort();
   activeAbort?.abort();
   closeChannel();
@@ -545,6 +584,7 @@ export function __resetSSEManagerForTests(): void {
   isLeader = false;
   hasConnectedBefore = false;
   reconnectDelayMs = SSE_RECONNECT_INITIAL_DELAY_MS;
+  streamOpenedAt = 0;
   staleAfterMs = SSE_STALE_AFTER_MS;
   lastByteAt = 0;
   stopWatchdog();
