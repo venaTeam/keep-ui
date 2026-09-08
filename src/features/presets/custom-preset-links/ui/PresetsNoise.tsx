@@ -1,13 +1,32 @@
 import { Preset } from "@/entities/presets/model";
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import useSWR from "swr";
-import { AlertsQuery } from "@/entities/alerts/model";
 // Using dynamic import to avoid hydration issues with react-player
 import dynamic from "next/dynamic";
-import clsx from "clsx";
 const ReactPlayer = dynamic(() => import("react-player"), { ssr: false });
-import { usePathname } from "next/navigation"
+import { usePathname } from "next/navigation";
+import { useDashboards } from "@/utils/hooks/useDashboards";
+import { useAlertPolling } from "@/utils/hooks/useAlertPolling";
+import { useConfig } from "@/utils/hooks/useConfig";
+import {
+  RefetchTimers,
+  clearRefetchTimers,
+  scheduleRefetchWithMaxWait,
+} from "@/widgets/alerts-table/lib/refetch-scheduler";
+
+const COUNT_URL = "/alerts/query/count";
+const REFRESH_INTERVAL_MS = 30_000;
+
+// The condition the sound is armed on. `dismissed` is deliberately absent: a
+// dismissed alert is one whose status is `suppressed`, which `status ==
+// 'firing'` already excludes, and the gateway's `dismissed` mapping compares
+// text to boolean and answers 500.
+const NOISE_BASE_CEL =
+  "status == 'firing' && deleted == false && severity == 'critical'";
+
+const getPresetCel = (preset: Preset) =>
+  preset.options.find((option) => option.label === "CEL")?.value ?? "";
 
 interface PresetsNoiseProps {
   presets: Preset[];
@@ -16,66 +35,131 @@ interface PresetsNoiseProps {
 export const PresetsNoise = ({ presets }: PresetsNoiseProps) => {
   const api = useApi();
   const pathname = usePathname();
+  const { data: config } = useConfig();
+  // Same SWR key the navbar's DashboardLinks already warms, so this is free.
+  const { dashboards } = useDashboards();
+
+  // Which noisy presets are on screen right now. Two routes arm the sound: a
+  // preset page, and a dashboard carrying a widget that points at a noisy
+  // preset.
   const noisyPresets = useMemo(() => {
-    const currentPath = (pathname || "").toLowerCase();
-    const activePreset = presets?.find(
-      (preset) => `/alerts/${preset.name.toLocaleLowerCase()}` === currentPath
-    );
+    const path = pathname || "";
 
-    if (activePreset && activePreset.is_noisy) {
-      return [activePreset]
+    // Decode only the segment: usePathname() is percent-encoded, while preset
+    // names are not, so a preset named "db errors" lives at /alerts/db%20errors.
+    const alertsMatch = path.match(/^\/alerts\/(.+)$/);
+    if (alertsMatch) {
+      const presetName = decodeURIComponent(alertsMatch[1]).toLowerCase();
+      const activePreset = presets?.find(
+        (preset) => preset.name.toLowerCase() === presetName
+      );
+      return activePreset?.is_noisy ? [activePreset] : [];
     }
-    return []
-  }, [presets, pathname]);
 
-  const { data: shouldDoNoise } = useSWR(
-    () =>
-      api.isReady() && noisyPresets
-        ? noisyPresets.map((noisyPreset) => noisyPreset.id)
-        : null,
-    async () => {
-      let shouldDoNoise = false;
+    const dashboardMatch = path.match(/^\/dashboard\/(.+)$/);
+    if (dashboardMatch) {
+      const dashboardName = decodeURIComponent(dashboardMatch[1]);
+      // Resolved the same way the dashboard page itself resolves the route.
+      const dashboard = dashboards?.find(
+        (item) => item.dashboard_name === dashboardName
+      );
 
-      // Iterate through noisy presets and find first that has an Alert that should trigger noise
-      for (let noisyPreset of noisyPresets) {
-        const noisyAlertsCelRules = [
-          "status == 'firing' && deleted == false && dismissed == false",
-          noisyPreset.options.find((opt) => opt.label == "CEL")?.value,
-        ];
-        const query: AlertsQuery = {
-          cel: noisyAlertsCelRules.map((cel) => `(${cel})`).join(" && "),
-          limit: 0,
-          offset: 0,
-        };
+      const widgets: any[] = dashboard?.dashboard_config?.widget_data ?? [];
+      const presetIds = new Set<string>(
+        widgets.map((widget) => widget?.preset?.id).filter(Boolean)
+      );
 
-        const matchingAlerts = await api.post(
-          "/alerts/query",
-          query
-        );
-        shouldDoNoise = !!matchingAlerts.results;
+      // Re-resolved against the live preset list rather than the widget's own
+      // copy: a whole Preset is serialised into the dashboard config at
+      // widget-creation time, so its is_noisy is a snapshot. Un-flagging a
+      // preset must silence widgets that already exist.
+      return (presets ?? []).filter(
+        (preset) => presetIds.has(preset.id) && preset.is_noisy
+      );
+    }
 
-        if (shouldDoNoise) {
-          break;
-        }
-      }
+    return [];
+  }, [presets, dashboards, pathname]);
 
-      return shouldDoNoise;
-    },
+  // One query for every noisy preset on screen, so widget count never drives
+  // request count.
+  const cel = useMemo(() => {
+    if (noisyPresets.length === 0) {
+      return null;
+    }
+
+    const presetCels = noisyPresets.map(getPresetCel);
+
+    // An empty preset CEL matches every alert, so the OR group is satisfied
+    // outright — and emitting `()` would be rejected as a 400.
+    if (presetCels.some((presetCel) => !presetCel.trim())) {
+      return NOISE_BASE_CEL;
+    }
+
+    const presetGroup = presetCels
+      .map((presetCel) => `(${presetCel})`)
+      .join(" || ");
+
+    return `(${NOISE_BASE_CEL}) && (${presetGroup})`;
+  }, [noisyPresets]);
+
+  // /alerts/query/count returns a bare integer, so there is no response shape
+  // to misread — unlike /alerts/query, whose `results` is truthy even when empty.
+  const { data: matchingCount, mutate } = useSWR<number>(
+    () => (api.isReady() && cel ? `${COUNT_URL}?cel=${cel}` : null),
+    () => api.post(COUNT_URL, { cel }),
     {
-      revalidateIfStale: true,
-      revalidateOnReconnect: true,
-      revalidateOnFocus: true,
+      revalidateOnFocus: false,
+      refreshInterval: REFRESH_INTERVAL_MS,
     }
   );
+
+  const shouldDoNoise = (matchingCount ?? 0) > 0;
+
+  const refetchTimersRef = useRef<RefetchTimers>({
+    debounce: null,
+    maxWait: null,
+  });
+
+  useEffect(() => {
+    const timers = refetchTimersRef.current;
+    return () => clearRefetchTimers(timers);
+  }, []);
+
+  const onAlertsChanged = useCallback(
+    (data?: any) => {
+      // The ingest payload carries each alert's severity; the gateway's and the
+      // workflows watcher's emissions carry {} and must always revalidate.
+      // A batch with no critical alert cannot change the answer in either
+      // direction, because a critical alert that resolves is still serialised
+      // with severity 'critical' — only its status changes.
+      if (
+        Array.isArray(data?.alerts) &&
+        !data.alerts.some((alert: any) => alert?.severity === "critical")
+      ) {
+        return;
+      }
+
+      // Paced with the same debounce the alerts table uses on this stream, so a
+      // storm cannot turn one query per evaluation into one query per event.
+      scheduleRefetchWithMaxWait(
+        refetchTimersRef.current,
+        () => mutate(),
+        config?.ALERT_REFETCH_DEBOUNCE_MS,
+        config?.ALERT_REFETCH_MAX_WAIT_MS
+      );
+    },
+    [mutate, config]
+  );
+
+  useAlertPolling(noisyPresets.length > 0, onAlertsChanged);
 
   /* React Player for playing alert sound */
   return (
     <div
       data-testid="noisy-presets-audio-player"
       data-cy="noisy-presets-audio-player"
-      className={clsx("absolute -z-10", {
-        playing: shouldDoNoise,
-      })}
+      className="absolute -z-10"
     >
       <ReactPlayer
         // TODO: cache the audio file fiercely
