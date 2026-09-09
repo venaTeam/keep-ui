@@ -18,7 +18,7 @@ import {
 
 export const useSSE = () => {
   const { data: configData } = useConfig();
-  const { data: user_session, status } = useSession();
+  const { data: user_session, status, update } = useSession();
 
   // Ensure the shared SSE connection is established (idempotent across all
   // hook instances and tabs).
@@ -51,11 +51,26 @@ export const useSSE = () => {
       return;
     }
 
-    ensureSSEConnected({ token: session?.accessToken, apiUrl });
+    ensureSSEConnected({
+      token: session?.accessToken,
+      apiUrl,
+      tenantId:
+        status === "unauthenticated" ? undefined : user_session?.tenantId,
+      refreshToken:
+        status === "unauthenticated"
+          ? undefined
+          : async () => (await update())?.accessToken,
+    });
     // Intentionally key off the access token only (not the whole session
     // object) so we don't tear down/reconnect on every session identity change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [configData, user_session?.accessToken, status]);
+  }, [
+    configData,
+    user_session?.accessToken,
+    user_session?.tenantId,
+    status,
+    update,
+  ]);
 
   const bind = useCallback((event: string, callback: (data: any) => void) => {
     bindSSEHandler(event, callback);

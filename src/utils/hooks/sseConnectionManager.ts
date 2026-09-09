@@ -11,7 +11,17 @@
  * One tab is elected "leader" via an exclusive Web Lock and owns the only SSE
  * stream; it fans every event out to the other tabs over a `BroadcastChannel`.
  * When the leader tab closes, the browser releases its lock and a waiting tab
- * automatically takes over.
+ * automatically takes over. The lock and the channel are scoped by the
+ * session's active tenant, so a tab that switches tenant leaves the old scope
+ * and competes for the new one instead of carrying a stream for the wrong
+ * tenant.
+ *
+ * The stream is kept honest rather than trusted: a watchdog drops a stream
+ * that has gone silent for longer than a few server keepalive intervals, a
+ * failed connection is retried with capped exponential backoff for as long as
+ * the tab is open (an `online` or visibility event cuts the wait short), and
+ * every reconnect asks the open views to catch up on whatever was missed while
+ * the stream was down.
  *
  * If `navigator.locks` or `BroadcastChannel` is unavailable (older browsers /
  * insecure context), we fall back to the previous per-tab behavior so realtime
@@ -25,29 +35,42 @@ import {
   SSE_BROADCAST_CHANNEL_NAME,
   SSE_BROADCAST_KIND,
   SSE_LEADER_LOCK_NAME,
-  SSE_MAX_RECONNECT_ATTEMPTS,
+  SSE_LEADER_QUERY_KIND,
+  SSE_LEADER_STATE_KIND,
+  SSE_RECONNECT_INITIAL_DELAY_MS,
+  SSE_RECONNECT_MAX_DELAY_MS,
+  SSE_STABLE_CONNECTION_MS,
+  SSE_STALE_AFTER_MS,
+  SSE_WATCHDOG_INTERVAL_MS,
 } from "@/shared/constants";
 
 type SSEHandler = (data: any) => void;
+type TokenRefresher = () => Promise<string | undefined>;
 
-// Event types the backend can send (documentation; handlers are keyed dynamically):
-// connected, poll-alerts, incident-change, poll-presets, topology-update,
-// ai-logs-change, incident-comment, alert-update
+const CATCH_UP_EVENTS = ["poll-alerts", "incident-change"];
 
-// Handlers are shared across all hook instances in this tab.
 const handlers: Map<string, Set<SSEHandler>> = new Map();
 
-// Coordination / connection state (module-level singleton = per tab).
 let initialized = false;
 let currentToken: string | undefined;
 let currentApiUrl: string | undefined;
-let connectionAttempts = 0;
+let currentTenantId: string | undefined;
+let currentRefreshToken: TokenRefresher | undefined;
 let connectionShouldRun = false;
+let loopGeneration = 0;
 let activeAbort: AbortController | null = null;
 let channel: BroadcastChannel | null = null;
 let isLeader = false;
-
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+let hasConnectedBefore = false;
+let reconnectDelayMs = SSE_RECONNECT_INITIAL_DELAY_MS;
+let streamOpenedAt = 0;
+let staleAfterMs = SSE_STALE_AFTER_MS;
+let lastByteAt = 0;
+let watchdogTimer: ReturnType<typeof setInterval> | null = null;
+let wakeBackoff: (() => void) | null = null;
+let leadershipAbort: AbortController | null = null;
+let leaderVisible: boolean | undefined;
+let lifecycleListenersInstalled = false;
 
 function supportsCoordination(): boolean {
   return (
@@ -57,6 +80,17 @@ function supportsCoordination(): boolean {
     !!navigator.locks &&
     typeof navigator.locks.request === "function"
   );
+}
+
+function isVisible(): boolean {
+  return (
+    typeof document !== "undefined" && document.visibilityState === "visible"
+  );
+}
+
+/** Lock and channel names carry the active tenant so scopes never overlap. */
+function scopedName(base: string): string {
+  return `${base}:${currentTenantId ?? "default"}`;
 }
 
 /** Invoke all local handlers bound to an event type in this tab. */
@@ -91,7 +125,44 @@ function emit(eventType: string, data: any): void {
   }
 }
 
-/** Parse a raw SSE block ("event: x\ndata: y") and emit it. */
+/**
+ * The leader tells the other tabs whether it is visible. Browsers throttle
+ * timers in hidden tabs, so a hidden leader recovers slowly; a visible
+ * follower uses this to take the stream over.
+ */
+function announceLeaderVisibility(): void {
+  if (!channel) {
+    return;
+  }
+  try {
+    channel.postMessage({ kind: SSE_LEADER_STATE_KIND, visible: isVisible() });
+  } catch (error) {
+    console.error("useSSE: failed to announce leader visibility", error);
+  }
+}
+
+/**
+ * A tab that queues up as a follower asks the current leader to announce its
+ * visibility, since a leader only announces on election and on its own
+ * visibility changes and a tab that joins later would otherwise never learn
+ * whether the leader is hidden.
+ */
+function askLeaderVisibility(): void {
+  if (!channel) {
+    return;
+  }
+  try {
+    channel.postMessage({ kind: SSE_LEADER_QUERY_KIND });
+  } catch (error) {
+    console.error("useSSE: failed to query leader visibility", error);
+  }
+}
+
+/**
+ * Parse a raw SSE block ("event: x\ndata: y") and emit it. The server's
+ * `connected` event may announce its keepalive interval; the stale threshold
+ * follows it so the two never drift apart.
+ */
 function parseAndEmit(block: string): void {
   const lines = block.split("\n");
   let eventType = "message";
@@ -115,23 +186,110 @@ function parseAndEmit(block: string): void {
   } catch {
     payload = data;
   }
+  if (
+    eventType === "connected" &&
+    typeof payload?.keepalive_seconds === "number"
+  ) {
+    staleAfterMs = Math.max(10_000, payload.keepalive_seconds * 3_000);
+  }
   emit(eventType, payload);
+}
+
+/** Abort the connection once no byte (headers, event or keepalive) has arrived for too long. */
+function startWatchdog(controller: AbortController): void {
+  stopWatchdog();
+  lastByteAt = Date.now();
+  watchdogTimer = setInterval(() => {
+    if (Date.now() - lastByteAt > staleAfterMs) {
+      console.warn(`useSSE: No data for ${staleAfterMs}ms, reconnecting...`);
+      controller.abort();
+    }
+  }, SSE_WATCHDOG_INTERVAL_MS);
+}
+
+function stopWatchdog(): void {
+  if (watchdogTimer) {
+    clearInterval(watchdogTimer);
+    watchdogTimer = null;
+  }
+}
+
+/**
+ * Wait out the current backoff and double it for next time. The backoff only
+ * restarts from the initial delay once the stream that just died had stayed
+ * open for `SSE_STABLE_CONNECTION_MS`, so a gateway that accepts and at once
+ * drops connections is retried ever more slowly instead of once a second.
+ * Jitter is a share of the current delay so retries spread out at every
+ * step; only the base delay is capped at `SSE_RECONNECT_MAX_DELAY_MS`, so
+ * clients keep spreading out at the ceiling instead of reconnecting in
+ * lockstep. An `online` or visibility event ends the wait early through
+ * `wakeBackoff`.
+ */
+function waitBeforeReconnect(): Promise<void> {
+  if (
+    streamOpenedAt &&
+    Date.now() - streamOpenedAt >= SSE_STABLE_CONNECTION_MS
+  ) {
+    reconnectDelayMs = SSE_RECONNECT_INITIAL_DELAY_MS;
+  }
+  streamOpenedAt = 0;
+  const baseMs = Math.min(reconnectDelayMs, SSE_RECONNECT_MAX_DELAY_MS);
+  const waitMs = baseMs + Math.floor(Math.random() * baseMs * 0.5);
+  reconnectDelayMs = Math.min(reconnectDelayMs * 2, SSE_RECONNECT_MAX_DELAY_MS);
+  console.log(`useSSE: Reconnecting in ${waitMs}ms...`);
+  return new Promise((resolve) => {
+    const finish = () => {
+      clearTimeout(timer);
+      wakeBackoff = null;
+      resolve();
+    };
+    const timer = setTimeout(finish, waitMs);
+    wakeBackoff = finish;
+  });
+}
+
+function installLifecycleListeners(): void {
+  if (lifecycleListenersInstalled) {
+    return;
+  }
+  lifecycleListenersInstalled = true;
+  const resume = () => {
+    reconnectDelayMs = SSE_RECONNECT_INITIAL_DELAY_MS;
+    wakeBackoff?.();
+  };
+  window.addEventListener("online", resume);
+  document.addEventListener("visibilitychange", () => {
+    if (!isVisible()) {
+      if (isLeader) {
+        announceLeaderVisibility();
+      }
+      return;
+    }
+    resume();
+    if (isLeader) {
+      announceLeaderVisibility();
+    } else if (channel && leaderVisible === false) {
+      claimLeadership();
+    }
+  });
 }
 
 /**
  * Owns the single SSE stream. Used by the elected leader and by the standalone
  * fallback path. Reads `currentToken` fresh on every (re)connect so token
- * refreshes are picked up. Loops until `connectionShouldRun` is cleared or the
- * reconnect budget is exhausted.
+ * refreshes are picked up. Loops until `connectionShouldRun` is cleared or a
+ * newer loop generation has taken over (tenant change).
  */
-async function runConnectionLoop(): Promise<void> {
+async function runConnectionLoop(generation: number): Promise<void> {
   if (!currentApiUrl) {
-    console.error("useSSE: API_URL not configured, cannot establish SSE connection");
+    console.error(
+      "useSSE: API_URL not configured, cannot establish SSE connection"
+    );
     return;
   }
   const sseUrl = `${currentApiUrl}/sse/subscribe`;
 
-  while (connectionShouldRun) {
+  while (connectionShouldRun && generation === loopGeneration) {
     const controller = new AbortController();
     activeAbort = controller;
     const token = currentToken;
@@ -149,13 +307,26 @@ async function runConnectionLoop(): Promise<void> {
         headers["Authorization"] = `Bearer ${token}`;
       }
 
+      startWatchdog(controller);
       const response = await fetch(sseUrl, {
         method: "POST",
         headers,
         signal: controller.signal,
       });
+      lastByteAt = Date.now();
 
       if (!response.ok) {
+        if (
+          (response.status === 401 || response.status === 403) &&
+          currentRefreshToken
+        ) {
+          const fresh = await currentRefreshToken();
+          if (fresh && fresh !== token) {
+            currentToken = fresh;
+            stopWatchdog();
+            continue;
+          }
+        }
         throw new Error(
           `SSE connection failed: ${response.status} ${response.statusText}`
         );
@@ -165,8 +336,13 @@ async function runConnectionLoop(): Promise<void> {
       }
 
       console.log("useSSE: Connected successfully");
-      connectionAttempts = 0;
+      streamOpenedAt = Date.now();
+      const isReconnect = hasConnectedBefore;
+      hasConnectedBefore = true;
       emit("connected", { status: "connected" });
+      if (isReconnect) {
+        CATCH_UP_EVENTS.forEach((eventType) => emit(eventType, {}));
+      }
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -177,79 +353,136 @@ async function runConnectionLoop(): Promise<void> {
         if (done) {
           break;
         }
+        lastByteAt = Date.now();
         buffer += decoder.decode(value, { stream: true });
         const blocks = buffer.split("\n\n");
-        buffer = blocks.pop() || ""; // keep incomplete chunk
+        buffer = blocks.pop() || "";
         for (const block of blocks) {
           parseAndEmit(block);
         }
       }
 
-      // Stream ended (server closed it, e.g. timeout or deploy). Reconnect
-      // unless we were intentionally torn down.
-      if (!connectionShouldRun) {
+      stopWatchdog();
+      if (!connectionShouldRun || generation !== loopGeneration) {
         break;
       }
       console.log("useSSE: Stream ended by server, reconnecting...");
-      connectionAttempts++;
-      if (connectionAttempts >= SSE_MAX_RECONNECT_ATTEMPTS) {
+      await waitBeforeReconnect();
+    } catch (error: any) {
+      stopWatchdog();
+      if (!connectionShouldRun || generation !== loopGeneration) {
         break;
       }
-      await delay(connectionAttempts * 1000);
-    } catch (error: any) {
       if (controller.signal.aborted) {
-        // Aborted for one of two reasons:
-        //  - teardown  -> connectionShouldRun is false, exit the loop
-        //  - token change -> reconnect immediately with the new token
-        if (!connectionShouldRun) {
-          break;
-        }
         continue;
       }
-
       console.error("useSSE: Connection error", error);
-      connectionAttempts++;
-      if (connectionAttempts >= SSE_MAX_RECONNECT_ATTEMPTS) {
-        break;
-      }
-      console.log(`useSSE: Reconnecting in ${connectionAttempts * 1000}ms...`);
-      await delay(connectionAttempts * 1000);
+      await waitBeforeReconnect();
     }
   }
 }
 
-/** Subscribe to events broadcast by the leader tab. */
+/** Subscribe to events broadcast by the leader of this tenant scope. */
 function setupChannel(): void {
-  channel = new BroadcastChannel(SSE_BROADCAST_CHANNEL_NAME);
+  channel = new BroadcastChannel(scopedName(SSE_BROADCAST_CHANNEL_NAME));
   channel.onmessage = (event: MessageEvent) => {
     const message = event.data;
-    if (message && message.kind === SSE_BROADCAST_KIND) {
+    if (!message) {
+      return;
+    }
+    if (message.kind === SSE_BROADCAST_KIND) {
       dispatch(message.eventType, message.data);
+    } else if (message.kind === SSE_LEADER_STATE_KIND) {
+      leaderVisible = message.visible;
+      if (!isLeader && message.visible === false && isVisible()) {
+        claimLeadership();
+      }
+    } else if (message.kind === SSE_LEADER_QUERY_KIND && isLeader) {
+      announceLeaderVisibility();
     }
   };
 }
 
+function closeChannel(): void {
+  if (!channel) {
+    return;
+  }
+  channel.onmessage = null;
+  try {
+    channel.close();
+  } catch {}
+  channel = null;
+}
+
 /**
- * Park on the leader lock. Exactly one tab holds it at a time; that tab owns
- * the SSE stream. The lock is held until the tab closes (browser auto-releases)
- * or the connection loop gives up, at which point another tab takes over.
+ * Park on the leader lock of the current tenant scope. Exactly one tab holds
+ * it at a time; that tab owns the SSE stream. The lock is held until the tab
+ * closes (browser auto-releases), the scope is handed over, or a visible tab
+ * steals it from a hidden leader, at which point another tab takes over. A
+ * stolen leader stops its stream and queues up again as a follower.
  */
-function requestLeadership(): void {
+function requestLeadership(steal = false): void {
+  const abort = new AbortController();
+  leadershipAbort = abort;
+  let generation = 0;
+  const options = steal
+    ? { mode: "exclusive" as const, steal: true }
+    : { mode: "exclusive" as const, signal: abort.signal };
+  if (!steal) {
+    askLeaderVisibility();
+  }
   navigator.locks
-    .request(SSE_LEADER_LOCK_NAME, { mode: "exclusive" }, () => {
+    .request(scopedName(SSE_LEADER_LOCK_NAME), options, () => {
+      generation = ++loopGeneration;
       isLeader = true;
       connectionShouldRun = true;
-      connectionAttempts = 0;
-      // Hold the lock for as long as we own the connection by returning a
-      // promise that only settles when the connection loop stops.
-      return runConnectionLoop().finally(() => {
-        isLeader = false;
-        connectionShouldRun = false;
+      reconnectDelayMs = SSE_RECONNECT_INITIAL_DELAY_MS;
+      if (steal) {
+        hasConnectedBefore = true;
+      }
+      announceLeaderVisibility();
+      return runConnectionLoop(generation).finally(() => {
+        if (generation === loopGeneration) {
+          isLeader = false;
+          connectionShouldRun = false;
+        }
       });
     })
     .catch((error) => {
-      console.error("useSSE: Leader lock request failed", error);
+      if (error?.name !== "AbortError") {
+        console.error("useSSE: Leader lock request failed", error);
+        return;
+      }
+      if (generation !== 0 && generation === loopGeneration) {
+        connectionShouldRun = false;
+        isLeader = false;
+        leaderVisible = undefined;
+        activeAbort?.abort();
+        requestLeadership();
+      }
     });
+}
+
+/** A visible follower takes the stream over from a hidden leader. */
+function claimLeadership(): void {
+  leadershipAbort?.abort();
+  requestLeadership(true);
+}
+
+/**
+ * Hand the shared stream over to a new tenant scope: end the loop holding the
+ * old scope's lock, drop the old channel, then compete for the new scope.
+ */
+function rescopeLeadership(): void {
+  loopGeneration++;
+  connectionShouldRun = false;
+  isLeader = false;
+  leaderVisible = undefined;
+  leadershipAbort?.abort();
+  activeAbort?.abort();
+  closeChannel();
+  setupChannel();
+  requestLeadership();
 }
 
 /** Fallback when cross-tab coordination APIs are unavailable: one stream per tab. */
@@ -258,32 +491,40 @@ function ensureStandalone(token: string | undefined): void {
     initialized = true;
     currentToken = token;
     connectionShouldRun = true;
-    connectionAttempts = 0;
-    runConnectionLoop();
+    reconnectDelayMs = SSE_RECONNECT_INITIAL_DELAY_MS;
+    runConnectionLoop(++loopGeneration);
     return;
   }
   if (currentToken !== token) {
     currentToken = token;
-    connectionAttempts = 0;
-    activeAbort?.abort(); // reconnect with the new token
+    reconnectDelayMs = SSE_RECONNECT_INITIAL_DELAY_MS;
+    activeAbort?.abort();
   }
 }
 
 /**
  * Idempotently ensure the shared SSE connection is established. Safe to call
  * repeatedly (every consuming hook calls it from an effect); only the first
- * call per tab sets things up, and later calls only react to token changes.
+ * call per tab sets things up, and later calls only react to token and tenant
+ * changes. `refreshToken` is asked for a fresh access token when the gateway
+ * rejects a reconnect with 401/403, which a tab left in the background hits
+ * once the identity provider's token lifetime has passed.
  */
 export function ensureSSEConnected(params: {
   token: string | undefined;
   apiUrl: string;
+  tenantId?: string;
+  refreshToken?: TokenRefresher;
 }): void {
   if (typeof window === "undefined") {
     return;
   }
   currentApiUrl = params.apiUrl;
+  currentRefreshToken = params.refreshToken;
+  installLifecycleListeners();
 
   if (!supportsCoordination()) {
+    currentTenantId = params.tenantId;
     ensureStandalone(params.token);
     return;
   }
@@ -291,20 +532,23 @@ export function ensureSSEConnected(params: {
   if (!initialized) {
     initialized = true;
     currentToken = params.token;
+    currentTenantId = params.tenantId;
     setupChannel();
     requestLeadership();
     return;
   }
 
-  // Token refreshed (e.g. in production). Only the leader holds a stream to
-  // reconnect; followers just remember the new token in case they become
-  // leader later.
-  if (currentToken !== params.token) {
-    currentToken = params.token;
-    if (isLeader) {
-      connectionAttempts = 0;
-      activeAbort?.abort(); // triggers an immediate reconnect with the new token
-    }
+  const tenantChanged = currentTenantId !== params.tenantId;
+  const tokenChanged = currentToken !== params.token;
+  currentToken = params.token;
+  if (tenantChanged) {
+    currentTenantId = params.tenantId;
+    rescopeLeadership();
+    return;
+  }
+  if (tokenChanged && isLeader) {
+    reconnectDelayMs = SSE_RECONNECT_INITIAL_DELAY_MS;
+    activeAbort?.abort();
   }
 }
 
@@ -331,17 +575,21 @@ export function __resetSSEManagerForTests(): void {
   initialized = false;
   currentToken = undefined;
   currentApiUrl = undefined;
-  connectionAttempts = 0;
+  currentTenantId = undefined;
+  currentRefreshToken = undefined;
+  leaderVisible = undefined;
   connectionShouldRun = false;
+  loopGeneration++;
   activeAbort = null;
   isLeader = false;
-  if (channel) {
-    channel.onmessage = null;
-    try {
-      channel.close();
-    } catch {
-      // ignore
-    }
-  }
-  channel = null;
+  hasConnectedBefore = false;
+  reconnectDelayMs = SSE_RECONNECT_INITIAL_DELAY_MS;
+  streamOpenedAt = 0;
+  staleAfterMs = SSE_STALE_AFTER_MS;
+  lastByteAt = 0;
+  stopWatchdog();
+  wakeBackoff = null;
+  leadershipAbort?.abort();
+  leadershipAbort = null;
+  closeChannel();
 }
