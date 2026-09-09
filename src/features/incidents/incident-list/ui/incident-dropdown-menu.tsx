@@ -1,8 +1,16 @@
-import { PencilIcon, PlayIcon, TrashIcon } from "@heroicons/react/24/outline";
+import {
+  PencilIcon,
+  PlayIcon,
+  TrashIcon,
+  BellSlashIcon,
+  BellIcon,
+} from "@heroicons/react/24/outline";
 import { EllipsisHorizontalIcon } from "@heroicons/react/20/solid";
 import { DropdownMenu } from "@/shared/ui";
-import { IncidentDto } from "@/entities/incidents/model";
+import { IncidentDto, Status } from "@/entities/incidents/model";
 import { useIncidentActions } from "@/entities/incidents/model/useIncidentActions";
+import { DismissModal } from "@/features/alerts/dismiss-alert";
+import { useState } from "react";
 
 interface Props {
   incident: IncidentDto;
@@ -16,6 +24,11 @@ export function IncidentDropdownMenu({
   handleRunWorkflow,
 }: Props) {
   const { deleteIncident } = useIncidentActions();
+
+  const [dismissModalIncident, setDismissModalIncident] =
+    useState<IncidentDto | null>(null);
+
+  const isDismissed = incident.status === Status.Suppressed;
 
   return (
     <>
@@ -46,6 +59,16 @@ export function IncidentDropdownMenu({
           }}
         />
         <DropdownMenu.Item
+          icon={isDismissed ? BellIcon : BellSlashIcon}
+          label={isDismissed ? "Restore" : "Dismiss"}
+          data-cy="incidents-row-menu-dismiss"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setDismissModalIncident(incident);
+          }}
+        />
+        <DropdownMenu.Item
           icon={TrashIcon}
           label="Delete"
           variant="destructive"
@@ -57,6 +80,10 @@ export function IncidentDropdownMenu({
           }}
         />
       </DropdownMenu.Menu>
+      <DismissModal
+        incident={dismissModalIncident}
+        handleClose={() => setDismissModalIncident(null)}
+      />
     </>
   );
 }

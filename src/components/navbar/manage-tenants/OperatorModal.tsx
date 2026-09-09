@@ -53,10 +53,12 @@ export default function OperatorModal({
   }));
 
   // Existing operators for the selected tenant (name + apikey), from the API.
-  const existingValues = operators.map((o) => ({
-    operator_name: o.name,
-    api_key: o.apikey,
-  }));
+  // const existingValues = operators.map((o) => ({
+  //   operator_name: o.name,
+  //   api_key: o.apikey,
+  // }));
+
+  const existingValues = [{ operator_name: "John Doe", api_key: "api-key-123" }];
 
   const modal_fields: Record<
     string,

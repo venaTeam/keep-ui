@@ -5,15 +5,17 @@ import {
   ExclamationCircleIcon,
   PauseIcon,
 } from "@heroicons/react/24/outline";
-import {IoIosGitPullRequest, IoIosTrash} from "react-icons/io";
+import { IoIosGitPullRequest } from "react-icons/io";
 import React from "react";
 import { capitalize } from "@/utils/helpers";
+import { SilencedDoorbellNotification } from "@/components/icons";
 
 export const STATUS_COLORS = {
   [Status.Firing]: "red",
   [Status.Resolved]: "green",
   [Status.Acknowledged]: "gray",
   [Status.Merged]: "purple",
+  [Status.Suppressed]: "gray",
 };
 
 export const STATUS_ICONS = {
@@ -49,10 +51,10 @@ export const STATUS_ICONS = {
       className="w-4 h-4 mr-2"
     />
   ),
-  [Status.Deleted]: (
+  [Status.Suppressed]: (
     <Icon
-      icon={IoIosTrash}
-      tooltip={capitalize(Status.Deleted)}
+      icon={SilencedDoorbellNotification}
+      tooltip={capitalize(Status.Suppressed)}
       color="gray"
       className="w-4 h-4 mr-2"
     />
@@ -73,5 +75,9 @@ export function StatusIcon({
       return <Icon icon={PauseIcon} color="gray" {...props} />;
     case Status.Merged:
       return <Icon icon={IoIosGitPullRequest} color="purple" {...props} />;
+    case Status.Suppressed:
+      return (
+        <Icon icon={SilencedDoorbellNotification} color="gray" {...props} />
+      );
   }
 }

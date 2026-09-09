@@ -41,8 +41,11 @@ export function IncidentChangeStatusModal({
         }
     }, [initialStatus]);
 
+    // "Suppressed" is reached through the dismiss flow (DismissModal), which
+    // also writes the dismiss_mode/dismissed_until enrichments, so it is not
+    // offered as a plain status change here.
     const statusOptions = Object.values(Status)
-        .filter((status) => status !== currentStatus && status !== Status.Deleted)
+        .filter((status) => status !== Status.Suppressed)
         .map((status) => ({
             value: status,
             label: (
@@ -115,13 +118,6 @@ export function IncidentChangeStatusModal({
                         }),
                     }}
                     data-cy="incidents-change-status-modal-select"
-                />
-                <DisposeOnNewAlertToggle
-                    value={disposeOnNewAlert}
-                    onChange={setDisposeOnNewAlert}
-                    entityLabel="status"
-                    className="ml-4"
-                    data-cy="incidents-change-status-dispose-toggle-btn"
                 />
             </div>
             <div className="mt-4">
