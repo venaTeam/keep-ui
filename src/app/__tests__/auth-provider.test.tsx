@@ -12,7 +12,7 @@ jest.mock("next-auth/react", () => ({
 const mockedSessionProvider = jest.mocked(SessionProvider);
 
 describe("NextAuthProvider", () => {
-  it("hydrates SessionProvider without automatic refetches", () => {
+  it("hydrates SessionProvider with the resolved session", () => {
     const session = {
       expires: "2030-01-01T00:00:00.000Z",
       accessToken: "token",
@@ -35,8 +35,13 @@ describe("NextAuthProvider", () => {
     expect(mockedSessionProvider).toHaveBeenCalledWith(
       expect.objectContaining({
         session,
-        refetchInterval: 0,
-        refetchOnWindowFocus: false,
+      }),
+      undefined
+    );
+    expect(mockedSessionProvider).toHaveBeenCalledWith(
+      expect.not.objectContaining({
+        refetchInterval: expect.anything(),
+        refetchOnWindowFocus: expect.anything(),
       }),
       undefined
     );

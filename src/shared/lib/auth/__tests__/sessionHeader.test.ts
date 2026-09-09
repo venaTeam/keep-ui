@@ -1,6 +1,7 @@
 import type { Session } from "next-auth";
 import {
   deserializeSession,
+  resolveSessionFromHeader,
   serializeSession,
 } from "../sessionHeader";
 
@@ -36,10 +37,40 @@ describe("session header serialization", () => {
     );
   });
 
-  it.each([null, "", "not-json", "%E0%A4%A"])(
+  it.each([
+    null,
+    "",
+    "not-json",
+    "%E0%A4%A",
+    encodeURIComponent("{}"),
+    encodeURIComponent("[]"),
+    encodeURIComponent('"hello"'),
+  ])(
     "returns null for an absent or invalid value",
     (value) => {
       expect(deserializeSession(value)).toBeNull();
+    }
+  );
+
+  it("does not resolve the fallback when the header is valid", async () => {
+    const fallback = jest.fn<Promise<Session | null>, []>();
+
+    await expect(
+      resolveSessionFromHeader(serializeSession(session), fallback)
+    ).resolves.toEqual(session);
+    expect(fallback).not.toHaveBeenCalled();
+  });
+
+  it.each([null, "not-json", encodeURIComponent("{}")])(
+    "uses the fallback when the header is missing or malformed",
+    async (value) => {
+      const fallbackSession = { ...session, tenantId: "fallback" };
+      const fallback = jest.fn(async () => fallbackSession);
+
+      await expect(resolveSessionFromHeader(value, fallback)).resolves.toEqual(
+        fallbackSession
+      );
+      expect(fallback).toHaveBeenCalledTimes(1);
     }
   );
 });

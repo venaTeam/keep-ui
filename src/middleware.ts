@@ -31,7 +31,7 @@ export const middleware = auth(async (request) => {
 
   const session = request.auth;
   const role = session?.userRole;
-  const isAuthenticated = !!request.auth;
+  const isAuthenticated = !!session;
   // Keep it on header so it can be used in server components
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-url", request.url);
@@ -64,9 +64,7 @@ export const middleware = auth(async (request) => {
     !isAuthenticated &&
     !pathname.startsWith("/signin") &&
     !pathname.startsWith("/health") &&
-    !pathname.startsWith("/error") &&
-    !pathname.startsWith("/api/healthcheck")&&
-    !pathname.startsWith("/api/metrics")
+    !pathname.startsWith("/error")
   ) {
     const redirectTo = request.nextUrl.href || "/incidents";
     console.log(
