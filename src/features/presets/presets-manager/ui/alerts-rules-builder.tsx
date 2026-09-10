@@ -275,8 +275,20 @@ export const AlertsRulesBuilder = ({
   /** The server accepted this exact draft. Anything else is "not known valid". */
   const isDraftKnownValid =
     validation?.cel === celRules && validation.status === "valid";
-  /** A rejection describes the applied expression; editing it ends its claim. */
-  const isAppliedCelRejected = isCelRejected && celRules === appliedCel;
+  /**
+   * A query rejection describes the expression that was applied when it ran, so
+   * editing the draft ends its claim.
+   *
+   * It is also dropped once the server has accepted this exact draft, for two
+   * reasons. A rejection from the previous query outlives the moment a
+   * corrected draft is applied - the error only clears when the new request
+   * starts - and without this the message would reappear on text that is known
+   * good. And the executed query is the draft combined with generated date and
+   * facet filters, so when the draft itself validates, the fault lies in the
+   * generated part and blaming the user's text would be wrong.
+   */
+  const isAppliedCelRejected =
+    isCelRejected && celRules === appliedCel && !isDraftKnownValid;
   const isAttemptRejected =
     attempt?.status === "rejected" && attempt.cel === celRules;
   const isAttemptPending =

@@ -271,6 +271,53 @@ describe("AlertsRulesBuilder", () => {
     expect(error).toHaveTextContent(INVALID_CEL_MESSAGE);
   });
 
+  it("does not re-show a rejection once a corrected draft is applied", async () => {
+    mockPost.mockResolvedValue(VALID);
+
+    // The parent still reports the previous query's rejection: the error only
+    // clears when the new request starts.
+    render(
+      <AlertsRulesBuilder
+        defaultQuery=""
+        celValue={uniqueDraft("'bad'")}
+        onCelChanges={onCelChanges}
+        showSqlImport={false}
+        isCelRejected={true}
+      />
+    );
+    expect(screen.getByTestId("cel-error")).toBeInTheDocument();
+
+    type(uniqueDraft("severity == 'critical'"));
+    await act(async () => {
+      pressEnter();
+    });
+
+    expect(screen.queryByTestId("cel-error")).not.toBeInTheDocument();
+  });
+
+  it("does not blame a draft the server accepted when the query still failed", async () => {
+    // The executed query is the draft plus generated date and facet filters, so
+    // a rejection with a known-good draft is not the user's text to fix.
+    mockPost.mockResolvedValue(VALID);
+    const draft = uniqueDraft("severity == 'critical'");
+
+    render(
+      <AlertsRulesBuilder
+        defaultQuery=""
+        celValue={draft}
+        onCelChanges={onCelChanges}
+        showSqlImport={false}
+        isCelRejected={true}
+      />
+    );
+
+    await act(async () => {
+      pressEnter();
+    });
+
+    expect(screen.queryByTestId("cel-error")).not.toBeInTheDocument();
+  });
+
   describe("Save", () => {
     const saveButton = () => screen.getByTestId("save-preset-button");
 
