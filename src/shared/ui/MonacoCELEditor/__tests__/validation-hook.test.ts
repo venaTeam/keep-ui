@@ -5,7 +5,6 @@ import { useCelValidation } from "../validation-hook";
 import {
   INVALID_CEL_MESSAGE,
   diagnosticsToMarkers,
-  getCelDiagnosticsFromError,
   isInvalidCelError,
 } from "../cel-validation";
 
@@ -289,45 +288,47 @@ describe("useCelValidation", () => {
   });
 });
 
-describe("getCelDiagnosticsFromError", () => {
+describe("isInvalidCelError", () => {
   const apiError = (status: number, responseJson: any) =>
     new KeepApiError("boom", "/alerts/query", "retry", responseJson, status);
 
   it("recognises a structured INVALID_CEL rejection", () => {
-    const error = apiError(400, {
-      detail: {
-        code: "INVALID_CEL",
-        message: "The CEL filter is invalid.",
-        diagnostics: INVALID.diagnostics,
-      },
-    });
-
-    expect(isInvalidCelError(error)).toBe(true);
-    expect(getCelDiagnosticsFromError(error)).toEqual(INVALID.diagnostics);
+    expect(
+      isInvalidCelError(
+        apiError(400, {
+          detail: {
+            code: "INVALID_CEL",
+            message: "The CEL filter is invalid.",
+            diagnostics: INVALID.diagnostics,
+          },
+        })
+      )
+    ).toBe(true);
   });
 
   it("does not treat every 400 as a CEL problem", () => {
-    const error = apiError(400, { detail: "limit must be an integer" });
-
-    expect(isInvalidCelError(error)).toBe(false);
-    expect(getCelDiagnosticsFromError(error)).toBeNull();
+    expect(
+      isInvalidCelError(apiError(400, { detail: "limit must be an integer" }))
+    ).toBe(false);
   });
 
   it("does not blame CEL for a server failure", () => {
-    const error = apiError(500, {
-      message: "An internal server error occurred.",
-    });
-
-    expect(isInvalidCelError(error)).toBe(false);
+    expect(
+      isInvalidCelError(
+        apiError(500, { message: "An internal server error occurred." })
+      )
+    ).toBe(false);
   });
 
-  it("handles a rejection that carries no diagnostics", () => {
-    const error = apiError(400, {
-      detail: { code: "INVALID_CEL", message: "x" },
-    });
+  it("recognises a rejection that carries no diagnostics", () => {
+    expect(
+      isInvalidCelError(apiError(400, { detail: { code: "INVALID_CEL", message: "x" } }))
+    ).toBe(true);
+  });
 
-    expect(isInvalidCelError(error)).toBe(true);
-    expect(getCelDiagnosticsFromError(error)).toEqual([]);
+  it("is not fooled by a non-API error", () => {
+    expect(isInvalidCelError(new Error("network down"))).toBe(false);
+    expect(isInvalidCelError(undefined)).toBe(false);
   });
 });
 

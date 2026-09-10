@@ -620,7 +620,6 @@ export function AlertTableServerSide({
         <div className="flex-1 flex items-center w-full">
           <div
             className="flex flex-col justify-center items-center w-full p-4"
-            data-cy="alerts-invalid-cel"
             data-testid="alerts-invalid-cel"
           >
             {/* The one message the UI uses for a rejected filter - the results
@@ -640,7 +639,6 @@ export function AlertTableServerSide({
         <div className="flex-1 flex items-center w-full">
           <div
             className="flex flex-col justify-center items-center w-full p-4"
-            data-cy="alerts-load-error"
             data-testid="alerts-load-error"
           >
             <EmptyStateCard

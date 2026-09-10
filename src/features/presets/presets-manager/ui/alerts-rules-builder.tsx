@@ -592,7 +592,6 @@ export const AlertsRulesBuilder = ({
               {showCelError && (
                 <div
                   className="text-red-500 text-sm relative top-1"
-                  data-cy="cel-error"
                   data-testid="cel-error"
                 >
                   {INVALID_CEL_MESSAGE}
@@ -601,7 +600,6 @@ export const AlertsRulesBuilder = ({
               {!showCelError && hasValidationServiceFailed && (
                 <div
                   className="text-red-500 text-sm relative top-1"
-                  data-cy="cel-validation-unavailable"
                   data-testid="cel-validation-unavailable"
                 >
                   Could not check this expression. Press Enter to try again.

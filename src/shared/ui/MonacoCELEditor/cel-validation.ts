@@ -72,10 +72,7 @@ export interface CelValidationState {
   diagnostics: CelDiagnostic[];
 }
 
-/**
- * The message the alerts search has always shown for a rejected expression.
- * Backend diagnostics are rendered *beneath* it, not instead of it.
- */
+/** The only invalid-CEL wording the UI shows, everywhere it shows one. */
 export const INVALID_CEL_MESSAGE = "Invalid Common Expression Logic expression.";
 
 /**
@@ -85,28 +82,15 @@ export const INVALID_CEL_MESSAGE = "Invalid Common Expression Logic expression."
  * malformed pagination, and a 500 never means the expression was bad.
  */
 export function isInvalidCelError(error: unknown): boolean {
-  return getCelDiagnosticsFromError(error) !== null;
-}
-
-/**
- * Diagnostics carried by an INVALID_CEL response, or `null` if the error is not
- * one. An empty array is a valid answer - the backend may reject without being
- * able to say where.
- */
-export function getCelDiagnosticsFromError(
-  error: unknown
-): CelDiagnostic[] | null {
   if (!(error instanceof KeepApiError)) {
-    return null;
+    return false;
   }
 
   const detail = error.responseJson?.detail;
 
-  if (!detail || typeof detail !== "object" || detail.code !== "INVALID_CEL") {
-    return null;
-  }
-
-  return Array.isArray(detail.diagnostics) ? detail.diagnostics : [];
+  return (
+    Boolean(detail) && typeof detail === "object" && detail.code === "INVALID_CEL"
+  );
 }
 
 /**
