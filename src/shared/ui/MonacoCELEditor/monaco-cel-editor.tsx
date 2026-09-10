@@ -20,8 +20,12 @@ interface MonacoCelProps {
   value: string;
   fieldsForSuggestions?: string[];
   readOnly?: boolean;
-  /** Which execution engine the expression is checked against. */
-  validationContext?: CelValidationContext;
+  /**
+   * Which execution engine the expression is checked against. Required: an
+   * editor that does not name its engine would silently inherit another
+   * feature's rules.
+   */
+  validationContext: CelValidationContext;
   /**
    * Full server-backed validation state for the debounced draft. Prefer this
    * over a boolean: "unchecked", "validating" and "failed" are all distinct

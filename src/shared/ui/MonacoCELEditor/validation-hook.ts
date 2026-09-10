@@ -44,7 +44,7 @@ export interface UseCelValidationResult extends CelValidationState {
  */
 export function useCelValidation(
   cel: string | undefined,
-  context: CelValidationContext = "alerts"
+  context: CelValidationContext
 ): UseCelValidationResult {
   const api = useApi();
   const { mutate } = useSWRConfig();

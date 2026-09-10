@@ -16,7 +16,8 @@ interface CelInputProps {
   onClearValue?: () => void;
   onKeyDown?: (e: KeyboardEvent) => void;
   onFocus?: () => void;
-  validationContext?: CelValidationContext;
+  /** The execution engine this expression will run on. */
+  validationContext: CelValidationContext;
   onValidationChange?: (state: UseCelValidationResult) => void;
   placeholder?: string;
   disabled?: boolean;

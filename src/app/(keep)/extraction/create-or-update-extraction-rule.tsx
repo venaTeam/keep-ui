@@ -273,6 +273,9 @@ export default function CreateOrUpdateExtractionRule({
             showSqlImport={false}
             showToast={true}
             shouldSetQueryParam={false}
+            // Extraction conditions are evaluated by celpy over the raw event
+            // payload in the event handler, not run as an alert SQL query.
+            validationContext="extraction"
           />
         </div>
       </div>

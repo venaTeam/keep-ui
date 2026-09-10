@@ -42,7 +42,7 @@ describe("useCelValidation", () => {
   it("validates the debounced expression for the requested context", async () => {
     mockPost.mockResolvedValue(VALID);
 
-    const { rerender } = renderHook(({ cel }) => useCelValidation(cel), {
+    const { rerender } = renderHook(({ cel }) => useCelValidation(cel, "alerts"), {
       initialProps: { cel: "" },
     });
 
@@ -78,7 +78,7 @@ describe("useCelValidation", () => {
     mockPost.mockResolvedValue(INVALID);
 
     const { result, rerender } = renderHook(
-      ({ cel }) => useCelValidation(cel),
+      ({ cel }) => useCelValidation(cel, "alerts"),
       { initialProps: { cel: "" } }
     );
 
@@ -94,7 +94,7 @@ describe("useCelValidation", () => {
     mockPost.mockResolvedValue(VALID);
 
     const { result, rerender } = renderHook(
-      ({ cel }) => useCelValidation(cel),
+      ({ cel }) => useCelValidation(cel, "alerts"),
       { initialProps: { cel: "" } }
     );
 
@@ -109,7 +109,7 @@ describe("useCelValidation", () => {
     mockPost.mockImplementation(() => new Promise(() => {}));
 
     const { result, rerender } = renderHook(
-      ({ cel }) => useCelValidation(cel),
+      ({ cel }) => useCelValidation(cel, "alerts"),
       { initialProps: { cel: "" } }
     );
 
@@ -125,7 +125,7 @@ describe("useCelValidation", () => {
     mockPost.mockRejectedValue(new Error("network down"));
 
     const { result, rerender } = renderHook(
-      ({ cel }) => useCelValidation(cel),
+      ({ cel }) => useCelValidation(cel, "alerts"),
       { initialProps: { cel: "" } }
     );
 
@@ -144,7 +144,7 @@ describe("useCelValidation", () => {
     mockPost.mockResolvedValue(INVALID);
 
     const { result, rerender } = renderHook(
-      ({ cel }) => useCelValidation(cel),
+      ({ cel }) => useCelValidation(cel, "alerts"),
       { initialProps: { cel: "" } }
     );
 
@@ -159,7 +159,7 @@ describe("useCelValidation", () => {
   });
 
   it("treats an empty expression as a valid (unfiltered) search", () => {
-    const { result } = renderHook(() => useCelValidation(""));
+    const { result } = renderHook(() => useCelValidation("", "alerts"));
 
     expect(result.current.status).toBe("valid");
     expect(mockPost).not.toHaveBeenCalled();
@@ -168,7 +168,7 @@ describe("useCelValidation", () => {
   it("validateNow checks the exact draft without waiting for the debounce", async () => {
     mockPost.mockResolvedValue(INVALID);
 
-    const { result } = renderHook(() => useCelValidation("typed so far"));
+    const { result } = renderHook(() => useCelValidation("typed so far", "alerts"));
 
     let verdict;
     await act(async () => {
