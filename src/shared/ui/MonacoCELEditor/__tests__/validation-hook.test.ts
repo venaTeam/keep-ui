@@ -3,6 +3,7 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import { KeepApiError } from "@/shared/api";
 import { useCelValidation } from "../validation-hook";
 import {
+  INVALID_CEL_MESSAGE,
   diagnosticsToMarkers,
   getCelDiagnosticsFromError,
   isInvalidCelError,
@@ -222,7 +223,7 @@ describe("getCelDiagnosticsFromError", () => {
 });
 
 describe("diagnosticsToMarkers", () => {
-  it("uses the documented one-based, end-exclusive coordinates", () => {
+  it("uses the documented coordinates but only the single user-facing message", () => {
     expect(diagnosticsToMarkers(INVALID.diagnostics as any)).toEqual([
       {
         severity: 8,
@@ -230,7 +231,8 @@ describe("diagnosticsToMarkers", () => {
         startColumn: 1,
         endLineNumber: 1,
         endColumn: 8,
-        message: "A CEL filter must evaluate to true or false.",
+        // The diagnostic supplies the position; the wording is always ours.
+        message: INVALID_CEL_MESSAGE,
         source: "CEL",
       },
     ]);

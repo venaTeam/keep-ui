@@ -31,7 +31,6 @@ import { useFacetPotentialFields } from "@/features/filter";
 import { useCelState } from "@/features/cel-input/use-cel-state";
 import {
   INVALID_CEL_MESSAGE,
-  type CelDiagnostic,
   type CelValidationContext,
   type CelValidationResponse,
 } from "@/shared/ui/MonacoCELEditor/cel-validation";
@@ -161,8 +160,6 @@ type AlertsRulesBuilderProps = {
   validationContext?: CelValidationContext;
   /** The applied CEL was rejected by the query API with INVALID_CEL. */
   isCelRejected?: boolean;
-  /** Diagnostics carried by that rejection, if the backend supplied any. */
-  celRejectionDiagnostics?: CelDiagnostic[];
   /**
    * Server-backed validation state for the current draft, so a parent form can
    * gate its own submit on it. "unchecked", "validating" and "failed" are all
@@ -181,7 +178,6 @@ type AlertsRulesBuilderProps = {
 type CelAttempt = {
   cel: string;
   status: "pending" | "rejected" | "failed";
-  diagnostics: CelDiagnostic[];
 };
 
 const SQL_QUERY_PLACEHOLDER = `SELECT *
@@ -232,7 +228,6 @@ export const AlertsRulesBuilder = ({
   applyOnTyping = false,
   validationContext = "alerts",
   isCelRejected = false,
-  celRejectionDiagnostics,
   onValidationStateChange,
 }: AlertsRulesBuilderProps) => {
   const router = useRouter();
@@ -407,11 +402,11 @@ export const AlertsRulesBuilder = ({
       if (!validator) {
         // No way to check this draft, so its validity is unknown - which is not
         // permission to apply it.
-        setAttempt({ cel, status: "failed", diagnostics: [] });
+        setAttempt({ cel, status: "failed" });
         return;
       }
 
-      setAttempt({ cel, status: "pending", diagnostics: [] });
+      setAttempt({ cel, status: "pending" });
 
       let result: CelValidationResponse;
 
@@ -421,7 +416,7 @@ export const AlertsRulesBuilder = ({
         // The check could not be completed, so validity is unknown. Do not
         // apply, and do not claim the expression is invalid.
         if (celRulesRef.current === cel) {
-          setAttempt({ cel, status: "failed", diagnostics: [] });
+          setAttempt({ cel, status: "failed" });
         }
         return;
       }
@@ -437,11 +432,7 @@ export const AlertsRulesBuilder = ({
         return;
       }
 
-      setAttempt({
-        cel,
-        status: "rejected",
-        diagnostics: result.diagnostics ?? [],
-      });
+      setAttempt({ cel, status: "rejected" });
     },
     [applyCel]
   );
@@ -542,15 +533,6 @@ export const AlertsRulesBuilder = ({
     ? validation?.cel === celRules && validation.status === "invalid"
     : isAttemptRejected || isAppliedCelRejected;
 
-  /** Specific backend diagnostics, rendered beneath the existing message. */
-  const celDiagnostics: CelDiagnostic[] = isAttemptRejected
-    ? attempt!.diagnostics
-    : isAppliedCelRejected
-      ? celRejectionDiagnostics ?? []
-      : showCelError
-        ? validation?.diagnostics ?? []
-        : [];
-
   function getSaveFilterTooltipText(): string {
     if (hasValidationServiceFailed) {
       return "Could not check this expression. Try again before saving.";
@@ -620,15 +602,6 @@ export const AlertsRulesBuilder = ({
                   data-testid="cel-error"
                 >
                   {INVALID_CEL_MESSAGE}
-                  {celDiagnostics.length > 0 && (
-                    <ul className="text-xs mt-0.5 list-none">
-                      {celDiagnostics.map((diagnostic, index) => (
-                        <li key={`${diagnostic.code}-${index}`}>
-                          {diagnostic.message}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
                 </div>
               )}
               {!showCelError && hasValidationServiceFailed && (

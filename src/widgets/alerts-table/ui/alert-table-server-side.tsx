@@ -64,7 +64,7 @@ import { v4 as uuidV4 } from "uuid";
 import { FacetsConfig } from "@/features/filter/models";
 import { TimeFormatOption } from "@/widgets/alerts-table/lib/alert-table-time-format";
 import { PushAlertToServerModal } from "@/features/alerts/simulate-alert";
-import type { CelDiagnostic } from "@/shared/ui/MonacoCELEditor";
+import { INVALID_CEL_MESSAGE } from "@/shared/ui/MonacoCELEditor";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { GrTest } from "react-icons/gr";
 import { FiFilter } from "react-icons/fi";
@@ -105,7 +105,6 @@ interface Props {
   columns: ColumnDef<AlertDto>[];
   isAsyncLoading?: boolean;
   isCelRejected?: boolean;
-  celRejectionDiagnostics?: CelDiagnostic[];
   /** A query failure that is not about the CEL filter. */
   queryError?: unknown;
   onRetryQuery?: () => void;
@@ -134,7 +133,6 @@ export function AlertTableServerSide({
   columns,
   isAsyncLoading = false,
   isCelRejected = false,
-  celRejectionDiagnostics,
   queryError,
   onRetryQuery,
   presetName,
@@ -625,13 +623,11 @@ export function AlertTableServerSide({
             data-cy="alerts-invalid-cel"
             data-testid="alerts-invalid-cel"
           >
+            {/* The one message the UI uses for a rejected filter - the results
+                area repeats it rather than inventing its own wording. */}
             <EmptyStateCard
               noCard
-              title="Invalid CEL query"
-              description={
-                celRejectionDiagnostics?.[0]?.message ??
-                "Correct the expression in the search bar above and press Enter."
-              }
+              title={INVALID_CEL_MESSAGE}
               icon={MagnifyingGlassIcon}
             />
           </div>
@@ -880,7 +876,6 @@ export function AlertTableServerSide({
             celValue={searchCel}
             onCelChanges={setSearchCel}
             isCelRejected={isCelRejected}
-            celRejectionDiagnostics={celRejectionDiagnostics}
             table={table}
             isGroupingActive={isGroupingActive}
             onToggleAllGroups={toggleAll}

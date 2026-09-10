@@ -97,7 +97,6 @@ describe("Alerts page error handling", () => {
     expect(screen.getByTestId("alerts-tab-panel")).toBeInTheDocument();
     expect(tabPanelProps.isCelRejected).toBe(true);
     expect(tabPanelProps.queryError).toBeUndefined();
-    expect(tabPanelProps.celRejectionDiagnostics).toHaveLength(1);
   });
 
   it("does not re-run facets for a filter the backend rejected", () => {

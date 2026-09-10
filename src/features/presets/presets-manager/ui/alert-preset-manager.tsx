@@ -3,7 +3,6 @@ import Modal from "@/components/ui/Modal";
 import { useRouter } from "next/navigation";
 import { Table } from "@tanstack/react-table";
 import { AlertsRulesBuilder } from "@/features/presets/presets-manager/ui/alerts-rules-builder";
-import type { CelDiagnostic } from "@/shared/ui/MonacoCELEditor";
 import { CreateOrUpdatePresetForm } from "@/features/presets/create-or-update-preset";
 import { STATIC_PRESETS_NAMES } from "@/entities/presets/model/constants";
 import { Preset } from "@/entities/presets/model/types";
@@ -24,7 +23,6 @@ interface Props {
   celValue?: string | null;
   onCelChanges?: (cel: string) => void;
   isCelRejected?: boolean;
-  celRejectionDiagnostics?: CelDiagnostic[];
   // Group expansion controls
   isGroupingActive?: boolean;
   onToggleAllGroups?: () => void;
@@ -37,7 +35,6 @@ export function AlertPresetManager({
   celValue,
   onCelChanges,
   isCelRejected,
-  celRejectionDiagnostics,
   isGroupingActive = false,
   onToggleAllGroups,
   areAllGroupsExpanded,
@@ -146,7 +143,6 @@ export function AlertPresetManager({
           setPresetCEL={setPresetCEL}
           onCelChanges={onCelChanges}
           isCelRejected={isCelRejected}
-          celRejectionDiagnostics={celRejectionDiagnostics}
         />
 
         <Button

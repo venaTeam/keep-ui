@@ -117,8 +117,10 @@ export function getCelDiagnosticsFromError(
 /**
  * Turn diagnostics into Monaco markers.
  *
- * A diagnostic without a range is still shown to the user as text, but gets no
- * marker: underlining an arbitrary span would point at the wrong thing.
+ * Only the *position* is taken from the diagnostic; every marker carries the
+ * single user-facing message, so the UI never surfaces the backend's internal
+ * wording. A diagnostic without a range gets no marker at all - underlining an
+ * arbitrary span would point at the wrong thing.
  */
 export function diagnosticsToMarkers(
   diagnostics: CelDiagnostic[]
@@ -132,7 +134,7 @@ export function diagnosticsToMarkers(
       startColumn: diagnostic.range!.startColumn,
       endLineNumber: diagnostic.range!.endLine,
       endColumn: diagnostic.range!.endColumn,
-      message: diagnostic.message,
+      message: INVALID_CEL_MESSAGE,
       source: "CEL",
     }));
 }

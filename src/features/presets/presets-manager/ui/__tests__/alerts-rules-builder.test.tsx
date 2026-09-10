@@ -56,11 +56,11 @@ const { AlertsRulesBuilder } = jest.requireActual(
 
 const DEBOUNCE_MS = 500;
 const VALID = { valid: true, diagnostics: [] };
+/** Backend diagnostic wording, which must never reach the screen. */
+const BACKEND_WORDING = "A CEL filter must evaluate to true or false.";
 const INVALID = {
   valid: false,
-  diagnostics: [
-    { code: "EXPECTED_BOOLEAN", message: "A CEL filter must evaluate to true or false." },
-  ],
+  diagnostics: [{ code: "EXPECTED_BOOLEAN", message: BACKEND_WORDING }],
 };
 
 /** Unique per test so a shared SWR cache entry cannot answer for another. */
@@ -121,7 +121,7 @@ describe("AlertsRulesBuilder", () => {
     expect(onCelChanges).not.toHaveBeenCalledWith(draft);
   });
 
-  it("renders backend diagnostics beneath the existing message", async () => {
+  it("shows only the existing message, never the backend's own wording", async () => {
     mockPost.mockResolvedValue(INVALID);
 
     renderBuilder();
@@ -132,9 +132,9 @@ describe("AlertsRulesBuilder", () => {
 
     const error = await screen.findByTestId("cel-error");
     expect(error).toHaveTextContent(INVALID_CEL_MESSAGE);
-    expect(error).toHaveTextContent(
-      "A CEL filter must evaluate to true or false."
-    );
+    // The diagnostic's own message is used for positioning only.
+    expect(error).not.toHaveTextContent(BACKEND_WORDING);
+    expect(screen.queryByText(BACKEND_WORDING)).not.toBeInTheDocument();
   });
 
   it("applies the draft once the server has accepted it", async () => {
@@ -261,15 +261,11 @@ describe("AlertsRulesBuilder", () => {
         onCelChanges={onCelChanges}
         showSqlImport={false}
         isCelRejected={true}
-        celRejectionDiagnostics={[
-          { code: "UNKNOWN_FIELD", message: "Unknown field in the expression." },
-        ]}
       />
     );
 
     const error = await screen.findByTestId("cel-error");
     expect(error).toHaveTextContent(INVALID_CEL_MESSAGE);
-    expect(error).toHaveTextContent("Unknown field in the expression.");
   });
 
   describe("Save", () => {

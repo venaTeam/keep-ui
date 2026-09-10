@@ -14,7 +14,7 @@ import { AlertChangeStatusModal } from "@/features/alerts/alert-change-status";
 import { AlertAssignModal } from "@/features/alerts/alert-assign";
 import { ViewAlertModal } from "@/features/alerts/view-alert";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { getCelDiagnosticsFromError } from "@/shared/ui/MonacoCELEditor";
+import { isInvalidCelError } from "@/shared/ui/MonacoCELEditor";
 import { KeepLoader, showErrorToast } from "@/shared/ui";
 import NotFound from "@/app/(keep)/not-found";
 import AlertTableTabPanelServerSide from "./alert-table-tab-panel-server-side";
@@ -166,10 +166,10 @@ export default function Alerts({ presetName }: AlertsProps) {
    *
    * Read from the structured response body rather than guessed from the status
    * code: a 400 can also be malformed pagination, and a 500 with a search
-   * present is a server failure, not a bad expression.
+   * present is a server failure, not a bad expression. Only the *fact* of the
+   * rejection is used - the backend's own diagnostic wording is never shown.
    */
-  const celDiagnostics = getCelDiagnosticsFromError(alertsError);
-  const isRejectedQuery = celDiagnostics !== null;
+  const isRejectedQuery = isInvalidCelError(alertsError);
   /**
    * A real query failure. It is rendered locally in the table area rather than
    * thrown, so the alerts screen, the editor and the user's draft stay mounted
@@ -195,7 +195,6 @@ export default function Alerts({ presetName }: AlertsProps) {
         facetsCel={isRejectedQuery ? null : facetsCel}
         isAsyncLoading={alertsLoading}
         isCelRejected={isRejectedQuery}
-        celRejectionDiagnostics={celDiagnostics ?? undefined}
         queryError={queryError}
         onRetryQuery={mutateAlerts}
         setTicketModalAlert={setTicketModalAlert}
