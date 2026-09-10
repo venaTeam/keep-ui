@@ -70,12 +70,7 @@ export interface CelValidationState {
   context: CelValidationContext;
   status: CelValidationStatus;
   diagnostics: CelDiagnostic[];
-  /** Present when `status` is "failed". */
-  error?: unknown;
 }
-
-export const isCelKnownValid = (state: CelValidationState) =>
-  state.status === "valid";
 
 /**
  * The message the alerts search has always shown for a rejected expression.

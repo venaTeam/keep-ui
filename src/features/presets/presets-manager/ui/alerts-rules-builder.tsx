@@ -160,12 +160,6 @@ type AlertsRulesBuilderProps = {
   validationContext?: CelValidationContext;
   /** The applied CEL was rejected by the query API with INVALID_CEL. */
   isCelRejected?: boolean;
-  /**
-   * Server-backed validation state for the current draft, so a parent form can
-   * gate its own submit on it. "unchecked", "validating" and "failed" are all
-   * distinct from "invalid" and none of them mean valid.
-   */
-  onValidationStateChange?: (state: UseCelValidationResult) => void;
 };
 
 /**
@@ -228,7 +222,6 @@ export const AlertsRulesBuilder = ({
   applyOnTyping = false,
   validationContext = "alerts",
   isCelRejected = false,
-  onValidationStateChange,
 }: AlertsRulesBuilderProps) => {
   const router = useRouter();
   const pathname = usePathname();
@@ -318,11 +311,8 @@ export const AlertsRulesBuilder = ({
   };
 
   const handleValidationChange = useCallback(
-    (state: UseCelValidationResult) => {
-      setValidation(state);
-      onValidationStateChange?.(state);
-    },
-    [onValidationStateChange]
+    (state: UseCelValidationResult) => setValidation(state),
+    []
   );
 
   const toggleSuggestions = () => {

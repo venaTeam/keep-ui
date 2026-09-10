@@ -160,7 +160,6 @@ export function useCelValidation(
             context,
             status: "failed",
             diagnostics: [],
-            error,
           });
         }
 
