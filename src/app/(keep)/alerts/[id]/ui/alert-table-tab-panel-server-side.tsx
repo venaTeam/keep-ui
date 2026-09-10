@@ -9,6 +9,7 @@ import {
 } from "@/entities/alerts/model";
 import { Preset } from "@/entities/presets/model/types";
 import { AlertsTableDataQuery } from "@/widgets/alerts-table/ui/useAlertsTableData";
+import type { CelDiagnostic } from "@/shared/ui/MonacoCELEditor";
 
 interface Props {
   alerts: AlertDto[];
@@ -18,6 +19,10 @@ interface Props {
   preset: Preset;
   isAsyncLoading: boolean;
   isCelRejected?: boolean;
+  celRejectionDiagnostics?: CelDiagnostic[];
+  /** A query failure that is not about the CEL filter. */
+  queryError?: unknown;
+  onRetryQuery?: () => void;
   setTicketModalAlert: (alert: AlertDto | null) => void;
   setNoteModalAlert: (alert: AlertDto | null) => void;
   setRunWorkflowModalAlert: (alert: AlertDto | null) => void;
@@ -38,6 +43,9 @@ export default function AlertTableTabPanelServerSide({
   facetsPanelRefreshToken,
   isAsyncLoading,
   isCelRejected,
+  celRejectionDiagnostics,
+  queryError,
+  onRetryQuery,
   setTicketModalAlert,
   setNoteModalAlert,
   setRunWorkflowModalAlert,
@@ -106,6 +114,9 @@ export default function AlertTableTabPanelServerSide({
       setDismissedModalAlert={setDismissModalAlert}
       isAsyncLoading={isAsyncLoading}
       isCelRejected={isCelRejected}
+      celRejectionDiagnostics={celRejectionDiagnostics}
+      queryError={queryError}
+      onRetryQuery={onRetryQuery}
       presetName={preset.name}
       presetId={preset.id}
       counterShowsFiringOnly={preset.counter_shows_firing_only}

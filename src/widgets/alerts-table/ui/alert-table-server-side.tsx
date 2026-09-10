@@ -64,6 +64,7 @@ import { v4 as uuidV4 } from "uuid";
 import { FacetsConfig } from "@/features/filter/models";
 import { TimeFormatOption } from "@/widgets/alerts-table/lib/alert-table-time-format";
 import { PushAlertToServerModal } from "@/features/alerts/simulate-alert";
+import type { CelDiagnostic } from "@/shared/ui/MonacoCELEditor";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { GrTest } from "react-icons/gr";
 import { FiFilter } from "react-icons/fi";
@@ -104,6 +105,10 @@ interface Props {
   columns: ColumnDef<AlertDto>[];
   isAsyncLoading?: boolean;
   isCelRejected?: boolean;
+  celRejectionDiagnostics?: CelDiagnostic[];
+  /** A query failure that is not about the CEL filter. */
+  queryError?: unknown;
+  onRetryQuery?: () => void;
   presetName: string;
   presetId?: string;
   counterShowsFiringOnly?: boolean;
@@ -129,6 +134,9 @@ export function AlertTableServerSide({
   columns,
   isAsyncLoading = false,
   isCelRejected = false,
+  celRejectionDiagnostics,
+  queryError,
+  onRetryQuery,
   presetName,
   presetId,
   counterShowsFiringOnly = false,
@@ -603,6 +611,63 @@ export function AlertTableServerSide({
   );
 
   function renderTable() {
+    /**
+     * A failed query has no results. Rows from an earlier query are not matches
+     * for this one, so the table area reports the failure instead of showing
+     * them - which also keeps the count and facets consistent with what is on
+     * screen.
+     */
+    if (isCelRejected) {
+      return (
+        <div className="flex-1 flex items-center w-full">
+          <div
+            className="flex flex-col justify-center items-center w-full p-4"
+            data-cy="alerts-invalid-cel"
+            data-testid="alerts-invalid-cel"
+          >
+            <EmptyStateCard
+              noCard
+              title="Invalid CEL query"
+              description={
+                celRejectionDiagnostics?.[0]?.message ??
+                "Correct the expression in the search bar above and press Enter."
+              }
+              icon={MagnifyingGlassIcon}
+            />
+          </div>
+        </div>
+      );
+    }
+
+    if (queryError) {
+      return (
+        <div className="flex-1 flex items-center w-full">
+          <div
+            className="flex flex-col justify-center items-center w-full p-4"
+            data-cy="alerts-load-error"
+            data-testid="alerts-load-error"
+          >
+            <EmptyStateCard
+              noCard
+              title="Could not load alerts"
+              description="The request to load alerts failed. Your filter has not changed."
+            >
+              <div className="flex gap-2 justify-center">
+                <Button
+                  color="orange"
+                  variant="secondary"
+                  onClick={() => onRetryQuery?.()}
+                  data-cy="alerts-btn-retry"
+                >
+                  Retry
+                </Button>
+              </div>
+            </EmptyStateCard>
+          </div>
+        </div>
+      );
+    }
+
     if (isFeedAwaitingQuery) {
       return (
         <div className="flex-1 flex items-center w-full">
@@ -815,6 +880,7 @@ export function AlertTableServerSide({
             celValue={searchCel}
             onCelChanges={setSearchCel}
             isCelRejected={isCelRejected}
+            celRejectionDiagnostics={celRejectionDiagnostics}
             table={table}
             isGroupingActive={isGroupingActive}
             onToggleAllGroups={toggleAll}

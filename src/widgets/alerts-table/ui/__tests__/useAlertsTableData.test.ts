@@ -63,6 +63,8 @@ describe("useAlertsTableData", () => {
     expect(mockUseLastAlerts).toHaveBeenCalledWith(undefined, {
       revalidateOnFocus: false,
       revalidateOnMount: true,
+      // A deterministic INVALID_CEL rejection is not worth retrying.
+      shouldRetryOnError: expect.any(Function),
     });
   });
 
@@ -153,7 +155,11 @@ describe("useAlertsTableData", () => {
         offset: 200,
         sortOptions: [{ sortBy: "name", sortDirection: "ASC" }],
       } as AlertsQuery,
-      { revalidateOnFocus: false, revalidateOnMount: true }
+      {
+        revalidateOnFocus: false,
+        revalidateOnMount: true,
+        shouldRetryOnError: expect.any(Function),
+      }
     );
   });
 

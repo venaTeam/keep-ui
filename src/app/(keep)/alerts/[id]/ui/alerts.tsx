@@ -14,7 +14,7 @@ import { AlertChangeStatusModal } from "@/features/alerts/alert-change-status";
 import { AlertAssignModal } from "@/features/alerts/alert-assign";
 import { ViewAlertModal } from "@/features/alerts/view-alert";
 import { useApi } from "@/shared/lib/hooks/useApi";
-import { KeepApiError } from "@/shared/api";
+import { getCelDiagnosticsFromError } from "@/shared/ui/MonacoCELEditor";
 import { KeepLoader, showErrorToast } from "@/shared/ui";
 import NotFound from "@/app/(keep)/not-found";
 import AlertTableTabPanelServerSide from "./alert-table-tab-panel-server-side";
@@ -162,19 +162,20 @@ export default function Alerts({ presetName }: AlertsProps) {
   }
 
   /**
-   * A rejected query means a bad CEL filter, so keep the page mounted for the
-   * user to fix it inline. Anything else is a real failure for error.tsx.
+   * Whether the backend rejected the CEL filter itself.
+   *
+   * Read from the structured response body rather than guessed from the status
+   * code: a 400 can also be malformed pagination, and a 500 with a search
+   * present is a server failure, not a bad expression.
    */
-  const isRejectedQuery =
-    alertsError instanceof KeepApiError &&
-    (alertsError.statusCode === 400 ||
-      alertsError.statusCode === 422 ||
-      (alertsError.statusCode === 500 &&
-        Boolean(alertsTableDataQuery?.searchCel)));
-
-  if (alertsError && !isRejectedQuery) {
-    throw alertsError;
-  }
+  const celDiagnostics = getCelDiagnosticsFromError(alertsError);
+  const isRejectedQuery = celDiagnostics !== null;
+  /**
+   * A real query failure. It is rendered locally in the table area rather than
+   * thrown, so the alerts screen, the editor and the user's draft stay mounted
+   * and the route does not change.
+   */
+  const queryError = alertsError && !isRejectedQuery ? alertsError : undefined;
 
   if (!selectedPreset) {
     return <NotFound />;
@@ -186,11 +187,17 @@ export default function Alerts({ presetName }: AlertsProps) {
         key={selectedPreset.name}
         facetsPanelRefreshToken={facetsPanelRefreshToken}
         preset={selectedPreset}
-        alerts={alerts || []}
-        alertsTotalCount={totalCount}
-        facetsCel={facetsCel}
+        // Results from an earlier query are not results for this one, so they
+        // are not carried past a failure.
+        alerts={alertsError ? [] : alerts || []}
+        alertsTotalCount={alertsError ? 0 : totalCount}
+        // Do not re-run a filter the backend has already rejected.
+        facetsCel={isRejectedQuery ? null : facetsCel}
         isAsyncLoading={alertsLoading}
         isCelRejected={isRejectedQuery}
+        celRejectionDiagnostics={celDiagnostics ?? undefined}
+        queryError={queryError}
+        onRetryQuery={mutateAlerts}
         setTicketModalAlert={setTicketModalAlert}
         setNoteModalAlert={setNoteModalAlert}
         setRunWorkflowModalAlert={setRunWorkflowModalAlert}
