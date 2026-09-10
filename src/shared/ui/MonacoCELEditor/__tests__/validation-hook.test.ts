@@ -9,16 +9,18 @@ import {
   isInvalidCelError,
 } from "../cel-validation";
 
-/** Matches the debounce inside useCelValidation. */
+/** Matches the debounce used by editors that validate while typing. */
 const DEBOUNCE_MS = 500;
 
 const VALID = { valid: true, diagnostics: [] };
+/** Backend diagnostic wording, which must never reach the screen. */
+const BACKEND_WORDING = "A CEL filter must evaluate to true or false.";
 const INVALID = {
   valid: false,
   diagnostics: [
     {
       code: "EXPECTED_BOOLEAN",
-      message: "A CEL filter must evaluate to true or false.",
+      message: BACKEND_WORDING,
       range: { startLine: 1, startColumn: 1, endLine: 1, endColumn: 8 },
     },
   ],
@@ -40,105 +42,232 @@ describe("useCelValidation", () => {
     jest.clearAllMocks();
   });
 
-  it("validates the debounced expression for the requested context", async () => {
-    mockPost.mockResolvedValue(VALID);
+  describe("on demand (the default)", () => {
+    it("does not validate while the user types", async () => {
+      mockPost.mockResolvedValue(VALID);
 
-    const { rerender } = renderHook(({ cel }) => useCelValidation(cel, "alerts"), {
-      initialProps: { cel: "" },
+      const { result, rerender } = renderHook(
+        ({ cel }) => useCelValidation(cel, "alerts"),
+        { initialProps: { cel: "" } }
+      );
+
+      rerender({ cel: "severity == 'critical'" });
+      await act(async () => {
+        jest.advanceTimersByTime(10_000);
+      });
+
+      expect(mockPost).not.toHaveBeenCalled();
+      expect(result.current.status).toBe("unchecked");
     });
 
-    rerender({ cel: "a" });
-    act(() => jest.advanceTimersByTime(DEBOUNCE_MS));
+    it("validates the exact draft it is asked about", async () => {
+      mockPost.mockResolvedValue(VALID);
 
-    await waitFor(() => expect(mockPost).toHaveBeenCalled());
-    expect(mockPost).toHaveBeenCalledWith("/cel/validate", {
-      cel: "a",
-      context: "alerts",
+      const { result } = renderHook(() => useCelValidation("typed", "alerts"));
+
+      let verdict;
+      await act(async () => {
+        verdict = await result.current.validateNow("the exact draft");
+      });
+
+      expect(mockPost).toHaveBeenCalledTimes(1);
+      expect(mockPost).toHaveBeenCalledWith("/cel/validate", {
+        cel: "the exact draft",
+        context: "alerts",
+      });
+      expect(verdict).toEqual(VALID);
+      expect(result.current.cel).toBe("the exact draft");
+      expect(result.current.status).toBe("valid");
+    });
+
+    it("sends the context it was given", async () => {
+      mockPost.mockResolvedValue(VALID);
+
+      const { result } = renderHook(() =>
+        useCelValidation("x", "maintenance")
+      );
+
+      await act(async () => {
+        await result.current.validateNow("x");
+      });
+
+      expect(mockPost).toHaveBeenCalledWith("/cel/validate", {
+        cel: "x",
+        context: "maintenance",
+      });
+    });
+
+    it("answers a repeated draft without asking again", async () => {
+      mockPost.mockResolvedValue(INVALID);
+
+      const { result } = renderHook(() => useCelValidation("x", "alerts"));
+
+      await act(async () => {
+        await result.current.validateNow("same draft");
+      });
+      expect(mockPost).toHaveBeenCalledTimes(1);
+
+      let verdict;
+      await act(async () => {
+        verdict = await result.current.validateNow("same draft");
+      });
+
+      expect(mockPost).toHaveBeenCalledTimes(1);
+      expect(verdict).toEqual(INVALID);
+      expect(result.current.status).toBe("invalid");
+    });
+
+    it("asks again for a different draft", async () => {
+      mockPost.mockResolvedValue(VALID);
+
+      const { result } = renderHook(() => useCelValidation("x", "alerts"));
+
+      await act(async () => {
+        await result.current.validateNow("draft one");
+        await result.current.validateNow("draft two");
+      });
+
+      expect(mockPost).toHaveBeenCalledTimes(2);
+    });
+
+    it("does not ask about an empty expression", async () => {
+      const { result } = renderHook(() => useCelValidation("", "alerts"));
+
+      let verdict;
+      await act(async () => {
+        verdict = await result.current.validateNow("");
+      });
+
+      expect(mockPost).not.toHaveBeenCalled();
+      expect(verdict).toEqual({ valid: true, diagnostics: [] });
+      expect(result.current.status).toBe("valid");
     });
   });
 
-  it("sends the context it was given", async () => {
-    mockPost.mockResolvedValue(VALID);
+  describe("validateWhileTyping", () => {
+    const renderTyping = (cel: string) =>
+      renderHook(
+        ({ cel }) =>
+          useCelValidation(cel, "alerts", { validateWhileTyping: true }),
+        { initialProps: { cel } }
+      );
 
-    const { rerender } = renderHook(
-      ({ cel }) => useCelValidation(cel, "maintenance"),
-      { initialProps: { cel: "" } }
-    );
+    it("validates the draft the user paused on, not every keystroke", async () => {
+      mockPost.mockResolvedValue(VALID);
 
-    rerender({ cel: "a" });
-    act(() => jest.advanceTimersByTime(DEBOUNCE_MS));
+      const { rerender } = renderTyping("");
 
-    await waitFor(() => expect(mockPost).toHaveBeenCalled());
-    expect(mockPost).toHaveBeenCalledWith("/cel/validate", {
-      cel: "a",
-      context: "maintenance",
+      for (const cel of ["s", "se", "sev", "seve", "sever"]) {
+        rerender({ cel });
+        act(() => {
+          jest.advanceTimersByTime(50);
+        });
+      }
+      expect(mockPost).not.toHaveBeenCalled();
+
+      await act(async () => {
+        jest.advanceTimersByTime(DEBOUNCE_MS);
+      });
+
+      expect(mockPost).toHaveBeenCalledTimes(1);
+      expect(mockPost).toHaveBeenCalledWith("/cel/validate", {
+        cel: "sever",
+        context: "alerts",
+      });
     });
-  });
 
-  it("reports the server verdict rather than inferring it from empty markers", async () => {
-    mockPost.mockResolvedValue(INVALID);
+    it("reports the server verdict rather than inferring it", async () => {
+      mockPost.mockResolvedValue(INVALID);
 
-    const { result, rerender } = renderHook(
-      ({ cel }) => useCelValidation(cel, "alerts"),
-      { initialProps: { cel: "" } }
-    );
+      const { result, rerender } = renderTyping("");
 
-    rerender({ cel: '"just a string"' });
-    act(() => jest.advanceTimersByTime(DEBOUNCE_MS));
+      rerender({ cel: '"just a string"' });
+      await act(async () => {
+        jest.advanceTimersByTime(DEBOUNCE_MS);
+      });
 
-    await waitFor(() => expect(result.current.status).toBe("invalid"));
-    expect(result.current.diagnostics).toHaveLength(1);
-    expect(result.current.markers).toHaveLength(1);
-  });
+      await waitFor(() => expect(result.current.status).toBe("invalid"));
+      expect(result.current.diagnostics).toHaveLength(1);
+      expect(result.current.markers).toHaveLength(1);
+    });
 
-  it("treats a 200 with valid:true as valid", async () => {
-    mockPost.mockResolvedValue(VALID);
+    it("never reports a pending check as valid", async () => {
+      mockPost.mockImplementation(() => new Promise(() => {}));
 
-    const { result, rerender } = renderHook(
-      ({ cel }) => useCelValidation(cel, "alerts"),
-      { initialProps: { cel: "" } }
-    );
+      const { result, rerender } = renderTyping("");
 
-    rerender({ cel: "severity == 'critical'" });
-    act(() => jest.advanceTimersByTime(DEBOUNCE_MS));
+      rerender({ cel: "severity ==" });
+      await act(async () => {
+        jest.advanceTimersByTime(DEBOUNCE_MS);
+      });
 
-    await waitFor(() => expect(result.current.status).toBe("valid"));
-    expect(result.current.markers).toEqual([]);
-  });
-
-  it("never reports a pending check as valid", async () => {
-    mockPost.mockImplementation(() => new Promise(() => {}));
-
-    const { result, rerender } = renderHook(
-      ({ cel }) => useCelValidation(cel, "alerts"),
-      { initialProps: { cel: "" } }
-    );
-
-    rerender({ cel: "severity ==" });
-    act(() => jest.advanceTimersByTime(DEBOUNCE_MS));
-
-    await waitFor(() => expect(result.current.status).toBe("validating"));
-    expect(result.current.status).not.toBe("valid");
-    expect(result.current.markers).toEqual([]);
+      await waitFor(() => expect(result.current.status).toBe("validating"));
+      expect(result.current.markers).toEqual([]);
+    });
   });
 
   it("reports a failed request as unknown validity, not as invalid CEL", async () => {
     mockPost.mockRejectedValue(new Error("network down"));
 
-    const { result, rerender } = renderHook(
-      ({ cel }) => useCelValidation(cel, "alerts"),
-      { initialProps: { cel: "" } }
-    );
+    const { result } = renderHook(() => useCelValidation("x", "alerts"));
 
-    // A draft no other test uses: SWR's cache is shared across this file, and a
-    // cached verdict would be served instead of the failing request.
-    rerender({ cel: "service == 'unreachable-backend'" });
-    act(() => jest.advanceTimersByTime(DEBOUNCE_MS));
+    await act(async () => {
+      await expect(
+        result.current.validateNow("severity == 'critical'")
+      ).rejects.toThrow("network down");
+    });
 
-    await waitFor(() => expect(result.current.status).toBe("failed"));
+    expect(result.current.status).toBe("failed");
     expect(result.current.status).not.toBe("valid");
     expect(result.current.status).not.toBe("invalid");
     expect(result.current.diagnostics).toEqual([]);
+  });
+
+  it("does not remember a failed check as a verdict", async () => {
+    mockPost.mockRejectedValueOnce(new Error("network down"));
+    mockPost.mockResolvedValueOnce(VALID);
+
+    const { result } = renderHook(() => useCelValidation("x", "alerts"));
+
+    await act(async () => {
+      await result.current.validateNow("retry me").catch(() => {});
+    });
+    await act(async () => {
+      await result.current.validateNow("retry me");
+    });
+
+    expect(mockPost).toHaveBeenCalledTimes(2);
+    expect(result.current.status).toBe("valid");
+  });
+
+  it("does not let a superseded answer overwrite a newer one", async () => {
+    let resolveFirst: (value: any) => void = () => {};
+    mockPost.mockImplementationOnce(
+      () => new Promise((resolve) => (resolveFirst = resolve))
+    );
+    mockPost.mockResolvedValueOnce(VALID);
+
+    const { result } = renderHook(() => useCelValidation("x", "alerts"));
+
+    let firstCall: Promise<any> = Promise.resolve();
+    act(() => {
+      firstCall = result.current.validateNow("older draft").catch(() => {});
+    });
+
+    await act(async () => {
+      await result.current.validateNow("newer draft");
+    });
+    expect(result.current.cel).toBe("newer draft");
+    expect(result.current.status).toBe("valid");
+
+    // The older request lands late with a rejection; it must not take over.
+    await act(async () => {
+      resolveFirst(INVALID);
+      await firstCall;
+    });
+
+    expect(result.current.cel).toBe("newer draft");
+    expect(result.current.status).toBe("valid");
   });
 
   it("labels its state with the draft it describes", async () => {
@@ -146,41 +275,17 @@ describe("useCelValidation", () => {
 
     const { result, rerender } = renderHook(
       ({ cel }) => useCelValidation(cel, "alerts"),
-      { initialProps: { cel: "" } }
+      { initialProps: { cel: "old draft" } }
     );
 
-    rerender({ cel: "old draft" });
-    act(() => jest.advanceTimersByTime(DEBOUNCE_MS));
-    await waitFor(() => expect(result.current.status).toBe("invalid"));
+    await act(async () => {
+      await result.current.validateNow("old draft");
+    });
     expect(result.current.cel).toBe("old draft");
 
     // A newer draft has no verdict yet, and must not inherit the old one.
     rerender({ cel: "new draft" });
     expect(result.current.cel).toBe("old draft");
-  });
-
-  it("treats an empty expression as a valid (unfiltered) search", () => {
-    const { result } = renderHook(() => useCelValidation("", "alerts"));
-
-    expect(result.current.status).toBe("valid");
-    expect(mockPost).not.toHaveBeenCalled();
-  });
-
-  it("validateNow checks the exact draft without waiting for the debounce", async () => {
-    mockPost.mockResolvedValue(INVALID);
-
-    const { result } = renderHook(() => useCelValidation("typed so far", "alerts"));
-
-    let verdict;
-    await act(async () => {
-      verdict = await result.current.validateNow("the exact draft");
-    });
-
-    expect(mockPost).toHaveBeenCalledWith("/cel/validate", {
-      cel: "the exact draft",
-      context: "alerts",
-    });
-    expect(verdict).toEqual(INVALID);
   });
 });
 
@@ -209,13 +314,17 @@ describe("getCelDiagnosticsFromError", () => {
   });
 
   it("does not blame CEL for a server failure", () => {
-    const error = apiError(500, { message: "An internal server error occurred." });
+    const error = apiError(500, {
+      message: "An internal server error occurred.",
+    });
 
     expect(isInvalidCelError(error)).toBe(false);
   });
 
   it("handles a rejection that carries no diagnostics", () => {
-    const error = apiError(400, { detail: { code: "INVALID_CEL", message: "x" } });
+    const error = apiError(400, {
+      detail: { code: "INVALID_CEL", message: "x" },
+    });
 
     expect(isInvalidCelError(error)).toBe(true);
     expect(getCelDiagnosticsFromError(error)).toEqual([]);

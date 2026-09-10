@@ -18,6 +18,8 @@ interface CelInputProps {
   onFocus?: () => void;
   /** The execution engine this expression will run on. */
   validationContext: CelValidationContext;
+  /** For inputs with no apply gesture: check the expression as the user types. */
+  validateWhileTyping?: boolean;
   onValidationChange?: (state: UseCelValidationResult) => void;
   placeholder?: string;
   disabled?: boolean;
@@ -31,6 +33,7 @@ const CelInput: FC<CelInputProps> = ({
   fieldsForSuggestions = [],
   onValueChange,
   validationContext,
+  validateWhileTyping,
   onValidationChange,
   onClearValue,
   onKeyDown,
@@ -56,6 +59,7 @@ const CelInput: FC<CelInputProps> = ({
         readOnly={readOnly}
         fieldsForSuggestions={fieldsForSuggestions}
         validationContext={validationContext}
+        validateWhileTyping={validateWhileTyping}
         onValueChange={onValueChange || ((value: string) => {})}
         onValidationChange={onValidationChange}
         onKeyDown={onKeyDown}

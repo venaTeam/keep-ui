@@ -24,8 +24,11 @@ jest.mock("@/features/cel-input/cel-input", () => {
       onKeyDown,
       onValidationChange,
       validationContext,
+      validateWhileTyping,
     }: any) => {
-      const validation = useCelValidation(value, validationContext);
+      const validation = useCelValidation(value, validationContext, {
+        validateWhileTyping,
+      });
 
       React.useEffect(() => {
         onValidationChange?.(validation);
@@ -286,7 +289,7 @@ describe("AlertsRulesBuilder", () => {
       renderBuilder({ showSave: true });
       type(uniqueDraft("severity == 'critical'"));
       act(() => {
-        jest.advanceTimersByTime(DEBOUNCE_MS);
+        pressEnter();
       });
 
       await waitFor(() => expect(mockPost).toHaveBeenCalled());
@@ -298,11 +301,11 @@ describe("AlertsRulesBuilder", () => {
 
       renderBuilder({ showSave: true });
       type(uniqueDraft("'just a string'"));
-      act(() => {
-        jest.advanceTimersByTime(DEBOUNCE_MS);
+      await act(async () => {
+        pressEnter();
       });
 
-      await waitFor(() => expect(mockPost).toHaveBeenCalled());
+      expect(mockPost).toHaveBeenCalled();
       expect(saveButton()).toBeDisabled();
     });
 
@@ -311,11 +314,11 @@ describe("AlertsRulesBuilder", () => {
 
       renderBuilder({ showSave: true });
       type(uniqueDraft("severity == 'critical'"));
-      act(() => {
-        jest.advanceTimersByTime(DEBOUNCE_MS);
+      await act(async () => {
+        pressEnter();
       });
 
-      await waitFor(() => expect(mockPost).toHaveBeenCalled());
+      expect(mockPost).toHaveBeenCalled();
       expect(saveButton()).toBeDisabled();
     });
 
@@ -324,11 +327,26 @@ describe("AlertsRulesBuilder", () => {
 
       renderBuilder({ showSave: true });
       type(uniqueDraft("severity == 'critical'"));
-      act(() => {
-        jest.advanceTimersByTime(DEBOUNCE_MS);
+      await act(async () => {
+        pressEnter();
       });
 
       await waitFor(() => expect(saveButton()).not.toBeDisabled());
+    });
+
+    it("goes back to disabled as soon as the user edits an accepted draft", async () => {
+      mockPost.mockResolvedValue(VALID);
+
+      renderBuilder({ showSave: true });
+      type(uniqueDraft("severity == 'critical'"));
+      await act(async () => {
+        pressEnter();
+      });
+      await waitFor(() => expect(saveButton()).not.toBeDisabled());
+
+      // The verdict describes the previous text, so it cannot vouch for this one.
+      type(uniqueDraft("severity == 'critical' && "));
+      expect(saveButton()).toBeDisabled();
     });
   });
 
@@ -366,5 +384,131 @@ describe("AlertsRulesBuilder", () => {
       expect(await screen.findByTestId("cel-error")).toBeInTheDocument();
       expect(onCelChanges).not.toHaveBeenCalledWith(draft);
     });
+  });
+});
+
+/**
+ * The alerts search asks the server once per commit - never per keystroke, and
+ * never twice for the same expression.
+ */
+describe("AlertsRulesBuilder request economy", () => {
+  const mockPost = jest.fn();
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+    (useApi as jest.Mock).mockReturnValue({
+      post: mockPost,
+      isReady: () => true,
+    });
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    jest.clearAllMocks();
+  });
+
+  const renderBuilder = () =>
+    render(<AlertsRulesBuilder defaultQuery="" showSqlImport={false} />);
+
+  const type = (text: string) =>
+    fireEvent.change(screen.getByTestId("cel-input"), {
+      target: { value: text },
+    });
+
+  const pressEnter = () =>
+    fireEvent.keyDown(screen.getByTestId("cel-input"), { key: "Enter" });
+
+  it("asks nothing while the user types", async () => {
+    mockPost.mockResolvedValue(VALID);
+
+    renderBuilder();
+    for (const cel of ["s", "se", "sev", "seve"]) {
+      type(cel);
+      await act(async () => {
+        jest.advanceTimersByTime(DEBOUNCE_MS * 2);
+      });
+    }
+
+    expect(mockPost).not.toHaveBeenCalled();
+  });
+
+  it("asks exactly once per Enter", async () => {
+    mockPost.mockResolvedValue(VALID);
+
+    renderBuilder();
+    type(uniqueDraft("severity == 'critical'"));
+    await act(async () => {
+      pressEnter();
+    });
+
+    expect(mockPost).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not re-ask when Enter is pressed again on an accepted draft", async () => {
+    mockPost.mockResolvedValue(VALID);
+
+    renderBuilder();
+    type(uniqueDraft("severity == 'critical'"));
+    await act(async () => {
+      pressEnter();
+    });
+    await act(async () => {
+      pressEnter();
+    });
+
+    expect(mockPost).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not re-ask when Enter is pressed again on a rejected draft", async () => {
+    mockPost.mockResolvedValue(INVALID);
+
+    renderBuilder();
+    type(uniqueDraft("'just a string'"));
+    await act(async () => {
+      pressEnter();
+    });
+    await act(async () => {
+      pressEnter();
+    });
+
+    expect(mockPost).toHaveBeenCalledTimes(1);
+    expect(await screen.findByTestId("cel-error")).toBeInTheDocument();
+  });
+
+  it("does not re-ask for a draft the user returns to", async () => {
+    mockPost.mockResolvedValue(VALID);
+    const first = uniqueDraft("first");
+    const second = uniqueDraft("second");
+
+    renderBuilder();
+
+    type(first);
+    await act(async () => {
+      pressEnter();
+    });
+    type(second);
+    await act(async () => {
+      pressEnter();
+    });
+    expect(mockPost).toHaveBeenCalledTimes(2);
+
+    type(first);
+    await act(async () => {
+      pressEnter();
+    });
+
+    expect(mockPost).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not ask at all when the filter is cleared", async () => {
+    mockPost.mockResolvedValue(VALID);
+
+    renderBuilder();
+    type("");
+    await act(async () => {
+      pressEnter();
+    });
+
+    expect(mockPost).not.toHaveBeenCalled();
   });
 });

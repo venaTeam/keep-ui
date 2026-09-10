@@ -27,6 +27,11 @@ interface MonacoCelProps {
    */
   validationContext: CelValidationContext;
   /**
+   * Check the expression as the user types instead of only when the consumer
+   * asks. Only for editors with no apply gesture of their own.
+   */
+  validateWhileTyping?: boolean;
+  /**
    * Full server-backed validation state for the debounced draft. Prefer this
    * over a boolean: "unchecked", "validating" and "failed" are all distinct
    * from "invalid", and none of them may be treated as valid.
@@ -61,7 +66,8 @@ export function MonacoCelEditor(props: MonacoCelProps) {
 
   const validation = useCelValidation(
     props.readOnly ? undefined : value,
-    props.validationContext
+    props.validationContext,
+    { validateWhileTyping: !props.readOnly && props.validateWhileTyping }
   );
 
   useEffect(() => {

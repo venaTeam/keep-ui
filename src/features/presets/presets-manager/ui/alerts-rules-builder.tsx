@@ -562,6 +562,10 @@ export const AlertsRulesBuilder = ({
                   value={celRules}
                   fieldsForSuggestions={alertFields}
                   validationContext={validationContext}
+                  // With an apply gesture, the check happens on Enter. Forms
+                  // that apply on typing have no such gesture, so there the
+                  // typing has to drive it.
+                  validateWhileTyping={applyOnTyping}
                   onValueChange={handleCelRulesChange}
                   onValidationChange={handleValidationChange}
                   onClearValue={handleClearInput}
