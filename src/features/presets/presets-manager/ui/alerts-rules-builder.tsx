@@ -29,7 +29,12 @@ import { usePresetActions } from "@/entities/presets/model/usePresetActions";
 import CelInput from "@/features/cel-input/cel-input";
 import { useFacetPotentialFields } from "@/features/filter";
 import { useCelState } from "@/features/cel-input/use-cel-state";
-import { isStandaloneCelStringLiteral } from "@/shared/ui/MonacoCELEditor/validation-hook";
+import {
+  INVALID_CEL_MESSAGE,
+  type CelValidationContext,
+  type CelValidationResponse,
+} from "@/shared/ui/MonacoCELEditor/cel-validation";
+import type { UseCelValidationResult } from "@/shared/ui/MonacoCELEditor/validation-hook";
 
 const staticOptions = [
   { value: 'severity > "info"', label: 'severity > "info"' },
@@ -151,8 +156,22 @@ type AlertsRulesBuilderProps = {
   showToast?: boolean;
   shouldSetQueryParam?: boolean;
   applyOnTyping?: boolean;
-  /** The applied CEL was rejected by the alerts query API. */
+  /** Which execution engine the expression is validated against. */
+  validationContext?: CelValidationContext;
+  /** The applied CEL was rejected by the query API with INVALID_CEL. */
   isCelRejected?: boolean;
+};
+
+/**
+ * An apply/save attempt for one exact draft.
+ *
+ * "pending" is not a verdict - the draft is neither valid nor invalid while a
+ * check is in flight. "failed" means the check itself could not be completed,
+ * which leaves validity unknown.
+ */
+type CelAttempt = {
+  cel: string;
+  status: "pending" | "rejected" | "failed";
 };
 
 const SQL_QUERY_PLACEHOLDER = `SELECT *
@@ -201,6 +220,7 @@ export const AlertsRulesBuilder = ({
   shouldSetQueryParam = true,
   onCelChanges,
   applyOnTyping = false,
+  validationContext = "alerts",
   isCelRejected = false,
 }: AlertsRulesBuilderProps) => {
   const router = useRouter();
@@ -234,11 +254,48 @@ export const AlertsRulesBuilder = ({
   const action = isDynamic ? "update" : "create";
 
   const [query, setQuery] = useState<RuleGroupType>(parsedCELRulesToQuery);
-  const [isEditorValidCEL, setIsEditorValidCEL] = useState(true);
-  const isValidCEL =
-    isEditorValidCEL && !isStandaloneCelStringLiteral(celRules);
-  const [lastAttemptedCel, setLastAttemptedCel] = useState<string | null>(null);
+  /**
+   * The backend decides CEL validity. This holds its verdict together with the
+   * draft the verdict is about, so a late response can never be applied to a
+   * newer draft.
+   */
+  const [validation, setValidation] = useState<UseCelValidationResult | null>(
+    null
+  );
+  const [attempt, setAttempt] = useState<CelAttempt | null>(null);
   const [sqlError, setSqlError] = useState<string | null>(null);
+
+  const celRulesRef = useRef(celRules);
+  celRulesRef.current = celRules;
+  const validationRef = useRef(validation);
+  validationRef.current = validation;
+  const attemptRef = useRef(attempt);
+  attemptRef.current = attempt;
+
+  /** The server accepted this exact draft. Anything else is "not known valid". */
+  const isDraftKnownValid =
+    validation?.cel === celRules && validation.status === "valid";
+  /**
+   * A query rejection describes the expression that was applied when it ran, so
+   * editing the draft ends its claim.
+   *
+   * It is also dropped once the server has accepted this exact draft, for two
+   * reasons. A rejection from the previous query outlives the moment a
+   * corrected draft is applied - the error only clears when the new request
+   * starts - and without this the message would reappear on text that is known
+   * good. And the executed query is the draft combined with generated date and
+   * facet filters, so when the draft itself validates, the fault lies in the
+   * generated part and blaming the user's text would be wrong.
+   */
+  const isAppliedCelRejected =
+    isCelRejected && celRules === appliedCel && !isDraftKnownValid;
+  const isAttemptRejected =
+    attempt?.status === "rejected" && attempt.cel === celRules;
+  const isAttemptPending =
+    attempt?.status === "pending" && attempt.cel === celRules;
+  const hasValidationServiceFailed =
+    (attempt?.status === "failed" && attempt.cel === celRules) ||
+    (validation?.cel === celRules && validation.status === "failed");
 
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -252,14 +309,23 @@ export const AlertsRulesBuilder = ({
     setAppliedCel("");
     onCelChanges && onCelChanges("");
     table?.resetGlobalFilter();
-    setIsEditorValidCEL(true);
-    setLastAttemptedCel(null);
+    setAttempt(null);
   }, [table]);
 
   const handleCelRulesChange = (cel: string) => {
     setCELRules(cel);
-    setLastAttemptedCel(null);
+    /**
+     * Typing invalidates the previous attempt: its diagnostics described text
+     * that no longer exists, and its response must not apply the older draft.
+     * The already-applied search is left untouched.
+     */
+    setAttempt(null);
   };
+
+  const handleValidationChange = useCallback(
+    (state: UseCelValidationResult) => setValidation(state),
+    []
+  );
 
   const toggleSuggestions = () => {
     setShowSuggestions(!showSuggestions);
@@ -296,22 +362,89 @@ export const AlertsRulesBuilder = ({
     adjustTextAreaHeight();
   }, [celRules]);
 
+  const applyCel = useCallback(
+    (cel: string) => {
+      setAppliedCel(cel);
+      if (showToast)
+        toast.success("Condition applied", { position: "top-right" });
+    },
+    [setAppliedCel, showToast]
+  );
+
+  /**
+   * Apply `cel`, but only once the server has accepted that exact draft.
+   *
+   * Background validation is debounced, so on Enter the draft may have no
+   * verdict yet. Rather than guessing, ask immediately and wait. A pending
+   * attempt is neither valid nor invalid, and the applied filter and its
+   * results stay put until a verdict arrives.
+   */
+  const submitCel = useCallback(
+    async (cel: string) => {
+      // One apply at a time - a second Enter must not fire a duplicate request.
+      if (attemptRef.current?.status === "pending") {
+        return;
+      }
+
+      // An empty search is not a filter, so there is nothing to check.
+      if (!cel) {
+        setAttempt(null);
+        applyCel(cel);
+        return;
+      }
+
+      const validator = validationRef.current;
+
+      if (validator?.cel === cel && validator.status === "valid") {
+        setAttempt(null);
+        applyCel(cel);
+        return;
+      }
+
+      if (!validator) {
+        // No way to check this draft, so its validity is unknown - which is not
+        // permission to apply it.
+        setAttempt({ cel, status: "failed" });
+        return;
+      }
+
+      setAttempt({ cel, status: "pending" });
+
+      let result: CelValidationResponse;
+
+      try {
+        result = await validator.validateNow(cel);
+      } catch (error) {
+        // The check could not be completed, so validity is unknown. Do not
+        // apply, and do not claim the expression is invalid.
+        if (celRulesRef.current === cel) {
+          setAttempt({ cel, status: "failed" });
+        }
+        return;
+      }
+
+      // The user edited while we waited: this answer is about an older draft.
+      if (celRulesRef.current !== cel) {
+        return;
+      }
+
+      if (result.valid) {
+        setAttempt(null);
+        applyCel(cel);
+        return;
+      }
+
+      setAttempt({ cel, status: "rejected" });
+    },
+    [applyCel]
+  );
+
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === "Enter") {
       e.preventDefault(); // Prevents the default action of Enter key in a form
       // close the menu
       setShowSuggestions(false);
-      setLastAttemptedCel(celRules);
-      /**
-       * Validation is debounced, so `isValidCEL` may still describe the previous
-       * expression. An unchecked one that slips through is rejected by the query
-       * and surfaces the same inline error via isCelRejected.
-       */
-      if (isValidCEL) {
-        setAppliedCel(celRules);
-        if (showToast)
-          toast.success("Condition applied", { position: "top-right" });
-      }
+      void submitCel(celRulesRef.current);
     }
   };
 
@@ -320,17 +453,16 @@ export const AlertsRulesBuilder = ({
     onCelChanges?.(appliedCel);
   }, [appliedCel, updateOutputCEL]);
 
-  // When applyOnTyping is enabled, auto-apply valid CEL as the user types
-  // and clear it when the CEL becomes invalid so the parent form can disable submission.
+  // When applyOnTyping is enabled, auto-apply the draft once the server has
+  // accepted it, and clear it otherwise so the parent form cannot submit an
+  // expression that is unchecked, still being checked, rejected, or unverifiable.
   useEffect(() => {
-    if (applyOnTyping) {
-      if (isValidCEL) {
-        setAppliedCel(celRules);
-      } else {
-        setAppliedCel("");
-      }
+    if (!applyOnTyping) {
+      return;
     }
-  }, [applyOnTyping, celRules, isValidCEL]);
+
+    setAppliedCel(isDraftKnownValid ? celRules : "");
+  }, [applyOnTyping, celRules, isDraftKnownValid]);
 
   const onGenerateQuery = () => {
     setCELRules(formatQuery(query, "cel"));
@@ -389,19 +521,25 @@ export const AlertsRulesBuilder = ({
   };
 
   /**
-   * `/cel/validate` only checks syntax, so an expression that parses can still be
-   * rejected when the query runs. The rejection describes the applied expression,
-   * so it stops counting once the user edits it.
+   * Saving requires a server verdict for the exact expression being saved. A
+   * query rejection also disqualifies it, until the user edits the text.
    */
-  const isCelUsable =
-    isValidCEL &&
-    !(isCelRejected && celRules === appliedCel);
+  const isCelUsable = isDraftKnownValid && !isAppliedCelRejected;
+
+  /**
+   * The prominent message is deferred until the user tries to apply, so typing
+   * an incomplete expression does not shout at them. Forms that apply on typing
+   * have no separate apply step, so their verdict shows as soon as it lands.
+   */
   const showCelError = applyOnTyping
-    ? !isCelUsable
-    : (!isValidCEL && lastAttemptedCel === celRules) ||
-      (isCelRejected && celRules === appliedCel);
+    ? validation?.cel === celRules && validation.status === "invalid"
+    : isAttemptRejected || isAppliedCelRejected;
 
   function getSaveFilterTooltipText(): string {
+    if (hasValidationServiceFailed) {
+      return "Could not check this expression. Try again before saving.";
+    }
+
     if (!isCelUsable) {
       return "You can only save a valid CEL expression.";
     }
@@ -425,8 +563,13 @@ export const AlertsRulesBuilder = ({
                   placeholder='Use CEL to filter your alerts e.g. source.contains("kibana").'
                   value={celRules}
                   fieldsForSuggestions={alertFields}
+                  validationContext={validationContext}
+                  // With an apply gesture, the check happens on Enter. Forms
+                  // that apply on typing have no such gesture, so there the
+                  // typing has to drive it.
+                  validateWhileTyping={applyOnTyping}
                   onValueChange={handleCelRulesChange}
-                  onIsValidChange={setIsEditorValidCEL}
+                  onValidationChange={handleValidationChange}
                   onClearValue={handleClearInput}
                   onKeyDown={handleKeyDown}
                   onFocus={() => setShowSuggestions(true)}
@@ -459,8 +602,19 @@ export const AlertsRulesBuilder = ({
                 </div>
               )}
               {showCelError && (
-                <div className="text-red-500 text-sm relative top-1">
-                  Invalid Common Expression Logic expression.
+                <div
+                  className="text-red-500 text-sm relative top-1"
+                  data-testid="cel-error"
+                >
+                  {INVALID_CEL_MESSAGE}
+                </div>
+              )}
+              {!showCelError && hasValidationServiceFailed && (
+                <div
+                  className="text-red-500 text-sm relative top-1"
+                  data-testid="cel-validation-unavailable"
+                >
+                  Could not check this expression. Press Enter to try again.
                 </div>
               )}
               {!applyOnTyping && (
@@ -483,7 +637,7 @@ export const AlertsRulesBuilder = ({
               color="orange"
               variant="secondary"
               size="sm"
-              disabled={!celRules.length || !isCelUsable}
+              disabled={!celRules.length || !isCelUsable || isAttemptPending}
               onClick={() => openSaveModal(celRules)}
               tooltip={getSaveFilterTooltipText()}
             ></Button>

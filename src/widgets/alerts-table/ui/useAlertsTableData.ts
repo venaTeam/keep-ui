@@ -10,6 +10,7 @@ import {
 import { v4 as uuidv4 } from "uuid";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSWRConfig } from "swr";
+import { isInvalidCelError } from "@/shared/ui/MonacoCELEditor";
 
 export interface AlertsTableDataQuery {
   searchCel: string;
@@ -152,7 +153,15 @@ export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
   } = useLastAlerts(alertsQueryState, {
     revalidateOnFocus: false,
     revalidateOnMount: true,
+    /**
+     * An INVALID_CEL rejection is deterministic - retrying asks a question that
+     * already has an answer. Transport failures are still worth retrying.
+     */
+    shouldRetryOnError: (error: unknown) => !isInvalidCelError(error),
   });
+
+  /** The backend rejected this exact filter; nothing should re-run it. */
+  const isQueryRejected = isInvalidCelError(alertsError);
 
   const refetchTimersRef = useRef<RefetchTimers>({
     debounce: null,
@@ -164,8 +173,10 @@ export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
     return () => clearRefetchTimers(timers);
   }, []);
 
-  // Simple alert polling - append incoming SSE events to the local cache
-  useAlertPolling(!isPaused, (data) => {
+  // Simple alert polling - append incoming SSE events to the local cache.
+  // Paused while the current filter is rejected, so polling does not keep
+  // re-issuing a query the backend has already refused.
+  useAlertPolling(!isPaused && !isQueryRejected, (data) => {
     const triggerRefetch = () =>
       scheduleRefetchWithMaxWait(
         refetchTimersRef.current,

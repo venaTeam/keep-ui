@@ -1,6 +1,8 @@
 import React, { ChangeEvent, FC, useRef, useState } from "react";
 import type { editor } from "monaco-editor";
 import { MonacoCelEditor } from "@/shared/ui/MonacoCELEditor";
+import type { CelValidationContext } from "@/shared/ui/MonacoCELEditor/cel-validation";
+import type { UseCelValidationResult } from "@/shared/ui/MonacoCELEditor/validation-hook";
 import { IoSearchOutline } from "react-icons/io5";
 import { TrashIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import clsx from "clsx";
@@ -14,7 +16,11 @@ interface CelInputProps {
   onClearValue?: () => void;
   onKeyDown?: (e: KeyboardEvent) => void;
   onFocus?: () => void;
-  onIsValidChange?: (isValid: boolean) => void;
+  /** The execution engine this expression will run on. */
+  validationContext: CelValidationContext;
+  /** For inputs with no apply gesture: check the expression as the user types. */
+  validateWhileTyping?: boolean;
+  onValidationChange?: (state: UseCelValidationResult) => void;
   placeholder?: string;
   disabled?: boolean;
   readOnly?: boolean;
@@ -26,7 +32,9 @@ const CelInput: FC<CelInputProps> = ({
   value = "",
   fieldsForSuggestions = [],
   onValueChange,
-  onIsValidChange,
+  validationContext,
+  validateWhileTyping,
+  onValidationChange,
   onClearValue,
   onKeyDown,
   onFocus,
@@ -50,8 +58,10 @@ const CelInput: FC<CelInputProps> = ({
         value={value}
         readOnly={readOnly}
         fieldsForSuggestions={fieldsForSuggestions}
+        validationContext={validationContext}
+        validateWhileTyping={validateWhileTyping}
         onValueChange={onValueChange || ((value: string) => {})}
-        onIsValidChange={onIsValidChange}
+        onValidationChange={onValidationChange}
         onKeyDown={onKeyDown}
         onFocus={onFocus}
       />

@@ -136,6 +136,12 @@ export function TriggerEditor() {
                   onValueChange={(value: string) => updateAlertCel(value)}
                   onClearValue={() => updateAlertCel("")}
                   fieldsForSuggestions={alertFields}
+                  // Workflow triggers are evaluated by celpy over the raw event
+                  // payload in keep-workflows, not run as an alert SQL query.
+                  validationContext="workflows"
+                  // This editor has no apply gesture - the value is saved as it
+                  // is typed - so nothing else would trigger a check.
+                  validateWhileTyping
                 />
               </div>
               <div className="mt-4">
