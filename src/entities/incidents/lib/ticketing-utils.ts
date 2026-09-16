@@ -32,22 +32,7 @@ export function getTicketViewUrl(incident: IncidentDto, provider: Provider): str
   return incident.enrichments[urlKey] || "";
 }
 
-/**
- * Build the ServiceNow deep link that opens a new record form with fields prefilled.
- *
- * ServiceNow does not read prefill values off an arbitrary path segment: they have
- * to ride on the encoded query it looks for.
- *
- * Next Experience (the shape the provider's `ticket_creation_url` hint documents)
- * takes them in a `/params/query/` segment:
- *   .../now/sow/record/incident/-1/params/query/short_description=Foo%5Edescription=Bar
- *
- * Classic UI instances take the same query as a `sysparm_query` parameter:
- *   .../incident.do?sys_id=-1&sysparm_query=short_description=Foo%5Edescription=Bar
- *
- * In both, pairs are separated by a caret encoded as %5E, and each value is
- * URL-encoded so spaces/&/# in an incident name or summary can't truncate the URL.
- */
+/** Build the ServiceNow deep link that opens a new record form with fields prefilled. */
 function buildServiceNowCreateUrl(
   configuredUrl: string,
   title: string,
