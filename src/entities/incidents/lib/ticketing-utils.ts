@@ -33,6 +33,59 @@ export function getTicketViewUrl(incident: IncidentDto, provider: Provider): str
 }
 
 /**
+ * Build the ServiceNow deep link that opens a new record form with fields prefilled.
+ *
+ * ServiceNow does not read prefill values off an arbitrary path segment: they have
+ * to ride on the encoded query it looks for.
+ *
+ * Next Experience (the shape the provider's `ticket_creation_url` hint documents)
+ * takes them in a `/params/query/` segment:
+ *   .../now/sow/record/incident/-1/params/query/short_description=Foo%5Edescription=Bar
+ *
+ * Classic UI instances take the same query as a `sysparm_query` parameter:
+ *   .../incident.do?sys_id=-1&sysparm_query=short_description=Foo%5Edescription=Bar
+ *
+ * In both, pairs are separated by a caret encoded as %5E, and each value is
+ * URL-encoded so spaces/&/# in an incident name or summary can't truncate the URL.
+ */
+function buildServiceNowCreateUrl(
+  configuredUrl: string,
+  title: string,
+  description: string
+): string {
+  const pairs: string[] = [];
+
+  if (title) {
+    pairs.push(`short_description=${encodeURIComponent(title)}`);
+  }
+
+  if (description) {
+    pairs.push(`description=${encodeURIComponent(description)}`);
+  }
+
+  // Nothing to prefill — hand back the plain "new record" form.
+  if (pairs.length === 0) {
+    return configuredUrl;
+  }
+
+  const query = pairs.join("%5E");
+
+  // Classic UI: the record form is a *.do page and prefill rides on sysparm_query.
+  if (/\.do(\?|$)/.test(configuredUrl)) {
+    const separator = configuredUrl.includes("?") ? "&" : "?";
+    return `${configuredUrl}${separator}sysparm_query=${query}`;
+  }
+
+  // Next Experience: tolerate an admin who already typed the /params or
+  // /params/query suffix, so we never emit .../params/params/query/.
+  const base = configuredUrl
+    .replace(/\/+$/, "")
+    .replace(/\/params(\/query)?$/, "");
+
+  return `${base}/params/query/${query}`;
+}
+
+/**
  * Get and construct a URL to create a new ticket in the provider's system
  */
 export function getTicketCreateUrl(provider: Provider, description: string = "", title: string = ""): string {
@@ -40,17 +93,16 @@ export function getTicketCreateUrl(provider: Provider, description: string = "",
     return "";
   }
 
-  let createUrl = provider.details.authentication.ticket_creation_url;
+  const createUrl = provider.details.authentication.ticket_creation_url;
 
-  // TODO: might need to add other providers here
   if (provider.type === "servicenow") {
-    createUrl = `${createUrl}/short_description=${title}^description=${description}`;
-  }
-  else{
-    createUrl = `${createUrl}/title=${title}^description=${description}`;
+    return buildServiceNowCreateUrl(createUrl, title, description);
   }
 
-  return createUrl;
+  // TODO: Jira and Zendesk ignore these too — they need their own prefill
+  // formats (Jira: summary/description query params; Zendesk: its own). Left as
+  // it was rather than guessed at, so only ServiceNow behaviour changes here.
+  return `${createUrl}/title=${title}^description=${description}`;
 }
 
 /**

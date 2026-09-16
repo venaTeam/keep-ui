@@ -176,7 +176,49 @@ describe("ticketing-utils", () => {
   describe("getTicketCreateUrl", () => {
     it("should construct ServiceNow create URL with parameters", () => {
       const result = getTicketCreateUrl(mockServiceNowProvider, "Test description", "Test title");
-      expect(result).toBe("https://company.service-now.com/now/sow/record/incident/-1/params/short_description=Test title^description=Test description");
+      expect(result).toBe("https://company.service-now.com/now/sow/record/incident/-1/params/query/short_description=Test%20title%5Edescription=Test%20description");
+    });
+
+    it("should not double up the /params segment the admin already configured", () => {
+      // The mock's ticket_creation_url already ends in /params.
+      const result = getTicketCreateUrl(mockServiceNowProvider, "d", "t");
+      expect(result).not.toContain("/params/params");
+      expect(result).toContain("/incident/-1/params/query/");
+    });
+
+    it("should encode characters that would otherwise truncate the URL", () => {
+      const result = getTicketCreateUrl(
+        mockServiceNowProvider,
+        "Disk at 90% & climbing",
+        "DB #4 down"
+      );
+      // A raw # would drop everything after it; a raw & would split the query.
+      expect(result).toContain("short_description=DB%20%234%20down");
+      expect(result).toContain("description=Disk%20at%2090%25%20%26%20climbing");
+    });
+
+    it("should use sysparm_query for a classic-UI record form", () => {
+      const classicProvider = {
+        ...mockServiceNowProvider,
+        details: {
+          authentication: {
+            ...mockServiceNowProvider.details.authentication,
+            ticket_creation_url: "https://company.service-now.com/incident.do?sys_id=-1"
+          }
+        }
+      };
+      const result = getTicketCreateUrl(classicProvider, "Test description", "Test title");
+      expect(result).toBe("https://company.service-now.com/incident.do?sys_id=-1&sysparm_query=short_description=Test%20title%5Edescription=Test%20description");
+    });
+
+    it("should return the bare form when there is nothing to prefill", () => {
+      const result = getTicketCreateUrl(mockServiceNowProvider);
+      expect(result).toBe("https://company.service-now.com/now/sow/record/incident/-1/params");
+    });
+
+    it("should omit the description pair when only a title is given", () => {
+      const result = getTicketCreateUrl(mockServiceNowProvider, "", "Only title");
+      expect(result).toBe("https://company.service-now.com/now/sow/record/incident/-1/params/query/short_description=Only%20title");
     });
 
     it("should construct Jira create URL with parameters", () => {
@@ -205,7 +247,7 @@ describe("ticketing-utils", () => {
         }
       };
       const result = getTicketCreateUrl(providerWithCustomUrl, "Test description", "Test title");
-      expect(result).toBe("https://custom.service-now.com/custom/create/short_description=Test title^description=Test description");
+      expect(result).toBe("https://custom.service-now.com/custom/create/params/query/short_description=Test%20title%5Edescription=Test%20description");
     });
   });
 
