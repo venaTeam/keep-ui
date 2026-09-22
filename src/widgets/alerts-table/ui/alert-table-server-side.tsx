@@ -21,6 +21,7 @@ import {
 } from "@tanstack/react-table";
 import { ListFormatOption } from "@/widgets/alerts-table/lib/alert-table-list-format";
 import AlertsTableHeaders from "@/widgets/alerts-table/ui/alert-table-headers";
+import { ColumnResizeIndicator } from "@/widgets/alerts-table/ui/column-resize-indicator";
 import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
 import {
   getColumnsIds,
@@ -56,13 +57,14 @@ import {
   FunnelIcon,
   MagnifyingGlassIcon,
 } from "@heroicons/react/24/outline";
-import { FacetDto, Pagination } from "@/features/filter";
+import { Pagination } from "@/features/filter";
 import { ShortNumber } from "@/components/ui";
 import { GroupingState, getGroupedRowModel } from "@tanstack/react-table";
 import { v4 as uuidV4 } from "uuid";
 import { FacetsConfig } from "@/features/filter/models";
 import { TimeFormatOption } from "@/widgets/alerts-table/lib/alert-table-time-format";
 import { PushAlertToServerModal } from "@/features/alerts/simulate-alert";
+import { INVALID_CEL_MESSAGE } from "@/shared/ui/MonacoCELEditor";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { GrTest } from "react-icons/gr";
 import { FiFilter } from "react-icons/fi";
@@ -99,10 +101,13 @@ interface Tab {
 
 interface Props {
   alerts: AlertDto[];
-  initialFacets: FacetDto[];
   alertsTotalCount: number;
   columns: ColumnDef<AlertDto>[];
   isAsyncLoading?: boolean;
+  isCelRejected?: boolean;
+  /** A query failure that is not about the CEL filter. */
+  queryError?: unknown;
+  onRetryQuery?: () => void;
   presetName: string;
   presetId?: string;
   counterShowsFiringOnly?: boolean;
@@ -126,8 +131,10 @@ export function AlertTableServerSide({
   alerts,
   alertsTotalCount,
   columns,
-  initialFacets,
   isAsyncLoading = false,
+  isCelRejected = false,
+  queryError,
+  onRetryQuery,
   presetName,
   presetId,
   counterShowsFiringOnly = false,
@@ -222,6 +229,7 @@ export function AlertTableServerSide({
     `table-sizes-${userPrefix}${presetName}`,
     {}
   );
+  const tableContainerRef = useRef<HTMLDivElement>(null);
 
   const [sorting, setSorting] = useState<SortingState>(
     noisyAlertsEnabled ? [{ id: "noise", desc: true }] : []
@@ -313,7 +321,7 @@ export function AlertTableServerSide({
     getPaginationRowModel: getPaginationRowModel(),
     onColumnSizingChange: setColumnSizing,
     enableColumnPinning: true,
-    columnResizeMode: "onChange",
+    columnResizeMode: "onEnd",
     autoResetPageIndex: false,
     enableGlobalFilter: true,
     enableSorting: true,
@@ -601,6 +609,59 @@ export function AlertTableServerSide({
   );
 
   function renderTable() {
+    /**
+     * A failed query has no results. Rows from an earlier query are not matches
+     * for this one, so the table area reports the failure instead of showing
+     * them - which also keeps the count and facets consistent with what is on
+     * screen.
+     */
+    if (isCelRejected) {
+      return (
+        <div className="flex-1 flex items-center w-full">
+          <div
+            className="flex flex-col justify-center items-center w-full p-4"
+            data-testid="alerts-invalid-cel"
+          >
+            {/* The one message the UI uses for a rejected filter - the results
+                area repeats it rather than inventing its own wording. */}
+            <EmptyStateCard
+              noCard
+              title={INVALID_CEL_MESSAGE}
+              icon={MagnifyingGlassIcon}
+            />
+          </div>
+        </div>
+      );
+    }
+
+    if (queryError) {
+      return (
+        <div className="flex-1 flex items-center w-full">
+          <div
+            className="flex flex-col justify-center items-center w-full p-4"
+            data-testid="alerts-load-error"
+          >
+            <EmptyStateCard
+              noCard
+              title="Could not load alerts"
+              description="The request to load alerts failed. Your filter has not changed."
+            >
+              <div className="flex gap-2 justify-center">
+                <Button
+                  color="orange"
+                  variant="secondary"
+                  onClick={() => onRetryQuery?.()}
+                  data-cy="alerts-btn-retry"
+                >
+                  Retry
+                </Button>
+              </div>
+            </EmptyStateCard>
+          </div>
+        </div>
+      );
+    }
+
     if (isFeedAwaitingQuery) {
       return (
         <div className="flex-1 flex items-center w-full">
@@ -812,6 +873,7 @@ export function AlertTableServerSide({
             presetName={presetName}
             celValue={searchCel}
             onCelChanges={setSearchCel}
+            isCelRejected={isCelRejected}
             table={table}
             isGroupingActive={isGroupingActive}
             onToggleAllGroups={toggleAll}
@@ -858,10 +920,6 @@ export function AlertTableServerSide({
                   entityName={"alerts"}
                   facetOptionsCel={facetsCel}
                   clearFiltersToken={clearFiltersToken}
-                  initialFacetsData={{
-                    facets: initialFacets,
-                    facetOptions: null,
-                  }}
                   facetsConfig={facetsConfig}
                   persistenceKey={
                     presetName === "feed"
@@ -881,13 +939,17 @@ export function AlertTableServerSide({
           {/* Table section */}
           <div className="flex-1 flex flex-col min-w-0 gap-4">
             <Card className="flex-1 flex flex-col p-0 overflow-x-auto">
-              <div className="flex-1 flex flex-col">
+              <div ref={tableContainerRef} className="relative flex-1 flex flex-col">
                 <div ref={a11yContainerRef} className="sr-only" />
 
                 {/* Make table wrapper scrollable */}
                 <div data-testid="alerts-table" data-cy="alerts-table-wrapper" className="flex-1">
                   {renderTable()}
                 </div>
+                <ColumnResizeIndicator
+                  table={table}
+                  containerRef={tableContainerRef}
+                />
               </div>
             </Card>
             {/* Pagination footer - fixed height */}

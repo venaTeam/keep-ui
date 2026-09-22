@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { FacetDto } from "@/features/filter";
 import { AlertTableServerSide } from "@/widgets/alerts-table/ui/alert-table-server-side";
 import { useAlertTableCols } from "@/widgets/alerts-table/lib/alert-table-utils";
 import {
@@ -12,13 +11,16 @@ import { Preset } from "@/entities/presets/model/types";
 import { AlertsTableDataQuery } from "@/widgets/alerts-table/ui/useAlertsTableData";
 
 interface Props {
-  initialFacets: FacetDto[];
   alerts: AlertDto[];
   alertsTotalCount: number;
   facetsCel: string | null;
   facetsPanelRefreshToken: string | undefined;
   preset: Preset;
   isAsyncLoading: boolean;
+  isCelRejected?: boolean;
+  /** A query failure that is not about the CEL filter. */
+  queryError?: unknown;
+  onRetryQuery?: () => void;
   setTicketModalAlert: (alert: AlertDto | null) => void;
   setNoteModalAlert: (alert: AlertDto | null) => void;
   setRunWorkflowModalAlert: (alert: AlertDto | null) => void;
@@ -32,13 +34,15 @@ interface Props {
 }
 
 export default function AlertTableTabPanelServerSide({
-  initialFacets,
   alerts,
   alertsTotalCount,
   preset,
   facetsCel,
   facetsPanelRefreshToken,
   isAsyncLoading,
+  isCelRejected,
+  queryError,
+  onRetryQuery,
   setTicketModalAlert,
   setNoteModalAlert,
   setRunWorkflowModalAlert,
@@ -101,12 +105,14 @@ export default function AlertTableTabPanelServerSide({
     <AlertTableServerSide
       facetsCel={facetsCel}
       facetsPanelRefreshToken={facetsPanelRefreshToken}
-      initialFacets={initialFacets}
       alerts={alerts}
       alertsTotalCount={alertsTotalCount}
       columns={alertTableColumns}
       setDismissedModalAlert={setDismissModalAlert}
       isAsyncLoading={isAsyncLoading}
+      isCelRejected={isCelRejected}
+      queryError={queryError}
+      onRetryQuery={onRetryQuery}
       presetName={preset.name}
       presetId={preset.id}
       counterShowsFiringOnly={preset.counter_shows_firing_only}

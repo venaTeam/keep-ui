@@ -1,5 +1,6 @@
 import styles from "../Search.module.css";
 import { Controller, get, useFormContext } from "react-hook-form";
+import { asyncSelectStyles } from "./useManageTenants";
 
 interface FormFieldProps {
     title?: string;
@@ -47,7 +48,7 @@ export default function FormField({fieldClassName, fieldsetClassName, field_type
               options: other?.options,
               menuPortalTarget: typeof document !== "undefined" ? document.body : undefined,
               menuPosition: "fixed",
-              styles: { menuPortal: (base: any) => ({ ...base, zIndex: 9999 }) },
+              styles: asyncSelectStyles,
             } : {
               type: "text",
               disabled,

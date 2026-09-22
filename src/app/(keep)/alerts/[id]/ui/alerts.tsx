@@ -13,8 +13,8 @@ import { AlertDismissModal } from "@/features/alerts/dismiss-alert";
 import { AlertChangeStatusModal } from "@/features/alerts/alert-change-status";
 import { AlertAssignModal } from "@/features/alerts/alert-assign";
 import { ViewAlertModal } from "@/features/alerts/view-alert";
-import { FacetDto } from "@/features/filter";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { isInvalidCelError } from "@/shared/ui/MonacoCELEditor";
 import { KeepLoader, showErrorToast } from "@/shared/ui";
 import NotFound from "@/app/(keep)/not-found";
 import AlertTableTabPanelServerSide from "./alert-table-tab-panel-server-side";
@@ -40,11 +40,10 @@ const defaultPresets: Preset[] = [
 ];
 
 type AlertsProps = {
-  initialFacets: FacetDto[];
   presetName: string;
 };
 
-export default function Alerts({ presetName, initialFacets }: AlertsProps) {
+export default function Alerts({ presetName }: AlertsProps) {
   const api = useApi();
 
   // Record page load time - call directly since useEffect may not fire reliably in Next.js
@@ -162,10 +161,21 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
     return <KeepLoader />;
   }
 
-  // if we have an error, throw it, error.tsx will catch it
-  if (alertsError) {
-    throw alertsError;
-  }
+  /**
+   * Whether the backend rejected the CEL filter itself.
+   *
+   * Read from the structured response body rather than guessed from the status
+   * code: a 400 can also be malformed pagination, and a 500 with a search
+   * present is a server failure, not a bad expression. Only the *fact* of the
+   * rejection is used - the backend's own diagnostic wording is never shown.
+   */
+  const isRejectedQuery = isInvalidCelError(alertsError);
+  /**
+   * A real query failure. It is rendered locally in the table area rather than
+   * thrown, so the alerts screen, the editor and the user's draft stay mounted
+   * and the route does not change.
+   */
+  const queryError = alertsError && !isRejectedQuery ? alertsError : undefined;
 
   if (!selectedPreset) {
     return <NotFound />;
@@ -174,14 +184,19 @@ export default function Alerts({ presetName, initialFacets }: AlertsProps) {
   return (
     <>
       <AlertTableTabPanelServerSide
-        initialFacets={initialFacets}
         key={selectedPreset.name}
         facetsPanelRefreshToken={facetsPanelRefreshToken}
         preset={selectedPreset}
-        alerts={alerts || []}
-        alertsTotalCount={totalCount}
-        facetsCel={facetsCel}
+        // Results from an earlier query are not results for this one, so they
+        // are not carried past a failure.
+        alerts={alertsError ? [] : alerts || []}
+        alertsTotalCount={alertsError ? 0 : totalCount}
+        // Do not re-run a filter the backend has already rejected.
+        facetsCel={isRejectedQuery ? null : facetsCel}
         isAsyncLoading={alertsLoading}
+        isCelRejected={isRejectedQuery}
+        queryError={queryError}
+        onRetryQuery={mutateAlerts}
         setTicketModalAlert={setTicketModalAlert}
         setNoteModalAlert={setNoteModalAlert}
         setRunWorkflowModalAlert={setRunWorkflowModalAlert}

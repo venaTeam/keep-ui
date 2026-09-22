@@ -306,7 +306,7 @@ export function AlertTable({
     getGroupedRowModel: getGroupedRowModel(),
     onColumnSizingChange: setColumnSizing,
     enableColumnPinning: true,
-    columnResizeMode: "onChange",
+    columnResizeMode: "onEnd",
     autoResetPageIndex: false,
     enableGlobalFilter: true,
     enableSorting: true,

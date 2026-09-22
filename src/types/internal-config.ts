@@ -43,4 +43,10 @@ export interface InternalConfig {
   // Add ticketing options to the incident view, defaults to false
   KEEP_TICKETING_ENABLED: boolean;
   KEEP_WF_LIST_EXTENDED_INFO: boolean;
+  /**
+   * Feed refetch pacing for SSE poll-alerts events, in milliseconds.
+   * Unset means the client-side defaults (800 / 2000) apply.
+   */
+  ALERT_REFETCH_DEBOUNCE_MS?: number;
+  ALERT_REFETCH_MAX_WAIT_MS?: number;
 }

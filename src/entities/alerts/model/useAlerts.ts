@@ -263,7 +263,12 @@ const useLastAlertsCount = (
       ...swrValue,
       data: results,
       queryTimeInSeconds: swrValue.data?.queryTimeInSeconds,
-      isLoading: swrValue.isLoading || !swrValue.data?.queryResult,
+      /**
+       * A rejected request never produces a queryResult, so without the error
+       * check this would stay true forever.
+       */
+      isLoading:
+        !swrValue.error && (swrValue.isLoading || !swrValue.data?.queryResult),
       totalCount: swrValue.data?.queryResult?.count as number,
       limit: swrValue.data?.queryResult?.limit as number,
       offset: swrValue.data?.queryResult?.offset as number,

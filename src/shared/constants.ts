@@ -8,3 +8,9 @@ export const SSE_LEADER_LOCK_NAME = "keep-sse-leader";
 export const SSE_BROADCAST_CHANNEL_NAME = "keep-sse";
 export const SSE_BROADCAST_KIND = "keep-sse-event";
 export const SSE_MAX_RECONNECT_ATTEMPTS = 10;
+
+// Feed refetch pacing for SSE poll-alerts events, in milliseconds (see
+// widgets/alerts-table/lib/refetch-scheduler.ts). The env vars of the same
+// names override them at runtime via InternalConfig.
+export const ALERT_REFETCH_DEBOUNCE_MS = 800;
+export const ALERT_REFETCH_MAX_WAIT_MS = 2000;

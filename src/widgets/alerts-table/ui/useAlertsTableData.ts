@@ -1,9 +1,16 @@
 import { TimeFrameV2 } from "@/components/ui/DateRangePickerV2";
 import { AlertDto, AlertsQuery, useAlerts } from "@/entities/alerts/model";
 import { useAlertPolling } from "@/utils/hooks/useAlertPolling";
+import { useConfig } from "@/utils/hooks/useConfig";
+import {
+  RefetchTimers,
+  clearRefetchTimers,
+  scheduleRefetchWithMaxWait,
+} from "@/widgets/alerts-table/lib/refetch-scheduler";
 import { v4 as uuidv4 } from "uuid";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSWRConfig } from "swr";
+import { isInvalidCelError } from "@/shared/ui/MonacoCELEditor";
 
 export interface AlertsTableDataQuery {
   searchCel: string;
@@ -36,6 +43,7 @@ function getDateRangeCel(timeFrame: TimeFrameV2 | null): string | null {
 export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
   const { useLastAlerts } = useAlerts();
   const { mutate: mutateGlobal } = useSWRConfig();
+  const { data: config } = useConfig();
 
   const [canRevalidate, setCanRevalidate] = useState<boolean>(false);
   const [dateRangeCel, setDateRangeCel] = useState<string | null>(null);
@@ -145,20 +153,37 @@ export const useAlertsTableData = (query: AlertsTableDataQuery | undefined) => {
   } = useLastAlerts(alertsQueryState, {
     revalidateOnFocus: false,
     revalidateOnMount: true,
+    /**
+     * An INVALID_CEL rejection is deterministic - retrying asks a question that
+     * already has an answer. Transport failures are still worth retrying.
+     */
+    shouldRetryOnError: (error: unknown) => !isInvalidCelError(error),
   });
 
-  const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  /** The backend rejected this exact filter; nothing should re-run it. */
+  const isQueryRejected = isInvalidCelError(alertsError);
 
-  // Simple alert polling - append incoming SSE events to the local cache
-  useAlertPolling(!isPaused, (data) => {
-    const triggerRefetch = () => {
-      if (fetchTimeoutRef.current) {
-        clearTimeout(fetchTimeoutRef.current);
-      }
-      fetchTimeoutRef.current = setTimeout(() => {
-        mutateAlerts();
-      }, 800);
-    };
+  const refetchTimersRef = useRef<RefetchTimers>({
+    debounce: null,
+    maxWait: null,
+  });
+
+  useEffect(() => {
+    const timers = refetchTimersRef.current;
+    return () => clearRefetchTimers(timers);
+  }, []);
+
+  // Simple alert polling - append incoming SSE events to the local cache.
+  // Paused while the current filter is rejected, so polling does not keep
+  // re-issuing a query the backend has already refused.
+  useAlertPolling(!isPaused && !isQueryRejected, (data) => {
+    const triggerRefetch = () =>
+      scheduleRefetchWithMaxWait(
+        refetchTimersRef.current,
+        () => mutateAlerts(),
+        config?.ALERT_REFETCH_DEBOUNCE_MS,
+        config?.ALERT_REFETCH_MAX_WAIT_MS
+      );
 
     if (data?.alerts && Array.isArray(data.alerts)) {
       // Check if we're on the first page by looking at the query offset

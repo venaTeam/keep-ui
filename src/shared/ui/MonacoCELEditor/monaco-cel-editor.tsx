@@ -8,6 +8,9 @@ import { MonacoCelBase } from "./MonacoCel";
 import { editor, Token } from "monaco-editor";
 import "./editor.scss";
 import { useCelValidation } from "./validation-hook";
+import type { CelValidationContext } from "./cel-validation";
+import type { UseCelValidationResult } from "./validation-hook";
+import { normalizeCelPaste } from "./paste-utils";
 
 const Loader = <KeepLoader loadingText="Loading Code Editor ..." />;
 
@@ -17,7 +20,23 @@ interface MonacoCelProps {
   value: string;
   fieldsForSuggestions?: string[];
   readOnly?: boolean;
-  onIsValidChange?: (isValid: boolean) => void;
+  /**
+   * Which execution engine the expression is checked against. Required: an
+   * editor that does not name its engine would silently inherit another
+   * feature's rules.
+   */
+  validationContext: CelValidationContext;
+  /**
+   * Check the expression as the user types instead of only when the consumer
+   * asks. Only for editors with no apply gesture of their own.
+   */
+  validateWhileTyping?: boolean;
+  /**
+   * Full server-backed validation state for the debounced draft. Prefer this
+   * over a boolean: "unchecked", "validating" and "failed" are all distinct
+   * from "invalid", and none of them may be treated as valid.
+   */
+  onValidationChange?: (state: UseCelValidationResult) => void;
   onValueChange: (value: string) => void;
   onKeyDown?: (e: KeyboardEvent) => void;
   onFocus?: () => void;
@@ -31,33 +50,48 @@ export function MonacoCelEditor(props: MonacoCelProps) {
   const modelRef = useRef<editor.ITextModel | null>(null);
   const onKeyDownRef = useRef<MonacoCelProps["onKeyDown"]>(props.onKeyDown);
   onKeyDownRef.current = props.onKeyDown;
-  const onIsValidChangeRef = useRef<MonacoCelProps["onIsValidChange"]>(
-    props.onIsValidChange
+  const onValidationChangeRef = useRef<MonacoCelProps["onValidationChange"]>(
+    props.onValidationChange
   );
-  onIsValidChangeRef.current = props.onIsValidChange;
+  onValidationChangeRef.current = props.onValidationChange;
   const onFocusRef = useRef<MonacoCelProps["onFocus"]>(props.onFocus);
   onFocusRef.current = props.onFocus;
-  const fieldsForSuggestionsRef =
-    useRef<MonacoCelProps["fieldsForSuggestions"] | null>(null);
+  const fieldsForSuggestionsRef = useRef<
+    MonacoCelProps["fieldsForSuggestions"] | null
+  >(null);
   fieldsForSuggestionsRef.current = props.fieldsForSuggestions;
   const enteredTokensRef = useRef<Token[]>([]);
   const suggestionsShownRef = useRef<boolean>(false);
   const [value, setValue] = useState<string>(props.value);
 
-  const validationErrors = useCelValidation(props.readOnly ? undefined : value);
+  const validation = useCelValidation(
+    props.readOnly ? undefined : value,
+    props.validationContext,
+    { validateWhileTyping: !props.readOnly && props.validateWhileTyping }
+  );
+
+  useEffect(() => {
+    onValidationChangeRef.current?.(validation);
+  }, [validation]);
 
   useEffect(() => {
     if (!isEditorMounted) {
       return;
     }
 
+    /**
+     * Markers describe the draft the server answered about. While a newer draft
+     * is still being checked they would point at text that has since changed,
+     * so they are cleared rather than left stale.
+     */
+    const markers = validation.cel === value ? validation.markers : [];
+
     monacoInstanceRef.current?.editor.setModelMarkers(
       editorRef.current?.getModel()!,
       "cel",
-      validationErrors
+      markers
     );
-    onIsValidChangeRef.current?.(validationErrors.length === 0);
-  }, [isEditorMounted, validationErrors]);
+  }, [isEditorMounted, validation, value]);
 
   function monacoLoadedCallback(
     monacoInstance: typeof import("monaco-editor")
@@ -115,14 +149,29 @@ export function MonacoCelEditor(props: MonacoCelProps) {
       onKeyDownRef.current?.(e.browserEvent);
     });
     editor.onDidFocusEditorText(() => onFocusRef.current?.());
+    editor.onDidPaste(({ range }) => {
+      const model = editor.getModel();
+      if (!model || range.startLineNumber === range.endLineNumber) {
+        return;
+      }
+
+      const normalizedValue = normalizeCelPaste(model.getValueInRange(range));
+      const endPosition = {
+        lineNumber: range.startLineNumber,
+        column: range.startColumn + normalizedValue.length,
+      };
+
+      editor.executeEdits(
+        "cel.multilinePaste",
+        [{ range, text: normalizedValue }],
+        [monaco.Selection.fromPositions(endPosition)]
+      );
+    });
     editor.onDidChangeModelContent(() => {
       const model = editor.getModel();
       if (!model) return;
 
       const value = model.getValue();
-      if (value.includes("\n")) {
-        model.setValue(value.replace(/\n/g, " "));
-      }
       enteredTokensRef.current = monaco.editor.tokenize(value, "cel")[0];
     });
 

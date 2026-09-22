@@ -4,6 +4,7 @@ import FormField from "./FormField";
 import { TextInput } from "@/components/ui/TextInput";
 import Select from "react-select";
 import SubjectSelect from "./SubjectSelect";
+import { asyncSelectStyles } from "./useManageTenants";
 
 interface RoleMappingProps {
   subjectType: "group" | "user";
@@ -12,12 +13,16 @@ interface RoleMappingProps {
   initialValues?: Record<string, string>[];
   // Called when an existing grant is removed, so the parent can DELETE it.
   onRemove?: (removed: Record<string, string>) => void;
+  // Called when an existing grant's role is changed in place, so the parent can
+  // POST the update (previously only newly-added rows were submitted).
+  onEdit?: (name: string, role: string) => void;
 }
 
 export default function RoleMapping({
   subjectType,
   initialValues = [],
   onRemove,
+  onEdit,
 }: RoleMappingProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const newMappingRef = useRef<HTMLDivElement>(null);
@@ -77,26 +82,53 @@ export default function RoleMapping({
         {existingValues.map((value, index) => (
           <div className={styles.existingRow} key={`${subjectType}.${value.name}`}>
             <div className={`grid grid-cols-2 ${styles.existingFieldset}`}>
-              {Object.keys(existingValuesFields).map((field) => (
-                <FormField
-                  key={field}
-                  field_type={existingValuesFields[field].field_type}
-                  required={existingValuesFields[field].required}
-                  disabled={existingValuesFields[field].disabled}
-                  name={`${subjectType}.existing.${index}.${field}`}
-                  placeholder={
-                    field === "name" && subjectType === "group"
-                      ? (value[field] || "").replace(/^\//, "")
-                      : value[field]
+              {/* name -- read-only display of the existing subject */}
+              <FormField
+                key="name"
+                field_type={existingValuesFields.name.field_type}
+                required={false}
+                disabled={true}
+                name={`${subjectType}.existing.${index}.name`}
+                placeholder={
+                  subjectType === "group"
+                    ? (value.name || "").replace(/^\//, "")
+                    : value.name
+                }
+                isSubmitted={false}
+                errors={{}}
+                fieldClassName={styles.existingFieldInput}
+                fieldsetClassName={styles.existingFieldSetClassName}
+              />
+              {/* role -- editable; kept in existingValues state and reported to
+                  the parent via onEdit so an in-place role change is saved. */}
+              <fieldset
+                className={`grid grid-cols-2 ${styles.existingFieldSetClassName}`}
+              >
+                <Select
+                  className={`mt-2 ${styles.existingFieldInput}`}
+                  options={existingValuesFields.role.other.options}
+                  value={
+                    existingValuesFields.role.other.options.find(
+                      (o: any) => o.value === value.role
+                    ) ?? null
                   }
-                  isSelect={field === "role"}
-                  isSubmitted={false}
-                  errors={{}}
-                  other={existingValuesFields[field].other}
-                  fieldClassName={styles.existingFieldInput}
-                  fieldsetClassName={styles.existingFieldSetClassName}
+                  onChange={(opt: any) => {
+                    const role = opt?.value;
+                    if (!role) return;
+                    setExistingValues((prev) =>
+                      prev.map((it, i) =>
+                        i === index ? { ...it, role } : it
+                      )
+                    );
+                    onEdit?.(value.name, role);
+                  }}
+                  menuPortalTarget={
+                    typeof document !== "undefined" ? document.body : undefined
+                  }
+                  menuPosition="fixed"
+                  styles={asyncSelectStyles}
                 />
-              ))}
+              </fieldset>
             </div>
             <div
               className={styles.removeIcon}

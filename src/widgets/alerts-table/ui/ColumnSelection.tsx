@@ -111,7 +111,7 @@ export default function ColumnSelection({
   const columnsOptions = [
     // Include columns from table data
     ...tableColumns
-      .filter((col) => col.getIsPinned() === false)
+      .filter((col) => col.getIsPinned() === false || col.id === "source")
       .map((col) => col.id),
     // Include common enrichment fields that might not be in current data
     ...COMMON_ENRICHMENT_FIELDS.filter(field =>
@@ -150,6 +150,7 @@ export default function ColumnSelection({
         columnTimeFormats: {},
         columnListFormats: {},
       });
+      table.resetColumnSizing();
       setLocalColumnVisibility(DEFAULT_COLS_VISIBILITY);
       // Also reset grouping and facets if callbacks provided
       onResetGrouping?.();

@@ -4,12 +4,12 @@ import styles from "../Search.module.css";
 import { FormProvider, useForm } from "react-hook-form";
 import { TextInput } from "@/components/ui/TextInput";
 import FormField from "./FormField";
-import Select from "react-select";
+import AvailableGroupSelect from "./AvailableGroupSelect";
 import { Button } from "@/components/ui";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { useHydratedSession as useSession } from "@/shared/lib/hooks/useHydratedSession";
 import { showErrorToast, showSuccessToast } from "@/shared/ui";
-import { useAvailableGroups, useOperators } from "./useManageTenants";
+import { useOperators, useWhoami } from "./useManageTenants";
 
 type OperatorModalProps = {
   modalType: string;
@@ -41,53 +41,32 @@ export default function OperatorModal({
     formState: { errors, isSubmitted, isSubmitting },
   } = methods;
 
-  const { data: availableGroups = [], mutate: mutateGroups } =
-    useAvailableGroups();
   const { data: operators = [], mutate: mutateOperators } =
     useOperators(currentTenantId);
 
-  // value keeps the full path (sent to the API); label drops the leading "/".
-  const groupOptions = availableGroups.map((g) => ({
-    value: g,
-    label: g.replace(/^\//, ""),
+  const { data: whoami } = useWhoami();
+  const isSuperAdmin = whoami?.role === "superadmin";
+
+  // Existing operators for the current tenant (id + name + apikey), from the API.
+  const existingValues = operators.map((o) => ({
+    id: o.id,
+    operator_name: o.name,
+    api_key: o.apikey,
   }));
 
-  // Existing operators for the selected tenant (name + apikey), from the API.
-  // const existingValues = operators.map((o) => ({
-  //   operator_name: o.name,
-  //   api_key: o.apikey,
-  // }));
-
-  const existingValues = [{ operator_name: "John Doe", api_key: "api-key-123" }];
-
-  const modal_fields: Record<
-    string,
-    Record<
-      string,
-      {
-        field_type: any;
-        required: boolean;
-        disabled: boolean;
-        placeholder: string | undefined;
-        other?: any;
-      }
-    >
-  > = {
-    operator: {
-      name: {
-        field_type: TextInput,
-        required: true,
-        disabled: false,
-        placeholder: "operator name",
-      },
-      group: {
-        field_type: Select,
-        required: true,
-        disabled: false,
-        placeholder: "group",
-        other: { options: groupOptions },
-      },
-    },
+  // Superadmin-only: delete an operator via the API. Removing the operator row
+  // also removes its tenant link (tenant_id lives on the operator).
+  const handleDeleteOperator = async (operatorId: string) => {
+    if (!window.confirm("Delete this operator? It will be removed from the tenant.")) {
+      return;
+    }
+    try {
+      await api.delete(`/operators/${operatorId}`);
+      showSuccessToast("Operator deleted");
+      await mutateOperators();
+    } catch (error) {
+      showErrorToast(error);
+    }
   };
 
   const handleCopyApiKey = (apiKey: string) => {
@@ -110,8 +89,8 @@ export default function OperatorModal({
       });
       showSuccessToast("Operator created");
       // The new operator (with its apikey) shows up in the list; the claimed
-      // group drops out of available-groups.
-      await Promise.all([mutateOperators(), mutateGroups()]);
+      // group drops out of available-groups on the next search.
+      await mutateOperators();
       methods.reset({ name: "", group: "" });
     } catch (error) {
       showErrorToast(error);
@@ -185,6 +164,27 @@ export default function OperatorModal({
                             )}
                           </div>
                         </div>
+                        {isSuperAdmin && (
+                          <div
+                            onClick={() => handleDeleteOperator(value.id)}
+                            className="ml-2 p-1 hover:bg-red-100 rounded cursor-pointer"
+                            title="Delete operator"
+                          >
+                            <svg
+                              width="20"
+                              height="20"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="red"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M18 6 6 18" />
+                              <path d="M6 6l12 12" />
+                            </svg>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -194,23 +194,34 @@ export default function OperatorModal({
               <div className={styles.requiredOperatorFields}>
                 <div className={styles.createOperator}>create new operator</div>
 
-                {Object.keys(modal_fields[modalType]).map((field) => (
-                  <FormField
-                    field_type={modal_fields[modalType][field].field_type}
-                    key={field}
-                    title={field}
-                    required={modal_fields[modalType][field].required}
-                    disabled={modal_fields[modalType][field].disabled}
-                    placeholder={modal_fields[modalType][field].placeholder || ""}
-                    isSubmitted={isSubmitted}
-                    errors={errors}
-                    other={modal_fields[modalType][field].other}
-                    isSelect={
-                      modal_fields[modalType][field].field_type === Select
-                    }
-                    fieldsetClassName={styles.operatorFieldSetClassName}
+                <FormField
+                  field_type={TextInput}
+                  title="name"
+                  required={true}
+                  disabled={false}
+                  placeholder="operator name"
+                  isSubmitted={isSubmitted}
+                  errors={errors}
+                  fieldsetClassName={styles.operatorFieldSetClassName}
+                />
+
+                <fieldset
+                  className={`grid grid-cols-2 ${styles.operatorFieldSetClassName}`}
+                >
+                  <label
+                    className={`text-tremor-default mr-10 font-medium text-tremor-content-strong ${styles.fieldLabel}`}
+                  >
+                    group
+                    <div className={`text-red-500 ${styles.requiredField}`}>
+                      {" "}
+                      &nbsp; *
+                    </div>
+                  </label>
+                  <AvailableGroupSelect
+                    name="group"
+                    placeholder="type to search groups"
                   />
-                ))}
+                </fieldset>
               </div>
             </div>
             <div className={`flex justify-end ${styles.modalFooter}`}>

@@ -344,11 +344,15 @@ export const Search = ({ session }: SearchProps) => {
     tenantList.find((tenant) => tenant.tenant_id === session?.tenantId) ??
     tenantList[0];
   const activeTenantId = currentTenant?.tenant_id;
+  // Operators route alerts into a specific tenant, so they don't apply to the
+  // general ("keep") tenant -- hide the operator button there.
+  const isGeneralTenant = activeTenantId === "keep";
   const tenantLogoUrl = currentTenant?.tenant_logo_url;
   const hasTenantLogo = Boolean(tenantLogoUrl);
 
   // Button visibility by role (VENA-5596):
-  //  - create operator: any tenant member (>= viewer)
+  //  - create operator: editor, admin, or superadmin (NOT viewer -- viewers are
+  //    read-only and the backend rejects operator creation for them)
   //  - edit tenant: admin (or superadmin)
   //  - add tenant: superadmin only
   // Use the BACKEND-resolved role (/whoami) -- it reflects the env superadmin
@@ -358,7 +362,8 @@ export const Search = ({ session }: SearchProps) => {
     whoami?.role ?? session?.userRole ?? session?.user?.role;
   const isSuperAdmin = role === "superadmin";
   const isTenantAdmin = role === "admin" || role === "superadmin";
-  const isTenantMember = Boolean(role);
+  const isTenantEditor =
+    role === "editor" || role === "admin" || role === "superadmin";
 
   return (
     <div
@@ -425,10 +430,9 @@ export const Search = ({ session }: SearchProps) => {
             )}
           </Link>
         )}
-
-        {true && <TenantButton modalCompType={OperatorModal} icon={KeyIcon} modalType="operator" />}
-        {true && <TenantButton modalCompType={TenantFormModal} icon={PlusIcon} modalType="create tenant" />}
-        {true && <TenantButton modalCompType={TenantFormModal} icon={EditIcon} modalType="update tenant" tenantData={currentTenant} />}
+        {isTenantEditor && !isGeneralTenant && <TenantButton modalCompType={OperatorModal} icon={KeyIcon} modalType="operator" />}
+        {isSuperAdmin && <TenantButton modalCompType={TenantFormModal} icon={PlusIcon} modalType="create tenant" />}
+        {isTenantAdmin && !isGeneralTenant && <TenantButton modalCompType={TenantFormModal} icon={EditIcon} modalType="update tenant" tenantData={currentTenant} />}
 
       </div>
 

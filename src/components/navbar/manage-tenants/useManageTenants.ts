@@ -20,6 +20,23 @@ export type RoleAssignment = {
 
 const DEFAULT: SWRConfiguration = { revalidateOnFocus: false };
 
+// Minimum characters before the async user/group pickers query Keycloak.
+// Each search is capped server-side (max 20), so this is just to avoid firing
+// on a single character.
+export const SEARCH_MIN_CHARS = 2;
+
+// Shared react-select styles for the pickers: a slightly smaller font, and the
+// menu portalled above the modal.
+export const asyncSelectStyles = {
+  menuPortal: (base: any) => ({ ...base, zIndex: 9999 }),
+  control: (base: any) => ({ ...base, fontSize: "0.8rem", minHeight: 34 }),
+  menu: (base: any) => ({ ...base, fontSize: "0.8rem" }),
+  option: (base: any) => ({ ...base, fontSize: "0.8rem" }),
+  placeholder: (base: any) => ({ ...base, fontSize: "0.8rem" }),
+  singleValue: (base: any) => ({ ...base, fontSize: "0.8rem" }),
+  input: (base: any) => ({ ...base, fontSize: "0.8rem" }),
+};
+
 /** Tenants the caller can see (superadmin -> all; others -> their tenants). */
 export function useTenants(options: SWRConfiguration = DEFAULT) {
   const api = useApi();
