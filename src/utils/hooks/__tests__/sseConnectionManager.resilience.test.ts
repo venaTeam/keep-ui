@@ -731,3 +731,166 @@ describe("sseConnectionManager — leadership follows the visible tab", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("sseConnectionManager — a refresh races a tenant change", () => {
+  beforeEach(() => {
+    (global as any).BroadcastChannel = MockBroadcastChannel;
+    setLocks({
+      request: jest.fn((_name: string, _opts: any, cb: () => Promise<void>) =>
+        cb()
+      ),
+    });
+  });
+
+  it("a refresh that completes after a tenant change leaves the new tenant's token and watchdog alone", async () => {
+    const streamB = scriptedStream();
+    const streamB2 = scriptedStream();
+    let bConnects = 0;
+    let refreshResolve: (token: string) => void = () => {};
+    const refreshToken = jest.fn(
+      () =>
+        new Promise<string>((resolve) => {
+          refreshResolve = resolve;
+        })
+    );
+    const authHeaders: string[] = [];
+    const signals: AbortSignal[] = [];
+    const fetchMock = jest.fn((_url: string, init: any) => {
+      authHeaders.push(init.headers.Authorization);
+      signals.push(init.signal);
+      if (init.headers.Authorization === "Bearer A") {
+        return Promise.resolve({
+          ok: false,
+          status: 401,
+          statusText: "Unauthorized",
+        });
+      }
+      if (init.headers.Authorization === "Bearer B") {
+        const stream = bConnects === 0 ? streamB : streamB2;
+        bConnects++;
+        stream.attach(init.signal);
+        return Promise.resolve({
+          ok: true,
+          body: { getReader: () => stream.reader },
+        });
+      }
+      return Promise.reject(
+        new Error(
+          `unexpected Authorization header: ${init.headers.Authorization}`
+        )
+      );
+    });
+    global.fetch = fetchMock as any;
+
+    ensureSSEConnected({
+      token: "A",
+      apiUrl: API,
+      tenantId: "org-a",
+      refreshToken,
+    });
+    await flush();
+    expect(refreshToken).toHaveBeenCalledTimes(1);
+
+    ensureSSEConnected({ token: "B", apiUrl: API, tenantId: "org-b" });
+    await flush();
+    expect(bConnects).toBe(1);
+
+    // The stale tenant-A refresh finally answers well after tenant B is
+    // already the active, connected scope.
+    refreshResolve("A2");
+    await flush();
+    expect(authHeaders).not.toContain("Bearer A2");
+
+    // Go silent on B's live stream; only a healthy watchdog forces the
+    // reconnect that follows. B's original connect is signals[1] (index 0 is
+    // tenant A's aborted-by-rescope connect attempt).
+    await advance(30_000);
+    expect(signals[1].aborted).toBe(false);
+    await advance(30_000);
+    expect(signals[1].aborted).toBe(true);
+
+    await flush();
+    expect(bConnects).toBe(2);
+    expect(authHeaders[authHeaders.length - 1]).toBe("Bearer B");
+    expect(authHeaders).not.toContain("Bearer A2");
+  });
+});
+
+describe("sseConnectionManager — catch-up when a follower becomes leader", () => {
+  let grantLock: () => void;
+
+  beforeEach(() => {
+    (global as any).BroadcastChannel = MockBroadcastChannel;
+    grantLock = () => {};
+    setLocks({
+      request: jest.fn(
+        (_name: string, _opts: any, cb: () => Promise<void>) =>
+          new Promise<void>((resolve) => {
+            grantLock = () => {
+              cb().then(resolve);
+            };
+          })
+      ),
+    });
+  });
+
+  it("a follower that takes over after the leader leaves asks the views to catch up", async () => {
+    const stream = scriptedStream();
+    const { fetchMock } = fetchReturning([stream]);
+    global.fetch = fetchMock as any;
+    const connected = jest.fn();
+    const pollAlerts = jest.fn();
+    const incidentChange = jest.fn();
+    bindSSEHandler("connected", connected);
+    bindSSEHandler("poll-alerts", pollAlerts);
+    bindSSEHandler("incident-change", incidentChange);
+
+    ensureSSEConnected({ token: "tkn", apiUrl: API, tenantId: "t1" });
+    await flush();
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    // This tab has heard from the outgoing leader on the channel before it
+    // ever gets the lock itself.
+    const channel = MockBroadcastChannel.instances[0];
+    channel.emit({ kind: "keep-sse-leader-state", visible: true });
+
+    grantLock();
+    await flush();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(connected).toHaveBeenCalledTimes(1);
+    expect(pollAlerts).toHaveBeenCalledWith({});
+    expect(incidentChange).toHaveBeenCalledWith({});
+    expect(pollAlerts.mock.invocationCallOrder[0]).toBeGreaterThan(
+      connected.mock.invocationCallOrder[0]
+    );
+    expect(incidentChange.mock.invocationCallOrder[0]).toBeGreaterThan(
+      connected.mock.invocationCallOrder[0]
+    );
+  });
+
+  it("a tab that finds no leader does not catch up on its first stream", async () => {
+    const stream = scriptedStream();
+    const { fetchMock } = fetchReturning([stream]);
+    global.fetch = fetchMock as any;
+    const connected = jest.fn();
+    const pollAlerts = jest.fn();
+    const incidentChange = jest.fn();
+    bindSSEHandler("connected", connected);
+    bindSSEHandler("poll-alerts", pollAlerts);
+    bindSSEHandler("incident-change", incidentChange);
+
+    ensureSSEConnected({ token: "tkn", apiUrl: API, tenantId: "t1" });
+    await flush();
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    // No broadcast or leader-state message arrived before we became leader.
+    grantLock();
+    await flush();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(connected).toHaveBeenCalledTimes(1);
+    expect(pollAlerts).not.toHaveBeenCalled();
+    expect(incidentChange).not.toHaveBeenCalled();
+  });
+});

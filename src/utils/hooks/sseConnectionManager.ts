@@ -21,7 +21,8 @@
  * failed connection is retried with capped exponential backoff for as long as
  * the tab is open (an `online` or visibility event cuts the wait short), and
  * every reconnect asks the open views to catch up on whatever was missed while
- * the stream was down.
+ * the stream was down. A follower that takes the stream over counts as
+ * reconnecting too: the old leader's stream ended before its own opened.
  *
  * If `navigator.locks` or `BroadcastChannel` is unavailable (older browsers /
  * insecure context), we fall back to the previous per-tab behavior so realtime
@@ -67,6 +68,7 @@ let streamOpenedAt = 0;
 let staleAfterMs = SSE_STALE_AFTER_MS;
 let lastByteAt = 0;
 let watchdogTimer: ReturnType<typeof setInterval> | null = null;
+let watchdogOwner: AbortController | null = null;
 let wakeBackoff: (() => void) | null = null;
 let leadershipAbort: AbortController | null = null;
 let leaderVisible: boolean | undefined;
@@ -198,6 +200,7 @@ function parseAndEmit(block: string): void {
 /** Abort the connection once no byte (headers, event or keepalive) has arrived for too long. */
 function startWatchdog(controller: AbortController): void {
   stopWatchdog();
+  watchdogOwner = controller;
   lastByteAt = Date.now();
   watchdogTimer = setInterval(() => {
     if (Date.now() - lastByteAt > staleAfterMs) {
@@ -207,11 +210,20 @@ function startWatchdog(controller: AbortController): void {
   }, SSE_WATCHDOG_INTERVAL_MS);
 }
 
-function stopWatchdog(): void {
+/**
+ * Stop the watchdog. A loop passes its own controller so that a loop which
+ * has been superseded (tenant change) cannot stop the watchdog of the loop
+ * that replaced it.
+ */
+function stopWatchdog(owner?: AbortController): void {
+  if (owner && owner !== watchdogOwner) {
+    return;
+  }
   if (watchdogTimer) {
     clearInterval(watchdogTimer);
     watchdogTimer = null;
   }
+  watchdogOwner = null;
 }
 
 /**
@@ -321,9 +333,13 @@ async function runConnectionLoop(generation: number): Promise<void> {
           currentRefreshToken
         ) {
           const fresh = await currentRefreshToken();
+          if (!connectionShouldRun || generation !== loopGeneration) {
+            stopWatchdog(controller);
+            break;
+          }
           if (fresh && fresh !== token) {
             currentToken = fresh;
-            stopWatchdog();
+            stopWatchdog(controller);
             continue;
           }
         }
@@ -362,14 +378,14 @@ async function runConnectionLoop(generation: number): Promise<void> {
         }
       }
 
-      stopWatchdog();
+      stopWatchdog(controller);
       if (!connectionShouldRun || generation !== loopGeneration) {
         break;
       }
       console.log("useSSE: Stream ended by server, reconnecting...");
       await waitBeforeReconnect();
     } catch (error: any) {
-      stopWatchdog();
+      stopWatchdog(controller);
       if (!connectionShouldRun || generation !== loopGeneration) {
         break;
       }
@@ -391,8 +407,10 @@ function setupChannel(): void {
       return;
     }
     if (message.kind === SSE_BROADCAST_KIND) {
+      hasConnectedBefore = true;
       dispatch(message.eventType, message.data);
     } else if (message.kind === SSE_LEADER_STATE_KIND) {
+      hasConnectedBefore = true;
       leaderVisible = message.visible;
       if (!isLeader && message.visible === false && isVisible()) {
         claimLeadership();
