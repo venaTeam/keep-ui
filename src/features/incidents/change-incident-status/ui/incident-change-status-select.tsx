@@ -1,9 +1,10 @@
 import clsx from "clsx";
-import { Status } from "@/entities/incidents/model";
+import { IncidentDto, Status } from "@/entities/incidents/model";
 import { STATUS_ICONS } from "@/entities/incidents/ui";
 import Select, { ClassNamesConfig } from "react-select";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { capitalize } from "@/utils/helpers";
+import { DismissModal } from "@/features/alerts/dismiss-alert";
 import { IncidentChangeStatusModal } from "./incident-change-status-modal";
 
 const customClassNames: ClassNamesConfig<any, false, any> = {
@@ -27,56 +28,76 @@ const customClassNames: ClassNamesConfig<any, false, any> = {
 };
 
 type Props = {
-  incidentId: string;
-  value: Status;
+  incident: IncidentDto;
   onChange?: (status: Status) => void;
   className?: string;
 };
 
 export function IncidentChangeStatusSelect({
-  incidentId,
-  value,
+  incident,
   onChange,
   className,
 }: Props) {
+  const incidentId = incident.id;
   // Use a portal to render the menu outside the table container with overflow: hidden
   const menuPortalTarget = useRef<HTMLElement | null>(null);
-  const [currentStatus, setCurrentStatus] = useState(value);
+  const [currentStatus, setCurrentStatus] = useState(incident.status);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<Status | null>(null);
+  const [dismissModalIncident, setDismissModalIncident] =
+    useState<IncidentDto | null>(null);
+  const [pendingRestoreStatus, setPendingRestoreStatus] =
+    useState<Status | null>(null);
   useEffect(() => {
     menuPortalTarget.current = document.body;
   }, []);
 
   // Keep internal status in sync with prop
   useEffect(() => {
-    setCurrentStatus(value);
-  }, [value]);
+    setCurrentStatus(incident.status);
+  }, [incident.status]);
 
   const statusOptions = useMemo(
     () =>
-      Object.values(Status)
-        .filter((status) => status != Status.Deleted || currentStatus == Status.Deleted)
-        .map((status) => ({
-          value: status,
-          label: (
-            <div className="flex items-center">
-              {STATUS_ICONS[status]}
-              <span>{capitalize(status)}</span>
-            </div>
-          ),
-        })),
-    [currentStatus]
+      Object.values(Status).map((status) => ({
+        value: status,
+        label: (
+          <div className="flex items-center">
+            {STATUS_ICONS[status]}
+            <span>{capitalize(status)}</span>
+          </div>
+        ),
+      })),
+    []
   );
 
   const handleChange = useCallback(
     (option: any) => {
-      if (option?.value && option.value !== currentStatus) {
-        setPendingStatus(option.value);
-        setIsModalOpen(true);
+      const nextStatus: Status | undefined = option?.value;
+      if (!nextStatus || nextStatus === currentStatus) {
+        return;
       }
+
+      // Dismissing has its own flow: it needs the "forever / until" choice and
+      // writes dismiss_mode enrichments rather than a plain status change.
+      if (nextStatus === Status.Suppressed) {
+        setPendingRestoreStatus(null);
+        setDismissModalIncident(incident);
+        return;
+      }
+
+      // Leaving the dismissed state has to clear those same enrichments, so
+      // route it through the restore flow with the picked status preselected.
+      if (currentStatus === Status.Suppressed) {
+        setPendingRestoreStatus(nextStatus);
+        setDismissModalIncident(incident);
+        return;
+      }
+
+      setPendingStatus(nextStatus);
+      setIsModalOpen(true);
     },
-    [currentStatus]
+    [currentStatus, incident]
   );
 
   const handleModalClose = useCallback(() => {
@@ -91,6 +112,17 @@ export function IncidentChangeStatusSelect({
     },
     [onChange]
   );
+
+  const handleDismissSuccess = useCallback(() => {
+    const newStatus =
+      currentStatus === Status.Suppressed
+        ? pendingRestoreStatus
+        : Status.Suppressed;
+    if (newStatus) {
+      setCurrentStatus(newStatus);
+      onChange?.(newStatus);
+    }
+  }, [currentStatus, pendingRestoreStatus, onChange]);
 
   const selectedOption = useMemo(
     () => statusOptions.find((option) => option.value === currentStatus),
@@ -120,6 +152,15 @@ export function IncidentChangeStatusSelect({
         isOpen={isModalOpen}
         onClose={handleModalClose}
         onSuccess={handleModalSuccess}
+      />
+      <DismissModal
+        incident={dismissModalIncident}
+        initialRestoreStatus={pendingRestoreStatus}
+        handleClose={() => {
+          setDismissModalIncident(null);
+          setPendingRestoreStatus(null);
+        }}
+        onSuccess={handleDismissSuccess}
       />
     </>
   );

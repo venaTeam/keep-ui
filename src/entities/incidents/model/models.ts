@@ -6,7 +6,7 @@ export enum Status {
   Resolved = "resolved",
   Acknowledged = "acknowledged",
   Merged = "merged",
-  Deleted = "deleted",
+  Suppressed = "suppressed",
 }
 
 export enum Severity {
@@ -66,6 +66,11 @@ export interface IncidentDto {
   merged_by: string;
   merged_at: Date;
   fingerprint: string;
+  // An incident is dismissed/suppressed iff dismiss_mode != null.
+  // Backend may serialize cleared values as null (Python None -> JSON null), so
+  // allow null in addition to undefined for these typed dismiss columns.
+  dismiss_mode?: "permanent" | "dismiss_until" | null;
+  dismissed_until?: string | null;
   enrichments: { [key: string]: any };
   incident_type?: string;
   incident_application?: string;

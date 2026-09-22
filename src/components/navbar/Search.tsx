@@ -430,7 +430,6 @@ export const Search = ({ session }: SearchProps) => {
             )}
           </Link>
         )}
-
         {isTenantEditor && !isGeneralTenant && <TenantButton modalCompType={OperatorModal} icon={KeyIcon} modalType="operator" />}
         {isSuperAdmin && <TenantButton modalCompType={TenantFormModal} icon={PlusIcon} modalType="create tenant" />}
         {isTenantAdmin && !isGeneralTenant && <TenantButton modalCompType={TenantFormModal} icon={EditIcon} modalType="update tenant" tenantData={currentTenant} />}
