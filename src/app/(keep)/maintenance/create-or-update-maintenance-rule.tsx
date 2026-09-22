@@ -191,29 +191,16 @@ export default function CreateOrUpdateMaintenanceRule({
     clearForm();
   };
 
-  // Ensure CEL is a proper filter expression with field references on the left side
-  const isCelFilterExpression = (cel: string): boolean => {
-    if (!cel.trim()) return false;
-    // Must contain at least one comparison operator or filter function
-    const hasOperator = /[=!<>]=?|\.contains\s*\(|\.startsWith\s*\(|\.endsWith\s*\(|\.matches\s*\(|\bin\b|\.has\s*\(/.test(cel);
-    if (!hasOperator) return false;
-
-    // Check that left operands are field identifiers, not literals
-    const parts = cel.split(/\s*(?:&&|\|\|)\s*/);
-    for (const part of parts) {
-      // Strip leading whitespace, parentheses, and negation
-      const trimmed = part.replace(/^[\s(!]+/, "");
-      if (!trimmed) continue;
-      // Reject if left side starts with a string literal, number, or boolean/null
-      if (/^["']/.test(trimmed) || /^\d/.test(trimmed) || /^(true|false|null)\b/.test(trimmed)) {
-        return false;
-      }
-    }
-    return true;
-  };
-
+  /**
+   * `celQuery` is only set once the backend has accepted the exact draft the
+   * builder holds - it is cleared while the check is unchecked, pending,
+   * rejected or unavailable. So a non-empty value here already means
+   * "server-validated", and no frontend CEL parsing is needed to decide this.
+   *
+   * The name is an ordinary form requirement and stays a frontend concern.
+   */
   const submitEnabled = (): boolean => {
-    return !!maintenanceName && isCelFilterExpression(celQuery) && !!startTime;
+    return !!maintenanceName && !!celQuery.trim() && !!startTime;
   };
 
   return (
@@ -254,12 +241,10 @@ export default function CreateOrUpdateMaintenanceRule({
           showSqlImport={false}
           applyOnTyping={true}
           shouldSetQueryParam={false}
+          // Maintenance conditions are evaluated by the event handler, not run
+          // as SQL, so they are validated against that engine's rules.
+          validationContext="maintenance"
         />
-        {celQuery && !isCelFilterExpression(celQuery) && (
-          <div className="text-red-500 text-sm mt-1">
-            CEL expression must be a filter (e.g. name == &quot;test&quot;, severity &gt; &quot;info&quot;, source.contains(&quot;grafana&quot;)).
-          </div>
-        )}
       </div>
 
       <div className="mt-2.5">
