@@ -503,13 +503,22 @@ function rescopeLeadership(): void {
   requestLeadership();
 }
 
-/** Fallback when cross-tab coordination APIs are unavailable: one stream per tab. */
-function ensureStandalone(token: string | undefined): void {
-  if (!initialized) {
+/**
+ * Fallback when cross-tab coordination APIs are unavailable: one stream per
+ * tab. A tenant change starts a new loop generation, so a loop still waiting
+ * on a token refresh for the old tenant finds itself superseded.
+ */
+function ensureStandalone(
+  token: string | undefined,
+  tenantId: string | undefined
+): void {
+  if (!initialized || currentTenantId !== tenantId) {
     initialized = true;
+    currentTenantId = tenantId;
     currentToken = token;
     connectionShouldRun = true;
     reconnectDelayMs = SSE_RECONNECT_INITIAL_DELAY_MS;
+    activeAbort?.abort();
     runConnectionLoop(++loopGeneration);
     return;
   }
@@ -542,8 +551,7 @@ export function ensureSSEConnected(params: {
   installLifecycleListeners();
 
   if (!supportsCoordination()) {
-    currentTenantId = params.tenantId;
-    ensureStandalone(params.token);
+    ensureStandalone(params.token, params.tenantId);
     return;
   }
 
