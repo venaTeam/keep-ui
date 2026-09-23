@@ -1,4 +1,6 @@
-import { auth } from "@/auth";
+"use client";
+
+import { useSession } from "next-auth/react";
 import { Search } from "@/components/navbar/Search";
 import { NoiseReductionLinks } from "@/components/navbar/NoiseReductionLinks";
 import { AlertsLinks } from "@/components/navbar/AlertsLinks";
@@ -11,8 +13,8 @@ import { SetSentryUser } from "./SetSentryUser";
 // @ts-ignore: CSS import type declarations are handled by the bundler
 import "./Navbar.css";
 
-export default async function NavbarInner() {
-  const session = await auth();
+export default function NavbarInner() {
+  const { data: session } = useSession();
 
   return (
     <>

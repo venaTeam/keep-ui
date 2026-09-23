@@ -9,6 +9,11 @@ import { ConfigProvider } from "../config-provider";
 
 import ReadOnlyBanner from "@/components/banners/read-only-banner";
 import { auth } from "@/auth";
+import { headers } from "next/headers";
+import {
+  SESSION_HEADER,
+  resolveSessionFromHeader,
+} from "@/shared/lib/auth/sessionHeader";
 import { ThemeScript, WatchUpdateTheme } from "@/shared/ui";
 import "@/app/globals.css";
 import "react-toastify/dist/ReactToastify.css";
@@ -25,7 +30,10 @@ type RootLayoutProps = {
 
 export default async function RootLayout({ children }: RootLayoutProps) {
   const config = getConfig();
-  const session = await auth();
+  const session = await resolveSessionFromHeader(
+    (await headers()).get(SESSION_HEADER),
+    auth
+  );
 
   return (
     <html lang="en" className="bg-gray-50">
@@ -39,7 +47,6 @@ export default async function RootLayout({ children }: RootLayoutProps) {
             <SSEProvider>
               <TopologyPollingContextProvider>
                 <WorkflowModalProvider>
-                  {/* @ts-ignore-error Server Component */}
                   <Navbar />
                   {/* https://discord.com/channels/752553802359505017/1068089513253019688/1117731746922893333 */}
                   <main
