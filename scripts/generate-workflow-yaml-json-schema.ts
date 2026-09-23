@@ -1,7 +1,7 @@
-import { getYamlWorkflowDefinitionSchema } from "../entities/workflows/model/yaml.schema";
+import { getYamlWorkflowDefinitionSchema } from "../src/entities/workflows/model/yaml.schema";
 import fs from "fs";
 import path from "path";
-import { generateWorkflowYamlJsonSchema } from "../entities/workflows/lib/generateWorkflowYamlJsonSchema";
+import { generateWorkflowYamlJsonSchema } from "../src/entities/workflows/lib/generateWorkflowYamlJsonSchema";
 
 function saveWorkflowYamlJsonSchema() {
   console.log("Loading providers list");

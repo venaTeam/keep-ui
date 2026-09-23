@@ -1,0 +1,52 @@
+export interface InternalConfig {
+  AUTH_TYPE: string;
+
+  // KEYCLOAK
+  KEYCLOAK_SECRET: string | undefined;
+  KEYCLOAK_ID: string | undefined;
+  KEYCLOAK_ISSUER: string | undefined;
+
+  // Real-time notifications (SSE)
+  SSE_DISABLED: boolean;
+
+  // the API URL is used by the server to make requests to the API
+  API_URL: string | undefined;
+  // the API URL for the client (browser)
+  // optional, defaults to /backend (relative)
+  API_URL_CLIENT: string | undefined;
+  // the Workflows API URL
+  WORKFLOWS_API_URL: string | undefined;
+  // Sentry
+  SENTRY_DISABLED: string | undefined;
+  // READ ONLY
+  READ_ONLY: boolean;
+  OPEN_AI_API_KEY_SET: boolean;
+  KEEP_AI_FEATURES_DISABLED: boolean;
+  AI_FEATURES_ENABLED: boolean;
+  // NOISY ALERTS ENABLED
+  NOISY_ALERTS_ENABLED: boolean;
+  // Keep Docs
+  KEEP_DOCS_URL: string;
+  // Keep Contact Us
+  KEEP_CONTACT_US_URL: string;
+  // Hide sensitive fields
+  KEEP_HIDE_SENSITIVE_FIELDS: boolean;
+  // Show debug info in workflow builder UI
+  KEEP_WORKFLOW_DEBUG: boolean;
+  HIDE_NAVBAR_DEDUPLICATION: boolean;
+  HIDE_NAVBAR_WORKFLOWS: boolean;
+  HIDE_NAVBAR_SERVICE_TOPOLOGY: boolean;
+  HIDE_NAVBAR_MAPPING: boolean;
+  HIDE_NAVBAR_EXTRACTION: boolean;
+  HIDE_NAVBAR_MAINTENANCE_WINDOW: boolean;
+  HIDE_NAVBAR_AI_PLUGINS: boolean;
+  // Add ticketing options to the incident view, defaults to false
+  KEEP_TICKETING_ENABLED: boolean;
+  KEEP_WF_LIST_EXTENDED_INFO: boolean;
+  /**
+   * Feed refetch pacing for SSE poll-alerts events, in milliseconds.
+   * Unset means the client-side defaults (800 / 2000) apply.
+   */
+  ALERT_REFETCH_DEBOUNCE_MS?: number;
+  ALERT_REFETCH_MAX_WAIT_MS?: number;
+}

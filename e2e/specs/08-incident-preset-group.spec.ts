@@ -1,114 +1,102 @@
 import { test, expect } from "../fixtures/test-base";
+import { celFingerprintIn } from "../pages";
 
 /**
  * [check:08] incident-preset-group
  *
- * Seeds two incidents that share a groupable field (severity), then drives the
- * incidents "preset" UI to group/segment the list by that field and asserts the
- * grouped section headers render.
+ * Groups ALERTS on the feed by an added "incident" column — the intended
  *
- * IMPORTANT — UI reality / data-cy GAP:
- *   The incidents table (features/incidents/incident-list/ui/incidents-table.tsx)
- *   has a HARD-CODED column set and ships NO "add column" control and NO
- *   "group by" control. The only field-grouping UI for the incidents preset is
- *   the server-side Facets panel (data-cy="facets-panel"), which renders one
- *   group row per distinct field value with a per-value count
- *   (data-cy="facet-value" + data-cy="facet-value-count") and filters the table
- *   when a value is selected.
+ * Flow (all on the alerts feed / preset):
+ *   1. seed one incident + three alerts; attach two of them to the incident and
+ *      leave the third unattached.
+ *   2. load the feed filtered to the three seeded alerts.
+ *   3. add the "incident" column via the settings popover (enableColumn).
+ *   4. open that column's header menu → "Group by".
  *
- *   So this check exercises the Facets panel as the group-by surface. The facet
- *   HEADER (the field name, e.g. "Severity") has NO data-cy — the facet wrapper
- *   uses a dynamic id (data-cy="facet-<id>"). We therefore locate the facet by
- *   its visible title text (a role/text locator). See the GAP report returned
- *   by this task.
+ * How the grouping segments (widgets/alerts-table):
+ *   The generated column has `getGroupingValue` that collapses object-valued
+ *   cells (an alert's incident list) into a single "object" bucket, while
+ *   unattached alerts (no incident value) fall into the "No Incidents" bucket
+ *   (alert-grouped-row.tsx). So the two attached alerts collapse into one group
+ *   labelled with the incident name, and the unattached alert forms the
+ *   "No Incidents" group — exactly two groups.
+ *
+ * Cleanup: the settings popover's "Reset" button restores the default columns
+ * AND clears grouping (its handler calls onResetGrouping). It only appears once
+ * the view is customized, which it is after we add the column — so we click it
+ * at the end regardless of pass/fail via resetTableSettings().
  */
 test.describe("[check:08] incident-preset-group", () => {
-  test("groups the incidents preset by a shared field via the facets panel", async ({
-    page,
+  test("groups alerts on the feed by an added incident column", async ({
+    alertsFeed,
     api,
   }) => {
     const stamp = Date.now();
-    const sharedSeverity = "warning"; // both incidents share this groupable value
+    const incidentName = `sanity-group-incident-${stamp}`;
 
-    // --- seed: two incidents sharing a groupable field (severity) ----------
-    const nameA = `sanity-group-a-${stamp}`;
-    const nameB = `sanity-group-b-${stamp}`;
-    await api.createIncident({
-      user_generated_name: nameA,
-      user_summary: `group check A ${stamp}`,
-      severity: sharedSeverity,
-    });
-    await api.createIncident({
-      user_generated_name: nameB,
-      user_summary: `group check B ${stamp}`,
-      severity: sharedSeverity,
+    // --- seed: one incident + three alerts (2 attached, 1 unattached) ------
+    const incident = await api.incidents.createIncident({
+      user_generated_name: incidentName,
+      user_summary: `group check ${stamp}`,
     });
 
-    // backend sanity: both incidents exist with the shared severity
+    const attached = await Promise.all(
+      [0, 1].map((i) =>
+        api.alerts.sendAlert({ name: `sanity-group-attached-${stamp}-${i}` })
+      )
+    );
+    const loose = await api.alerts.sendAlert({ name: `sanity-group-loose-${stamp}` });
+
+    const attachedFps = attached.map((a) => a.fingerprint);
+    const allFps = [...attachedFps, loose.fingerprint];
+    await Promise.all(allFps.map((fp) => api.alerts.waitForAlert(fp)));
+
+    await api.incidents.addAlertsToIncident(incident.id, attachedFps);
+
+    // backend gate: the incident reports both alerts attached before we drive UI
     await expect
       .poll(
         async () => {
-          const incidents = await api.getIncidents();
-          return incidents.filter(
-            (i) =>
-              i?.user_generated_name === nameA ||
-              i?.user_generated_name === nameB
-          ).length;
+          const list = await api.incidents.getIncidents();
+          const found = list.find((i) => i?.user_generated_name === incidentName);
+          return found?.alerts_count ?? 0;
         },
-        { timeout: 30_000, message: "both seeded incidents to exist" }
+        { timeout: 30_000, message: "incident to report its 2 attached alerts" }
       )
-      .toBe(2);
+      .toBeGreaterThanOrEqual(2);
 
-    // --- drive the incidents preset / facets UI ----------------------------
-    await page.goto("/incidents");
+    // --- UI: load the feed filtered to the three seeded alerts -------------
+    // The feed only lists alerts once a CEL query is submitted; scope it to our
+    // three fingerprints so the grouped counts are deterministic.
+    await alertsFeed.loadFeed(celFingerprintIn(allFps), allFps);
 
-    const facetsPanel = page.locator('[data-cy="facets-panel"]');
-    await expect(facetsPanel).toBeVisible();
+    // --- UI: add the incident column, then group the feed by it -----------
+    await alertsFeed.enableColumn("incident");
+    await alertsFeed.groupByColumn("incident");
 
-    // The facets panel is the group-by surface: it renders one facet per field
-    // (Status, Severity, Assignee, …), each with value rows (data-cy="facet-value")
-    // carrying a per-value count (data-cy="facet-value-count"). The facet header
-    // (the field name) has no stable data-cy — the wrapper uses a dynamic
-    // facet-<id> — so we assert on the Severity header text and target the
-    // grouped value rows directly within the panel.
-    await expect(
-      facetsPanel.getByText("Severity", { exact: true }).first()
-    ).toBeVisible();
+    // --- assert: exactly two groups form ----------------------------------
+    // (Web-first assertions poll, so this settles once the feed's incident data
+    // has loaded and the rows regroup.)
+    await expect(alertsFeed.groupHeaders()).toHaveCount(2);
 
-    // grouped value rows render with counts
-    const groupRows = facetsPanel.locator('[data-cy="facet-value"]');
-    await expect(groupRows.first()).toBeVisible();
-    await expect
-      .poll(() => groupRows.count(), {
-        timeout: 30_000,
-        message: "grouped facet value rows to render",
-      })
-      .toBeGreaterThanOrEqual(1);
-    await expect(
-      facetsPanel.locator('[data-cy="facet-value-count"]').first()
-    ).toBeVisible();
+    // the attached alerts collapse into one group labelled with the incident
+    // name, carrying both alerts
+    const incidentGroup = alertsFeed.groupHeader(incidentName);
+    await expect(incidentGroup).toBeVisible();
+    await expect(incidentGroup).toContainText("2 alerts");
 
-    // --- select the shared group value → table filters to that group -------
-    // (sharedSeverity only appears as a Severity value, so a panel-wide match is
-    // unambiguous.)
-    // NOTE: a facet-value's text is the label concatenated with its count
-    // (e.g. "Warning12"), so match the label without a trailing word boundary.
-    const sharedGroupRow = groupRows
-      .filter({ hasText: new RegExp(sharedSeverity, "i") })
-      .first();
-    await expect(sharedGroupRow).toBeVisible();
-    await sharedGroupRow.click();
+    // the unattached alert forms the "No Incidents" group
+    const noIncidentGroup = alertsFeed.groupHeader("No Incidents");
+    await expect(noIncidentGroup).toBeVisible();
+    await expect(noIncidentGroup).toContainText("1 alert");
 
-    // Selecting the shared group value filters the list to that group: the table
-    // re-renders and still shows incidents. We assert the filtered table is
-    // populated rather than that the two *seeded* incidents are visible — the
-    // incidents table is itself paginated, so on a stack with many incidents of
-    // this severity the freshly-seeded rows can fall onto a later page. The
-    // grouped section rows + counts asserted above are the real proof of the
-    // group-by behaviour.
-    await expect(page.locator('[data-cy="incidents-table"]')).toBeVisible();
-    await expect(
-      page.locator('[data-cy="incidents-row"]').first()
-    ).toBeVisible();
+    // all three seeded alerts still render as child rows under the groups
+    for (const fp of allFps) {
+      await expect(alertsFeed.row(fp).root).toBeVisible();
+    }
+
+    // --- cleanup: reset columns + grouping to default via the settings UI --
+    await alertsFeed.resetTableSettings();
+    await expect(alertsFeed.groupHeaders()).toHaveCount(0);
   });
 });
