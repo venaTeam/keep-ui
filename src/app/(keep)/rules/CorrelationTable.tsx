@@ -96,7 +96,11 @@ export const CorrelationTable = ({ rules }: CorrelationTableProps) => {
                 e.stopPropagation();
               }}
             >
-              <CelInput readOnly={true} value={cel}></CelInput>
+              <CelInput
+                readOnly={true}
+                value={cel}
+                validationContext="rules"
+              ></CelInput>
             </div>
           );
         },

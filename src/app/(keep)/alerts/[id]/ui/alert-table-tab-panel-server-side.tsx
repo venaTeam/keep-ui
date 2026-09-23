@@ -18,6 +18,9 @@ interface Props {
   preset: Preset;
   isAsyncLoading: boolean;
   isCelRejected?: boolean;
+  /** A query failure that is not about the CEL filter. */
+  queryError?: unknown;
+  onRetryQuery?: () => void;
   setTicketModalAlert: (alert: AlertDto | null) => void;
   setNoteModalAlert: (alert: AlertDto | null) => void;
   setRunWorkflowModalAlert: (alert: AlertDto | null) => void;
@@ -38,6 +41,8 @@ export default function AlertTableTabPanelServerSide({
   facetsPanelRefreshToken,
   isAsyncLoading,
   isCelRejected,
+  queryError,
+  onRetryQuery,
   setTicketModalAlert,
   setNoteModalAlert,
   setRunWorkflowModalAlert,
@@ -106,6 +111,8 @@ export default function AlertTableTabPanelServerSide({
       setDismissedModalAlert={setDismissModalAlert}
       isAsyncLoading={isAsyncLoading}
       isCelRejected={isCelRejected}
+      queryError={queryError}
+      onRetryQuery={onRetryQuery}
       presetName={preset.name}
       presetId={preset.id}
       counterShowsFiringOnly={preset.counter_shows_firing_only}
