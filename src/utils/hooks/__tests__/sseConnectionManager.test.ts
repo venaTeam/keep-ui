@@ -74,7 +74,7 @@ describe("sseConnectionManager — coordinated (follower) mode", () => {
     bindSSEHandler("poll-alerts", handler);
 
     const channel = MockBroadcastChannel.instances.find(
-      (c) => c.name === "keep-sse"
+      (c) => c.name === "keep-sse:default"
     );
     expect(channel).toBeDefined();
 
@@ -94,7 +94,7 @@ describe("sseConnectionManager — coordinated (follower) mode", () => {
     const handler = jest.fn();
     bindSSEHandler("poll-alerts", handler);
     const channel = MockBroadcastChannel.instances.find(
-      (c) => c.name === "keep-sse"
+      (c) => c.name === "keep-sse:default"
     )!;
 
     // Unrelated message shape is ignored.

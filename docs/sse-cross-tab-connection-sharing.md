@@ -63,8 +63,8 @@ unnecessary load on the backend, which today holds one open SSE stream per tab p
 1. **One SSE connection per browser.** Regardless of how many tabs of Keep are open in the
    same browser profile/origin, at most **one** `/sse/subscribe` stream is open at a time.
 2. **All tabs receive all events.** Every real-time event type currently handled
-   (`connected`, `poll-alerts`, `incident-change`, `poll-presets`, `topology-update`,
-   `ai-logs-change`, `incident-comment`, `alert-update`) must be delivered to **every** open
+   (`connected`, `poll-alerts`, `incident-change`, `topology-update`, `ai-logs-change`,
+   `incident-comment`, `alert-update`) must be delivered to **every** open
    tab, not only the tab that owns the underlying connection.
 3. **Automatic failover.** When the tab that owns the connection is closed (or crashes),
    another open tab must take over and open a new stream within a few seconds, with no user
@@ -73,9 +73,8 @@ unnecessary load on the backend, which today holds one open SSE stream per tab p
    duplicated tab must complete its initial load (presets, alert query) and render the table —
    i.e. the connection-pool starvation that causes the infinite load must be eliminated.
 5. **Unchanged public hook API.** `useSSE()` must keep returning `{ bind, unbind }` with
-   identical semantics. Its **7 consumers** must not require changes:
-   `app/sse-provider.tsx`, `utils/hooks/useAlertPolling.ts`,
-   `entities/presets/model/usePresetPolling.ts`, `utils/hooks/useIncidents.ts`,
+   identical semantics. Its **6 consumers** must not require changes:
+   `app/sse-provider.tsx`, `utils/hooks/useAlertPolling.ts`, `utils/hooks/useIncidents.ts`,
    `utils/hooks/useAI.ts`, `app/(keep)/topology/model/TopologyPollingContext.tsx`,
    `features/alerts/alert-detail-sidebar/ui/alert-sidebar.tsx`.
 6. **Preserve existing connection behavior.** Honor the current guards and lifecycle:

@@ -7,7 +7,17 @@ export const DOCS_CLIPBOARD_COPY_ERROR_PATH =
 export const SSE_LEADER_LOCK_NAME = "keep-sse-leader";
 export const SSE_BROADCAST_CHANNEL_NAME = "keep-sse";
 export const SSE_BROADCAST_KIND = "keep-sse-event";
-export const SSE_MAX_RECONNECT_ATTEMPTS = 10;
+export const SSE_LEADER_STATE_KIND = "keep-sse-leader-state";
+export const SSE_LEADER_QUERY_KIND = "keep-sse-leader-query";
+export const SSE_STALE_AFTER_MS = 45_000;
+export const SSE_WATCHDOG_INTERVAL_MS = 5_000;
+export const SSE_RECONNECT_INITIAL_DELAY_MS = 1_000;
+export const SSE_RECONNECT_MAX_DELAY_MS = 30_000;
+/**
+ * A stream must stay open this long before the next reconnect restarts the
+ * backoff from the initial delay.
+ */
+export const SSE_STABLE_CONNECTION_MS = 10_000;
 
 // Feed refetch pacing for SSE poll-alerts events, in milliseconds (see
 // widgets/alerts-table/lib/refetch-scheduler.ts). The env vars of the same
