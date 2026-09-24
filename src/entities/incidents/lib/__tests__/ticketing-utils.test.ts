@@ -174,38 +174,184 @@ describe("ticketing-utils", () => {
   });
 
   describe("getTicketCreateUrl", () => {
-    it("should construct ServiceNow create URL with parameters", () => {
-      const result = getTicketCreateUrl(mockServiceNowProvider, "Test description", "Test title");
-      expect(result).toBe("https://company.service-now.com/now/sow/record/incident/-1/params/short_description=Test title^description=Test description");
+    // A ServiceNow URL that already carries a params/query payload, so the
+    // pairs are appended to it rather than starting a new one.
+    const mockServiceNowWithQueryProvider: Provider = {
+      ...mockServiceNowProvider,
+      details: {
+        authentication: {
+          ...mockServiceNowProvider.details.authentication,
+          ticket_creation_url:
+            "https://company.service-now.com/now/sow/record/incident/-1/params/query/active=true",
+        },
+      },
+    };
+
+    const withUrl = (provider: Provider, ticket_creation_url: string): Provider => ({
+      ...provider,
+      details: {
+        authentication: { ...provider.details.authentication, ticket_creation_url },
+      },
     });
 
-    it("should construct Jira create URL with parameters", () => {
-      const result = getTicketCreateUrl(mockJiraProvider, "Test description", "Test title");
-      expect(result).toBe("https://company.atlassian.net/secure/CreateIssue.jspa/title=Test title^description=Test description");
+    describe("servicenow", () => {
+      it("adds params/query when the configured URL has none", () => {
+        const result = getTicketCreateUrl(mockServiceNowProvider, "Test description", "Test title");
+        expect(result).toBe(
+          "https://company.service-now.com/now/sow/record/incident/-1/params?params/query=short_description=Test%20title^description=Test%20description"
+        );
+      });
+
+      it("appends to the payload when the URL already has params/query", () => {
+        const result = getTicketCreateUrl(mockServiceNowWithQueryProvider, "Test description", "Test title");
+        expect(result).toBe(
+          "https://company.service-now.com/now/sow/record/incident/-1/params/query/active=true^short_description=Test%20title^description=Test%20description"
+        );
+      });
+
+      it("starts the payload when params/query has nothing after it", () => {
+        const provider = withUrl(
+          mockServiceNowProvider,
+          "https://company.service-now.com/now/sow/record/incident/-1/params/query"
+        );
+        // Joined with "/" rather than "^": there is no earlier pair to separate from.
+        expect(getTicketCreateUrl(provider, "Test description", "Test title")).toBe(
+          "https://company.service-now.com/now/sow/record/incident/-1/params/query/short_description=Test%20title^description=Test%20description"
+        );
+      });
+
+      it("does not double the slash when params/query ends with one", () => {
+        const provider = withUrl(
+          mockServiceNowProvider,
+          "https://company.service-now.com/now/sow/record/incident/-1/params/query/"
+        );
+        expect(getTicketCreateUrl(provider, "Test description", "Test title")).toBe(
+          "https://company.service-now.com/now/sow/record/incident/-1/params/query/short_description=Test%20title^description=Test%20description"
+        );
+      });
+
+      it("treats params/query only as a trailing segment", () => {
+        // The text appears mid-path, so it is not the payload marker.
+        const provider = withUrl(
+          mockServiceNowProvider,
+          "https://company.service-now.com/params/query/x/now/sow/record/incident/-1"
+        );
+        expect(getTicketCreateUrl(provider, "Test description", "Test title")).toBe(
+          "https://company.service-now.com/params/query/x/now/sow/record/incident/-1?params/query=short_description=Test%20title^description=Test%20description"
+        );
+      });
+
+      it("extends an existing params/query request parameter", () => {
+        const provider = withUrl(
+          mockServiceNowProvider,
+          "https://company.service-now.com/now/sow/record/incident/-1/params?params/query=active=true"
+        );
+        // Extended in place -- a second params/query would be ignored.
+        expect(getTicketCreateUrl(provider, "Test description", "Test title")).toBe(
+          "https://company.service-now.com/now/sow/record/incident/-1/params?params/query=active=true^short_description=Test%20title^description=Test%20description"
+        );
+      });
+
+      it("fills an empty params/query request parameter", () => {
+        const provider = withUrl(
+          mockServiceNowProvider,
+          "https://company.service-now.com/now/sow/record/incident/-1/params?params/query="
+        );
+        expect(getTicketCreateUrl(provider, "Test description", "Test title")).toBe(
+          "https://company.service-now.com/now/sow/record/incident/-1/params?params/query=short_description=Test%20title^description=Test%20description"
+        );
+      });
+
+      it("leaves the other request parameters alone", () => {
+        const provider = withUrl(
+          mockServiceNowProvider,
+          "https://company.service-now.com/now/sow/record/incident/-1?params/query=active=true&x=1"
+        );
+        expect(getTicketCreateUrl(provider, "Test description", "Test title")).toBe(
+          "https://company.service-now.com/now/sow/record/incident/-1?params/query=active=true^short_description=Test%20title^description=Test%20description&x=1"
+        );
+      });
+
+      it("keeps a query string out of a path payload", () => {
+        const provider = withUrl(
+          mockServiceNowProvider,
+          "https://company.service-now.com/now/sow/record/incident/-1/params/query/active=true?sysparm_stack=no"
+        );
+        // ?sysparm_stack=no must not be swallowed into the payload.
+        expect(getTicketCreateUrl(provider, "Test description", "Test title")).toBe(
+          "https://company.service-now.com/now/sow/record/incident/-1/params/query/active=true^short_description=Test%20title^description=Test%20description?sysparm_stack=no"
+        );
+      });
+
+      it("keeps a fragment out of a path payload", () => {
+        const provider = withUrl(
+          mockServiceNowProvider,
+          "https://company.service-now.com/now/sow/record/incident/-1/params/query/active=true#frag"
+        );
+        expect(getTicketCreateUrl(provider, "Test description", "Test title")).toBe(
+          "https://company.service-now.com/now/sow/record/incident/-1/params/query/active=true^short_description=Test%20title^description=Test%20description#frag"
+        );
+      });
+
+      it("uses & when the configured URL already has a query string", () => {
+        const provider = withUrl(
+          mockServiceNowProvider,
+          "https://company.service-now.com/now/sow/record/incident/-1?sysparm_stack=no"
+        );
+        const result = getTicketCreateUrl(provider, "Test description", "Test title");
+        expect(result).toBe(
+          "https://company.service-now.com/now/sow/record/incident/-1?sysparm_stack=no&params/query=short_description=Test%20title^description=Test%20description"
+        );
+      });
+
+      it("encodes characters that would otherwise truncate or split the URL", () => {
+        const result = getTicketCreateUrl(
+          mockServiceNowProvider,
+          "Disk at 90% & climbing",
+          "DB #4 down"
+        );
+        // A raw # drops everything after it; a raw & starts a new parameter.
+        expect(result).toContain("short_description=DB%20%234%20down");
+        expect(result).toContain("description=Disk%20at%2090%25%20%26%20climbing");
+      });
+
+      it("uses the configured ticket creation URL when available", () => {
+        const provider = withUrl(mockServiceNowProvider, "https://custom.service-now.com/custom/create");
+        const result = getTicketCreateUrl(provider, "Test description", "Test title");
+        expect(result).toBe(
+          "https://custom.service-now.com/custom/create?params/query=short_description=Test%20title^description=Test%20description"
+        );
+      });
     });
 
-    it("should construct Zendesk create URL with parameters", () => {
-      const result = getTicketCreateUrl(mockZendeskProvider, "Test description", "Test title");
-      expect(result).toBe("https://company.zendesk.com/agent/filters/new/title=Test title^description=Test description");
+    describe("jira / zendesk", () => {
+      // Unchanged by this change -- see the TODO in getTicketCreateUrl. These
+      // pin the existing behaviour so that altering it is a deliberate act,
+      // and they assert what this codebase emits, not that either vendor
+      // accepts it: neither has been checked against a live instance.
+      it("builds a Jira create URL", () => {
+        const result = getTicketCreateUrl(mockJiraProvider, "Test description", "Test title");
+        expect(result).toBe(
+          "https://company.atlassian.net/secure/CreateIssue.jspa/title=Test title^description=Test description"
+        );
+      });
+
+      it("builds a Zendesk create URL", () => {
+        const result = getTicketCreateUrl(mockZendeskProvider, "Test description", "Test title");
+        expect(result).toBe(
+          "https://company.zendesk.com/agent/filters/new/title=Test title^description=Test description"
+        );
+      });
+
+      it("emits empty values when no title or description is given", () => {
+        const result = getTicketCreateUrl(mockJiraProvider);
+        expect(result).toBe("https://company.atlassian.net/secure/CreateIssue.jspa/title=^description=");
+      });
     });
 
-    it("should handle empty parameters", () => {
-      const result = getTicketCreateUrl(mockJiraProvider);
-      expect(result).toBe("https://company.atlassian.net/secure/CreateIssue.jspa/title=^description=");
-    });
-
-    it("should use configured ticket creation URL when available", () => {
-      const providerWithCustomUrl = {
-        ...mockServiceNowProvider,
-        details: {
-          authentication: {
-            ...mockServiceNowProvider.details.authentication,
-            ticket_creation_url: "https://custom.service-now.com/custom/create"
-          }
-        }
-      };
-      const result = getTicketCreateUrl(providerWithCustomUrl, "Test description", "Test title");
-      expect(result).toBe("https://custom.service-now.com/custom/create/short_description=Test title^description=Test description");
+    it("returns an empty string when the provider has no ticket_creation_url", () => {
+      const provider = withUrl(mockJiraProvider, "");
+      expect(getTicketCreateUrl(provider, "d", "t")).toBe("");
     });
   });
 
