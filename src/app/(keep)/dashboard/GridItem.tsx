@@ -6,6 +6,7 @@ import PresetGridItem from "./widget-types/preset/preset-grid-item";
 import MetricGridItem from "./widget-types/metric/metric-grid-item";
 import GenericMetricsGridItem from "./widget-types/generic-metrics/generic-metrics-grid-item";
 import WidgetServiceNow from "./widget-types/service-now/widget-service-now";
+import ImageGridItem from "./widget-types/image/image-grid-item";
 
 interface GridItemProps {
   item: WidgetData;
@@ -58,6 +59,7 @@ const GridItem: React.FC<GridItemProps> = ({
             customLink={item.customLink}
           />
         )}
+        {item.widgetType === WidgetType.IMAGE && <ImageGridItem item={item} />}
       </div>
     </Card>
   );
