@@ -209,6 +209,38 @@ describe("ticketing-utils", () => {
         );
       });
 
+      it("starts the payload when params/query has nothing after it", () => {
+        const provider = withUrl(
+          mockServiceNowProvider,
+          "https://company.service-now.com/now/sow/record/incident/-1/params/query"
+        );
+        // Joined with "/" rather than "^": there is no earlier pair to separate from.
+        expect(getTicketCreateUrl(provider, "Test description", "Test title")).toBe(
+          "https://company.service-now.com/now/sow/record/incident/-1/params/query/short_description=Test%20title^description=Test%20description"
+        );
+      });
+
+      it("does not double the slash when params/query ends with one", () => {
+        const provider = withUrl(
+          mockServiceNowProvider,
+          "https://company.service-now.com/now/sow/record/incident/-1/params/query/"
+        );
+        expect(getTicketCreateUrl(provider, "Test description", "Test title")).toBe(
+          "https://company.service-now.com/now/sow/record/incident/-1/params/query/short_description=Test%20title^description=Test%20description"
+        );
+      });
+
+      it("treats params/query only as a trailing segment", () => {
+        // The text appears mid-path, so it is not the payload marker.
+        const provider = withUrl(
+          mockServiceNowProvider,
+          "https://company.service-now.com/params/query/x/now/sow/record/incident/-1"
+        );
+        expect(getTicketCreateUrl(provider, "Test description", "Test title")).toBe(
+          "https://company.service-now.com/params/query/x/now/sow/record/incident/-1?params/query=short_description=Test%20title^description=Test%20description"
+        );
+      });
+
       it("uses & when the configured URL already has a query string", () => {
         const provider = withUrl(
           mockServiceNowProvider,

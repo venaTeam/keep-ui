@@ -46,13 +46,27 @@ export function getTicketCreateUrl(provider: Provider, description: string = "",
   if (provider.type === "servicenow") {
     const encodedTitle = encodeURIComponent(title);
     const encodedDescription = encodeURIComponent(description);
-    if (createUrl.includes("params/query")) {
-      // Service Operations Workspace URL: append to the existing encoded query
-      createUrl = `${createUrl}^short_description=${encodedTitle}^description=${encodedDescription}`;
+    const pairs = `short_description=${encodedTitle}^description=${encodedDescription}`;
+
+    // Only a trailing `params/query` segment is the payload marker, and the
+    // capture says whether a payload already follows it. A substring test
+    // cannot tell those apart, and answering "no payload" with `^` emits a
+    // separator with nothing on its left. The payload is one segment, so it
+    // stops at `/` -- otherwise a mid-path `params/query` swallows the rest of
+    // the path and is mistaken for an existing payload.
+    const paramsQuery = createUrl.match(/\/params\/query(?:\/([^/]*))?$/);
+
+    if (paramsQuery) {
+      const existingPayload = paramsQuery[1] ?? "";
+      createUrl = existingPayload
+        ? // Service Operations Workspace URL: extend the existing query
+          `${createUrl}^${pairs}`
+        : // params/query with nothing after it: start the query
+          `${createUrl.replace(/\/$/, "")}/${pairs}`;
     } else {
       // Standard SOW/platform URL: add params/query
       const separator = createUrl.includes("?") ? "&" : "?";
-      createUrl = `${createUrl}${separator}params/query=short_description=${encodedTitle}^description=${encodedDescription}`;
+      createUrl = `${createUrl}${separator}params/query=${pairs}`;
     }
   } else {
     const separator = createUrl.includes("?") ? "&" : "?";
