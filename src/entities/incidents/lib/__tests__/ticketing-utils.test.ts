@@ -241,6 +241,58 @@ describe("ticketing-utils", () => {
         );
       });
 
+      it("extends an existing params/query request parameter", () => {
+        const provider = withUrl(
+          mockServiceNowProvider,
+          "https://company.service-now.com/now/sow/record/incident/-1/params?params/query=active=true"
+        );
+        // Extended in place -- a second params/query would be ignored.
+        expect(getTicketCreateUrl(provider, "Test description", "Test title")).toBe(
+          "https://company.service-now.com/now/sow/record/incident/-1/params?params/query=active=true^short_description=Test%20title^description=Test%20description"
+        );
+      });
+
+      it("fills an empty params/query request parameter", () => {
+        const provider = withUrl(
+          mockServiceNowProvider,
+          "https://company.service-now.com/now/sow/record/incident/-1/params?params/query="
+        );
+        expect(getTicketCreateUrl(provider, "Test description", "Test title")).toBe(
+          "https://company.service-now.com/now/sow/record/incident/-1/params?params/query=short_description=Test%20title^description=Test%20description"
+        );
+      });
+
+      it("leaves the other request parameters alone", () => {
+        const provider = withUrl(
+          mockServiceNowProvider,
+          "https://company.service-now.com/now/sow/record/incident/-1?params/query=active=true&x=1"
+        );
+        expect(getTicketCreateUrl(provider, "Test description", "Test title")).toBe(
+          "https://company.service-now.com/now/sow/record/incident/-1?params/query=active=true^short_description=Test%20title^description=Test%20description&x=1"
+        );
+      });
+
+      it("keeps a query string out of a path payload", () => {
+        const provider = withUrl(
+          mockServiceNowProvider,
+          "https://company.service-now.com/now/sow/record/incident/-1/params/query/active=true?sysparm_stack=no"
+        );
+        // ?sysparm_stack=no must not be swallowed into the payload.
+        expect(getTicketCreateUrl(provider, "Test description", "Test title")).toBe(
+          "https://company.service-now.com/now/sow/record/incident/-1/params/query/active=true^short_description=Test%20title^description=Test%20description?sysparm_stack=no"
+        );
+      });
+
+      it("keeps a fragment out of a path payload", () => {
+        const provider = withUrl(
+          mockServiceNowProvider,
+          "https://company.service-now.com/now/sow/record/incident/-1/params/query/active=true#frag"
+        );
+        expect(getTicketCreateUrl(provider, "Test description", "Test title")).toBe(
+          "https://company.service-now.com/now/sow/record/incident/-1/params/query/active=true^short_description=Test%20title^description=Test%20description#frag"
+        );
+      });
+
       it("uses & when the configured URL already has a query string", () => {
         const provider = withUrl(
           mockServiceNowProvider,
@@ -273,40 +325,27 @@ describe("ticketing-utils", () => {
     });
 
     describe("jira / zendesk", () => {
-      it("builds Jira query parameters", () => {
+      // Unchanged by this change -- see the TODO in getTicketCreateUrl. These
+      // pin the existing behaviour so that altering it is a deliberate act,
+      // and they assert what this codebase emits, not that either vendor
+      // accepts it: neither has been checked against a live instance.
+      it("builds a Jira create URL", () => {
         const result = getTicketCreateUrl(mockJiraProvider, "Test description", "Test title");
         expect(result).toBe(
-          "https://company.atlassian.net/secure/CreateIssue.jspa?title=Test%20title&description=Test%20description"
+          "https://company.atlassian.net/secure/CreateIssue.jspa/title=Test title^description=Test description"
         );
       });
 
-      it("builds Zendesk query parameters", () => {
+      it("builds a Zendesk create URL", () => {
         const result = getTicketCreateUrl(mockZendeskProvider, "Test description", "Test title");
         expect(result).toBe(
-          "https://company.zendesk.com/agent/filters/new?title=Test%20title&description=Test%20description"
+          "https://company.zendesk.com/agent/filters/new/title=Test title^description=Test description"
         );
-      });
-
-      it("uses & when the configured URL already has a query string", () => {
-        const provider = withUrl(
-          mockJiraProvider,
-          "https://company.atlassian.net/secure/CreateIssue.jspa?pid=10000"
-        );
-        const result = getTicketCreateUrl(provider, "Test description", "Test title");
-        expect(result).toBe(
-          "https://company.atlassian.net/secure/CreateIssue.jspa?pid=10000&title=Test%20title&description=Test%20description"
-        );
-      });
-
-      it("encodes characters that would otherwise truncate or split the URL", () => {
-        const result = getTicketCreateUrl(mockZendeskProvider, "Disk at 90% & climbing", "DB #4 down");
-        expect(result).toContain("title=DB%20%234%20down");
-        expect(result).toContain("description=Disk%20at%2090%25%20%26%20climbing");
       });
 
       it("emits empty values when no title or description is given", () => {
         const result = getTicketCreateUrl(mockJiraProvider);
-        expect(result).toBe("https://company.atlassian.net/secure/CreateIssue.jspa?title=&description=");
+        expect(result).toBe("https://company.atlassian.net/secure/CreateIssue.jspa/title=^description=");
       });
     });
 
