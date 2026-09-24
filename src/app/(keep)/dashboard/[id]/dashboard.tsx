@@ -22,6 +22,7 @@ import {
 } from "@/utils/hooks/useDashboardMetricWidgets";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
+import { describeInvalidImageError } from "../widget-types/image/image-widget-validation";
 import "../styles.css";
 import { Preset } from "@/entities/presets/model/types";
 import { recordAction, recordPageLoad, recordError } from "@/utils/metrics";
@@ -161,7 +162,10 @@ const DashboardPage = () => {
       toast.success("Dashboard saved successfully");
     } catch (error) {
       recordError("create_dashboard");
-      showErrorToast(error, "Failed to save dashboard");
+      showErrorToast(
+        error,
+        describeInvalidImageError(error, widgetData) ?? "Failed to save dashboard"
+      );
     }
   };
 
