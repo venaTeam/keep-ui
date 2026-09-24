@@ -44,10 +44,19 @@ export function getTicketCreateUrl(provider: Provider, description: string = "",
 
   // TODO: might need to add other providers here
   if (provider.type === "servicenow") {
-    createUrl = `${createUrl}/short_description=${title}^description=${description}`;
-  }
-  else{
-    createUrl = `${createUrl}/title=${title}^description=${description}`;
+    const encodedTitle = encodeURIComponent(title);
+    const encodedDescription = encodeURIComponent(description);
+    if (createUrl.includes("params/query")) {
+      // Service Operations Workspace URL: append to the existing encoded query
+      createUrl = `${createUrl}^short_description=${encodedTitle}^description=${encodedDescription}`;
+    } else {
+      // Standard SOW/platform URL: add params/query
+      const separator = createUrl.includes("?") ? "&" : "?";
+      createUrl = `${createUrl}${separator}params/query=short_description=${encodedTitle}^description=${encodedDescription}`;
+    }
+  } else {
+    const separator = createUrl.includes("?") ? "&" : "?";
+    createUrl = `${createUrl}${separator}title=${encodeURIComponent(title)}&description=${encodeURIComponent(description)}`;
   }
 
   return createUrl;
