@@ -16,19 +16,19 @@ export function DashboardImageView({
   alt: string;
 }) {
   const isUpload = image.source === "upload";
-  const { url: blobUrl, error, isLoading } = useDashboardImage(
+  const { url: uploadUrl, error } = useDashboardImage(
     isUpload ? image.imageId : undefined
   );
   const [broken, setBroken] = useState(false);
   const src = isUpload
-    ? blobUrl
+    ? uploadUrl
     : image.url && isHttpUrl(image.url)
       ? image.url
       : undefined;
 
   useEffect(() => setBroken(false), [src]);
 
-  if (isUpload && isLoading) {
+  if (isUpload && image.imageId && !error && !uploadUrl) {
     return <Skeleton containerClassName="block h-full w-full" className="h-full" />;
   }
   if (!src || error || broken) {

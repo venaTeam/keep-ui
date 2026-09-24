@@ -40,24 +40,54 @@ export async function fetchDashboardImageBlob(
   return response.blob();
 }
 
-/** Object URL for an uploaded image; the URL is revoked when the caller unmounts or the image changes. */
+/** Reads a Blob into a base64 data: URL. */
+export function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () =>
+      reject(reader.error ?? new Error("Could not read image"));
+    reader.readAsDataURL(blob);
+  });
+}
+
+type Converted = { blob: Blob; url?: string; error?: Error };
+
+/**
+ * data: URL for an uploaded image. A data: URL, unlike a same-origin blob: URL,
+ * is an opaque origin, so an SVG opened from it cannot script the Keep UI.
+ * `isLoading` stays true until the fetched bytes have been converted.
+ */
 export function useDashboardImage(imageId?: string) {
   const api = useApi();
-  const { data: blob, error, isLoading } = useSWRImmutable(
+  const {
+    data: blob,
+    error: fetchError,
+    isLoading: isFetching,
+  } = useSWRImmutable(
     api.isReady() && imageId ? ["dashboard-image", imageId] : null,
     () => fetchDashboardImageBlob(api, imageId as string)
   );
-  const [url, setUrl] = useState<string>();
+  const [converted, setConverted] = useState<Converted>();
 
   useEffect(() => {
     if (!blob) {
-      setUrl(undefined);
       return;
     }
-    const objectUrl = URL.createObjectURL(blob);
-    setUrl(objectUrl);
-    return () => URL.revokeObjectURL(objectUrl);
+    let cancelled = false;
+    blobToDataUrl(blob).then(
+      (url) => !cancelled && setConverted({ blob, url }),
+      (error) => !cancelled && setConverted({ blob, error })
+    );
+    return () => {
+      cancelled = true;
+    };
   }, [blob]);
+
+  const current = blob && converted?.blob === blob ? converted : undefined;
+  const url = current?.url;
+  const error = fetchError ?? current?.error;
+  const isLoading = isFetching || (!!blob && !current);
 
   return { url, error, isLoading };
 }

@@ -80,6 +80,36 @@ describe("ImageWidgetForm", () => {
     expect(value).toEqual({ image: { source: "upload", imageId: "img-9", fit: "cover" } });
   });
 
+  it("keeps the previous image when a replacement upload fails", async () => {
+    mockUpload.mockRejectedValueOnce(new Error("Too many unsaved images"));
+    const editingItem = {
+      i: "w-1",
+      name: "Topology",
+      widgetType: WidgetType.IMAGE,
+      image: { source: "upload", imageId: "img-9", fit: "cover" },
+    } as unknown as WidgetData;
+    const onChange = jest.fn();
+    render(<ImageWidgetForm editingItem={editingItem} onChange={onChange} />);
+    pick(png);
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Too many unsaved images"));
+    await waitFor(() => expect(screen.queryByText("Uploading…")).toBeNull());
+    const [value, isValid] = lastCall(onChange);
+    expect(isValid).toBe(true);
+    expect(value).toEqual({ image: { source: "upload", imageId: "img-9", fit: "cover" } });
+    expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+  });
+
+  it("disables the file input while uploading", async () => {
+    let resolve: (v: unknown) => void = () => {};
+    mockUpload.mockReturnValue(new Promise((r) => (resolve = r)));
+    render(<ImageWidgetForm onChange={jest.fn()} />);
+    pick(png);
+    await waitFor(() => expect(screen.getByText("Uploading…")).toBeInTheDocument());
+    expect(screen.getByLabelText("Image file")).toBeDisabled();
+    await act(async () => resolve({ id: "img-1", name: "a.png", content_type: "image/png", size_bytes: 10 }));
+    await waitFor(() => expect(screen.getByLabelText("Image file")).not.toBeDisabled());
+  });
+
   it("invalidates a non-http link", () => {
     const editingItem = {
       i: "w-1",

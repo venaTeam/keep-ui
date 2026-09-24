@@ -68,7 +68,6 @@ export function ImageWidgetForm({
     setUploading(true);
     setUploadError(null);
     setRetryFile(file);
-    setImageId(undefined);
     try {
       const result = await uploadDashboardImage(api, file);
       setImageId(result.id);
@@ -106,6 +105,7 @@ export function ImageWidgetForm({
             aria-label="Image file"
             className="mt-1 block w-full text-sm"
             data-cy="dashboard-widget-form-image-file-input"
+            disabled={uploading}
             onChange={(event) => {
               const picked = event.target.files?.[0];
               event.target.value = "";

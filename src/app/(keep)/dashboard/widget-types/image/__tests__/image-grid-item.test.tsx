@@ -17,11 +17,11 @@ const upload: ImageWidgetConfig = { source: "upload", imageId: "img-1", fit: "co
 const byUrl: ImageWidgetConfig = { source: "url", url: "https://x.io/a.png", fit: "contain" };
 
 describe("DashboardImageView", () => {
-  it("renders an uploaded image from its blob URL with the chosen fit", () => {
-    mockUseDashboardImage.mockReturnValue({ url: "blob:abc", error: undefined, isLoading: false });
+  it("renders an uploaded image from its data URL with the chosen fit", () => {
+    mockUseDashboardImage.mockReturnValue({ url: "data:image/png;base64,abc", error: undefined, isLoading: false });
     render(<DashboardImageView image={upload} alt="Topology" />);
     const img = screen.getByRole("img", { name: "Topology" });
-    expect(img).toHaveAttribute("src", "blob:abc");
+    expect(img).toHaveAttribute("src", "data:image/png;base64,abc");
     expect(img).toHaveStyle({ objectFit: "cover" });
     expect(mockUseDashboardImage).toHaveBeenCalledWith("img-1");
   });
@@ -36,6 +36,21 @@ describe("DashboardImageView", () => {
     mockUseDashboardImage.mockReturnValue({ url: undefined, error: new Error("404"), isLoading: false });
     render(<DashboardImageView image={upload} alt="Topology" />);
     expect(screen.getByText("Image unavailable")).toBeInTheDocument();
+  });
+
+  it("shows the skeleton while an upload has no url yet and no error", () => {
+    const { container } = render(<DashboardImageView image={upload} alt="Topology" />);
+    expect(container.querySelector(".react-loading-skeleton")).not.toBeNull();
+    expect(screen.queryByText("Image unavailable")).toBeNull();
+    expect(screen.queryByRole("img")).toBeNull();
+  });
+
+  it("shows the placeholder for an upload without an image id", () => {
+    const { container } = render(
+      <DashboardImageView image={{ ...upload, imageId: undefined }} alt="Topology" />
+    );
+    expect(screen.getByText("Image unavailable")).toBeInTheDocument();
+    expect(container.querySelector(".react-loading-skeleton")).toBeNull();
   });
 
   it("shows the placeholder when a URL image fails to load", () => {
