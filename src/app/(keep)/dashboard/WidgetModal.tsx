@@ -10,6 +10,7 @@ import { MetricWidgetForm } from "./widget-types/metric/metric-widget-form";
 import { GenericMetricsWidgetForm } from "./widget-types/generic-metrics/generic-metrics-widget-form";
 import { useProviders } from "@/utils/hooks/useProviders";
 import { ServiceNowWidgetForm } from "./widget-types/service-now/widget-service-now-form";
+import { HtmlWidgetForm } from "./widget-types/html/html-widget-form";
 
 interface WidgetForm {
   widgetName: string;
@@ -150,6 +151,7 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
                       value: "Generic Metrics",
                     },
                     { key: WidgetType.METRIC, value: "Metric" },
+                    { key: WidgetType.HTML, value: "HTML" },
                     ...(hasTicketCountProvider
                       ? [{ key: WidgetType.SERVICE_NOW, value: "Service Now" }]
                       : []),
@@ -193,6 +195,14 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
         )}
         {widgetType === WidgetType.SERVICE_NOW && (
           <ServiceNowWidgetForm
+            editingItem={editingItem}
+            onChange={(formValue, isValid) =>
+              setInnerFormState({ formValue, isValid })
+            }
+          />
+        )}
+        {widgetType === WidgetType.HTML && (
+          <HtmlWidgetForm
             editingItem={editingItem}
             onChange={(formValue, isValid) =>
               setInnerFormState({ formValue, isValid })

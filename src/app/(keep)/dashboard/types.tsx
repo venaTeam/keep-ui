@@ -28,6 +28,11 @@ export enum WidgetType {
   METRIC = "METRIC",
   GENERICS_METRICS = "GENERICS_METRICS",
   SERVICE_NOW = "SERVICE_NOW",
+  HTML = "HTML",
+}
+
+export interface HtmlWidgetConfig {
+  html: string;
 }
 
 export enum PresetPanelType {
@@ -49,6 +54,7 @@ export interface WidgetData extends LayoutItem {
   presetPanelType?: PresetPanelType;
   showFiringOnly?: boolean;
   customLink?: string;
+  html?: HtmlWidgetConfig;
 }
 
 export interface Threshold {
