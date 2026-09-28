@@ -1,0 +1,276 @@
+.tenantSwitcher:hover {
+    background-color: coral;
+    border-radius: 15px;
+    cursor: pointer;
+}
+
+.createUpdateTenant {
+    display: inline-flex;
+    border-radius: 8px;
+    cursor: pointer;
+    width: 1.5rem;
+    height: 1.5rem;
+    margin-left: 15px;
+    position: relative;
+    align-items: center;
+    justify-content: center;
+    font-weight: 200;
+    color: white;
+    background-color: rgba(249, 115, 22);
+}
+
+.createUpdateTenant:hover {
+    background-color: rgb(255, 195, 173);
+    color: rgb(0, 0, 0);
+}
+
+.requiredFields {
+    display: flex;
+    flex-direction: row;
+}
+
+.fieldInput {
+    width: 12rem !important;
+}
+
+.userGroup {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    margin-left: 10px;
+    margin-top: 5px;
+    background-color:rgb(121, 121, 121);
+    border-radius: 4px;
+    width: 7rem;
+    margin-top: 0;
+    margin-right: 2px;
+}
+
+.userGroupChosen {
+    background-color: rgb(64, 64, 64);
+    color: white;
+    border-radius: 4px;
+    width: 50%;
+
+}
+
+.userGroupNotChosen {
+    background-color:rgb(121, 121, 121);
+    color: white;
+    border-radius: 4px;
+    width: 50%;
+}
+
+.fieldLabel {
+    display: flex;
+    flex-direction: row;
+    height: 1.5rem;
+}
+
+.fieldset {
+    display: flex;
+    flex-direction: column;
+    width: 20rem;
+}
+
+.requiredField {
+    font-size: 1.35rem;
+    font-weight: 100;
+    text-align: center;
+    align-self: center;
+}
+
+.modalContent {
+    display: flex;
+    flex-direction: column;
+}
+
+.submitButton {
+    align-self: self-end;
+    width: 10rem;
+    margin-top: 1rem;
+}
+
+.existingFieldset {
+    display: flex;
+    flex-direction: row;
+
+}
+
+.existingFieldInput {
+    width: 6rem !important;
+}
+
+.rolesMappingHeader {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.rolesMappingContent {
+    display: flex;
+    flex-direction: row;
+    gap: 1rem;
+}
+
+.rolesMappingPart {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.existingFieldSetClassName {
+    display: flex;
+    flex-direction: column;
+    margin-right: 2rem;
+
+}
+
+.fieldLabelRM {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    font-weight: 400;
+    font-size: 1.2rem;
+    height: 4rem;
+    text-align: center;
+}
+
+.fieldLabelSubject {
+    font-size: 1rem;
+}
+
+.tenantFormModal {
+    width: fit-content;
+    height: fit-content;
+    max-width: 100rem;
+}
+
+.addMapping {
+    margin-top: 1rem;
+    color: rgb(255, 115, 103);
+    cursor: pointer;
+}
+
+.addMapping:hover {
+    color: rgb(255, 72, 0);
+}
+
+.fieldsWrapper {
+    max-height: 8rem;
+    overflow-y: scroll;
+    min-width: 23rem;
+    margin-top: 0.25rem;
+}
+
+.operatorFieldSetClassName {
+    display: flex;
+    flex-direction: column;
+    width: 14rem;
+    padding: 10px;
+}
+
+
+.existingOperators {
+    display: flex;
+    flex-direction: column;
+    max-height: 18rem;
+    height: 18rem;
+    overflow-y: scroll;
+    background-color: rgb(255, 255, 255);
+    border-radius: 5px;
+    padding: 8px;
+    border-color: rgb(30, 30, 53, 0.1);
+    border-width: 1px;
+    margin-bottom: 2rem;
+    width: 30rem;
+
+}
+
+.existingOperators:hover {
+    background-color: rgb(255, 247, 245);
+    cursor: pointer;
+
+}
+
+.existingOperator {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 8px;
+    height: 4rem;
+}
+
+.operatorName {
+    display: flex;
+    justify-content: center;
+    padding: 8px;
+    border-radius: 10px;
+    width: 6rem;
+}
+
+.apiKey {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    cursor: pointer;
+    background-color: rgb(255, 255, 255);
+    border-radius: 10px;
+    width: 30rem;
+    white-space: nowrap;
+}
+
+.createOperator {
+    display: flex;
+    align-items: flex-start;
+    color: rgb(255, 104, 50);
+    margin-left: 10px;
+}
+
+.requiredOperatorFields {
+    display: flex;
+    flex-direction: column;
+}
+
+.operatorModalContent {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    width: 62rem;
+}
+
+.noOperators {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: black;
+    background-color: rgb(255, 247, 245);
+    height: 18rem;
+    border-radius: 5px;
+    border-color: rgb(30, 30, 53, 0.1);
+    border-width: 1px;
+    width: 30rem;
+}
+
+.existingRow {
+    display: flex;
+    flex-direction: row;
+}
+
+.removeIcon {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    height: 3rem;
+    width: 3rem;
+    cursor: pointer;
+}
+
+.removeIcon:hover {
+    color: red;
+}
+
+.newFieldset {
+    margin-right: 3rem;
+}
