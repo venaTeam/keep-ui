@@ -1,6 +1,6 @@
 "use client";
 import { useParams } from "next/navigation";
-import { ChangeEvent, useEffect, useState } from "react";
+import { ChangeEvent, useEffect, useRef, useState } from "react";
 import GridLayout from "../GridLayout";
 import WidgetModal from "../WidgetModal";
 import { Button, Card, Icon, Subtitle, TextInput } from "@tremor/react";
@@ -11,7 +11,13 @@ import {
   WidgetData,
   WidgetType,
 } from "../types";
-import { FiEdit2, FiSave } from "react-icons/fi";
+import {
+  clampAppearance,
+  DashboardAppearance,
+  DEFAULT_APPEARANCE,
+} from "../dashboard-appearance/dashboard-appearance-validation";
+import { DashboardSettingsPanel } from "../dashboard-appearance/DashboardSettingsPanel";
+import { FiEdit2, FiSave, FiSliders } from "react-icons/fi";
 import { useDashboards } from "utils/hooks/useDashboards";
 import { toast } from "react-toastify";
 import { GenericFilters } from "@/components/filters/GenericFilters";
@@ -52,6 +58,10 @@ const DashboardPage = () => {
   const [editingItem, setEditingItem] = useState<WidgetData | null>(null);
   const [dashboardName, setDashboardName] = useState(decodeURIComponent(id));
   const [isEditingName, setIsEditingName] = useState(false);
+  const [appearance, setAppearance] =
+    useState<DashboardAppearance>(DEFAULT_APPEARANCE);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const settingsSnapshot = useRef<DashboardAppearance>(DEFAULT_APPEARANCE);
 
   useEffect(() => {
     if (!isLoading) {
@@ -62,6 +72,7 @@ const DashboardPage = () => {
         setLayout(dashboard.dashboard_config.layout);
         setWidgetData(dashboard.dashboard_config.widget_data);
         setDashboardName(dashboard.dashboard_name);
+        setAppearance(clampAppearance(dashboard.dashboard_config.appearance));
       }
     }
   }, [id, dashboards, isLoading]);
@@ -71,6 +82,17 @@ const DashboardPage = () => {
     setIsModalOpen(true);
   };
   const closeModal = () => setIsModalOpen(false);
+
+  const openSettings = () => {
+    settingsSnapshot.current = appearance;
+    setIsSettingsOpen(true);
+  };
+  const closeSettings = () => setIsSettingsOpen(false);
+  const cancelSettings = () => {
+    setAppearance(settingsSnapshot.current);
+    setIsSettingsOpen(false);
+  };
+  const resetAppearance = () => setAppearance(DEFAULT_APPEARANCE);
 
   const handleAddWidget = (widget: any) => {
     const uniqueId = `w-${Date.now()}`;
@@ -145,6 +167,7 @@ const DashboardPage = () => {
           dashboard_config: {
             layout,
             widget_data: widgetData,
+            appearance,
           },
         },
         {
@@ -174,7 +197,12 @@ const DashboardPage = () => {
   };
 
   return (
-    <div className="flex flex-col h-full" data-cy="dashboard-page">
+    <div
+      className={`flex flex-col h-full relative ${
+        isSettingsOpen ? "pr-80" : ""
+      }`}
+      data-cy="dashboard-page"
+    >
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
         <div className="relative">
           {isEditingName ? (
@@ -214,6 +242,17 @@ const DashboardPage = () => {
             <Button color="orange" onClick={openModal} className="ml-2" data-cy="dashboard-add-widget-btn">
               Add Widget
             </Button>
+            <Button
+              color="orange"
+              variant="secondary"
+              icon={FiSliders}
+              onClick={openSettings}
+              className="ml-2"
+              tooltip="Customize this dashboard"
+              data-cy="dashboard-customize-btn"
+            >
+              Customize
+            </Button>
           </div>
         </div>
       </div>
@@ -232,6 +271,11 @@ const DashboardPage = () => {
         <Card
           className="w-full h-full overflow-auto"
           data-cy="dashboard-grid-container"
+          style={
+            appearance.backgroundColor
+              ? { backgroundColor: appearance.backgroundColor }
+              : undefined
+          }
         >
           <GridLayout
             layout={layout}
@@ -242,6 +286,7 @@ const DashboardPage = () => {
             onSave={handleSaveEdit}
             presets={allPresets}
             metrics={allMetricWidgets}
+            density={appearance.density}
           />
         </Card>
       )}
@@ -254,6 +299,15 @@ const DashboardPage = () => {
           presets={allPresets}
           editingItem={editingItem}
           metricWidgets={allMetricWidgets}
+        />
+      )}
+      {isSettingsOpen && (
+        <DashboardSettingsPanel
+          appearance={appearance}
+          onChange={setAppearance}
+          onReset={resetAppearance}
+          onCancel={cancelSettings}
+          onClose={closeSettings}
         />
       )}
     </div>
