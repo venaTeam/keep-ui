@@ -161,6 +161,15 @@ export function ImageWidgetForm({
           <SelectItem value="contain">Contain (show whole image)</SelectItem>
           <SelectItem value="cover">Cover (fill, may crop)</SelectItem>
         </Select>
+        {fit === "cover" && (
+          <p
+            className="mt-1 text-sm text-amber-600"
+            data-cy="dashboard-widget-form-image-cover-warning"
+          >
+            Cover fills the widget and may crop the image edges. Use Contain to
+            always show the whole image.
+          </p>
+        )}
       </div>
 
       <div className="mb-4 mt-2">

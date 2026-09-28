@@ -16,7 +16,7 @@ export function DashboardImageView({
   alt: string;
 }) {
   const isUpload = image.source === "upload";
-  const { url: uploadUrl, error } = useDashboardImage(
+  const { url: uploadUrl, error, contentType } = useDashboardImage(
     isUpload ? image.imageId : undefined
   );
   const [broken, setBroken] = useState(false);
@@ -42,23 +42,32 @@ export function DashboardImageView({
     );
   }
 
+  const isVector = isUpload
+    ? contentType === "image/svg+xml"
+    : /\.svg$/i.test(new URL(src).pathname);
+  const sizing =
+    image.fit === "cover"
+      ? "h-full w-full object-cover"
+      : isVector
+        ? "h-full w-full object-contain"
+        : "max-h-full max-w-full object-contain";
   const picture = (
     <img
       src={src}
       alt={alt}
       onError={() => setBroken(true)}
-      className="h-full w-full"
-      style={{ objectFit: image.fit }}
+      className={sizing}
       data-cy="dashboard-widget-image"
     />
   );
   const href = image.link && isHttpUrl(image.link) ? image.link : undefined;
+  const wrapper = "flex h-full w-full items-center justify-center";
   return href ? (
-    <a href={href} target="_blank" rel="noopener noreferrer" className="block h-full w-full">
+    <a href={href} target="_blank" rel="noopener noreferrer" className={wrapper}>
       {picture}
     </a>
   ) : (
-    picture
+    <div className={wrapper}>{picture}</div>
   );
 }
 

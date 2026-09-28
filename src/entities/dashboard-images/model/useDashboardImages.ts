@@ -88,6 +88,7 @@ export function useDashboardImage(imageId?: string) {
   const url = current?.url;
   const error = fetchError ?? current?.error;
   const isLoading = isFetching || (!!blob && !current);
+  const contentType = current?.blob.type;
 
-  return { url, error, isLoading };
+  return { url, error, isLoading, contentType };
 }

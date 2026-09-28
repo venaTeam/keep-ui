@@ -121,4 +121,32 @@ describe("ImageWidgetForm", () => {
     render(<ImageWidgetForm editingItem={editingItem} onChange={onChange} />);
     expect(lastCall(onChange)[1]).toBe(false);
   });
+
+  const coverWarning = '[data-cy="dashboard-widget-form-image-cover-warning"]';
+
+  it("warns that cover may crop the image", () => {
+    const editingItem = {
+      i: "w-1",
+      name: "Topology",
+      widgetType: WidgetType.IMAGE,
+      image: { source: "upload", imageId: "img-9", fit: "cover" },
+    } as unknown as WidgetData;
+    const { container } = render(
+      <ImageWidgetForm editingItem={editingItem} onChange={jest.fn()} />
+    );
+    expect(container.querySelector(coverWarning)).not.toBeNull();
+  });
+
+  it("does not warn about cropping under contain", () => {
+    const editingItem = {
+      i: "w-1",
+      name: "Topology",
+      widgetType: WidgetType.IMAGE,
+      image: { source: "upload", imageId: "img-9", fit: "contain" },
+    } as unknown as WidgetData;
+    const { container } = render(
+      <ImageWidgetForm editingItem={editingItem} onChange={jest.fn()} />
+    );
+    expect(container.querySelector(coverWarning)).toBeNull();
+  });
 });

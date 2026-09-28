@@ -10,19 +10,28 @@ jest.mock("@/entities/dashboard-images/model/useDashboardImages", () => ({
 
 beforeEach(() => {
   mockUseDashboardImage.mockReset();
-  mockUseDashboardImage.mockReturnValue({ url: undefined, error: undefined, isLoading: false });
+  mockUseDashboardImage.mockReturnValue({
+    url: undefined,
+    error: undefined,
+    isLoading: false,
+    contentType: undefined,
+  });
 });
 
 const upload: ImageWidgetConfig = { source: "upload", imageId: "img-1", fit: "cover" };
 const byUrl: ImageWidgetConfig = { source: "url", url: "https://x.io/a.png", fit: "contain" };
 
 describe("DashboardImageView", () => {
-  it("renders an uploaded image from its data URL with the chosen fit", () => {
-    mockUseDashboardImage.mockReturnValue({ url: "data:image/png;base64,abc", error: undefined, isLoading: false });
+  it("renders an uploaded image from its data URL", () => {
+    mockUseDashboardImage.mockReturnValue({
+      url: "data:image/png;base64,abc",
+      error: undefined,
+      isLoading: false,
+      contentType: "image/png",
+    });
     render(<DashboardImageView image={upload} alt="Topology" />);
     const img = screen.getByRole("img", { name: "Topology" });
     expect(img).toHaveAttribute("src", "data:image/png;base64,abc");
-    expect(img).toHaveStyle({ objectFit: "cover" });
     expect(mockUseDashboardImage).toHaveBeenCalledWith("img-1");
   });
 
@@ -76,5 +85,80 @@ describe("DashboardImageView", () => {
   it("drops a non-http link", () => {
     render(<DashboardImageView image={{ ...byUrl, link: "javascript:alert(1)" }} alt="Logo" />);
     expect(screen.queryByRole("link")).toBeNull();
+  });
+});
+
+describe("DashboardImageView fit and sizing", () => {
+  function renderUpload(fit: "contain" | "cover", contentType: string) {
+    mockUseDashboardImage.mockReturnValue({
+      url: "data:x",
+      error: undefined,
+      isLoading: false,
+      contentType,
+    });
+    render(<DashboardImageView image={{ source: "upload", imageId: "img-1", fit }} alt="I" />);
+    return screen.getByRole("img", { name: "I" });
+  }
+
+  it("caps a raster image at its natural size under contain (no upscale)", () => {
+    const img = renderUpload("contain", "image/png");
+    expect(img).toHaveClass("max-h-full", "max-w-full", "object-contain");
+    expect(img).not.toHaveClass("h-full");
+    expect(img).not.toHaveClass("w-full");
+  });
+
+  it("centers the contained image within the panel", () => {
+    const img = renderUpload("contain", "image/png");
+    const wrapper = img.parentElement as HTMLElement;
+    expect(wrapper).toHaveClass("flex", "items-center", "justify-center");
+  });
+
+  it("lets a vector (SVG) image fill the panel under contain", () => {
+    const img = renderUpload("contain", "image/svg+xml");
+    expect(img).toHaveClass("h-full", "w-full", "object-contain");
+    expect(img).not.toHaveClass("max-w-full");
+  });
+
+  it("fills and crops under cover", () => {
+    const img = renderUpload("cover", "image/png");
+    expect(img).toHaveClass("h-full", "w-full", "object-cover");
+    expect(img).not.toHaveClass("max-w-full");
+  });
+
+  it("treats a .svg URL as vector (fills under contain)", () => {
+    render(
+      <DashboardImageView image={{ source: "url", url: "https://x.io/d.svg", fit: "contain" }} alt="D" />
+    );
+    const img = screen.getByRole("img", { name: "D" });
+    expect(img).toHaveClass("h-full", "w-full", "object-contain");
+  });
+
+  it("caps a non-svg URL image (raster) under contain", () => {
+    render(
+      <DashboardImageView image={{ source: "url", url: "https://x.io/a.png", fit: "contain" }} alt="A" />
+    );
+    const img = screen.getByRole("img", { name: "A" });
+    expect(img).toHaveClass("max-h-full", "max-w-full", "object-contain");
+  });
+
+  it("treats a raster URL with .svg only in the query as raster", () => {
+    render(
+      <DashboardImageView
+        image={{ source: "url", url: "https://x.io/pic.png?ref=logo.svg", fit: "contain" }}
+        alt="Q"
+      />
+    );
+    const img = screen.getByRole("img", { name: "Q" });
+    expect(img).toHaveClass("max-h-full", "max-w-full", "object-contain");
+  });
+
+  it("still crops an SVG under cover", () => {
+    const img = renderUpload("cover", "image/svg+xml");
+    expect(img).toHaveClass("h-full", "w-full", "object-cover");
+  });
+
+  it("falls back to raster capping when the content type is unknown", () => {
+    const img = renderUpload("contain", "");
+    expect(img).toHaveClass("max-h-full", "max-w-full", "object-contain");
   });
 });
