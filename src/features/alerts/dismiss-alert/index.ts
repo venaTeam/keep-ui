@@ -1,1 +1,4 @@
-export { AlertDismissModal } from "./ui/alert-dismiss-modal";
+export {
+  DismissModal,
+  AlertDismissModal,
+} from "./ui/alert-dismiss-modal";
