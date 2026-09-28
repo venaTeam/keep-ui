@@ -2,36 +2,42 @@ import React, { Fragment } from "react";
 import { Menu, Transition } from "@headlessui/react";
 import { Icon } from "@tremor/react";
 import { PencilIcon, TrashIcon } from "@heroicons/react/24/outline";
-import { Bars3Icon } from "@heroicons/react/20/solid";
+import { EllipsisVerticalIcon } from "@heroicons/react/20/solid";
 import { FiSave } from "react-icons/fi";
 
 interface MenuButtonProps {
   onEdit: () => void;
   onDelete: () => void;
   onSave?: () => void;
+  icon?: React.ElementType;
+  compact?: boolean;
 }
 
 const MenuButton: React.FC<MenuButtonProps> = ({
   onEdit,
   onDelete,
   onSave,
+  icon = EllipsisVerticalIcon,
+  compact = false,
 }) => {
   const stopPropagation = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
   };
 
   return (
-    <div className="w-44 text-right">
+    <div className={compact ? "text-right" : "w-44 text-right"}>
       <Menu as="div" className="relative inline-block text-left z-10">
         <div>
           <Menu.Button
-            className="inline-flex w-full justify-center rounded-md text-sm mt-2"
+            className={`inline-flex w-full justify-center rounded-md text-sm ${
+              compact ? "" : "mt-2"
+            }`}
             onClick={stopPropagation}
             data-cy="dashboard-widget-menu-btn"
           >
             <Icon
               size="sm"
-              icon={Bars3Icon}
+              icon={icon}
               className="hover:bg-gray-100 w-8 h-8"
               color="gray"
             />

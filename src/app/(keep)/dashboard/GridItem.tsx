@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Card } from "@tremor/react";
 import MenuButton from "./MenuButton";
-import { WidgetData, WidgetType } from "./types";
+import { WidgetData, WidgetType, PresetPanelType } from "./types";
 import PresetGridItem from "./widget-types/preset/preset-grid-item";
 import MetricGridItem from "./widget-types/metric/metric-grid-item";
 import GenericMetricsGridItem from "./widget-types/generic-metrics/generic-metrics-grid-item";
@@ -26,22 +26,35 @@ const GridItem: React.FC<GridItemProps> = ({
     onEdit(updatedItem.i, updatedItem);
   };
 
+  const handleDelete = () => onDelete(item.i);
+  const handleSave = () => onSave(updatedItem);
+
+  const isAlertCountPanel =
+    item.presetPanelType === PresetPanelType.ALERT_COUNT_PANEL;
+
   return (
     <Card className="relative w-full h-full p-3" data-cy={`dashboard-widget-${item.i}`}>
       <div className="flex flex-col h-full px-2">
-        <div className={`flex-none flex items-center justify-between`}>
-          <span className="text-lg font-bold grid-item__widget" title={item.name} data-cy="dashboard-widget-title">
-            {item.name}
-          </span>
-          <MenuButton
+        {!isAlertCountPanel && (
+          <div className={`flex-none flex items-center justify-between`}>
+            <span className="text-lg font-bold grid-item__widget" title={item.name} data-cy="dashboard-widget-title">
+              {item.name}
+            </span>
+            <MenuButton
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onSave={handleSave}
+            />
+          </div>
+        )}
+        {item.preset && (
+          <PresetGridItem
+            item={item}
             onEdit={handleEdit}
-            onDelete={() => onDelete(item.i)}
-            onSave={() => {
-              onSave(updatedItem);
-            }}
+            onDelete={handleDelete}
+            onSave={handleSave}
           />
-        </div>
-        {item.preset && <PresetGridItem item={item} />}
+        )}
         {item.metric && <MetricGridItem item={item} />}
         {item.genericMetrics && (
           <GenericMetricsGridItem

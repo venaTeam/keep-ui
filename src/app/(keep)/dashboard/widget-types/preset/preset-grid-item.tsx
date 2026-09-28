@@ -7,9 +7,17 @@ import PresetAlertTablePanel from "./preset-alert-table-panel";
 
 interface GridItemProps {
   item: WidgetData;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  onSave?: () => void;
 }
 
-const PresetGridItem: React.FC<GridItemProps> = ({ item }) => {
+const PresetGridItem: React.FC<GridItemProps> = ({
+  item,
+  onEdit,
+  onDelete,
+  onSave,
+}) => {
   const searchParams = useSearchParams();
   const timeRangeCel = useMemo(() => {
     const timeRangeSearchParam = searchParams.get("time_stamp");
@@ -62,6 +70,9 @@ const PresetGridItem: React.FC<GridItemProps> = ({ item }) => {
           customLink={item.customLink}
           dashboardName={dashboardName}
           widgetName={item.name}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onSave={onSave}
         />
       )}
     </div>
