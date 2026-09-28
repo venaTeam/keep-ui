@@ -53,6 +53,12 @@ describe("clampAppearance", () => {
     ).toEqual({ backgroundColor: "#eef2fb", density: "compact" });
   });
 
+  it("expands a 3-digit hex color to 6 digits so the color input can render it", () => {
+    expect(clampAppearance({ backgroundColor: "#ABC" })).toEqual({
+      backgroundColor: "#aabbcc",
+    });
+  });
+
   it("drops an invalid color", () => {
     expect(clampAppearance({ backgroundColor: "not-a-color" })).toEqual({});
   });
@@ -68,7 +74,7 @@ describe("clampAppearance", () => {
         style: "position:fixed;top:0",
         onClick: "alert(1)",
       })
-    ).toEqual({ backgroundColor: "#fff" });
+    ).toEqual({ backgroundColor: "#ffffff" });
   });
 });
 

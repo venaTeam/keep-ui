@@ -40,6 +40,22 @@ export function isHexColor(value: unknown): value is string {
   return typeof value === "string" && HEX_COLOR.test(value);
 }
 
+/** Lowercase a valid hex color and expand `#rgb` to `#rrggbb` (which `<input type="color">` requires). */
+function normalizeHexColor(value: string): string {
+  const hex = value.toLowerCase();
+  if (hex.length === 4) {
+    return (
+      "#" +
+      hex
+        .slice(1)
+        .split("")
+        .map((c) => c + c)
+        .join("")
+    );
+  }
+  return hex;
+}
+
 /** True only for a known density keyword. */
 export function isDensity(value: unknown): value is DashboardDensity {
   return (
@@ -58,7 +74,7 @@ export function clampAppearance(raw: unknown): DashboardAppearance {
   const source = raw as Record<string, unknown>;
   const result: DashboardAppearance = {};
   if (isHexColor(source.backgroundColor)) {
-    result.backgroundColor = source.backgroundColor.toLowerCase();
+    result.backgroundColor = normalizeHexColor(source.backgroundColor);
   }
   if (isDensity(source.density)) {
     result.density = source.density;

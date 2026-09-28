@@ -167,7 +167,7 @@ const DashboardPage = () => {
           dashboard_config: {
             layout,
             widget_data: widgetData,
-            appearance,
+            appearance: clampAppearance(appearance),
           },
         },
         {
@@ -261,6 +261,11 @@ const DashboardPage = () => {
           className="w-full h-full flex items-center justify-center cursor-pointer"
           onClick={openModal}
           data-cy="dashboard-empty-state"
+          style={
+            appearance.backgroundColor
+              ? { backgroundColor: appearance.backgroundColor }
+              : undefined
+          }
         >
           <div className="text-center">
             <p className="text-lg font-medium">No widgets available</p>
