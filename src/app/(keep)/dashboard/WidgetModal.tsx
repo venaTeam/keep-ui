@@ -54,6 +54,8 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
     handleSubmit,
     formState: { errors, isValid },
     reset,
+    setValue,
+    getValues,
   } = useForm<WidgetForm>({
     defaultValues: {
       widgetName: editingItem?.name || "",
@@ -71,6 +73,19 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
       setInnerFormState({ formValue: {}, isValid: true });
     }
   }, [widgetType]);
+
+  // Default the widget name to the selected preset's name when the user hasn't
+  // entered one, so preset widgets always carry a title without a separate field.
+  const selectedPresetName = innerFormState.formValue?.preset?.name;
+  useEffect(() => {
+    if (
+      widgetType === WidgetType.PRESET &&
+      selectedPresetName &&
+      !getValues("widgetName")?.trim()
+    ) {
+      setValue("widgetName", selectedPresetName, { shouldValidate: true });
+    }
+  }, [selectedPresetName, widgetType, getValues, setValue]);
 
   const onSubmit = (data: WidgetForm) => {
     if (editingItem) {
@@ -115,7 +130,7 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
             render={({ field }) => (
               <TextInput
                 {...field}
-                placeholder="Enter widget name"
+                placeholder="Enter widget name (defaults to the preset name)"
                 error={!!get(errors, "widgetName.message")}
                 errorMessage={get(errors, "widgetName.message")}
                 data-cy="dashboard-widget-form-name-input"

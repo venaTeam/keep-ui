@@ -130,15 +130,6 @@ const PresetAlertTablePanel: React.FC<PresetAlertTablePanelProps> = ({
     <>
       <div className="flex gap-2">
         <div className="flex-1 min-w-0 overflow-hidden whitespace-nowrap">
-          <div className="flex gap-1 items-center">
-            <div>Preset name:</div>
-            <div
-              className="truncate cursor-pointer hover:text-orange-500 transition-colors"
-              onClick={handleGoToPresetClick}
-            >
-              {preset?.name}
-            </div>
-          </div>
           {renderAlertsCountText()}
         </div>
         <div className="flex items-center">
