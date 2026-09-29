@@ -4,7 +4,7 @@ import { usePresetAlertCount } from "@/features/presets/custom-preset-links";
 import { useDashboardPreset } from "@/utils/hooks/useDashboardPresets";
 import { Button, Icon } from "@tremor/react";
 import { FireIcon, ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline";
-import { AiOutlineSwap } from "react-icons/ai";
+import MenuButton from "../../MenuButton";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { useRouter } from "next/navigation";
@@ -17,6 +17,9 @@ interface WidgetAlertCountPanelProps {
   customLink?: string;
   dashboardName?: string;
   widgetName?: string;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  onSave?: () => void;
 }
 
 const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
@@ -26,6 +29,9 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
   customLink,
   dashboardName,
   widgetName,
+  onEdit,
+  onDelete,
+  onSave,
 }) => {
   const searchParams = useSearchParams();
   const timeRangeCel = useMemo(() => {
@@ -77,6 +83,23 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
     }
   }
 
+  function handleBoxClick() {
+    if (!preset) {
+      return;
+    }
+    handleGoToPresetClick();
+  }
+
+  function handleBoxKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handleBoxClick();
+    }
+  }
+
+  const hasMenu = Boolean(onEdit && onDelete);
+  const title = widgetName?.trim() ? widgetName : preset?.name;
+
   const isCountLoading = isLoading || !preset;
 
   const getColor = (count: number) => {
@@ -114,63 +137,70 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
 
   return (
     <div className="flex flex-col h-full" data-cy="dashboard-widget-alert-count-panel">
-      <div className="flex items-center justify-end mb-2 flex-shrink-0">
-        <div className="flex items-center space-x-1">
-          <Button
-            color="orange"
-            variant="secondary"
-            size="xs"
-            icon={AiOutlineSwap}
-            onClick={handleGoToPresetClick}
-            tooltip="Go to Preset"
-          />
-          {customLink && (
-            <Button
-              color="blue"
-              variant="secondary"
-              size="xs"
-              icon={ArrowTopRightOnSquareIcon}
-              onClick={handleCustomLinkClick}
-              tooltip="Go to Link"
-            />
-          )}
-        </div>
-      </div>
       <div
+        role="link"
+        tabIndex={0}
+        aria-label={`Go to preset ${preset?.name ?? ""}`}
+        onClick={handleBoxClick}
+        onKeyDown={handleBoxKeyDown}
         style={{
           background: hexToRgb(color, 0.15),
           borderColor: color,
           borderWidth: "2px",
         }}
-        className="max-w-full border rounded-lg p-2 h-full shadow-sm"
+        className="relative flex flex-col max-w-full border rounded-lg p-2 h-full shadow-sm cursor-pointer transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-1"
+        data-cy="dashboard-widget-alert-count-box"
       >
-        <div className="flex-1 flex flex-col justify-center min-h-0">
-          <div className="flex flex-col space-y-2 items-center">
-            <div className="text-2xl font-bold text-gray-700 flex items-center gap-1">
-              {preset?.name}
-              {showFiringOnly && (
-                <Icon
-                  className="p-0"
-                  style={{ color }}
-                  size="sm"
-                  icon={FireIcon}
+        <div className="flex-none flex items-center gap-1 min-w-0">
+          <div className="flex-1 min-w-0 flex items-center justify-center gap-1 text-xl font-bold text-gray-700">
+            <span className="truncate">{title}</span>
+            {showFiringOnly && (
+              <Icon
+                className="p-0 shrink-0"
+                style={{ color }}
+                size="sm"
+                icon={FireIcon}
+              />
+            )}
+          </div>
+          {(customLink || hasMenu) && (
+            <div className="flex-none flex items-center space-x-1">
+              {customLink && (
+                <Button
+                  color="blue"
+                  variant="secondary"
+                  size="xs"
+                  icon={ArrowTopRightOnSquareIcon}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCustomLinkClick();
+                  }}
+                  tooltip="Go to Link"
+                />
+              )}
+              {hasMenu && (
+                <MenuButton
+                  compact
+                  onEdit={onEdit!}
+                  onDelete={onDelete!}
+                  onSave={onSave}
                 />
               )}
             </div>
-            <div
-              className="text-4xl font-black tracking-tight"
-              style={{
-                color,
-                textShadow: "0 1px 2px rgba(0,0,0,0.1)",
-              }}
-            >
-              {isCountLoading ? (
-                <Skeleton containerClassName="h-8 w-16" />
-              ) : (
-                alertsCount
-              )}
-            </div>
-          </div>
+          )}
+        </div>
+        <div
+          className="flex-1 flex items-center justify-center min-h-0 text-4xl font-black tracking-tight"
+          style={{
+            color,
+            textShadow: "0 1px 2px rgba(0,0,0,0.1)",
+          }}
+        >
+          {isCountLoading ? (
+            <Skeleton containerClassName="h-8 w-16" />
+          ) : (
+            alertsCount
+          )}
         </div>
       </div>
     </div>
