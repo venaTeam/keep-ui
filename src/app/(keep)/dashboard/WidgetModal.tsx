@@ -10,7 +10,7 @@ import { MetricWidgetForm } from "./widget-types/metric/metric-widget-form";
 import { GenericMetricsWidgetForm } from "./widget-types/generic-metrics/generic-metrics-widget-form";
 import { useProviders } from "@/utils/hooks/useProviders";
 import { ServiceNowWidgetForm } from "./widget-types/service-now/widget-service-now-form";
-import { ImageWidgetForm } from "./widget-types/image/image-widget-form";
+
 interface WidgetForm {
   widgetName: string;
   widgetType: WidgetType;
@@ -40,7 +40,8 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
     formValue: any;
   }>({ isValid: false, formValue: {} });
   const { data: providersData } = useProviders();
-
+  
+  // Check if ticket_count provider exists
   const hasTicketCountProvider = useMemo(() => {
     if (!providersData?.installed_providers) return false;
     return providersData.installed_providers.some(
@@ -86,6 +87,7 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
         widgetType: data.widgetType || WidgetType.PRESET, // backwards compatibility
         ...innerFormState.formValue,
       });
+      // cleanup form
       reset({
         widgetName: "",
         widgetType: WidgetType.PRESET,
@@ -148,7 +150,6 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
                       value: "Generic Metrics",
                     },
                     { key: WidgetType.METRIC, value: "Metric" },
-                    { key: WidgetType.IMAGE, value: "Image" },
                     ...(hasTicketCountProvider
                       ? [{ key: WidgetType.SERVICE_NOW, value: "Service Now" }]
                       : []),
@@ -192,14 +193,6 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
         )}
         {widgetType === WidgetType.SERVICE_NOW && (
           <ServiceNowWidgetForm
-            editingItem={editingItem}
-            onChange={(formValue, isValid) =>
-              setInnerFormState({ formValue, isValid })
-            }
-          />
-        )}
-        {widgetType === WidgetType.IMAGE && (
-          <ImageWidgetForm
             editingItem={editingItem}
             onChange={(formValue, isValid) =>
               setInnerFormState({ formValue, isValid })
