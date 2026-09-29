@@ -7,6 +7,7 @@ import MetricGridItem from "./widget-types/metric/metric-grid-item";
 import GenericMetricsGridItem from "./widget-types/generic-metrics/generic-metrics-grid-item";
 import WidgetServiceNow from "./widget-types/service-now/widget-service-now";
 import ImageGridItem from "./widget-types/image/image-grid-item";
+import HtmlGridItem from "./widget-types/html/html-grid-item";
 
 interface GridItemProps {
   item: WidgetData;
@@ -60,6 +61,7 @@ const GridItem: React.FC<GridItemProps> = ({
           />
         )}
         {item.widgetType === WidgetType.IMAGE && <ImageGridItem item={item} />}
+        {item.widgetType === WidgetType.HTML && <HtmlGridItem item={item} />}
       </div>
     </Card>
   );

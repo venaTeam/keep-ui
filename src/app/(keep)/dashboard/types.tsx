@@ -29,6 +29,7 @@ export enum WidgetType {
   GENERICS_METRICS = "GENERICS_METRICS",
   SERVICE_NOW = "SERVICE_NOW",
   IMAGE = "IMAGE",
+  HTML = "HTML",
 }
 
 export type ImageFit = "contain" | "cover";
@@ -39,6 +40,10 @@ export interface ImageWidgetConfig {
   url?: string;
   fit: ImageFit;
   link?: string;
+}
+
+export interface HtmlWidgetConfig {
+  html: string;
 }
 
 export enum PresetPanelType {
@@ -61,6 +66,7 @@ export interface WidgetData extends LayoutItem {
   showFiringOnly?: boolean;
   customLink?: string;
   image?: ImageWidgetConfig;
+  html?: HtmlWidgetConfig;
 }
 
 export interface Threshold {

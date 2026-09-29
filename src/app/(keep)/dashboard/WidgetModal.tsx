@@ -11,6 +11,8 @@ import { GenericMetricsWidgetForm } from "./widget-types/generic-metrics/generic
 import { useProviders } from "@/utils/hooks/useProviders";
 import { ServiceNowWidgetForm } from "./widget-types/service-now/widget-service-now-form";
 import { ImageWidgetForm } from "./widget-types/image/image-widget-form";
+import { HtmlWidgetForm } from "./widget-types/html/html-widget-form";
+
 interface WidgetForm {
   widgetName: string;
   widgetType: WidgetType;
@@ -149,6 +151,7 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
                     },
                     { key: WidgetType.METRIC, value: "Metric" },
                     { key: WidgetType.IMAGE, value: "Image" },
+                    { key: WidgetType.HTML, value: "HTML" },
                     ...(hasTicketCountProvider
                       ? [{ key: WidgetType.SERVICE_NOW, value: "Service Now" }]
                       : []),
@@ -200,6 +203,14 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
         )}
         {widgetType === WidgetType.IMAGE && (
           <ImageWidgetForm
+            editingItem={editingItem}
+            onChange={(formValue, isValid) =>
+              setInnerFormState({ formValue, isValid })
+            }
+          />
+        )}
+        {widgetType === WidgetType.HTML && (
+          <HtmlWidgetForm
             editingItem={editingItem}
             onChange={(formValue, isValid) =>
               setInnerFormState({ formValue, isValid })
