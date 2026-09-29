@@ -5,6 +5,10 @@ import { LayoutItem, WidgetData } from "./types";
 import "react-grid-layout/css/styles.css";
 import { MetricsWidget } from "@/utils/hooks/useDashboardMetricWidgets";
 import { Preset } from "@/entities/presets/model/types";
+import {
+  DashboardDensity,
+  densityMargin,
+} from "./dashboard-appearance/dashboard-appearance-validation";
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
@@ -44,6 +48,7 @@ interface GridLayoutProps {
   presets: Preset[];
   onSave: (updateItem: WidgetData) => void;
   metrics: MetricsWidget[];
+  density?: DashboardDensity;
 }
 
 const GridLayout: React.FC<GridLayoutProps> = ({
@@ -55,6 +60,7 @@ const GridLayout: React.FC<GridLayoutProps> = ({
   onSave,
   presets,
   metrics,
+  density,
 }) => {
   const breakpointRef = useRef<string>("lg");
   const [isEditable, setIsEditable] = useState(true);
@@ -96,7 +102,7 @@ const GridLayout: React.FC<GridLayoutProps> = ({
         cols={COLS}
         rowHeight={30}
         containerPadding={[0, 0]}
-        margin={[10, 10]}
+        margin={densityMargin(density)}
         useCSSTransforms={true}
         isDraggable={isEditable}
         isResizable={isEditable}
