@@ -6,7 +6,6 @@ import {
   DashboardDensity,
   DEFAULT_DENSITY,
   DENSITIES,
-  isHexColor,
   PRESET_THEMES,
 } from "./dashboard-appearance-validation";
 
@@ -36,11 +35,8 @@ export function DashboardSettingsPanel({
 }) {
   const activeDensity = appearance.density ?? DEFAULT_DENSITY;
 
-  const setColor = (value: string) => {
-    if (isHexColor(value)) {
-      onChange({ ...appearance, backgroundColor: value });
-    }
-  };
+  const setColor = (value: string) =>
+    onChange({ ...appearance, backgroundColor: value });
 
   const applyPreset = (backgroundColor: string | null) => {
     const next: DashboardAppearance = { ...appearance };

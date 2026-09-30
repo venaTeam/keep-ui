@@ -167,7 +167,7 @@ const DashboardPage = () => {
           dashboard_config: {
             layout,
             widget_data: widgetData,
-            appearance: clampAppearance(appearance),
+            appearance,
           },
         },
         {
