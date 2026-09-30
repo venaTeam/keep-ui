@@ -35,7 +35,7 @@ export const DEFAULT_APPEARANCE: DashboardAppearance = {};
 
 const HEX_COLOR = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
 
-/** True only for a `#rgb`/`#rrggbb` string, so no free-form CSS value can reach the DOM. */
+/** True only for a `#rgb`/`#rrggbb` string. */
 export function isHexColor(value: unknown): value is string {
   return typeof value === "string" && HEX_COLOR.test(value);
 }
@@ -64,8 +64,9 @@ export function isDensity(value: unknown): value is DashboardDensity {
 }
 
 /**
- * Coerce an opaque persisted value into a safe appearance: only a validated hex
- * color and a known density survive, every other key is dropped.
+ * Coerce a persisted appearance, which the gateway stores unvalidated, into one
+ * the UI can render: only a hex color and a known density survive, every other
+ * key is dropped.
  */
 export function clampAppearance(raw: unknown): DashboardAppearance {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
