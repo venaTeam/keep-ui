@@ -131,6 +131,7 @@ const GridLayout: React.FC<GridLayoutProps> = ({
                 onEdit={onEdit}
                 onDelete={onDelete}
                 onSave={onSave}
+                isDraggable={isEditable}
               />
             </div>
           );

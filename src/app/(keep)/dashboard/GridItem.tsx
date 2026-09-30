@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Card } from "@tremor/react";
+import { RxDragHandleDots2 } from "react-icons/rx";
 import MenuButton from "./MenuButton";
 import { WidgetData, WidgetType, PresetPanelType } from "./types";
 import PresetGridItem from "./widget-types/preset/preset-grid-item";
@@ -14,6 +15,7 @@ interface GridItemProps {
   onEdit: (id: string, updateData?: WidgetData) => void;
   onDelete: (id: string) => void;
   onSave: (updateItem: WidgetData) => void;
+  isDraggable?: boolean;
 }
 
 const GridItem: React.FC<GridItemProps> = ({
@@ -21,8 +23,13 @@ const GridItem: React.FC<GridItemProps> = ({
   onEdit,
   onDelete,
   onSave,
+  isDraggable = false,
 }) => {
   const [updatedItem, setUpdatedItem] = useState<WidgetData>(item);
+
+  useEffect(() => {
+    setUpdatedItem(item);
+  }, [item]);
 
   const handleEdit = () => {
     onEdit(updatedItem.i, updatedItem);
@@ -36,6 +43,16 @@ const GridItem: React.FC<GridItemProps> = ({
 
   return (
     <Card className="relative w-full h-full p-3" data-cy={`dashboard-widget-${item.i}`}>
+      {isDraggable && (
+        <span
+          className="grid-item__widget absolute left-0.5 top-3 h-7 flex items-center text-gray-400 hover:text-gray-600"
+          title="Drag to move"
+          aria-label="Drag to move widget"
+          data-cy="dashboard-widget-drag-handle"
+        >
+          <RxDragHandleDots2 className="w-4 h-4" />
+        </span>
+      )}
       <div className="flex flex-col h-full px-2">
         {!isAlertCountPanel && (
           <div className={`flex-none flex items-center justify-between`}>
