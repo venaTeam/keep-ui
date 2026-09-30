@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import Modal from "@/components/ui/Modal";
 import { Button, Select, SelectItem, Subtitle, TextInput } from "@tremor/react";
 import { WidgetData, WidgetType } from "./types";
+import { stripForeignTypeFields } from "./widget-type-fields";
 import { Controller, get, useForm, useWatch } from "react-hook-form";
 import { MetricsWidget } from "@/utils/hooks/useDashboardMetricWidgets";
 import { Preset } from "@/entities/presets/model/types";
@@ -91,7 +92,10 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
   const onSubmit = (data: WidgetForm) => {
     if (editingItem) {
       let updatedWidget: WidgetData = {
-        ...editingItem,
+        ...stripForeignTypeFields(
+          editingItem,
+          data.widgetType || WidgetType.PRESET
+        ),
         name: data.widgetName,
         widgetType: data.widgetType || WidgetType.PRESET, // backwards compatibility
         ...innerFormState.formValue,
