@@ -13,6 +13,8 @@ import { useProviders } from "@/utils/hooks/useProviders";
 import { ServiceNowWidgetForm } from "./widget-types/service-now/widget-service-now-form";
 import { ImageWidgetForm } from "./widget-types/image/image-widget-form";
 import { HtmlWidgetForm } from "./widget-types/html/html-widget-form";
+import { GrafanaPanelWidgetForm } from "./widget-types/grafana-panel/grafana-panel-widget-form";
+import { useGrafanaEmbedPolicy } from "./widget-types/grafana-panel/grafana-panel-grid-item";
 
 interface WidgetForm {
   widgetName: string;
@@ -43,6 +45,10 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
     formValue: any;
   }>({ isValid: false, formValue: {} });
   const { data: providersData } = useProviders();
+  const { allowedOrigins: grafanaOrigins } = useGrafanaEmbedPolicy();
+  const grafanaPanelAvailable =
+    grafanaOrigins.length > 0 ||
+    editingItem?.widgetType === WidgetType.GRAFANA_PANEL;
 
   const hasTicketCountProvider = useMemo(() => {
     if (!providersData?.installed_providers) return false;
@@ -171,6 +177,14 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
                     { key: WidgetType.METRIC, value: "Metric" },
                     { key: WidgetType.IMAGE, value: "Image" },
                     { key: WidgetType.HTML, value: "HTML" },
+                    ...(grafanaPanelAvailable
+                      ? [
+                          {
+                            key: WidgetType.GRAFANA_PANEL,
+                            value: "Grafana Panel",
+                          },
+                        ]
+                      : []),
                     ...(hasTicketCountProvider
                       ? [{ key: WidgetType.SERVICE_NOW, value: "Service Now" }]
                       : []),
@@ -230,6 +244,14 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
         )}
         {widgetType === WidgetType.HTML && (
           <HtmlWidgetForm
+            editingItem={editingItem}
+            onChange={(formValue, isValid) =>
+              setInnerFormState({ formValue, isValid })
+            }
+          />
+        )}
+        {widgetType === WidgetType.GRAFANA_PANEL && (
+          <GrafanaPanelWidgetForm
             editingItem={editingItem}
             onChange={(formValue, isValid) =>
               setInnerFormState({ formValue, isValid })
