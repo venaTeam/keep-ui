@@ -20,6 +20,7 @@ const TYPE_FIELDS: Record<WidgetType, readonly string[]> = {
   ],
   [WidgetType.IMAGE]: ["image"],
   [WidgetType.HTML]: ["html"],
+  [WidgetType.GRAFANA_PANEL]: ["grafanaPanel"],
 };
 
 /**
