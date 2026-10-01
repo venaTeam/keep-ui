@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import Modal from "@/components/ui/Modal";
 import { Button, Select, SelectItem, Subtitle, TextInput } from "@tremor/react";
 import { WidgetData, WidgetType } from "./types";
+import { stripForeignTypeFields } from "./widget-type-fields";
 import { Controller, get, useForm, useWatch } from "react-hook-form";
 import { MetricsWidget } from "@/utils/hooks/useDashboardMetricWidgets";
 import { Preset } from "@/entities/presets/model/types";
@@ -10,6 +11,8 @@ import { MetricWidgetForm } from "./widget-types/metric/metric-widget-form";
 import { GenericMetricsWidgetForm } from "./widget-types/generic-metrics/generic-metrics-widget-form";
 import { useProviders } from "@/utils/hooks/useProviders";
 import { ServiceNowWidgetForm } from "./widget-types/service-now/widget-service-now-form";
+import { ImageWidgetForm } from "./widget-types/image/image-widget-form";
+import { HtmlWidgetForm } from "./widget-types/html/html-widget-form";
 
 interface WidgetForm {
   widgetName: string;
@@ -40,8 +43,7 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
     formValue: any;
   }>({ isValid: false, formValue: {} });
   const { data: providersData } = useProviders();
-  
-  // Check if ticket_count provider exists
+
   const hasTicketCountProvider = useMemo(() => {
     if (!providersData?.installed_providers) return false;
     return providersData.installed_providers.some(
@@ -54,6 +56,8 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
     handleSubmit,
     formState: { errors, isValid },
     reset,
+    setValue,
+    getValues,
   } = useForm<WidgetForm>({
     defaultValues: {
       widgetName: editingItem?.name || "",
@@ -72,10 +76,26 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
     }
   }, [widgetType]);
 
+  // Default the widget name to the selected preset's name when the user hasn't
+  // entered one, so preset widgets always carry a title without a separate field.
+  const selectedPresetName = innerFormState.formValue?.preset?.name;
+  useEffect(() => {
+    if (
+      widgetType === WidgetType.PRESET &&
+      selectedPresetName &&
+      !getValues("widgetName")?.trim()
+    ) {
+      setValue("widgetName", selectedPresetName, { shouldValidate: true });
+    }
+  }, [selectedPresetName, widgetType, getValues, setValue]);
+
   const onSubmit = (data: WidgetForm) => {
     if (editingItem) {
       let updatedWidget: WidgetData = {
-        ...editingItem,
+        ...stripForeignTypeFields(
+          editingItem,
+          data.widgetType || WidgetType.PRESET
+        ),
         name: data.widgetName,
         widgetType: data.widgetType || WidgetType.PRESET, // backwards compatibility
         ...innerFormState.formValue,
@@ -87,7 +107,6 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
         widgetType: data.widgetType || WidgetType.PRESET, // backwards compatibility
         ...innerFormState.formValue,
       });
-      // cleanup form
       reset({
         widgetName: "",
         widgetType: WidgetType.PRESET,
@@ -115,7 +134,7 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
             render={({ field }) => (
               <TextInput
                 {...field}
-                placeholder="Enter widget name"
+                placeholder="Enter widget name (defaults to the preset name)"
                 error={!!get(errors, "widgetName.message")}
                 errorMessage={get(errors, "widgetName.message")}
                 data-cy="dashboard-widget-form-name-input"
@@ -150,6 +169,8 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
                       value: "Generic Metrics",
                     },
                     { key: WidgetType.METRIC, value: "Metric" },
+                    { key: WidgetType.IMAGE, value: "Image" },
+                    { key: WidgetType.HTML, value: "HTML" },
                     ...(hasTicketCountProvider
                       ? [{ key: WidgetType.SERVICE_NOW, value: "Service Now" }]
                       : []),
@@ -193,6 +214,22 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
         )}
         {widgetType === WidgetType.SERVICE_NOW && (
           <ServiceNowWidgetForm
+            editingItem={editingItem}
+            onChange={(formValue, isValid) =>
+              setInnerFormState({ formValue, isValid })
+            }
+          />
+        )}
+        {widgetType === WidgetType.IMAGE && (
+          <ImageWidgetForm
+            editingItem={editingItem}
+            onChange={(formValue, isValid) =>
+              setInnerFormState({ formValue, isValid })
+            }
+          />
+        )}
+        {widgetType === WidgetType.HTML && (
+          <HtmlWidgetForm
             editingItem={editingItem}
             onChange={(formValue, isValid) =>
               setInnerFormState({ formValue, isValid })

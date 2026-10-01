@@ -7,6 +7,7 @@ interface GridItemContainerProps {
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
   onSave: (updateItem: WidgetData) => void;
+  isDraggable?: boolean;
 }
 
 const GridItemContainer: React.FC<GridItemContainerProps> = ({
@@ -14,6 +15,7 @@ const GridItemContainer: React.FC<GridItemContainerProps> = ({
   onEdit,
   onDelete,
   onSave,
+  isDraggable,
 }) => {
   return (
     <GridItem
@@ -21,6 +23,7 @@ const GridItemContainer: React.FC<GridItemContainerProps> = ({
       onEdit={() => onEdit(item.i)}
       onDelete={() => onDelete(item.i)}
       onSave={onSave}
+      isDraggable={isDraggable}
     />
   );
 };
