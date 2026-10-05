@@ -2,7 +2,7 @@
 # Verifies that HOSSTED_UPSTREAM_URL/HOSSTED_UPSTREAM_TOKEN in .env actually
 # reach the hossted-survey-api MOCK server's /api/integrations route and get
 # back a usable response — the same request @hossted/keep-integration's
-# HosstedButton sends through app/api/hossted/route.ts.
+# HosstedButton sends through src/app/api/hossted/route.ts.
 #
 # Usage: ./scripts/verify-hossted-mock.sh [.env path]
 set -euo pipefail

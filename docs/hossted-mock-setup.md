@@ -45,6 +45,6 @@ Confirm the Hossted widget is talking to the mock server (not the real platform,
 ```
 ./scripts/verify-hossted-mock.sh
 ```
-`OK: mock server responded with a usable summary/response.` means the exact request `HosstedButton` sends through `app/api/hossted/route.ts`, with the `.env` URL and token.
+`OK: mock server responded with a usable summary/response.` means the exact request `HosstedButton` sends through `src/app/api/hossted/route.ts`, with the `.env` URL and token.
 
 To see it rendered: open an alert's row in the Feed and click its "Send to Hossted" Button in the "Hossted" column — it should show a green icon with `Analysis complete for this alert.` in the tooltip, and the alert's sidebar should show text under the "Hossted" field.

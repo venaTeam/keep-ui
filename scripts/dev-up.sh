@@ -77,7 +77,6 @@ stop_services() {  # kill the whole process GROUP each service was started in
 if [[ "$DOWN" == "1" ]]; then
   stop_services
   ( cd "$MOCK" && docker compose down )
-  ( cd "$UI_DIR" && docker compose -f docker-compose.hossted.yml down )
   docker compose -f "$INFRA" down
   echo "Torn down (services + infra + mock)."
   exit 0
@@ -192,9 +191,6 @@ up_with_retry() {  # name  container_name  cmd...
 
 echo "[mock] starting hossted-survey-api..."
 up_with_retry mock hossted-survey-api bash -c "cd '$MOCK' && docker compose up -d --build"
-
-echo "[hossted-cache] starting the widget proxy's redis..."
-up_with_retry hossted-cache keep-hossted-cache bash -c "cd '$UI_DIR' && docker compose -f docker-compose.hossted.yml up -d"
 
 wait_health() {  # name  url
   local name="$1" url="$2"
