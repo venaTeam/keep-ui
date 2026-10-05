@@ -28,6 +28,12 @@ declare module "@hossted/keep-integration" {
     response?: string;
     thread_id?: string;
     error?: string;
+    // Per-knowledge-base counts of the sources behind the response, keyed by
+    // source kind; rendered as badges in HosstedSidebarSection.
+    sources?: {
+      hkb?: Record<string, number>;
+      ckb?: Record<string, number>;
+    };
   };
 
   export function useHosstedResponseStatus(
