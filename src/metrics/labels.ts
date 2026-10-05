@@ -13,6 +13,7 @@ export const ACTION_LABELS = [
   "change_status",
   "self_assign",
   "dismiss_alert",
+  "dismiss_incident",
   "create_incident",
   "create_dashboard",
   "add_note",
