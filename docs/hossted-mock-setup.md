@@ -4,7 +4,7 @@
 
 | Repo | Branch | What it adds |
 |---|---|---|
-| `keep-ui` | `feat/hossted-integration-setup` | `@hossted/keep-integration` widget wiring, fixes the Feed table so it actually loads alerts, `scripts/dev-up.sh`/`verify-hossted-mock.sh` |
+| `keep-ui` | `feat/hossted-integration-setup` | `@hossted/keep-integration` widget wiring, `scripts/dev-up.sh`/`verify-hossted-mock.sh` |
 | `keep-api-gateway` | `fix/alert-field-mapping-casing` | Fixes CEL/facet field mapping for camelCase alert fields, merges alembic heads, adds `env.example` |
 | `keep-event-handler` | `feat/prometheus-provider-and-port-fix` | Adds the `prometheus_provider` the consumer needs to process mock alerts, moves a colliding Redis port, adds `env.example` |
 | `hossted-survey-api` | `feat/keep-backend-dev-routing` | Routes `keep-backend-dev` to the host backend, seeds a dev API key, fixes the mock "keep" integration token to a known value |
@@ -39,7 +39,7 @@ curl -X POST http://localhost:8080/alerts/event/prometheus \
   -H 'Content-Type: application/json' -H 'x-api-key: dev-noauth' \
   -d '{"fingerprint":"smoke-test","labels":{"alertname":"smoke-test","severity":"critical"},"annotations":{"summary":"smoke test"},"status":"firing","startsAt":"2026-01-01T00:00:00Z","endsAt":"0001-01-01T00:00:00Z","generatorURL":"http://test"}'
 ```
-should return `202 Accepted`, and the alert should appear in keep-ui at `http://localhost:3000/alerts/feed` within a couple of seconds.
+should return `202 Accepted`. The Feed shows a "Query Your Alerts" empty state until it has a query, so type a CEL filter in the search bar (e.g. `name == "smoke-test"`) at `http://localhost:3000/alerts/feed` — the alert should appear within a couple of seconds.
 
 Confirm the Hossted widget is talking to the mock server (not the real platform, and with a token the mock actually accepts):
 ```
@@ -48,3 +48,8 @@ Confirm the Hossted widget is talking to the mock server (not the real platform,
 `OK: mock server responded with a usable summary/response.` means the exact request `HosstedButton` sends through `src/app/api/hossted/route.ts`, with the `.env` URL and token.
 
 To see it rendered: open an alert's row in the Feed and click its "Send to Hossted" Button in the "Hossted" column — it should show a green icon with `Analysis complete for this alert.` in the tooltip, and the alert's sidebar should show text under the "Hossted" field.
+
+## Known limitations
+
+- **An analysis does not survive a page reload.** `src/app/api/hossted/route.ts` caches nothing and has no `GET` handler, and the widget keeps results only in the browser tab's memory. After a refresh the button is back to its idle state, and clicking it again sends a new request to Hossted.
+- **The proxy needs a signed-in session.** `/api/hossted` returns `401` without one (NOAUTH mode signs you in automatically).
