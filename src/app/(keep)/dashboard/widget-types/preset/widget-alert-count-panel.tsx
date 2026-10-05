@@ -9,6 +9,7 @@ import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
+import { buildTimeRangeCel } from "./time-range-cel";
 
 interface WidgetAlertCountPanelProps {
   presetName: string;
@@ -34,14 +35,10 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
   onSave,
 }) => {
   const searchParams = useSearchParams();
-  const timeRangeCel = useMemo(() => {
-    const timeRangeSearchParam = searchParams.get("time_stamp");
-    if (timeRangeSearchParam) {
-      const parsedTimeRange = JSON.parse(timeRangeSearchParam);
-      return `lastReceived >= "${parsedTimeRange.start}" && lastReceived <= "${parsedTimeRange.end}"`;
-    }
-    return "";
-  }, [searchParams]);
+  const timeRangeCel = useMemo(
+    () => buildTimeRangeCel(searchParams.get("time_stamp")),
+    [searchParams]
+  );
 
   const presets = useDashboardPreset();
   const preset = useMemo(
