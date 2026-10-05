@@ -20,28 +20,24 @@
         "name": "next"
       }
     ],
-    "baseUrl": ".",
+    "baseUrl": "src",
     "paths": {
-      "@/components/*": ["./components/*"],
-      "@/app/*": ["./app/*"],
-      "@/pages/*": ["./pages/*"],
-      "@/utils/*": ["./utils/*"],
-      "@/entities/*": ["./entities/*"],
-      "@/features/*": ["./features/*"],
-      "@/widgets/*": ["./widgets/*"],
-      "@/shared/*": ["./shared/*"],
-      "@/types/*": ["./types/*"],
-      "@/*": ["./*"]
+      "@/components/*": ["components/*"],
+      "@/app/*": ["app/*"],
+      "@/utils/*": ["utils/*"],
+      "@/entities/*": ["entities/*"],
+      "@/features/*": ["features/*"],
+      "@/widgets/*": ["widgets/*"],
+      "@/shared/*": ["shared/*"],
+      "@/types/*": ["types/*"],
+      "@/*": ["*"]
     }
   },
   "include": [
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    ".next/types/**/*.ts",
-    "pages/signin.tsx",
-    "./.next/types/**/*.ts",
-    "types/auth.d.ts"
+    ".next/types/**/*.ts"
   ],
   "exclude": ["node_modules"]
 }

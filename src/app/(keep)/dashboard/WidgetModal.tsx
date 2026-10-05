@@ -1,0 +1,252 @@
+import React, { useState, useMemo, useEffect } from "react";
+import Modal from "@/components/ui/Modal";
+import { Button, Select, SelectItem, Subtitle, TextInput } from "@tremor/react";
+import { WidgetData, WidgetType } from "./types";
+import { stripForeignTypeFields } from "./widget-type-fields";
+import { Controller, get, useForm, useWatch } from "react-hook-form";
+import { MetricsWidget } from "@/utils/hooks/useDashboardMetricWidgets";
+import { Preset } from "@/entities/presets/model/types";
+import { PresetWidgetForm } from "./widget-types/preset/preset-widget-form";
+import { MetricWidgetForm } from "./widget-types/metric/metric-widget-form";
+import { GenericMetricsWidgetForm } from "./widget-types/generic-metrics/generic-metrics-widget-form";
+import { useProviders } from "@/utils/hooks/useProviders";
+import { ServiceNowWidgetForm } from "./widget-types/service-now/widget-service-now-form";
+import { ImageWidgetForm } from "./widget-types/image/image-widget-form";
+import { HtmlWidgetForm } from "./widget-types/html/html-widget-form";
+
+interface WidgetForm {
+  widgetName: string;
+  widgetType: WidgetType;
+}
+
+interface WidgetModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onAddWidget: (widget: any) => void;
+  onEditWidget: (updatedWidget: WidgetData) => void;
+  presets: Preset[];
+  editingItem?: WidgetData | null;
+  metricWidgets: MetricsWidget[];
+}
+
+const WidgetModal: React.FC<WidgetModalProps> = ({
+  isOpen,
+  onClose,
+  onAddWidget,
+  onEditWidget,
+  presets,
+  editingItem,
+  metricWidgets,
+}) => {
+  const [innerFormState, setInnerFormState] = useState<{
+    isValid: boolean;
+    formValue: any;
+  }>({ isValid: false, formValue: {} });
+  const { data: providersData } = useProviders();
+
+  const hasTicketCountProvider = useMemo(() => {
+    if (!providersData?.installed_providers) return false;
+    return providersData.installed_providers.some(
+      (p) => p.type === "ticket_count"
+    );
+  }, [providersData]);
+
+  const {
+    control,
+    handleSubmit,
+    formState: { errors, isValid },
+    reset,
+    setValue,
+    getValues,
+  } = useForm<WidgetForm>({
+    defaultValues: {
+      widgetName: editingItem?.name || "",
+      widgetType: editingItem?.widgetType || WidgetType.PRESET,
+    },
+  });
+
+  const widgetType = useWatch({
+    control,
+    name: "widgetType",
+  });
+
+  useEffect(() => {
+    if (widgetType === WidgetType.SERVICE_NOW) {
+      setInnerFormState({ formValue: {}, isValid: true });
+    }
+  }, [widgetType]);
+
+  // Default the widget name to the selected preset's name when the user hasn't
+  // entered one, so preset widgets always carry a title without a separate field.
+  const selectedPresetName = innerFormState.formValue?.preset?.name;
+  useEffect(() => {
+    if (
+      widgetType === WidgetType.PRESET &&
+      selectedPresetName &&
+      !getValues("widgetName")?.trim()
+    ) {
+      setValue("widgetName", selectedPresetName, { shouldValidate: true });
+    }
+  }, [selectedPresetName, widgetType, getValues, setValue]);
+
+  const onSubmit = (data: WidgetForm) => {
+    if (editingItem) {
+      let updatedWidget: WidgetData = {
+        ...stripForeignTypeFields(
+          editingItem,
+          data.widgetType || WidgetType.PRESET
+        ),
+        name: data.widgetName,
+        widgetType: data.widgetType || WidgetType.PRESET, // backwards compatibility
+        ...innerFormState.formValue,
+      };
+      onEditWidget(updatedWidget);
+    } else {
+      onAddWidget({
+        name: data.widgetName,
+        widgetType: data.widgetType || WidgetType.PRESET, // backwards compatibility
+        ...innerFormState.formValue,
+      });
+      reset({
+        widgetName: "",
+        widgetType: WidgetType.PRESET,
+      });
+    }
+    onClose();
+  };
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={editingItem ? "Edit Widget" : "Add Widget"}
+      data-cy="dashboard-widget-modal"
+    >
+      <form onSubmit={handleSubmit(onSubmit)} data-cy="dashboard-widget-form">
+        <div className="mb-4 mt-2">
+          <Subtitle>Widget Name</Subtitle>
+          <Controller
+            name="widgetName"
+            control={control}
+            rules={{
+              required: { value: true, message: "Widget name is required" },
+            }}
+            render={({ field }) => (
+              <TextInput
+                {...field}
+                placeholder="Enter widget name (defaults to the preset name)"
+                error={!!get(errors, "widgetName.message")}
+                errorMessage={get(errors, "widgetName.message")}
+                data-cy="dashboard-widget-form-name-input"
+              />
+            )}
+          />
+        </div>
+        <div className="mb-4 mt-2">
+          <Subtitle>Widget Type</Subtitle>
+          <Controller
+            name="widgetType"
+            control={control}
+            rules={{
+              required: {
+                value: true,
+                message: "Preset selection is required",
+              },
+            }}
+            render={({ field }) => {
+              return (
+                <Select
+                  {...field}
+                  placeholder="Select a Widget Type"
+                  error={!!get(errors, "selectedWidgetType.message")}
+                  errorMessage={get(errors, "selectedWidgetType.message")}
+                  data-cy="dashboard-widget-form-type-select"
+                >
+                  {[
+                    { key: WidgetType.PRESET, value: "Preset" },
+                    {
+                      key: WidgetType.GENERICS_METRICS,
+                      value: "Generic Metrics",
+                    },
+                    { key: WidgetType.METRIC, value: "Metric" },
+                    { key: WidgetType.IMAGE, value: "Image" },
+                    { key: WidgetType.HTML, value: "HTML" },
+                    ...(hasTicketCountProvider
+                      ? [{ key: WidgetType.SERVICE_NOW, value: "Service Now" }]
+                      : []),
+                  ].map(({ key, value }) => (
+                    <SelectItem key={key} value={key}>
+                      {value}
+                    </SelectItem>
+                  ))}
+                </Select>
+              );
+            }}
+          />
+        </div>
+        {widgetType === WidgetType.PRESET && (
+          <PresetWidgetForm
+            editingItem={editingItem}
+            presets={presets}
+            onChange={(formValue, isValid) =>
+              setInnerFormState({ formValue, isValid })
+            }
+          ></PresetWidgetForm>
+        )}
+        {widgetType == WidgetType.GENERICS_METRICS && (
+          <>
+            <GenericMetricsWidgetForm
+              editingItem={editingItem}
+              onChange={(formValue, isValid) =>
+                setInnerFormState({ formValue, isValid })
+              }
+            ></GenericMetricsWidgetForm>
+          </>
+        )}
+        {widgetType === WidgetType.METRIC && (
+          <MetricWidgetForm
+            editingItem={editingItem}
+            metricWidgets={metricWidgets}
+            onChange={(formValue, isValid) =>
+              setInnerFormState({ formValue, isValid })
+            }
+          ></MetricWidgetForm>
+        )}
+        {widgetType === WidgetType.SERVICE_NOW && (
+          <ServiceNowWidgetForm
+            editingItem={editingItem}
+            onChange={(formValue, isValid) =>
+              setInnerFormState({ formValue, isValid })
+            }
+          />
+        )}
+        {widgetType === WidgetType.IMAGE && (
+          <ImageWidgetForm
+            editingItem={editingItem}
+            onChange={(formValue, isValid) =>
+              setInnerFormState({ formValue, isValid })
+            }
+          />
+        )}
+        {widgetType === WidgetType.HTML && (
+          <HtmlWidgetForm
+            editingItem={editingItem}
+            onChange={(formValue, isValid) =>
+              setInnerFormState({ formValue, isValid })
+            }
+          />
+        )}
+        <Button
+          color="orange"
+          type="submit"
+          disabled={!isValid || !innerFormState.isValid}
+          data-cy="dashboard-widget-form-submit-btn"
+        >
+          {editingItem ? "Update Widget" : "Add Widget"}
+        </Button>
+      </form>
+    </Modal>
+  );
+};
+
+export default WidgetModal;

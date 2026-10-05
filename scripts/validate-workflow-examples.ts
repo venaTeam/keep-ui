@@ -1,6 +1,6 @@
 import { fromError, fromZodError } from "zod-validation-error";
-import { parseWorkflowYamlToJSON } from "../entities/workflows/lib/yaml-utils";
-import { getYamlWorkflowDefinitionSchema } from "../entities/workflows/model/yaml.schema";
+import { parseWorkflowYamlToJSON } from "../src/entities/workflows/lib/yaml-utils";
+import { getYamlWorkflowDefinitionSchema } from "../src/entities/workflows/model/yaml.schema";
 import fs from "fs";
 import path from "path";
 
@@ -60,7 +60,7 @@ function validateWorkflowExamples() {
       "1. UI Editor: http://localhost:3000/workflows/ - Shows errors in real-time with highlighting"
     );
     console.log(
-      "2. Schema: keep-ui/entities/workflows/model/yaml.schema.ts - Check if schema needs updates"
+      "2. Schema: keep-ui/src/entities/workflows/model/yaml.schema.ts - Check if schema needs updates"
     );
     console.log(
       "3. Issues: https://github.com/keephq/keep/issues - Report if you believe it's a schema bug"

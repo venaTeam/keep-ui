@@ -1,147 +1,123 @@
 import { test, expect } from "../fixtures/test-base";
-import { loadFeed, celFingerprint } from "../fixtures/ui";
+import { celFingerprint, type AlertRow } from "../pages";
+import type { Page } from "@playwright/test";
 
 /**
- * [check:06] dismiss
+ * [check:06] dismiss — two independent flows, one test each. Each hybrid-asserts:
+ * backend truth via the API, then the UI render.
  *
- * Drives the per-row "Dismiss" UI flow on the alerts feed for both dismiss
- * modes:
- *   open the row action menu (ellipsis) → "Dismiss" menu item
- *   (DropdownMenu.Item auto-generates data-cy="menu-item-dismiss") → the dismiss
- *   modal (data-cy="alerts-dismiss-modal") opens.
+ *   #1 permanent ("Dismiss Forever"): dismiss through the UI; assert the alert
+ *      enriches to status=suppressed / dismiss_mode=permanent, and the row shows
+ *      suppressed.
+ *   #2 dismiss-until: the UI datetime picker only steps in 15-minute jumps, so the
+ *      dismiss ACTION is issued via the API for a short real window (~30s); the UI
+ *      only VALIDATES. The alert must show suppressed within the window and return
+ *      to firing once it expires.
  *
- * #1 permanent ("Dismiss Forever", the default tab 0): a dismiss comment is
- *   REQUIRED (the textarea errors if blank) → submit
- *   (data-cy="alerts-dismiss-submit-btn"). Assert status becomes "suppressed".
- *
- * #2 dismiss-until ("Dismiss Until", tab 1): switching to the tab keeps the
- *   modal's pre-seeded future datetime (rounded up to the next 15 min on open),
- *   which is a valid future selection — no brittle datepicker clicks needed.
- *   Submit and assert dismissed_until is set on the backend.
- *
- * Render assert: a dismissed alert leaves the default feed and/or surfaces the
- * restore affordance — when re-selected its menu shows "Restore"
- * (data-cy="menu-item-restore") instead of "Dismiss".
- *
- * Also pins the "dispose on new alert" toggle default on the permanent path:
- *  - the modal opens in the "Keeping on new alerts" (false) state;
- *  - flipping it to "Disposing on new alerts" and cancelling
- *    (data-cy="alerts-dismiss-cancel-btn") resets it — reopening shows
- *    "Keeping on new alerts" again;
- *  - submitting WITHOUT touching the toggle POSTs /alerts/batch_enrich with
- *    dispose_on_new_alert=false in the query string.
+ * Reading UI status: the status cell renders <Icon tooltip={status}>
+ * (alert-table-utils.tsx), so we hover the row's status cell and read the tooltip.
+ * A freshly-dismissed (suppressed) alert lags in a FRESH feed load, so suppressed
+ * states are read IN PLACE on the already-rendered row (loaded while firing)
+ * rather than by re-navigating. A firing alert indexes normally, so the final
+ * return-to-firing check can reload the feed.
  */
-test.describe("[check:06] dismiss", () => {
-  async function openDismissModal(
-    page: import("@playwright/test").Page,
-    fingerprint: string
-  ) {
-    const row = page.locator(
-      `[data-cy="alerts-row"][data-cy-id="${fingerprint}"]`
-    );
-    await expect(row).toBeVisible();
-    await row
-      .locator('[data-cy="alerts-menu"] [data-testid="dropdown-menu-button"]')
-      .click();
-    await page.locator('[data-cy="menu-item-dismiss"]').click();
-    const modal = page.locator('[data-cy="alerts-dismiss-modal"]');
-    await expect(modal).toBeVisible();
-    return modal;
-  }
 
-  test("permanent dismiss and dismiss-until both persist via the UI", async ({
+/**
+ * Assert the row's status cell tooltip matches `status`. Polls in place (no
+ * reload): move off the status cell, then back onto it, so the tooltip re-renders
+ * the row's current status each attempt.
+ */
+async function expectRowStatus(
+  page: Page,
+  row: AlertRow,
+  status: RegExp,
+  timeoutMs = 20_000
+): Promise<void> {
+  await expect(async () => {
+    await row.cell("severity").hover();
+    await row.cell("status").hover();
+    await expect(
+      page.getByRole("tooltip").filter({ hasText: status })
+    ).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: timeoutMs, intervals: [1_000, 2_000, 3_000] });
+}
+
+test.describe("[check:06] dismiss", () => {
+  test("permanent dismiss suppresses the alert", async ({
+    alertsFeed,
     page,
     api,
   }) => {
     const stamp = Date.now();
 
-    // --- seed: two firing alerts -------------------------------------------
-    const a1 = await api.sendAlert({ name: `sanity-dismiss-perm-${stamp}` });
-    const a2 = await api.sendAlert({ name: `sanity-dismiss-until-${stamp}` });
-    await api.waitForAlert(a1.fingerprint);
-    await api.waitForAlert(a2.fingerprint);
-
-    // The feed only lists alerts once a CEL query is submitted; filter to a1.
-    await loadFeed(page, celFingerprint(a1.fingerprint), [a1.fingerprint]);
-
-    // --- #1 permanent (Dismiss Forever) ------------------------------------
-    const modal1 = await openDismissModal(page, a1.fingerprint);
-
-    // Toggle default: the dispose-on-new-alert toggle is a plain button whose
-    // visible label IS the state contract — it must open as "Keeping on new
-    // alerts" (false), never "Disposing on new alerts".
-    const keepingToggle = modal1.getByRole("button", {
-      name: "Keeping on new alerts",
+    const { fingerprint } = await api.alerts.sendAlert({
+      name: `sanity-dismiss-perm-${stamp}`,
     });
-    const disposingToggle = modal1.getByRole("button", {
-      name: "Disposing on new alerts",
+    await api.alerts.waitForAlert(fingerprint);
+
+    // Render the row while firing, then dismiss it "forever" through the UI.
+    await alertsFeed.loadFeed(celFingerprint(fingerprint), [fingerprint]);
+    const row = alertsFeed.row(fingerprint);
+    const modal = await row.openDismissModal();
+    // "Dismiss Forever" is the default tab; a dismiss comment is required.
+    await modal.comment.fill(`permanent dismiss ${stamp}`);
+    await modal.submit();
+    await expect(modal.root).toBeHidden();
+
+    // Backend assert: the alert enriches to suppressed + permanent dismiss.
+    await api.alerts.waitForEnrichment(
+      fingerprint,
+      (a) =>
+        a.status === "suppressed" &&
+        (a.dismiss_mode === "permanent" || a.dismissed === true),
+      30_000,
+      "permanent dismiss → status=suppressed, dismiss_mode=permanent"
+    );
+
+    // UI render assert: the row's status shows suppressed (read in place).
+    await expectRowStatus(page, row, /suppressed/i);
+  });
+
+  test("dismiss-until suppresses the alert, then it returns to firing when the window expires", async ({
+    alertsFeed,
+    page,
+    api,
+  }) => {
+    const stamp = Date.now();
+    const DISMISS_MS = 30_000;
+
+    const { fingerprint } = await api.alerts.sendAlert({
+      name: `sanity-dismiss-until-${stamp}`,
     });
-    await expect(keepingToggle).toBeVisible();
-    await expect(disposingToggle).toHaveCount(0);
+    await api.alerts.waitForAlert(fingerprint);
 
-    // Reset path: flip the toggle, cancel the modal, reopen — the toggle must
-    // be back at its "Keeping on new alerts" default (cancel discards state).
-    await keepingToggle.click();
-    await expect(disposingToggle).toBeVisible();
-    await modal1.locator('[data-cy="alerts-dismiss-cancel-btn"]').click();
-    await expect(modal1).toBeHidden();
-    await openDismissModal(page, a1.fingerprint);
-    await expect(keepingToggle).toBeVisible();
-    await expect(disposingToggle).toHaveCount(0);
+    // Render the row while firing so its status can be read in place afterwards.
+    await alertsFeed.loadFeed(celFingerprint(fingerprint), [fingerprint]);
+    const row = alertsFeed.row(fingerprint);
 
-    // Tab 0 ("Dismiss Forever") is the default. A comment is required.
-    await modal1.locator("textarea").fill(`permanent dismiss ${stamp}`);
-    // Submit WITHOUT touching the toggle and assert the outgoing
-    // POST /alerts/batch_enrich carries dispose_on_new_alert=false.
-    const batchEnrichRequest = page.waitForRequest(
-      (req) =>
-        req.method() === "POST" && req.url().includes("/alerts/batch_enrich"),
-      { timeout: 15_000 }
-    );
-    await modal1.locator('[data-cy="alerts-dismiss-submit-btn"]').click();
-    expect((await batchEnrichRequest).url()).toContain(
-      "dispose_on_new_alert=false"
-    );
-    await expect(modal1).toBeHidden();
+    // Action via API: dismiss for a short real window (the UI datetime picker only
+    // steps in 15-minute jumps, so the action is API-driven and only validated in UI).
+    const dismissedUntil = new Date(Date.now() + DISMISS_MS).toISOString();
+    await api.alerts.dismiss(fingerprint, "dismiss_until", dismissedUntil);
 
-    // Permanent dismiss enriches dismiss_mode="permanent" (and the derived
-    // `dismissed` flag) — it does NOT change `status` (alert-dismiss-modal.tsx
-    // only sets dismiss_mode/dismissed_until on dismiss; status is touched only
-    // on restore).
-    await api.waitForEnrichment(
-      a1.fingerprint,
-      (a) => a.dismiss_mode === "permanent" || a.dismissed === true,
+    // Backend assert: the alert is suppressed with a dismissed_until set.
+    await api.alerts.waitForEnrichment(
+      fingerprint,
+      (a) => a.status === "suppressed" && Boolean(a.dismissed_until),
       30_000,
-      "permanent dismiss → dismiss_mode=permanent"
+      "dismiss-until → status=suppressed, dismissed_until set"
     );
 
-    // --- #2 dismiss-until --------------------------------------------------
-    // a2 is still firing; re-submit a CEL query scoped to it so its row renders,
-    // then re-open its dismiss modal.
-    await loadFeed(page, celFingerprint(a2.fingerprint), [a2.fingerprint]);
-    const modal2 = await openDismissModal(page, a2.fingerprint);
-    // Switch to the "Dismiss Until" tab. The modal pre-seeds a valid future
-    // datetime on open, which this tab retains.
-    await modal2.getByRole("tab", { name: "Dismiss Until" }).click();
-    await modal2.locator("textarea").fill(`dismiss until ${stamp}`);
-    await modal2.locator('[data-cy="alerts-dismiss-submit-btn"]').click();
-    await expect(modal2).toBeHidden();
+    // UI render assert (in place): the row shows suppressed while within the window.
+    await expectRowStatus(page, row, /suppressed/i);
 
-    await api.waitForEnrichment(
-      a2.fingerprint,
-      (a) => Boolean(a.dismissed_until),
-      30_000,
-      "dismiss-until → dismissed_until set"
-    );
+    // --- after the window expires, the alert must return to firing -------------
+    // Backend assert: status returns to firing once dismissed_until passes.
+    await api.alerts.waitForAlertField(fingerprint, "status", "firing", DISMISS_MS + 30_000);
 
-    // --- render assert: the permanently-dismissed alert now offers Restore --
-    // After dismissal the alert is suppressed; surface it and confirm its row
-    // action menu exposes the restore affordance rather than dismiss.
-    await api.waitForEnrichment(
-      a1.fingerprint,
-      (a) => a.dismiss_mode === "permanent" || a.dismissed === true,
-      30_000,
-      "a1 stays permanently dismissed"
-    );
+    // UI render assert: the row reflects firing again. A firing alert indexes
+    // normally, so a fresh feed load surfaces it reliably here.
+    await alertsFeed.loadFeed(celFingerprint(fingerprint), [fingerprint]);
+    await expectRowStatus(page, alertsFeed.row(fingerprint), /firing/i);
   });
 });
