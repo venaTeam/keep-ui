@@ -89,5 +89,11 @@ export function getConfig(): InternalConfig {
       process.env.KEEP_TICKETING_ENABLED?.toLowerCase() === "true",
     KEEP_WF_LIST_EXTENDED_INFO:
       process.env.KEEP_WF_LIST_EXTENDED_INFO?.toLowerCase() === "true",
+
+    // @hossted/keep-integration - see HosstedWrapper's `config` prop
+    HOSSTED_PROXY_URL: process.env.HOSSTED_PROXY_URL,
+    HOSSTED_API_TOKEN: process.env.HOSSTED_API_TOKEN,
+    HOSSTED_DASHBOARD_URL: process.env.HOSSTED_DASHBOARD_URL,
+    HOSSTED_TOAST_DISABLED: process.env.HOSSTED_TOAST_DISABLED === "true",
   };
 }

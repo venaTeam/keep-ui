@@ -43,4 +43,13 @@ export interface InternalConfig {
   // Add ticketing options to the incident view, defaults to false
   KEEP_TICKETING_ENABLED: boolean;
   KEEP_WF_LIST_EXTENDED_INFO: boolean;
+
+  // @hossted/keep-integration's HosstedWrapper `config` prop - resolved here
+  // (server-side, fresh per request) instead of next.config.js's `env` key,
+  // so it's editable via a normal Helm/OpenShift env var with no rebuild.
+  // See keep-npm-widget/docs/INTEGRATION_GUIDE.md "3b".
+  HOSSTED_PROXY_URL: string | undefined;
+  HOSSTED_API_TOKEN: string | undefined;
+  HOSSTED_DASHBOARD_URL: string | undefined;
+  HOSSTED_TOAST_DISABLED: boolean;
 }

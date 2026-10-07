@@ -4,9 +4,25 @@ declare module "@hossted/keep-integration" {
   export type HosstedRequest = {
     fingerprint: string;
     payload: unknown;
+    type?: string;
+    stream?: boolean;
+  };
+
+  export type HosstedConfig = {
+    proxyUrl?: string;
+    apiToken?: string;
+    dashboardUrl?: string;
+    toastDisabled?: boolean;
   };
 
   export function HosstedWrapper(props: { children: ReactNode }): JSX.Element;
+
+  // Render once, as high up the app as convenient (e.g. the root layout) -
+  // everything underneath picks up `config` automatically.
+  export function HosstedConfigProvider(props: {
+    children: ReactNode;
+    config?: HosstedConfig;
+  }): JSX.Element;
 
   export function HosstedButton(props: {
     request: HosstedRequest;
