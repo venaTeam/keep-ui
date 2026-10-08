@@ -27,6 +27,7 @@ import { FormattedContent } from "@/shared/ui/FormattedContent/FormattedContent"
 import { IncidentDto } from "@/entities/incidents/model";
 import { DOCS_CLIPBOARD_COPY_ERROR_PATH } from "@/shared/constants";
 import CollapsibleIncidentsList from "./alert-sidebar-incidents";
+import { HosstedSidebarSection } from "@hossted/keep-integration";
 
 type AlertSidebarProps = {
   isOpen: boolean;
@@ -296,7 +297,15 @@ export const AlertSidebar = ({
                   isLoading={isLoading}
                   onRefresh={handleRefresh}
                 />
-
+                <div>
+                  <FieldHeader>Hossted</FieldHeader>
+                  <HosstedSidebarSection
+                    request={{
+                      fingerprint: alert.fingerprint,
+                      payload: alert,
+                    }}
+                  />
+                </div>
               </div>
             )}
           </Dialog.Panel>
