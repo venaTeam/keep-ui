@@ -8,6 +8,7 @@ const TYPE_FIELDS: Record<WidgetType, readonly string[]> = {
     "presetPanelType",
     "showFiringOnly",
     "customLink",
+    "countBy",
   ],
   [WidgetType.METRIC]: ["metric"],
   [WidgetType.GENERICS_METRICS]: ["genericMetrics"],

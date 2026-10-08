@@ -1,5 +1,6 @@
 import { MetricsWidget } from "@/utils/hooks/useDashboardMetricWidgets";
 import { Preset } from "@/entities/presets/model/types";
+import { CountBy } from "@/entities/presets/model/count-by";
 
 export interface LayoutItem {
   i: string;
@@ -65,6 +66,7 @@ export interface WidgetData extends LayoutItem {
   presetPanelType?: PresetPanelType;
   showFiringOnly?: boolean;
   customLink?: string;
+  countBy?: CountBy;
   image?: ImageWidgetConfig;
   html?: HtmlWidgetConfig;
 }

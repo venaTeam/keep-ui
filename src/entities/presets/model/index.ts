@@ -1,5 +1,6 @@
 export * from "./types";
 export * from "./constants";
+export * from "./count-by";
 export { usePresetActions } from "./usePresetActions";
 export { usePresets } from "./usePresets";
 export { usePresetColumnConfig } from "./usePresetColumnConfig";
