@@ -1,5 +1,11 @@
 import React from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { PresetWidgetForm } from "../preset-widget-form";
 import { Preset } from "@/entities/presets/model/types";
 import { CountBy } from "@/entities/presets/model/count-by";
@@ -36,6 +42,15 @@ const renderForm = async (editingItem?: WidgetData) => {
   );
   await screen.findByRole("radiogroup", { name: "Count" });
   return onChange;
+};
+
+const choosePanelType = async (optionName: string) => {
+  const root = document.querySelector(
+    '[data-cy="dashboard-widget-form-panel-type-select"]'
+  ) as HTMLElement;
+  fireEvent.click(within(root).getByRole("button"));
+  const listbox = await screen.findByRole("listbox");
+  fireEvent.click(within(listbox).getByRole("option", { name: optionName }));
 };
 
 describe("PresetWidgetForm countBy", () => {
@@ -87,5 +102,48 @@ describe("PresetWidgetForm countBy", () => {
     await renderForm(savedWidget({ presetPanelType: PresetPanelType.ALERT_TABLE }));
 
     expect(screen.getByRole("radiogroup", { name: "Count" })).toBeInTheDocument();
+  });
+});
+
+describe("PresetWidgetForm layout for a new counter tile", () => {
+  it("keeps three rows for a new grouped counter", async () => {
+    const onChange = await renderForm();
+
+    await choosePanelType("Alert Count Panel");
+    fireEvent.click(screen.getByRole("radio", { name: "Incidents" }));
+
+    await waitFor(() =>
+      expect(lastValue(onChange)).toMatchObject({
+        w: 4,
+        h: 3,
+        minW: 0,
+        minH: 3,
+        static: false,
+      })
+    );
+  });
+
+  it("still allows two rows for a new counter that counts alerts", async () => {
+    const onChange = await renderForm();
+
+    await choosePanelType("Alert Count Panel");
+
+    await waitFor(() =>
+      expect(lastValue(onChange)).toMatchObject({
+        w: 4,
+        h: 3,
+        minW: 0,
+        minH: 2,
+        static: false,
+      })
+    );
+  });
+
+  it("leaves the layout of a saved widget alone", async () => {
+    const onChange = await renderForm(
+      savedWidget({ countBy: { field: "incident", incidentStatus: "active" } })
+    );
+
+    expect(lastValue(onChange)).not.toHaveProperty("minH");
   });
 });

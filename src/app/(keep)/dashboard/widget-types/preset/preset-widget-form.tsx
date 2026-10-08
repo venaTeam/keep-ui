@@ -105,7 +105,7 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
         w: 4,
         h: 3,
         minW: 0,
-        minH: 2,
+        minH: normalizedFormValues.countBy ? 3 : 2,
         static: false,
       } as LayoutItem;
     }
