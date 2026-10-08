@@ -65,9 +65,11 @@ export const usePresetAlertCount = ({
     return () => clearInterval(intervalId);
   }, [enabled, mutate, refreshInterval]);
 
+  const isError = Boolean(groupBy) && Boolean(error);
+
   return {
     totalCount: data ?? 0,
-    isLoading,
-    isError: Boolean(groupBy) && Boolean(error),
+    isLoading: isLoading && !isError,
+    isError,
   };
 };
