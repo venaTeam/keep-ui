@@ -12,8 +12,11 @@ const ColumnsSelection: React.FC<ColumnsSelectionProps> = ({
   selectedColumns,
   onChange,
 }) => {
+  const [savedColumns] = useState<string[]>(
+    () => selectedColumns || defaultColumns
+  );
   const [selectedColumnsState, setSelectedColumnsState] = useState<Set<string>>(
-    new Set(selectedColumns || defaultColumns)
+    new Set(savedColumns)
   );
   const { data } = useFacetPotentialFields("alerts");
 
@@ -23,7 +26,9 @@ const ColumnsSelection: React.FC<ColumnsSelectionProps> = ({
   );
 
   const sortedOptions = useMemo(() => {
-    return data?.slice().sort((first, second) => {
+    const options = Array.from(new Set([...(data ?? []), ...savedColumns]));
+
+    return options.sort((first, second) => {
       const inSetA = selectedColumnsState.has(first);
       const inSetB = selectedColumnsState.has(second);
 
@@ -32,7 +37,7 @@ const ColumnsSelection: React.FC<ColumnsSelectionProps> = ({
 
       return first.localeCompare(second);
     });
-  }, [data, selectedColumnsState]);
+  }, [data, savedColumns, selectedColumnsState]);
 
   return (
     <MultiSelect
