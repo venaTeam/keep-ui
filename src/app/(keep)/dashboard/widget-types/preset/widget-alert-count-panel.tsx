@@ -213,7 +213,7 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
           )}
         </div>
         {countBy ? (
-          <div className="flex-1 flex flex-col items-center justify-center min-h-0 gap-1">
+          <div className="flex-1 flex flex-col items-center justify-center min-h-0 gap-1.5">
             <div
               className="text-4xl font-black tracking-tight leading-none"
               style={{
@@ -231,7 +231,7 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
               )}
             </div>
             <div
-              className="flex max-w-full items-center gap-1.5 text-xs font-semibold leading-none text-gray-700"
+              className="flex max-w-full items-center gap-1.5 text-xs font-semibold text-gray-700"
               data-cy="dashboard-widget-count-caption"
             >
               <span

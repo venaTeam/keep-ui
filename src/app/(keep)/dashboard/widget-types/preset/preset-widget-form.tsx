@@ -101,11 +101,12 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
     
     if (isAlertCountPanel) {
       // Narrower, more compact layout for count panels with no minimum width
+      const isGrouped = Boolean(normalizedFormValues.countBy);
       return {
         w: 4,
-        h: 3,
+        h: isGrouped ? 4 : 3,
         minW: 0,
-        minH: normalizedFormValues.countBy ? 3 : 2,
+        minH: isGrouped ? 4 : 2,
         static: false,
       } as LayoutItem;
     }

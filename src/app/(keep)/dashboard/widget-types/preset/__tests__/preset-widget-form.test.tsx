@@ -106,7 +106,7 @@ describe("PresetWidgetForm countBy", () => {
 });
 
 describe("PresetWidgetForm layout for a new counter tile", () => {
-  it("keeps three rows for a new grouped counter", async () => {
+  it("gives a new grouped counter four rows", async () => {
     const onChange = await renderForm();
 
     await choosePanelType("Alert Count Panel");
@@ -115,9 +115,9 @@ describe("PresetWidgetForm layout for a new counter tile", () => {
     await waitFor(() =>
       expect(lastValue(onChange)).toMatchObject({
         w: 4,
-        h: 3,
+        h: 4,
         minW: 0,
-        minH: 3,
+        minH: 4,
         static: false,
       })
     );
@@ -144,6 +144,9 @@ describe("PresetWidgetForm layout for a new counter tile", () => {
       savedWidget({ countBy: { field: "incident", incidentStatus: "active" } })
     );
 
-    expect(lastValue(onChange)).not.toHaveProperty("minH");
+    const emitted = lastValue(onChange);
+    ["w", "h", "minW", "minH", "static"].forEach((key) =>
+      expect(emitted).not.toHaveProperty(key)
+    );
   });
 });
