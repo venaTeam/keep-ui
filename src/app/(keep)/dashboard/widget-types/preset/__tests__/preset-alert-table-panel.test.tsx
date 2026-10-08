@@ -91,6 +91,17 @@ describe("PresetAlertTablePanel without grouping", () => {
     );
     expect(mockLastTableBackground).toBe("rgb(220, 38, 38, 0.1)");
   });
+
+  it("keeps the alerts line unmuted and coloured by the alert count", () => {
+    renderPanel(buildItem());
+
+    expect(screen.getByText("Alerts count:").parentElement).not.toHaveClass(
+      "text-gray-500"
+    );
+    expect(
+      screen.getByText("showing 5 out of 120").parentElement
+    ).toHaveStyle({ color: "#dc2626" });
+  });
 });
 
 describe("PresetAlertTablePanel with grouping", () => {
@@ -117,6 +128,9 @@ describe("PresetAlertTablePanel with grouping", () => {
     groupState({ totalCount: 3 });
     renderPanel(buildItem({ countBy: incidents }));
 
+    expect(screen.getByText("Alerts count:").parentElement).toHaveClass(
+      "text-gray-500"
+    );
     expect(
       screen.getByText("showing 5 out of 120").parentElement
     ).toHaveClass("text-gray-500");

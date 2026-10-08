@@ -123,7 +123,13 @@ const PresetAlertTablePanel: React.FC<PresetAlertTablePanelProps> = ({
     }
 
     return (
-      <div className="flex gap-1 items-center">
+      <div
+        className={
+          countBy
+            ? "flex gap-1 items-center text-gray-500"
+            : "flex gap-1 items-center"
+        }
+      >
         <div>Alerts count:</div>
         <div
           className={`flex items-center text-base font-bold ${countBy ? "text-gray-500" : ""}`}
