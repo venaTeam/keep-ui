@@ -19,6 +19,8 @@ import {
 } from "react-hook-form";
 import { LayoutItem, Threshold, PresetPanelType } from "../../types";
 import ColumnsSelection from "./columns-selection";
+import { CountByControl } from "./count-by-control";
+import { CountBy } from "@/entities/presets/model/count-by";
 
 interface PresetForm {
   selectedPreset: string;
@@ -62,6 +64,9 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
   const [presetColumns, setPresetColumns] = useState<string[] | undefined>(
     editingItem ? editingItem.presetColumns : undefined
   );
+  const [countBy, setCountBy] = useState<CountBy | undefined>(
+    editingItem?.countBy
+  );
 
   const { fields, append, remove, move, replace } = useFieldArray({
     control,
@@ -82,8 +87,9 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
       presetPanelType: formValues.presetPanelType || PresetPanelType.ALERT_TABLE,
       showFiringOnly: formValues.showFiringOnly ?? false,
       customLink: formValues.customLink || "",
+      countBy,
     };
-  }, [formValues, presetColumns]);
+  }, [formValues, presetColumns, countBy]);
 
   function getLayoutValues(): LayoutItem {
     if (editingItem) {
@@ -130,6 +136,7 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
         presetPanelType: normalizedFormValues.presetPanelType,
         showFiringOnly: normalizedFormValues.showFiringOnly,
         customLink: normalizedFormValues.customLink,
+        countBy: normalizedFormValues.countBy,
       },
       isValid
     );
@@ -215,6 +222,7 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
           )}
         />
       </div>
+      <CountByControl value={countBy} onChange={setCountBy} />
       {formValues.presetPanelType === PresetPanelType.ALERT_COUNT_PANEL && (
         <>
           <div className="mb-4 mt-2">
