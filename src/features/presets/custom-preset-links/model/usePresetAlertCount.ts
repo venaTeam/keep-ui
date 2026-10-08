@@ -2,10 +2,17 @@ import { useApi } from "@/shared/lib/hooks/useApi";
 import useSWR from "swr";
 import { useEffect, useMemo } from "react";
 import { buildPresetAlertCel } from "./usePresetAlertsCount";
+import {
+  CountByField,
+  DEFAULT_INCIDENT_STATUS,
+  IncidentStatusFilter,
+} from "@/entities/presets/model/count-by";
 
 type UsePresetAlertCountParams = {
   presetCel: string;
   counterShowsFiringOnly: boolean;
+  groupBy?: CountByField;
+  incidentStatus?: IncidentStatusFilter;
   refreshInterval?: number;
   enabled?: boolean;
 };
@@ -13,6 +20,8 @@ type UsePresetAlertCountParams = {
 export const usePresetAlertCount = ({
   presetCel,
   counterShowsFiringOnly,
+  groupBy,
+  incidentStatus,
   refreshInterval,
   enabled = true,
 }: UsePresetAlertCountParams) => {
@@ -23,9 +32,13 @@ export const usePresetAlertCount = ({
       enabled
         ? {
             cel: buildPresetAlertCel(presetCel, counterShowsFiringOnly),
+            ...(groupBy ? { group_by: groupBy } : {}),
+            ...(groupBy === "incident"
+              ? { incident_status: incidentStatus ?? DEFAULT_INCIDENT_STATUS }
+              : {}),
           }
         : undefined,
-    [counterShowsFiringOnly, enabled, presetCel]
+    [counterShowsFiringOnly, enabled, groupBy, incidentStatus, presetCel]
   );
 
   const swrKey = () =>
@@ -37,7 +50,7 @@ export const usePresetAlertCount = ({
           .join("&")
       : null;
 
-  const { data, isLoading, mutate } = useSWR<number>(
+  const { data, error, isLoading, mutate } = useSWR<number>(
     swrKey,
     () => api.post(requestUrl, query),
     { revalidateOnFocus: false }
@@ -52,5 +65,9 @@ export const usePresetAlertCount = ({
     return () => clearInterval(intervalId);
   }, [enabled, mutate, refreshInterval]);
 
-  return { totalCount: data ?? 0, isLoading };
+  return {
+    totalCount: data ?? 0,
+    isLoading,
+    isError: Boolean(groupBy) && Boolean(error),
+  };
 };
