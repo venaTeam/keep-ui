@@ -2,6 +2,7 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import PresetAlertTablePanel from "../preset-alert-table-panel";
 import { Preset } from "@/entities/presets/model/types";
+import { CountBy } from "@/entities/presets/model/count-by";
 import { PresetPanelType, WidgetData, WidgetType } from "../../../types";
 
 const mockUsePresetAlertsCount = jest.fn();
@@ -163,5 +164,28 @@ describe("PresetAlertTablePanel with grouping", () => {
     renderPanel(buildItem({ countBy: incidents }));
 
     expect(mockLastTableBackground).toBeUndefined();
+  });
+});
+
+describe("PresetAlertTablePanel with a saved field the UI does not know", () => {
+  const unknownField = { field: "severity" } as unknown as CountBy;
+
+  it("renders the group line instead of throwing", () => {
+    groupState({ totalCount: 0, isLoading: false, isError: false });
+    const { container } = renderPanel(buildItem({ countBy: unknownField }));
+
+    expect(
+      container.querySelector('[data-cy="dashboard-widget-group-count"]')
+    ).toHaveTextContent("severity:");
+  });
+
+  it("shows a dash with an explanation when the count fails", () => {
+    groupState({ totalCount: 0, isLoading: false, isError: true });
+    const { container } = renderPanel(buildItem({ countBy: unknownField }));
+
+    expect(
+      container.querySelector('[data-cy="dashboard-widget-group-count"]')
+    ).toHaveTextContent("—");
+    expect(screen.getByTitle("Couldn't load count")).toBeInTheDocument();
   });
 });

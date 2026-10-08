@@ -74,12 +74,30 @@ export function getCountMode(countBy?: CountBy): CountMode {
   return countBy.field === "incident" ? "incidents" : "field";
 }
 
+const hasOwnKey = <T extends object>(
+  record: T,
+  key: PropertyKey
+): key is keyof T => Object.prototype.hasOwnProperty.call(record, key);
+
+/**
+ * Caption for the counted unit. A saved setting the UI does not know (a field
+ * or status outside the allowlist) falls back to a generic label instead of
+ * throwing, so one stale widget cannot take the dashboard down.
+ */
 export function getCountUnitLabel(countBy: CountBy, count: number): string {
+  const isSingular = count === 1;
   if (countBy.field === "incident") {
-    const labels =
-      INCIDENT_LABELS[countBy.incidentStatus ?? DEFAULT_INCIDENT_STATUS];
-    return count === 1 ? labels.singular : labels.plural;
+    const status = countBy.incidentStatus ?? DEFAULT_INCIDENT_STATUS;
+    if (!hasOwnKey(INCIDENT_LABELS, status)) {
+      return isSingular ? "Incident" : "Incidents";
+    }
+    const labels = INCIDENT_LABELS[status];
+    return isSingular ? labels.singular : labels.plural;
   }
-  const labels = ALERT_FIELD_LABELS[countBy.field];
-  return count === 1 ? labels.singular : labels.plural;
+  const field: string = countBy.field;
+  if (!hasOwnKey(ALERT_FIELD_LABELS, field)) {
+    return field;
+  }
+  const labels = ALERT_FIELD_LABELS[field];
+  return isSingular ? labels.singular : labels.plural;
 }

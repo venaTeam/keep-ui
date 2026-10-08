@@ -52,6 +52,51 @@ describe("getCountUnitLabel", () => {
   });
 });
 
+describe("getCountUnitLabel with values the UI does not know", () => {
+  const unknownField = { field: "severity" } as unknown as CountBy;
+  const unknownStatus = {
+    field: "incident",
+    incidentStatus: "resolved",
+  } as unknown as CountBy;
+
+  it.each([0, 1, 3])(
+    "returns the raw field name for an unknown field at count %d",
+    (count) => {
+      expect(getCountUnitLabel(unknownField, count)).toBe("severity");
+    }
+  );
+
+  it("does not mistake an inherited object property for a field", () => {
+    const inherited = { field: "constructor" } as unknown as CountBy;
+
+    expect(getCountUnitLabel(inherited, 2)).toBe("constructor");
+  });
+
+  it("uses generic incident labels for an unknown status", () => {
+    expect(getCountUnitLabel(unknownStatus, 3)).toBe("Incidents");
+    expect(getCountUnitLabel(unknownStatus, 1)).toBe("Incident");
+  });
+
+  it("keeps the active labels when the status is missing", () => {
+    expect(getCountUnitLabel({ field: "incident" }, 3)).toBe("Active incidents");
+    expect(getCountUnitLabel({ field: "incident" }, 1)).toBe("Active incident");
+  });
+
+  it.each([
+    ["name", "Alert name", "Alert names"],
+    ["service", "Service", "Services"],
+    ["node_name", "Host", "Hosts"],
+    ["application", "Application", "Applications"],
+    ["site", "Site", "Sites"],
+    ["assignee", "Assignee", "Assignees"],
+  ])("still labels the valid field %s", (field, singular, plural) => {
+    const countBy = { field } as CountBy;
+
+    expect(getCountUnitLabel(countBy, 1)).toBe(singular);
+    expect(getCountUnitLabel(countBy, 2)).toBe(plural);
+  });
+});
+
 describe("option lists", () => {
   it("offers the other fields in the order shown in the form", () => {
     expect(COUNT_BY_ALERT_FIELD_OPTIONS).toEqual([

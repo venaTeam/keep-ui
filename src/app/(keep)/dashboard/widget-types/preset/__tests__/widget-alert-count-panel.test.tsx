@@ -152,3 +152,24 @@ describe("WidgetAlertCountPanel counting distinct values", () => {
     expect(valueOf(container)).toHaveStyle({ color: "#9ca3af" });
   });
 });
+
+describe("WidgetAlertCountPanel with a saved field the UI does not know", () => {
+  const unknownField = { field: "severity" } as unknown as CountBy;
+
+  it("renders a caption instead of throwing", () => {
+    hookState({ totalCount: 0, isLoading: false, isError: false });
+    const { container } = renderPanel({ countBy: unknownField });
+
+    expect(captionOf(container)).toHaveTextContent("severity");
+  });
+
+  it("shows the grey dash tile when the count fails, never 0", () => {
+    hookState({ totalCount: 0, isLoading: false, isError: true });
+    const { container } = renderPanel({ countBy: unknownField });
+
+    expect(valueOf(container)).toHaveTextContent("—");
+    expect(valueOf(container)).toHaveStyle({ color: "#9ca3af" });
+    expect(captionOf(container)).toHaveTextContent("Couldn't load count");
+    expect(screen.queryByText("0")).toBeNull();
+  });
+});
