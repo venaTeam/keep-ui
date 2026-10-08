@@ -44,6 +44,11 @@ const renderForm = async (editingItem?: WidgetData) => {
   return onChange;
 };
 
+const expectNoLayoutKeys = (emitted: object) =>
+  ["w", "h", "minW", "minH", "static"].forEach((key) =>
+    expect(emitted).not.toHaveProperty(key)
+  );
+
 const choosePanelType = async (optionName: string) => {
   const root = document.querySelector(
     '[data-cy="dashboard-widget-form-panel-type-select"]'
@@ -139,14 +144,89 @@ describe("PresetWidgetForm layout for a new counter tile", () => {
     );
   });
 
-  it("leaves the layout of a saved widget alone", async () => {
+  it("leaves the layout of a saved ungrouped counter alone", async () => {
+    const onChange = await renderForm(savedWidget({ h: 3 }));
+
+    expectNoLayoutKeys(lastValue(onChange));
+  });
+
+  it("leaves a saved grouped counter that is already tall enough alone", async () => {
+    const onChange = await renderForm(
+      savedWidget({
+        h: 4,
+        countBy: { field: "incident", incidentStatus: "active" },
+      })
+    );
+
+    expectNoLayoutKeys(lastValue(onChange));
+  });
+});
+
+describe("PresetWidgetForm layout when editing a saved widget", () => {
+  it("grows a three-row counter to four rows once it counts incidents", async () => {
+    const onChange = await renderForm(savedWidget({ h: 3 }));
+
+    fireEvent.click(screen.getByRole("radio", { name: "Incidents" }));
+
+    await waitFor(() => expect(lastValue(onChange)).toMatchObject({ h: 4, minH: 4 }));
+    ["w", "minW", "static"].forEach((key) =>
+      expect(lastValue(onChange)).not.toHaveProperty(key)
+    );
+  });
+
+  it("grows a two-row counter that counts another field", async () => {
+    const onChange = await renderForm(savedWidget({ h: 2 }));
+
+    fireEvent.click(screen.getByRole("radio", { name: "Other field" }));
+
+    await waitFor(() => expect(lastValue(onChange)).toMatchObject({ h: 4, minH: 4 }));
+  });
+
+  it("treats a missing height as too short", async () => {
     const onChange = await renderForm(
       savedWidget({ countBy: { field: "incident", incidentStatus: "active" } })
     );
 
-    const emitted = lastValue(onChange);
-    ["w", "h", "minW", "minH", "static"].forEach((key) =>
-      expect(emitted).not.toHaveProperty(key)
+    expect(lastValue(onChange)).toMatchObject({ h: 4, minH: 4 });
+  });
+
+  it("does not shrink a counter that is taller than four rows", async () => {
+    const onChange = await renderForm(savedWidget({ h: 5 }));
+
+    fireEvent.click(screen.getByRole("radio", { name: "Incidents" }));
+
+    await waitFor(() =>
+      expect(lastValue(onChange).countBy).toEqual({
+        field: "incident",
+        incidentStatus: "active",
+      })
     );
+    expectNoLayoutKeys(lastValue(onChange));
+  });
+
+  it("stops asking for rows when the user goes back to counting alerts", async () => {
+    const onChange = await renderForm(
+      savedWidget({
+        h: 3,
+        countBy: { field: "incident", incidentStatus: "active" },
+      })
+    );
+
+    fireEvent.click(screen.getByRole("radio", { name: "Alerts" }));
+
+    await waitFor(() => expect(lastValue(onChange).countBy).toBeUndefined());
+    expectNoLayoutKeys(lastValue(onChange));
+  });
+
+  it("leaves an alert table alone even when it counts incidents", async () => {
+    const onChange = await renderForm(
+      savedWidget({
+        h: 3,
+        presetPanelType: PresetPanelType.ALERT_TABLE,
+        countBy: { field: "incident", incidentStatus: "active" },
+      })
+    );
+
+    expectNoLayoutKeys(lastValue(onChange));
   });
 });

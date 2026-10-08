@@ -22,6 +22,8 @@ import ColumnsSelection from "./columns-selection";
 import { CountByControl } from "./count-by-control";
 import { CountBy } from "@/entities/presets/model/count-by";
 
+const GROUPED_COUNTER_ROWS = 4;
+
 interface PresetForm {
   selectedPreset: string;
   countOfLastAlerts: string;
@@ -92,21 +94,30 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
   }, [formValues, presetColumns, countBy]);
 
   function getLayoutValues(): LayoutItem {
-    if (editingItem) {
-      return {} as LayoutItem;
-    }
-
     const isAlertTable = normalizedFormValues.presetPanelType === PresetPanelType.ALERT_TABLE;
     const isAlertCountPanel = normalizedFormValues.presetPanelType === PresetPanelType.ALERT_COUNT_PANEL;
+
+    if (editingItem) {
+      const savedHeight = editingItem.h;
+      const needsRows =
+        isAlertCountPanel &&
+        Boolean(normalizedFormValues.countBy) &&
+        !(typeof savedHeight === "number" && savedHeight >= GROUPED_COUNTER_ROWS);
+      return (
+        needsRows
+          ? { h: GROUPED_COUNTER_ROWS, minH: GROUPED_COUNTER_ROWS }
+          : {}
+      ) as LayoutItem;
+    }
     
     if (isAlertCountPanel) {
       // Narrower, more compact layout for count panels with no minimum width
       const isGrouped = Boolean(normalizedFormValues.countBy);
       return {
         w: 4,
-        h: isGrouped ? 4 : 3,
+        h: isGrouped ? GROUPED_COUNTER_ROWS : 3,
         minW: 0,
-        minH: isGrouped ? 4 : 2,
+        minH: isGrouped ? GROUPED_COUNTER_ROWS : 2,
         static: false,
       } as LayoutItem;
     }
