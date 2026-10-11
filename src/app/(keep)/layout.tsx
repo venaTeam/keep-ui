@@ -1,4 +1,5 @@
 import { ReactNode } from "react";
+import { HosstedConfigProvider } from "@hossted/keep-integration";
 import { NextAuthProvider } from "../auth-provider";
 
 import { ToastContainer } from "react-toastify";
@@ -34,6 +35,12 @@ export default async function RootLayout({ children }: RootLayoutProps) {
     (await headers()).get(SESSION_HEADER),
     auth
   );
+  const hosstedConfig = {
+    proxyUrl: config.HOSSTED_PROXY_URL,
+    apiToken: config.HOSSTED_API_TOKEN,
+    dashboardUrl: config.HOSSTED_DASHBOARD_URL,
+    toastDisabled: config.HOSSTED_TOAST_DISABLED,
+  };
 
   return (
     <html lang="en" className="bg-gray-50">
@@ -42,6 +49,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
         <ThemeScript />
         <FontSizeInitializer />
         <ConfigProvider config={config}>
+        <HosstedConfigProvider config={hosstedConfig}>
           <ScreenWakeLock />
           <NextAuthProvider session={session}>
             <SSEProvider>
@@ -75,6 +83,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
               </TopologyPollingContextProvider>
             </SSEProvider>
           </NextAuthProvider>
+        </HosstedConfigProvider>
         </ConfigProvider>
         <WatchUpdateTheme />
       </body>

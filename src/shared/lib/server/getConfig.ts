@@ -95,6 +95,12 @@ export function getConfig(): InternalConfig {
     ALERT_REFETCH_MAX_WAIT_MS: parsePositiveIntEnv(
       process.env.ALERT_REFETCH_MAX_WAIT_MS
     ),
+
+    // @hossted/keep-integration - see HosstedWrapper's `config` prop
+    HOSSTED_PROXY_URL: process.env.HOSSTED_PROXY_URL,
+    HOSSTED_API_TOKEN: process.env.HOSSTED_API_TOKEN,
+    HOSSTED_DASHBOARD_URL: process.env.HOSSTED_DASHBOARD_URL,
+    HOSSTED_TOAST_DISABLED: process.env.HOSSTED_TOAST_DISABLED === "true",
   };
 }
 
