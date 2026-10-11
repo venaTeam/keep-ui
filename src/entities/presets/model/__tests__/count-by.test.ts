@@ -3,6 +3,7 @@ import {
   CountBy,
   DEFAULT_INCIDENT_STATUS,
   INCIDENT_STATUS_OPTIONS,
+  UNKNOWN_COUNT_FIELD_LABEL,
   getCountMode,
   getCountUnitLabel,
 } from "../count-by";
@@ -70,6 +71,24 @@ describe("getCountUnitLabel with values the UI does not know", () => {
     const inherited = { field: "constructor" } as unknown as CountBy;
 
     expect(getCountUnitLabel(inherited, 2)).toBe("constructor");
+  });
+
+  it.each<[string, unknown]>([
+    ["an object", { field: {} }],
+    ["an array", { field: ["a"] }],
+    ["a number", { field: 5 }],
+    ["null", { field: null }],
+    ["a missing field", {}],
+  ])("returns a generic label when the field is %s", (_name, saved) => {
+    const countBy = saved as CountBy;
+
+    expect(getCountUnitLabel(countBy, 0)).toBe("Unknown field");
+    expect(getCountUnitLabel(countBy, 1)).toBe("Unknown field");
+    expect(getCountUnitLabel(countBy, 3)).toBe("Unknown field");
+  });
+
+  it("exports the generic label", () => {
+    expect(UNKNOWN_COUNT_FIELD_LABEL).toBe("Unknown field");
   });
 
   it("uses generic incident labels for an unknown status", () => {

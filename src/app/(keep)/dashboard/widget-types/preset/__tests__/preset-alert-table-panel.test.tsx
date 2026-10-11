@@ -193,6 +193,17 @@ describe("PresetAlertTablePanel with a saved field the UI does not know", () => 
     ).toHaveTextContent("severity:");
   });
 
+  it("renders a generic label when the saved field is not a string", () => {
+    groupState({ totalCount: 0, isLoading: false, isError: false });
+    const { container } = renderPanel(
+      buildItem({ countBy: { field: {} } as unknown as CountBy })
+    );
+
+    expect(
+      container.querySelector('[data-cy="dashboard-widget-group-count"]')
+    ).toHaveTextContent("Unknown field:");
+  });
+
   it("shows a dash with an explanation when the count fails", () => {
     groupState({ totalCount: 0, isLoading: false, isError: true });
     const { container } = renderPanel(buildItem({ countBy: unknownField }));

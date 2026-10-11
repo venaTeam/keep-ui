@@ -22,6 +22,8 @@ export const DEFAULT_INCIDENT_STATUS: IncidentStatusFilter = "active";
 
 export const COUNT_LOAD_ERROR_LABEL = "Couldn't load count";
 
+export const UNKNOWN_COUNT_FIELD_LABEL = "Unknown field";
+
 export const INCIDENT_STATUS_OPTIONS: ReadonlyArray<{
   value: IncidentStatusFilter;
   label: string;
@@ -82,7 +84,8 @@ const hasOwnKey = <T extends object>(
 /**
  * Caption for the counted unit. A saved setting the UI does not know (a field
  * or status outside the allowlist) falls back to a generic label instead of
- * throwing, so one stale widget cannot take the dashboard down.
+ * throwing, so one stale widget cannot take the dashboard down. A field that
+ * is not a string at all cannot be rendered, so it gets a fixed label.
  */
 export function getCountUnitLabel(countBy: CountBy, count: number): string {
   const isSingular = count === 1;
@@ -94,7 +97,10 @@ export function getCountUnitLabel(countBy: CountBy, count: number): string {
     const labels = INCIDENT_LABELS[status];
     return isSingular ? labels.singular : labels.plural;
   }
-  const field: string = countBy.field;
+  const field: unknown = countBy.field;
+  if (typeof field !== "string") {
+    return UNKNOWN_COUNT_FIELD_LABEL;
+  }
   if (!hasOwnKey(ALERT_FIELD_LABELS, field)) {
     return field;
   }

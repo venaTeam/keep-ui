@@ -163,6 +163,15 @@ describe("WidgetAlertCountPanel with a saved field the UI does not know", () => 
     expect(captionOf(container)).toHaveTextContent("severity");
   });
 
+  it("renders a generic caption when the saved field is not a string", () => {
+    hookState({ totalCount: 0, isLoading: false, isError: false });
+    const { container } = renderPanel({
+      countBy: { field: {} } as unknown as CountBy,
+    });
+
+    expect(captionOf(container)).toHaveTextContent("Unknown field");
+  });
+
   it("shows the grey dash tile when the count fails, never 0", () => {
     hookState({ totalCount: 0, isLoading: false, isError: true });
     const { container } = renderPanel({ countBy: unknownField });
