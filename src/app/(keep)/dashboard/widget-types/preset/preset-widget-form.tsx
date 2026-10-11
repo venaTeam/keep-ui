@@ -98,16 +98,18 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
     const isAlertCountPanel = normalizedFormValues.presetPanelType === PresetPanelType.ALERT_COUNT_PANEL;
 
     if (editingItem) {
+      if (!isAlertCountPanel) {
+        return {} as LayoutItem;
+      }
+      const isGrouped = Boolean(normalizedFormValues.countBy);
       const savedHeight = editingItem.h;
       const needsRows =
-        isAlertCountPanel &&
-        Boolean(normalizedFormValues.countBy) &&
+        isGrouped &&
         !(typeof savedHeight === "number" && savedHeight >= GROUPED_COUNTER_ROWS);
-      return (
-        needsRows
-          ? { h: GROUPED_COUNTER_ROWS, minH: GROUPED_COUNTER_ROWS }
-          : {}
-      ) as LayoutItem;
+      return {
+        ...(needsRows ? { h: GROUPED_COUNTER_ROWS } : {}),
+        minH: isGrouped ? GROUPED_COUNTER_ROWS : 2,
+      } as LayoutItem;
     }
     
     if (isAlertCountPanel) {

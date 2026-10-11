@@ -49,6 +49,17 @@ const expectNoLayoutKeys = (emitted: object) =>
     expect(emitted).not.toHaveProperty(key)
   );
 
+const expectNoFootprintKeys = (emitted: object) =>
+  ["w", "minW", "static"].forEach((key) =>
+    expect(emitted).not.toHaveProperty(key)
+  );
+
+const expectOnlyMinH = (emitted: object, minH: number) => {
+  expect(emitted).toHaveProperty("minH", minH);
+  expect(emitted).not.toHaveProperty("h");
+  expectNoFootprintKeys(emitted);
+};
+
 const choosePanelType = async (optionName: string) => {
   const root = document.querySelector(
     '[data-cy="dashboard-widget-form-panel-type-select"]'
@@ -144,13 +155,13 @@ describe("PresetWidgetForm layout for a new counter tile", () => {
     );
   });
 
-  it("leaves the layout of a saved ungrouped counter alone", async () => {
+  it("emits only the two-row minimum for a saved ungrouped counter", async () => {
     const onChange = await renderForm(savedWidget({ h: 3 }));
 
-    expectNoLayoutKeys(lastValue(onChange));
+    expectOnlyMinH(lastValue(onChange), 2);
   });
 
-  it("leaves a saved grouped counter that is already tall enough alone", async () => {
+  it("emits only the four-row minimum for a saved grouped counter that is already tall enough", async () => {
     const onChange = await renderForm(
       savedWidget({
         h: 4,
@@ -158,7 +169,7 @@ describe("PresetWidgetForm layout for a new counter tile", () => {
       })
     );
 
-    expectNoLayoutKeys(lastValue(onChange));
+    expectOnlyMinH(lastValue(onChange), 4);
   });
 });
 
@@ -169,9 +180,7 @@ describe("PresetWidgetForm layout when editing a saved widget", () => {
     fireEvent.click(screen.getByRole("radio", { name: "Incidents" }));
 
     await waitFor(() => expect(lastValue(onChange)).toMatchObject({ h: 4, minH: 4 }));
-    ["w", "minW", "static"].forEach((key) =>
-      expect(lastValue(onChange)).not.toHaveProperty(key)
-    );
+    expectNoFootprintKeys(lastValue(onChange));
   });
 
   it("grows a two-row counter that counts another field", async () => {
@@ -180,6 +189,7 @@ describe("PresetWidgetForm layout when editing a saved widget", () => {
     fireEvent.click(screen.getByRole("radio", { name: "Other field" }));
 
     await waitFor(() => expect(lastValue(onChange)).toMatchObject({ h: 4, minH: 4 }));
+    expectNoFootprintKeys(lastValue(onChange));
   });
 
   it("treats a missing height as too short", async () => {
@@ -188,6 +198,7 @@ describe("PresetWidgetForm layout when editing a saved widget", () => {
     );
 
     expect(lastValue(onChange)).toMatchObject({ h: 4, minH: 4 });
+    expectNoFootprintKeys(lastValue(onChange));
   });
 
   it("does not shrink a counter that is taller than four rows", async () => {
@@ -201,10 +212,10 @@ describe("PresetWidgetForm layout when editing a saved widget", () => {
         incidentStatus: "active",
       })
     );
-    expectNoLayoutKeys(lastValue(onChange));
+    expectOnlyMinH(lastValue(onChange), 4);
   });
 
-  it("stops asking for rows when the user goes back to counting alerts", async () => {
+  it("lowers the minimum back to two rows when the user goes back to counting alerts", async () => {
     const onChange = await renderForm(
       savedWidget({
         h: 3,
@@ -215,7 +226,7 @@ describe("PresetWidgetForm layout when editing a saved widget", () => {
     fireEvent.click(screen.getByRole("radio", { name: "Alerts" }));
 
     await waitFor(() => expect(lastValue(onChange).countBy).toBeUndefined());
-    expectNoLayoutKeys(lastValue(onChange));
+    expectOnlyMinH(lastValue(onChange), 2);
   });
 
   it("leaves an alert table alone even when it counts incidents", async () => {
