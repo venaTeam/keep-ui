@@ -43,7 +43,9 @@ const hookState = (state: {
     ...state,
   });
 
-const renderPanel = (props: { countBy?: CountBy } = {}) =>
+const renderPanel = (
+  props: { countBy?: CountBy; showFiringOnly?: boolean } = {}
+) =>
   render(
     <WidgetAlertCountPanel presetName="feed" thresholds={thresholds} {...props} />
   );
@@ -150,6 +152,44 @@ describe("WidgetAlertCountPanel counting distinct values", () => {
     expect(valueOf(container)).not.toHaveTextContent("5");
     expect(captionOf(container)).toHaveTextContent("Couldn't load count");
     expect(valueOf(container)).toHaveStyle({ color: "#9ca3af" });
+  });
+});
+
+describe("WidgetAlertCountPanel firing-only toggle", () => {
+  it("ignores the toggle for an incident count", () => {
+    hookState({ totalCount: 3 });
+    const { container } = renderPanel({
+      countBy: incidents,
+      showFiringOnly: true,
+    });
+
+    expect(mockUsePresetAlertCount).toHaveBeenCalledWith(
+      expect.objectContaining({ counterShowsFiringOnly: false })
+    );
+    expect(container.querySelector("svg")).toBeNull();
+  });
+
+  it("applies the toggle to a count of another field", () => {
+    hookState({ totalCount: 3 });
+    const { container } = renderPanel({
+      countBy: { field: "service" },
+      showFiringOnly: true,
+    });
+
+    expect(mockUsePresetAlertCount).toHaveBeenCalledWith(
+      expect.objectContaining({ counterShowsFiringOnly: true })
+    );
+    expect(container.querySelector("svg")).not.toBeNull();
+  });
+
+  it("applies the toggle to a plain alert count", () => {
+    hookState({ totalCount: 3 });
+    const { container } = renderPanel({ showFiringOnly: true });
+
+    expect(mockUsePresetAlertCount).toHaveBeenCalledWith(
+      expect.objectContaining({ counterShowsFiringOnly: true })
+    );
+    expect(container.querySelector("svg")).not.toBeNull();
   });
 });
 

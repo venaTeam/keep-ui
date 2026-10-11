@@ -239,21 +239,23 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
       <CountByControl value={countBy} onChange={setCountBy} />
       {formValues.presetPanelType === PresetPanelType.ALERT_COUNT_PANEL && (
         <>
-          <div className="mb-4 mt-2">
-            <div className="flex items-center justify-between">
-              <Subtitle>Show Firing Alerts Only</Subtitle>
-              <Controller
-                name="showFiringOnly"
-                control={control}
-                render={({ field }) => (
-                  <Switch
-                    checked={field.value}
-                    onChange={field.onChange}
-                  />
-                )}
-              />
+          {countBy?.field !== "incident" && (
+            <div className="mb-4 mt-2">
+              <div className="flex items-center justify-between">
+                <Subtitle>Show Firing Alerts Only</Subtitle>
+                <Controller
+                  name="showFiringOnly"
+                  control={control}
+                  render={({ field }) => (
+                    <Switch
+                      checked={field.value}
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
+              </div>
             </div>
-          </div>
+          )}
           <div className="mb-4 mt-2">
             <Subtitle>Custom Link (optional)</Subtitle>
             <Controller

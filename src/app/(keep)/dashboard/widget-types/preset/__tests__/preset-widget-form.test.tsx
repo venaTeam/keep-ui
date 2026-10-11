@@ -121,6 +121,55 @@ describe("PresetWidgetForm countBy", () => {
   });
 });
 
+describe("PresetWidgetForm firing-only toggle", () => {
+  const FIRING_ONLY = "Show Firing Alerts Only";
+
+  it("offers the toggle when counting alerts", async () => {
+    await renderForm(savedWidget());
+
+    expect(screen.getByText(FIRING_ONLY)).toBeInTheDocument();
+  });
+
+  it("offers the toggle when counting another field", async () => {
+    await renderForm(savedWidget({ countBy: { field: "service" } }));
+
+    expect(screen.getByText(FIRING_ONLY)).toBeInTheDocument();
+  });
+
+  it("hides the toggle when counting incidents", async () => {
+    await renderForm(
+      savedWidget({ countBy: { field: "incident", incidentStatus: "active" } })
+    );
+
+    expect(screen.queryByText(FIRING_ONLY)).not.toBeInTheDocument();
+  });
+
+  it("restores the toggle with the earlier choice when the user returns to alerts", async () => {
+    const onChange = await renderForm(savedWidget({ showFiringOnly: true }));
+
+    fireEvent.click(screen.getByRole("radio", { name: "Incidents" }));
+    await waitFor(() =>
+      expect(screen.queryByText(FIRING_ONLY)).not.toBeInTheDocument()
+    );
+    expect(lastValue(onChange).showFiringOnly).toBe(true);
+
+    fireEvent.click(screen.getByRole("radio", { name: "Alerts" }));
+    expect(await screen.findByText(FIRING_ONLY)).toBeInTheDocument();
+    expect(lastValue(onChange).showFiringOnly).toBe(true);
+  });
+
+  it("keeps emitting the saved choice for an incident count", async () => {
+    const onChange = await renderForm(
+      savedWidget({
+        showFiringOnly: true,
+        countBy: { field: "incident", incidentStatus: "active" },
+      })
+    );
+
+    expect(lastValue(onChange).showFiringOnly).toBe(true);
+  });
+});
+
 describe("PresetWidgetForm layout for a new counter tile", () => {
   it("gives a new grouped counter four rows", async () => {
     const onChange = await renderForm();

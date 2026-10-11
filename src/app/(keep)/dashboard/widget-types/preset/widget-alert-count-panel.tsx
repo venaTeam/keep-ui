@@ -65,13 +65,15 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
     [presetCel, timeRangeCel]
   );
 
+  const appliesFiringOnly = showFiringOnly && countBy?.field !== "incident";
+
   const {
     totalCount: alertsCount,
     isLoading,
     isError,
   } = usePresetAlertCount({
     presetCel: filterCel,
-    counterShowsFiringOnly: showFiringOnly,
+    counterShowsFiringOnly: appliesFiringOnly,
     groupBy: countBy?.field,
     incidentStatus: countBy?.incidentStatus,
     refreshInterval: 30000,
@@ -174,7 +176,7 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
         <div className="flex-none flex items-center gap-1 min-w-0">
           <div className="flex-1 min-w-0 flex items-center justify-center gap-1 text-xl font-bold text-gray-700">
             <span className="truncate">{title}</span>
-            {showFiringOnly && (
+            {appliesFiringOnly && (
               <Icon
                 className="p-0 shrink-0"
                 style={{ color }}
