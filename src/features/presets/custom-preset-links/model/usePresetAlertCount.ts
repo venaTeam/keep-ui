@@ -17,6 +17,24 @@ type UsePresetAlertCountParams = {
   enabled?: boolean;
 };
 
+/**
+ * Returns the count carried by a grouped response, refusing any answer that
+ * does not echo the requested grouping. A gateway that predates grouped
+ * counts ignores `group_by` and replies with the plain alert count, which
+ * must not be shown as a distinct count.
+ */
+const confirmGroupedCount = (response: unknown, groupBy: CountByField) => {
+  if (
+    typeof response !== "object" ||
+    response === null ||
+    typeof (response as { count?: unknown }).count !== "number" ||
+    (response as { group_by?: unknown }).group_by !== groupBy
+  ) {
+    throw new Error("The gateway did not confirm the requested group_by");
+  }
+  return (response as { count: number }).count;
+};
+
 export const usePresetAlertCount = ({
   presetCel,
   counterShowsFiringOnly,
@@ -50,9 +68,14 @@ export const usePresetAlertCount = ({
           .join("&")
       : null;
 
+  const fetchCount = async () => {
+    const response = await api.post(requestUrl, query);
+    return groupBy ? confirmGroupedCount(response, groupBy) : response;
+  };
+
   const { data, error, isLoading, mutate } = useSWR<number>(
     swrKey,
-    () => api.post(requestUrl, query),
+    fetchCount,
     { revalidateOnFocus: false }
   );
 

@@ -53,7 +53,7 @@ describe("usePresetAlertCount request", () => {
   });
 
   it("asks for distinct incidents with the active status by default", async () => {
-    mockPost.mockResolvedValue(3);
+    mockPost.mockResolvedValue({ count: 3, group_by: "incident" });
     const { result } = renderCount({ groupBy: "incident" });
 
     await waitFor(() => expect(result.current.totalCount).toBe(3));
@@ -65,7 +65,7 @@ describe("usePresetAlertCount request", () => {
   });
 
   it("forwards an explicit incident status", async () => {
-    mockPost.mockResolvedValue(2);
+    mockPost.mockResolvedValue({ count: 2, group_by: "incident" });
     renderCount({ groupBy: "incident", incidentStatus: "acknowledged" });
 
     await waitFor(() => expect(mockPost).toHaveBeenCalled());
@@ -77,7 +77,7 @@ describe("usePresetAlertCount request", () => {
   });
 
   it("never sends an incident status for another field", async () => {
-    mockPost.mockResolvedValue(4);
+    mockPost.mockResolvedValue({ count: 4, group_by: "service" });
     renderCount({ groupBy: "service", incidentStatus: "firing" });
 
     await waitFor(() => expect(mockPost).toHaveBeenCalled());
@@ -88,7 +88,7 @@ describe("usePresetAlertCount request", () => {
   });
 
   it("composes the firing-only filter into the cel", async () => {
-    mockPost.mockResolvedValue(1);
+    mockPost.mockResolvedValue({ count: 1, group_by: "incident" });
     renderCount({ groupBy: "incident", counterShowsFiringOnly: true });
 
     await waitFor(() => expect(mockPost).toHaveBeenCalled());
@@ -108,7 +108,10 @@ describe("usePresetAlertCount request", () => {
 
   it("keeps different groupings of the same filter apart", async () => {
     mockPost.mockImplementation((_url: string, body: { group_by?: string }) =>
-      Promise.resolve(body.group_by === "incident" ? 3 : 9)
+      Promise.resolve({
+        count: body.group_by === "incident" ? 3 : 9,
+        group_by: body.group_by,
+      })
     );
     const { result } = renderHook(
       () => ({
@@ -136,6 +139,30 @@ describe("usePresetAlertCount request", () => {
 describe("usePresetAlertCount failures", () => {
   it("reports a failed grouped request as an error", async () => {
     mockPost.mockRejectedValue(new Error("boom"));
+    const { result } = renderCount({ groupBy: "incident" });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.totalCount).toBe(0);
+  });
+
+  it("treats a bare number answering a grouped request as an error", async () => {
+    mockPost.mockResolvedValue(40);
+    const { result } = renderCount({ groupBy: "incident" });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.totalCount).toBe(0);
+  });
+
+  it("treats a confirmation for a different grouping as an error", async () => {
+    mockPost.mockResolvedValue({ count: 3, group_by: "service" });
+    const { result } = renderCount({ groupBy: "incident" });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.totalCount).toBe(0);
+  });
+
+  it("treats a confirmation without a numeric count as an error", async () => {
+    mockPost.mockResolvedValue({ group_by: "incident" });
     const { result } = renderCount({ groupBy: "incident" });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
