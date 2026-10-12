@@ -9,6 +9,7 @@
 // tests run a real local HTTP server as the upstream instead of mocking fetch.
 
 import http from "http";
+import https from "https";
 import { AddressInfo } from "net";
 import { EventEmitter } from "events";
 import { NextRequest } from "next/server";
@@ -177,27 +178,131 @@ describe("POST /api/hossted", () => {
     expect(await res.text()).toBe("<html>Bad Gateway</html>");
   });
 
-  it("follows an upstream redirect, re-sending the body and token", async () => {
-    const upstreamData = { summary: "moved", response: "<p>r</p>" };
-    handler = (req, res) => {
-      if (req.url === "/api/integrations") {
-        res.writeHead(307, { Location: "/api/v2/integrations" });
+  it.each(["relative", "absolute"])(
+    "follows a same-origin %s redirect, re-sending the body and token",
+    async (kind) => {
+      const upstreamData = { summary: "moved", response: "<p>r</p>" };
+      handler = (req, res) => {
+        if (req.url === "/api/integrations") {
+          const location =
+            kind === "relative"
+              ? "/api/v2/integrations"
+              : new URL("/api/v2/integrations", upstreamUrl).toString();
+          res.writeHead(307, { Location: location });
+          res.end();
+          return;
+        }
+        replyJson(upstreamData)(req, res);
+      };
+
+      const res = await POST(proxyReq("fp-1"));
+
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual(upstreamData);
+      expect(seen.map((s) => s.url)).toEqual([
+        "/api/integrations",
+        "/api/v2/integrations",
+      ]);
+      expect(seen[1].authorization).toBe(`Bearer ${UPSTREAM_TOKEN}`);
+      expect(JSON.parse(seen[1].body)).toEqual(widgetBody());
+    }
+  );
+
+  it.each([false, true])(
+    "blocks cross-origin redirects (after same-origin hop: %s) without sending credentials or payload",
+    async (afterHop) => {
+      const received = jest.fn();
+      const otherServer = http.createServer((req, res) => {
+        received(req.headers.authorization);
+        req.resume();
+        replyJson({ summary: "unexpected", response: "unexpected" })(req, res);
+      });
+      await new Promise<void>((resolve) =>
+        otherServer.listen(0, "127.0.0.1", resolve)
+      );
+      const { port } = otherServer.address() as AddressInfo;
+      handler = (req, res) => {
+        const location =
+          afterHop && req.url === "/api/integrations"
+            ? "/api/redirect"
+            : `http://127.0.0.1:${port}/collect`;
+        res.writeHead(307, { Location: location });
         res.end();
-        return;
+      };
+
+      try {
+        const res = await POST(proxyReq("fp-1"));
+
+        expect(received).not.toHaveBeenCalled();
+        expect(res.status).toBe(502);
+        expect(await res.json()).toEqual({
+          error: "Hossted upstream redirect is not allowed",
+        });
+        expect(seen).toHaveLength(afterHop ? 2 : 1);
+      } finally {
+        await new Promise<void>((resolve) =>
+          otherServer.close(() => resolve())
+        );
       }
-      replyJson(upstreamData)(req, res);
+    }
+  );
+
+  it.each(["hostname", "protocol", "credentials", "malformed"])(
+    "rejects a redirect with an unsafe %s",
+    async (kind) => {
+      const target = new URL(upstreamUrl);
+      if (kind === "hostname") target.hostname = "localhost";
+      if (kind === "protocol") target.protocol = "https:";
+      if (kind === "credentials") target.username = "unexpected-user";
+      handler = (_req, res) => {
+        res.writeHead(307, {
+          Location: kind === "malformed" ? "http://[" : target.toString(),
+        });
+        res.end();
+      };
+      const httpRequest = jest.spyOn(http, "request");
+      const httpsRequest = jest.spyOn(https, "request");
+
+      const res = await POST(proxyReq("fp-1"));
+
+      expect(res.status).toBe(502);
+      expect(await res.json()).toEqual({
+        error: "Hossted upstream redirect is not allowed",
+      });
+      expect(httpRequest).toHaveBeenCalledTimes(1);
+      expect(httpsRequest).not.toHaveBeenCalled();
+    }
+  );
+
+  it("blocks HTTPS-to-HTTP redirects before forwarding credentials", async () => {
+    process.env.HOSSTED_UPSTREAM_URL = upstreamUrl.replace("http:", "https:");
+    // Serve the initial HTTPS response through our local server without a
+    // certificate fixture. Any redirect would produce a second HTTP call.
+    jest
+      .spyOn(https, "request")
+      .mockImplementation(((
+        _url: string,
+        options: http.RequestOptions,
+        callback: (res: http.IncomingMessage) => void
+      ) =>
+        http.request(
+          upstreamUrl,
+          { ...options, agent: undefined },
+          callback
+        )) as typeof https.request);
+    const httpRequest = jest.spyOn(http, "request");
+    handler = (_req, res) => {
+      res.writeHead(307, { Location: upstreamUrl });
+      res.end();
     };
 
     const res = await POST(proxyReq("fp-1"));
 
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual(upstreamData);
-    expect(seen.map((s) => s.url)).toEqual([
-      "/api/integrations",
-      "/api/v2/integrations",
-    ]);
-    expect(seen[1].authorization).toBe(`Bearer ${UPSTREAM_TOKEN}`);
-    expect(JSON.parse(seen[1].body)).toEqual(widgetBody());
+    expect(res.status).toBe(502);
+    expect(await res.json()).toEqual({
+      error: "Hossted upstream redirect is not allowed",
+    });
+    expect(httpRequest).toHaveBeenCalledTimes(1);
   });
 
   it("returns 502 when the upstream is unreachable", async () => {

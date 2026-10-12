@@ -14,6 +14,8 @@ import https from "https";
 
 const UPSTREAM_TIMEOUT_MS = 60_000;
 
+class UnsafeRedirectError extends Error {}
+
 function errorResponse(error: string, status: number) {
   return NextResponse.json({ error }, { status });
 }
@@ -44,9 +46,7 @@ function hosstedRequest(
     // Allow calling HTTPS upstreams that present certificates the pod does not
     // trust when NODE_TLS_REJECT_UNAUTHORIZED=0 is set (e.g. internal CA).
     const rejectUnauthorized = process.env.NODE_TLS_REJECT_UNAUTHORIZED !== "0";
-    const agent = isHttps
-      ? new https.Agent({ rejectUnauthorized })
-      : undefined;
+    const agent = isHttps ? new https.Agent({ rejectUnauthorized }) : undefined;
 
     const req = requestModule.request(
       url,
@@ -65,11 +65,31 @@ function hosstedRequest(
           res.headers.location &&
           redirectCount < 5
         ) {
-          const resolvedUrl = new URL(res.headers.location, url).toString();
-          hosstedRequest(resolvedUrl, options, redirectCount + 1).then(
-            resolve,
-            reject
-          );
+          // Never send the upstream token or alert payload to another origin,
+          // including an HTTPS-to-HTTP downgrade. Check every redirect hop.
+          res.resume();
+          let resolvedUrl: URL;
+          try {
+            resolvedUrl = new URL(res.headers.location, parsed);
+          } catch {
+            reject(
+              new UnsafeRedirectError("Invalid Hossted upstream redirect")
+            );
+            return;
+          }
+          if (
+            resolvedUrl.origin !== parsed.origin ||
+            resolvedUrl.username ||
+            resolvedUrl.password
+          ) {
+            reject(new UnsafeRedirectError("Unsafe Hossted upstream redirect"));
+            return;
+          }
+          hosstedRequest(
+            resolvedUrl.toString(),
+            options,
+            redirectCount + 1
+          ).then(resolve, reject);
           return;
         }
 
@@ -144,6 +164,9 @@ export async function POST(req: NextRequest) {
       timeout: UPSTREAM_TIMEOUT_MS,
     });
   } catch (error) {
+    if (error instanceof UnsafeRedirectError) {
+      return errorResponse("Hossted upstream redirect is not allowed", 502);
+    }
     const errorName = (error as { name?: string } | null)?.name;
     const isTimeout =
       errorName === "TimeoutError" || errorName === "AbortError";
