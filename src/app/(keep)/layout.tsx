@@ -1,5 +1,9 @@
 import { ReactNode } from "react";
-import { HosstedConfigProvider } from "@hossted/keep-integration";
+import {
+  HosstedConfigProvider,
+  HosstedWrapper,
+} from "@hossted/keep-integration";
+import "@hossted/keep-integration/styles.css";
 import { NextAuthProvider } from "../auth-provider";
 
 import { ToastContainer } from "react-toastify";
@@ -22,8 +26,7 @@ import { WorkflowModalProvider } from "@/features/workflows/manual-run-workflow"
 import ScreenWakeLock from "@/components/ui/ScreenWakeLock";
 import { SSEProvider } from "@/app/sse-provider";
 import { FontSizeInitializer } from "@/components/FontSizeInitializer";
-import ActiveUsersTracker from "@/components/ActiveUsersTracker"
-
+import ActiveUsersTracker from "@/components/ActiveUsersTracker";
 
 type RootLayoutProps = {
   children: ReactNode;
@@ -49,41 +52,43 @@ export default async function RootLayout({ children }: RootLayoutProps) {
         <ThemeScript />
         <FontSizeInitializer />
         <ConfigProvider config={config}>
-        <HosstedConfigProvider config={hosstedConfig}>
-          <ScreenWakeLock />
-          <NextAuthProvider session={session}>
-            <SSEProvider>
-              <TopologyPollingContextProvider>
-                <WorkflowModalProvider>
-                  <Navbar />
-                  {/* https://discord.com/channels/752553802359505017/1068089513253019688/1117731746922893333 */}
-                  <main
-                    className="page-container flex flex-col col-start-3 overflow-auto"
-                    data-cy="nav-page-main"
-                  >
-                    {/* Add the banner here, before the navbar */}
-                    {config.READ_ONLY && <ReadOnlyBanner />}
-                    <div className="flex-1">
-                      <ActiveUsersTracker />
-                      {children}
-                    </div>
-                    {/** footer */}
-                    {process.env.GIT_COMMIT_HASH &&
-                      process.env.SHOW_BUILD_INFO !== "false" && (
-                        <div className="pointer-events-none opacity-80 w-full p-2 text-slate-400 text-xs">
-                          <div className="w-full text-right">
-                            Version: {process.env.KEEP_VERSION} | Build:{" "}
-                            {process.env.GIT_COMMIT_HASH.slice(0, 6)}
-                          </div>
+          <HosstedConfigProvider config={hosstedConfig}>
+            <HosstedWrapper>
+              <ScreenWakeLock />
+              <NextAuthProvider session={session}>
+                <SSEProvider>
+                  <TopologyPollingContextProvider>
+                    <WorkflowModalProvider>
+                      <Navbar />
+                      {/* https://discord.com/channels/752553802359505017/1068089513253019688/1117731746922893333 */}
+                      <main
+                        className="page-container flex flex-col col-start-3 overflow-auto"
+                        data-cy="nav-page-main"
+                      >
+                        {/* Add the banner here, before the navbar */}
+                        {config.READ_ONLY && <ReadOnlyBanner />}
+                        <div className="flex-1">
+                          <ActiveUsersTracker />
+                          {children}
                         </div>
-                      )}
-                    <ToastContainer />
-                  </main>
-                </WorkflowModalProvider>
-              </TopologyPollingContextProvider>
-            </SSEProvider>
-          </NextAuthProvider>
-        </HosstedConfigProvider>
+                        {/** footer */}
+                        {process.env.GIT_COMMIT_HASH &&
+                          process.env.SHOW_BUILD_INFO !== "false" && (
+                            <div className="pointer-events-none opacity-80 w-full p-2 text-slate-400 text-xs">
+                              <div className="w-full text-right">
+                                Version: {process.env.KEEP_VERSION} | Build:{" "}
+                                {process.env.GIT_COMMIT_HASH.slice(0, 6)}
+                              </div>
+                            </div>
+                          )}
+                        <ToastContainer />
+                      </main>
+                    </WorkflowModalProvider>
+                  </TopologyPollingContextProvider>
+                </SSEProvider>
+              </NextAuthProvider>
+            </HosstedWrapper>
+          </HosstedConfigProvider>
         </ConfigProvider>
         <WatchUpdateTheme />
       </body>
