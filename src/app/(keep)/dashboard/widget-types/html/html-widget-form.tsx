@@ -53,6 +53,15 @@ export function HtmlWidgetForm({
             {error}
           </p>
         )}
+        {/<iframe[\s>]/i.test(html) && (
+          <p
+            className="mt-1 text-sm text-amber-600"
+            data-cy="dashboard-widget-form-html-iframe-hint"
+          >
+            Embedded frames are blocked in HTML widgets. To show a Grafana
+            panel, use the Grafana Panel widget type.
+          </p>
+        )}
       </div>
 
       {isValid && (

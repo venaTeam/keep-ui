@@ -9,6 +9,7 @@ import GenericMetricsGridItem from "./widget-types/generic-metrics/generic-metri
 import WidgetServiceNow from "./widget-types/service-now/widget-service-now";
 import ImageGridItem from "./widget-types/image/image-grid-item";
 import HtmlGridItem from "./widget-types/html/html-grid-item";
+import GrafanaPanelGridItem from "./widget-types/grafana-panel/grafana-panel-grid-item";
 
 interface GridItemProps {
   item: WidgetData;
@@ -92,6 +93,9 @@ const GridItem: React.FC<GridItemProps> = ({
         )}
         {item.widgetType === WidgetType.IMAGE && <ImageGridItem item={item} />}
         {item.widgetType === WidgetType.HTML && <HtmlGridItem item={item} />}
+        {item.widgetType === WidgetType.GRAFANA_PANEL && (
+          <GrafanaPanelGridItem item={item} />
+        )}
       </div>
     </Card>
   );

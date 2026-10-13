@@ -42,6 +42,13 @@ describe("HtmlWidgetForm", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(/50 KB/);
   });
 
+  it("points pasted iframes to the Grafana Panel widget", () => {
+    render(<HtmlWidgetForm onChange={jest.fn()} />);
+    expect(screen.queryByText(/grafana panel widget/i)).toBeNull();
+    type('<iframe src="https://grafana.example.com/d-solo/x"></iframe>');
+    expect(screen.getByText(/grafana panel widget/i)).toBeInTheDocument();
+  });
+
   it("keeps an existing widget valid when editing, without layout fields", () => {
     const editingItem = {
       i: "w-1",
