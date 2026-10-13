@@ -6,6 +6,7 @@ import { getApiURL } from "@/utils/apiUrl";
 import * as Sentry from "@sentry/nextjs";
 import { signOut as signOutClient } from "next-auth/react";
 import { GuestSession } from "@/types/auth";
+import { automationUpstreamPath } from "./automationRouting";
 
 const READ_ONLY_ALLOWED_METHODS = ["GET", "OPTIONS"];
 const READ_ONLY_ALWAYS_ALLOWED_URLS = [
@@ -90,7 +91,7 @@ export class ApiClient {
             response.status
           );
         }
-        if (response.status === 403 && data.detail.includes("Read only")) {
+        if (response.status === 403 && typeof data.detail === "string" && data.detail.includes("Read only")) {
           throw new KeepApiReadOnlyError(
             "Application is in read-only mode",
             url,
@@ -170,6 +171,17 @@ export class ApiClient {
       }
     }
 
+    const pathname = url.split("?")[0];
+    const automationPath = automationUpstreamPath(pathname);
+    if (automationPath) {
+      if (this.isServer) {
+        if (!process.env.AUTOMATIONS_API_URL) throw new Error("Automation service is not configured");
+        apiUrl = process.env.AUTOMATIONS_API_URL.replace(/\/$/, "");
+        url = automationPath + url.slice(pathname.length);
+      } else {
+        apiUrl = "/backend";
+      }
+    }
     const fullUrl = apiUrl + url;
 
     const response = await fetch(fullUrl, {
