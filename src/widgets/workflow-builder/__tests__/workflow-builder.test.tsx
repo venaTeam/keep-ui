@@ -182,6 +182,10 @@ jest.mock("@/entities/workflows", () => ({
 }));
 
 const mockConfig: InternalConfig = {
+  WORKFLOWS_API_URL: "http://localhost:8081",
+  KEEP_AI_FEATURES_DISABLED: true,
+  AI_FEATURES_ENABLED: false,
+  KEEP_AUTOMATIONS_ENABLED: false,
   API_URL: "http://localhost:8000",
   API_URL_CLIENT: "http://localhost:8000",
   AUTH_TYPE: "test",

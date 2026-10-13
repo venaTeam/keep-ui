@@ -49,6 +49,7 @@ const TogglableLink = ({ children, disabledConfigKey }: TogglableLinkProps) => {
 };
 
 export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
+  const { data: config } = useConfig();
   const isNOCRole = session?.userRole === "noc";
   const { data: tenantConfig, isLoading } = useTenantConfiguration();
   const noiseReductionKeys = {
@@ -66,7 +67,7 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
     return null;
   }
 
-  if (!Object.values(noiseReductionKeys).some((key) => !tenantConfig?.[key])) {
+  if (!config?.KEEP_AUTOMATIONS_ENABLED && !Object.values(noiseReductionKeys).some((key) => !tenantConfig?.[key])) {
     return null;
   }
 
@@ -101,6 +102,11 @@ export const NoiseReductionLinks = ({ session }: NoiseReductionLinksProps) => {
       </Disclosure.Button>
 
       <Disclosure.Panel as="ul" className="space-y-0.5 p-1 pr-1">
+        {config?.KEEP_AUTOMATIONS_ENABLED && (
+          <li><LinkWithIcon href="/automations" icon={Workflows} testId="automations" data-cy="nav-link-automations">
+            <Subtitle className="text-xs">Automations</Subtitle>
+          </LinkWithIcon></li>
+        )}
         <TogglableLink
           disabledConfigKey={noiseReductionKeys.HIDE_NAVBAR_DEDUPLICATION}
         >

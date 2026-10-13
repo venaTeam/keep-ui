@@ -11,6 +11,7 @@ const createJestConfig = nextJest({
 const config: Config = {
   coverageProvider: "v8",
   testEnvironment: "jsdom",
+  testPathIgnorePatterns: ["/node_modules/", "/e2e/"],
   // Bare absolute imports (e.g. "utils/hooks/useConfig") resolve under src/.
   // Mirrors tsconfig baseUrl: "src"; keep in sync if baseUrl changes.
   modulePaths: ["<rootDir>/src"],
