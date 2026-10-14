@@ -25,11 +25,11 @@ export function AutomationDefinition({
       <h2 id="automation-definition-title" className="text-lg font-semibold">
         Definition
       </h2>
-      <h3 className="font-medium">Trigger conditions (all must match)</h3>
+      <h3 className="text-sm font-semibold text-gray-700">Trigger conditions (all must match)</h3>
       {row.triggers?.length ? (
-        <ul className="list-disc pl-5">
+        <ul className="grid gap-2 sm:grid-cols-2">
           {row.triggers.map((trigger, index) => (
-            <li key={index}>
+            <li key={index} className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm">
               <code>{trigger.field}</code> equals <code>{trigger.value}</code>
             </li>
           ))}
@@ -40,8 +40,8 @@ export function AutomationDefinition({
       <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {fields.map(([label, value]) => (
           <div key={label}>
-            <dt className="text-sm text-gray-500">{label}</dt>
-            <dd className="break-all">
+            <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</dt>
+            <dd className="mt-1 break-all text-sm text-gray-800">
               {value === undefined
                 ? "Unavailable"
                 : value === null || value === ""
@@ -51,12 +51,12 @@ export function AutomationDefinition({
           </div>
         ))}
       </dl>
-      <h3 className="font-medium">Script</h3>
+      <h3 className="text-sm font-semibold text-gray-700">Script</h3>
       {row.script == null ? (
         <p>Unavailable</p>
       ) : (
         <pre
-          className="overflow-auto rounded bg-gray-50 p-4 text-sm"
+          className="overflow-auto rounded-lg border border-gray-800 bg-gray-950 p-4 text-sm leading-6 text-gray-100 shadow-inner"
           tabIndex={0}
         >
           <code>{row.script}</code>
