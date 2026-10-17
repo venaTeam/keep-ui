@@ -30,7 +30,7 @@ export default defineConfig({
     {
       command: process.env.CI
         ? "npm run start -- -p 3199"
-        : "node node_modules/next/dist/bin/next dev -p 3199",
+        : "node node_modules/next/dist/bin/next dev --turbopack -p 3199",
       url: "http://localhost:3199/signin",
       timeout: 180_000,
       reuseExistingServer: false,

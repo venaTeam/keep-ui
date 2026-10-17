@@ -6,13 +6,15 @@ The Automations pages follow the existing Workflows experience. They use the sam
 
 ## List page
 
-- Use the Workflows page header pattern with the title and a short description.
-- Place namespace, matching state, and build state controls in a light filter panel with a filter icon and clear action.
-- Present results in a bordered table card with a muted header row and hover feedback.
-- Make the automation name the primary navigation link; show namespace as supporting text.
-- Render matching and build state with the shared state badges, digest in monospace, and last run with a readable relative time plus the full timestamp on focus/hover.
-- Use the shared loader, error treatment, and empty-state card. Empty results from filters include a clear-filters action.
-- Keep the layout responsive and allow table content to scroll horizontally on narrow screens.
+- Reuse the Workflows search input above the sidebar and card grid.
+- Search names and namespaces case-insensitively within returned results. Store `q` in the URL and preserve it through detail/back navigation; do not send it to the upstream API.
+- Reuse Workflows' `FacetValue` rows: checkboxes, counts, Only/All shortcuts, compact spacing and section reset controls. Multiple values within a facet use OR; different facets use AND.
+- Persist sidebar collapse state in local storage. Preserve selections in URL parameters and retain stale namespace options.
+- Match Workflows card padding, responsive grid, orange hover/focus border and clickable content area. Show both state axes and left-aligned last run. Digest appears only on the detail page.
+- Facets use repeated URL parameters to retain multiple selections through detail/back navigation. Counts reflect other active facets and search. Filtering and counts operate on the loaded list because the upstream has no multi-select/facet contract; the page labels that scope explicitly. Long option lists include value search.
+- Cards use wrapping titles, an automation icon, supporting namespace text, two labeled state badges, and a quiet footer with relative last-run time. Exact timestamps remain accessible by tooltip.
+- Distinguish empty data, filtered results and search results, with independent clear actions.
+- Browser tests exercise the visible facet controls, combined search/filter behavior, navigation, persisted collapse preference and narrow viewport layout.
 
 ## Detail page
 
@@ -28,7 +30,7 @@ The Automations pages follow the existing Workflows experience. They use the sam
 - Use text and badges together for all state values; color is supplementary.
 - Keep disabled lifecycle controls discoverable with their existing tooltip and reason.
 - Preserve keyboard focus states, semantic headings, labeled filters, and descriptive action names.
-- Do not add an authoring CTA because authoring is out of scope for G28.
+- Do not add an authoring CTA because authoring belongs to G28 and is out of scope for G27.
 
 ## Verification
 

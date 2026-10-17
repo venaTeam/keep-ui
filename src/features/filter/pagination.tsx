@@ -63,13 +63,12 @@ export function Pagination({
     [pageSizeOptionsMemoized]
   );
 
-
   const pageIndex = useMemo(() => {
     return Math.ceil(state.offset / state.limit);
   }, [state]);
 
-    const ReachedLimit = useMemo(
-    () => Math.floor(totalCount / state.limit) != 0 && totalCount != 0,
+  const hasNextPage = useMemo(
+    () => state.offset + state.limit < totalCount,
     [totalCount, state]
   );
 
@@ -81,9 +80,13 @@ export function Pagination({
   }
 
   return (
-    <div className="flex justify-between items-center" data-cy="alerts-pagination">
+    <div
+      className="flex justify-between items-center"
+      data-cy="alerts-pagination"
+    >
       <Text>
-        Showing {pageIndex + 1} of {ReachedLimit ? `${pageIndex + 1}+` : pageIndex + 1}
+        Showing {pageIndex + 1} of{" "}
+        {Math.max(1, Math.ceil(totalCount / state.limit))}
       </Text>
       <div className="flex gap-1">
         <Select
@@ -94,7 +97,7 @@ export function Pagination({
             label: state.limit.toString(),
           }}
           onChange={(selectedOption) =>
-            onStateChange({ ...state, limit: Number(selectedOption!.value) })
+            onStateChange({ limit: Number(selectedOption!.value), offset: 0 })
           }
           options={selectOptions}
           menuPlacement="top"
@@ -125,7 +128,7 @@ export function Pagination({
             data-cy="alerts-pagination-next"
             icon={ChevronRightIcon}
             onClick={() => setPageIndex(pageIndex + 1)}
-            disabled={!ReachedLimit}
+            disabled={!hasNextPage}
             size="xs"
             color="gray"
             variant="secondary"

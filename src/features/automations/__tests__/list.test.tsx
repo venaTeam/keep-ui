@@ -50,27 +50,23 @@ test("each filter uses exact wire enum and stale wallets remain selectable", () 
   const onChange = jest.fn();
   render(
     <AutomationFilters
-      filters={{ namespace: "offboarded" }}
+      filters={{ namespace: ["offboarded"] }}
       onChange={onChange}
     />
   );
-  expect(screen.getByLabelText("Namespace (wallet)")).toHaveValue("offboarded");
+  expect(screen.getByRole("checkbox", { name: "offboarded" })).toBeChecked();
   expect(
-    screen.getByRole("option", { name: "unused-wallet" })
+    screen.getByRole("checkbox", { name: "unused-wallet" })
   ).toBeInTheDocument();
-  fireEvent.change(screen.getByLabelText("Matching state"), {
-    target: { value: "deleted" },
-  });
+  fireEvent.click(screen.getByRole("checkbox", { name: "deleted" }));
   expect(onChange).toHaveBeenLastCalledWith({
-    namespace: "offboarded",
-    matching_state: "deleted",
+    namespace: ["offboarded"],
+    matching_state: ["deleted"],
   });
-  fireEvent.change(screen.getByLabelText("Build state"), {
-    target: { value: "build_failed" },
-  });
+  fireEvent.click(screen.getByRole("checkbox", { name: "build_failed" }));
   expect(onChange).toHaveBeenLastCalledWith({
-    namespace: "offboarded",
-    build_state: "build_failed",
+    namespace: ["offboarded"],
+    build_state: ["build_failed"],
   });
   fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
   expect(onChange).toHaveBeenLastCalledWith({});

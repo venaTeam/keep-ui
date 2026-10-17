@@ -5,7 +5,7 @@ import type { JSX } from "react";
 
 export interface FacetValueProps {
   label: string;
-  count: number;
+  count?: number;
   isExclusivelySelected: boolean;
   isSelected: boolean;
   isSelectable: boolean;
@@ -55,6 +55,7 @@ export const FacetValue: React.FC<FacetValueProps> = ({
       <div className="flex items-center min-w-[24px]">
         <input
           type="checkbox"
+          aria-label={label}
           readOnly // Fixes "You provided a `checked` prop to a form field without an `onChange` handler." because click handler is on div above
           checked={isSelected}
           onClick={handleCheckboxClick}
@@ -81,7 +82,7 @@ export const FacetValue: React.FC<FacetValueProps> = ({
       <div className="flex-shrink-0 w-8 text-right flex justify-end">
         <button
           onClick={handleActionClick}
-          className="h-full text-xs text-orange-600 hidden hover:text-orange-800 group-hover:block"
+          className="h-full text-xs text-orange-600 hidden hover:text-orange-800 group-hover:block group-focus-within:block"
           data-cy="facet-value-action"
         >
           {isExclusivelySelected ? "All" : "Only"}
@@ -89,7 +90,7 @@ export const FacetValue: React.FC<FacetValueProps> = ({
         {
           <span data-testid="facet-value-count" data-cy="facet-value-count">
             <Text className="text-xs text-gray-500 group-hover:hidden">
-              <ShortNumber value={count}></ShortNumber>
+              {count !== undefined && <ShortNumber value={count}></ShortNumber>}
             </Text>
           </span>
         }

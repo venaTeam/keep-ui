@@ -10,12 +10,16 @@ test("feature-off hides navigation and rejects direct routes and BFF", async ({
   page,
 }) => {
   test.skip(!featureOff);
-  await expect(page.getByRole("heading", { name: "Automations" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Automations" })).toHaveCount(
+    0
+  );
   await expect(page.locator('[data-cy="nav-link-automations"]')).toHaveCount(0);
   const response = await page.request.get("/backend/automations");
   expect(response.status()).toBe(404);
   await page.goto("/automations/payments");
-  await expect(page.getByRole("heading", { name: "Automations" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Automations" })).toHaveCount(
+    0
+  );
 });
 test("read-only disables lifecycle and edit", async ({ page }) => {
   test.skip(featureOff || !readOnly);
@@ -39,11 +43,18 @@ test.describe("enabled", () => {
     await expect(
       page.getByRole("link", { name: "Restart payments" })
     ).toBeVisible();
-    await page.getByLabel("Namespace (wallet)").selectOption("payments");
-    await page
-      .getByLabel("Matching state", { exact: true })
-      .selectOption("active");
-    await page.getByLabel("Build state", { exact: true }).selectOption("idle");
+    await page.getByRole("checkbox", { name: "payments", exact: true }).click();
+    await expect(
+      page.getByRole("checkbox", { name: "payments", exact: true })
+    ).toBeChecked();
+    await page.getByRole("checkbox", { name: "active", exact: true }).click();
+    await expect(
+      page.getByRole("checkbox", { name: "active", exact: true })
+    ).toBeChecked();
+    await page.getByRole("checkbox", { name: "idle", exact: true }).click();
+    await expect(
+      page.getByRole("checkbox", { name: "idle", exact: true })
+    ).toBeChecked();
     await expect(
       page.getByRole("link", { name: "Building automation" })
     ).toHaveCount(0);
@@ -58,23 +69,124 @@ test.describe("enabled", () => {
       page.getByRole("link", { name: "Edit", exact: true })
     ).toHaveAttribute("href", "/automations/payments/edit");
     await page.getByRole("link", { name: "Back to automations" }).click();
-    await expect(page.getByLabel("Namespace (wallet)")).toHaveValue("payments");
     await expect(
-      page.getByLabel("Matching state", { exact: true })
-    ).toHaveValue("active");
-    await expect(page.getByLabel("Build state", { exact: true })).toHaveValue(
-      "idle"
-    );
+      page.getByRole("checkbox", { name: "payments", exact: true })
+    ).toBeChecked();
+    await expect(
+      page.getByRole("checkbox", { name: "active", exact: true })
+    ).toBeChecked();
+    await expect(
+      page.getByRole("checkbox", { name: "idle", exact: true })
+    ).toBeChecked();
     const calls = await (
       await request.get("http://127.0.0.1:4199/__requests")
     ).json();
     expect(
       calls.some(
-        (call: { search: string; authorization?: string }) =>
-          call.search.includes("build_state=idle") &&
+        (call: { path: string; authorization?: string }) =>
+          call.path === "/automations" &&
           call.authorization?.startsWith("Bearer ")
       )
     ).toBe(true);
+  });
+  test("search combines with facets, survives navigation, and sidebar preference persists", async ({
+    page,
+    request,
+  }) => {
+    await page.getByPlaceholder("Search automations").fill("PAYMENTS");
+    await expect(page).toHaveURL(/q=PAYMENTS/);
+    await expect(
+      page.getByRole("link", { name: "Unbuilt automation" })
+    ).toHaveCount(0);
+    await page.getByRole("checkbox", { name: "idle", exact: true }).click();
+    await expect(
+      page.getByRole("checkbox", { name: "idle", exact: true })
+    ).toBeChecked();
+    await expect(page.locator('[data-cy="automation-card"]')).toHaveCount(1);
+    await page.getByRole("link", { name: "Restart payments" }).click();
+    await page.getByRole("link", { name: "Back to automations" }).click();
+    await expect(page.getByPlaceholder("Search automations")).toHaveValue(
+      "PAYMENTS"
+    );
+    await expect(
+      page.getByRole("checkbox", { name: "idle", exact: true })
+    ).toBeChecked();
+    await page.getByRole("button", { name: "Hide filters" }).click();
+    await page.reload();
+    await expect(
+      page.getByRole("button", { name: "Show filters" })
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Show filters" }).click();
+    await page.getByPlaceholder("Search automations").fill("does-not-exist");
+    await expect(
+      page.getByText("No automations match your search.")
+    ).toBeVisible();
+    await page
+      .getByRole("button", { name: "Clear search", exact: true })
+      .click();
+    await expect(page.getByPlaceholder("Search automations")).toHaveValue("");
+    await expect(
+      page.getByRole("checkbox", { name: "idle", exact: true })
+    ).toBeChecked();
+    const calls = await (
+      await request.get("http://127.0.0.1:4199/__requests")
+    ).json();
+    expect(
+      calls
+        .filter((call: { path: string }) => call.path === "/automations")
+        .every(
+          (call: { search: string }) =>
+            !new URLSearchParams(call.search).has("q")
+        )
+    ).toBe(true);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.getByPlaceholder("Search automations")).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth
+      )
+    ).toBe(true);
+  });
+  test("facets support multiple values and contextual counts", async ({
+    page,
+  }) => {
+    const facets = page.locator('[data-cy="automations-facets"]');
+    await expect(
+      facets
+        .getByRole("group", { name: "payments", exact: true })
+        .locator('[data-cy="facet-value-count"]')
+    ).toHaveText("3");
+    await page.getByRole("checkbox", { name: "payments", exact: true }).click();
+    await expect(page.locator('[data-cy="automation-card"]')).toHaveCount(3);
+    await page.getByRole("checkbox", { name: "platform", exact: true }).click();
+    await expect(page.locator('[data-cy="automation-card"]')).toHaveCount(4);
+    await expect(page).toHaveURL(/namespace=payments&namespace=platform/);
+    await page.getByRole("checkbox", { name: "idle", exact: true }).click();
+    await expect(page.locator('[data-cy="automation-card"]')).toHaveCount(2);
+    await expect(
+      facets
+        .getByRole("group", { name: "payments", exact: true })
+        .locator('[data-cy="facet-value-count"]')
+    ).toHaveText("1");
+    await page.getByRole("link", { name: "Restart payments" }).click();
+    await page.getByRole("link", { name: "Back to automations" }).click();
+    await expect(
+      page.getByRole("checkbox", { name: "payments", exact: true })
+    ).toBeChecked();
+    await expect(
+      page.getByRole("checkbox", { name: "platform", exact: true })
+    ).toBeChecked();
+    await page
+      .getByRole("button", { name: "Clear build state", exact: true })
+      .click();
+    await expect(page.locator('[data-cy="automation-card"]')).toHaveCount(4);
+    const payments = facets.getByRole("group", {
+      name: "payments",
+      exact: true,
+    });
+    await payments.hover();
+    await payments.getByRole("button", { name: "Only", exact: true }).click();
+    await expect(page.locator('[data-cy="automation-card"]')).toHaveCount(3);
   });
   test("disable confirms, refreshes lists, then enable is immediate", async ({
     page,
@@ -95,7 +207,9 @@ test.describe("enabled", () => {
     ).toBeVisible();
     await page.getByRole("link", { name: "Back to automations" }).click();
     await expect(
-      page.getByRole("row").filter({ hasText: "Restart payments" })
+      page
+        .locator('[data-cy="automation-card"]')
+        .filter({ hasText: "Restart payments" })
     ).toContainText("inactive");
     await page.getByRole("link", { name: "Restart payments" }).click();
     await page.getByRole("button", { name: "Enable", exact: true }).click();
@@ -188,7 +302,12 @@ test.describe("enabled", () => {
     ).toBeVisible();
     await request.post("http://127.0.0.1:4199/__scenario", { data: {} });
     await page.getByRole("button", { name: "Retry namespace options" }).click();
-    await page.getByLabel("Namespace (wallet)").selectOption("unused-wallet");
+    await page
+      .getByRole("checkbox", { name: "unused-wallet", exact: true })
+      .click();
+    await expect(
+      page.getByRole("checkbox", { name: "unused-wallet", exact: true })
+    ).toBeChecked();
     await expect(
       page.getByText("No automations match these filters.")
     ).toBeVisible();

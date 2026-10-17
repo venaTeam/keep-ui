@@ -120,7 +120,7 @@ test("Edit hands off to the sibling editor route", () => {
     "/automations/a1/edit"
   );
 });
-test("table renders both axes, digest, actual last run and preserves filters", () => {
+test("cards render both axes and last run without digest, and preserve filters", () => {
   render(
     <AutomationsTable
       query="namespace=payments"
@@ -138,7 +138,7 @@ test("table renders both axes, digest, actual last run and preserves filters", (
   );
   expect(screen.getByText("active")).toBeVisible();
   expect(screen.getByText("build_failed")).toBeVisible();
-  expect(screen.getAllByText("abcdef123456")).toHaveLength(3);
+  expect(screen.queryByText("abcdef123456")).not.toBeInTheDocument();
   expect(screen.getByText("Never run")).toBeVisible();
   expect(screen.getByText("Unavailable")).toBeVisible();
   expect(document.querySelector("time")).toHaveAttribute(

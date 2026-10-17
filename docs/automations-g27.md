@@ -13,6 +13,14 @@ tenant-prefixed bearer tokens are forwarded; the upstream validates identity.
 
 ## Contract assumptions
 
+The list UI supports multi-select facets over the loaded `/automations` response.
+It fetches the unfiltered list, combines values within a facet using OR and
+different facets using AND, and calculates contextual counts locally. Counts
+are scoped to loaded results, not a global total. Repeated URL parameters retain
+selections without sending an unsupported multi-select query to the upstream.
+The existing scalar API-filter hooks remain available. Namespace choices still
+come from `/namespaces`, including wallets with no loaded automations.
+
 The UI payload section in the workspace's `automation-contracts.md` is still
 reserved. Known fields follow the automation API DTOs; provisional mappings
 are isolated in `entities/automations/model/normalize.ts`:
@@ -47,6 +55,11 @@ deterministic HTTP fixture upstream on ports 3199/4199. It uses the existing
 noauth sign-in convention only in that test process. These are browser/BFF
 tests, not real automation-service integration evidence. The standard Keep
 sanity suite remains separate and requires the full existing Keep stack.
+
+Local browser tests use Turbopack, matching the standard development runner.
+If a worktree shares `node_modules` through a junction outside its checkout,
+set `KEEP_TURBOPACK_ROOT` to the common parent directory before starting tests
+or the development server. This is a local filesystem setting, not an API URL.
 
 The GitHub Actions lane runs component tests, typecheck, a production build,
 and all three browser configurations. CI passing and merge must be confirmed

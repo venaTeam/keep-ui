@@ -2,15 +2,19 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Button, Card } from "@tremor/react";
-import { ArrowLeftIcon, ExclamationTriangleIcon } from "@heroicons/react/24/outline";
+import {
+  ArrowLeftIcon,
+  ExclamationTriangleIcon,
+} from "@heroicons/react/24/outline";
 import { PageTitle } from "@/shared/ui/PageTitle";
 import { PageSubtitle } from "@/shared/ui/PageSubtitle";
 import { KeepApiError } from "@/shared/api/KeepApiError";
 import {
   automationError,
   automationRoutes,
-  filterQuery,
-  parseFilters,
+  automationFacetQuery,
+  parseAutomationFacets,
+  parseAutomationPagination,
   useAutomationDetail,
 } from "@/entities/automations";
 import {
@@ -32,7 +36,13 @@ export function AutomationDetail({ automationId }: { automationId: string }) {
   return (
     <main className="flex flex-col gap-6" data-cy="automation-detail-page">
       <Link
-        href={automationRoutes.list(filterQuery(parseFilters(params)))}
+        href={automationRoutes.list(
+          automationFacetQuery(
+            parseAutomationFacets(params),
+            params.get("q") ?? "",
+            parseAutomationPagination(params)
+          )
+        )}
         className="flex w-fit items-center gap-2 text-sm font-medium text-gray-600 transition hover:text-orange-700"
         data-cy="automations-back"
       >
@@ -57,12 +67,18 @@ export function AutomationDetail({ automationId }: { automationId: string }) {
             <div className="space-y-2">
               <PageTitle>{row.name}</PageTitle>
               <PageSubtitle>{row.namespace}</PageSubtitle>
-              <div className="flex flex-wrap gap-2 pt-1"><AutomationState state={row.matching_state} /><AutomationState state={row.build_state} /></div>
+              <div className="flex flex-wrap gap-2 pt-1">
+                <AutomationState state={row.matching_state} />
+                <AutomationState state={row.build_state} />
+              </div>
             </div>
             <AutomationActions key={row.id} automation={row} />
           </header>
           {row.matching_state === "deleting" && (
-            <p role="status" className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <p
+              role="status"
+              className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+            >
               <ExclamationTriangleIcon className="mt-0.5 h-5 w-5 shrink-0" />
               Deletion in progress
               {row.delete_cascade_step != null
@@ -72,7 +88,10 @@ export function AutomationDetail({ automationId }: { automationId: string }) {
             </p>
           )}
           {row.matching_state === "deleted" && (
-            <p role="status" className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+            <p
+              role="status"
+              className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700"
+            >
               Deletion completed. Execution audit records are retained.
             </p>
           )}
@@ -81,32 +100,42 @@ export function AutomationDetail({ automationId }: { automationId: string }) {
               <AutomationDefinition automation={row} />
             </Card>
             <Card className="p-6 shadow-sm">
-            <h2 className="mb-5 text-lg font-semibold text-gray-900">Metadata</h2>
-            <dl className="grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2">
-              <div>
-                <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500">Active digest</dt>
-                <dd>
-                  <AutomationDigest digest={row.active_digest} full />
-                </dd>
-              </div>
-              <div>
-                <dt>Contract version</dt>
-                <dd className="mt-1">{row.contract_version ?? "Unavailable"}</dd>
-              </div>
-              {(
-                [
-                  ["Created at", row.created_at],
-                  ["Created by", row.created_by],
-                  ["Updated at", row.updated_at],
-                  ["Updated by", row.updated_by],
-                ] as const
-              ).map(([label, value]) => (
-                <div key={label}>
-                    <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</dt>
-                    <dd className="mt-1 break-all text-sm text-gray-800">{value ?? "Unavailable"}</dd>
+              <h2 className="mb-5 text-lg font-semibold text-gray-900">
+                Metadata
+              </h2>
+              <dl className="grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2">
+                <div>
+                  <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    Active digest
+                  </dt>
+                  <dd>
+                    <AutomationDigest digest={row.active_digest} full />
+                  </dd>
                 </div>
-              ))}
-            </dl>
+                <div>
+                  <dt>Contract version</dt>
+                  <dd className="mt-1">
+                    {row.contract_version ?? "Unavailable"}
+                  </dd>
+                </div>
+                {(
+                  [
+                    ["Created at", row.created_at],
+                    ["Created by", row.created_by],
+                    ["Updated at", row.updated_at],
+                    ["Updated by", row.updated_by],
+                  ] as const
+                ).map(([label, value]) => (
+                  <div key={label}>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      {label}
+                    </dt>
+                    <dd className="mt-1 break-all text-sm text-gray-800">
+                      {value ?? "Unavailable"}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
             </Card>
           </div>
         </>

@@ -1,10 +1,8 @@
-import Link from "next/link";
-import { Card } from "@tremor/react";
+﻿import Link from "next/link";
+import { ArrowRightIcon, ClockIcon } from "@heroicons/react/24/outline";
+import { formatDistanceToNowStrict } from "date-fns";
 import { Automation, automationRoutes, lastRun } from "@/entities/automations";
-import {
-  AutomationDigest,
-  AutomationState,
-} from "@/entities/automations/ui/AutomationValues";
+import { AutomationState } from "@/entities/automations/ui/AutomationValues";
 import { Tooltip } from "@/shared/ui/Tooltip";
 
 export function AutomationsTable({
@@ -15,29 +13,84 @@ export function AutomationsTable({
   query: string;
 }) {
   return (
-    <div className="grid flex-1 grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3" data-cy="automations-table">
+    <div
+      className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
+      data-cy="automations-table"
+    >
       {rows.map((row) => {
         const run = lastRun(row.last_run);
         return (
-          <Card key={row.id} className="group flex min-h-56 flex-col justify-between border border-gray-200 p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-orange-300 hover:shadow-md">
-            <div className="space-y-4">
-              <div className="flex items-start justify-between gap-3">
+          <article
+            key={row.id}
+            data-cy="automation-card"
+            className="group relative flex min-w-0 flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition hover:border-orange-300 hover:shadow-md focus-within:border-orange-400 focus-within:ring-1 focus-within:ring-orange-400"
+          >
+            <div className="flex flex-1 flex-col p-5">
+              <div className="mb-4 flex items-start justify-end gap-3">
+                <ArrowRightIcon
+                  aria-hidden="true"
+                  className="mt-2 h-4 w-4 text-gray-300 transition group-hover:translate-x-0.5 group-hover:text-orange-500"
+                />
+              </div>
+              <h2 className="text-base font-semibold leading-6 text-gray-900">
+                <Link
+                  href={automationRoutes.detail(row.id, query)}
+                  data-cy="automation-detail-link"
+                  className="break-words after:absolute after:inset-0 focus:outline-none"
+                >
+                  {row.name}
+                </Link>
+              </h2>
+              <p className="mt-2 w-fit max-w-full truncate rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs text-gray-600" title={row.namespace}>
+                <span className="truncate">
+                  {row.namespace}
+                </span>
+              </p>
+              <dl className="mt-5 grid grid-cols-2 gap-3 border-t border-gray-100 pt-4">
                 <div className="min-w-0">
-                  <Link className="block truncate text-base font-semibold text-gray-900 transition group-hover:text-orange-700" data-cy="automation-detail-link" href={automationRoutes.detail(row.id, query)}>{row.name}</Link>
-                  <p className="mt-1 truncate text-sm text-gray-500">{row.namespace}</p>
+                  <dt className="mb-1.5 text-xs text-gray-500">
+                    Matching state
+                  </dt>
+                  <dd>
+                    <AutomationState state={row.matching_state} />
+                  </dd>
                 </div>
-                <span className="rounded-full bg-orange-50 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-orange-700">Automation</span>
-              </div>
-              <div className="grid grid-cols-2 gap-3 border-y border-gray-100 py-3">
-                <div><p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Matching</p><div className="mt-1"><AutomationState state={row.matching_state} /></div></div>
-                <div><p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Build</p><div className="mt-1"><AutomationState state={row.build_state} /></div></div>
+                <div className="min-w-0">
+                  <dt className="mb-1.5 text-xs text-gray-500">Build state</dt>
+                  <dd>
+                    <AutomationState state={row.build_state} />
+                  </dd>
+                </div>
+              </dl>
+            </div>
+            <div className="flex items-center gap-2 border-t border-gray-100 bg-gray-50/70 px-5 py-3 text-left text-xs text-gray-500">
+              <ClockIcon
+                aria-hidden="true"
+                className="h-4 w-4 shrink-0 text-gray-400"
+              />
+              <div className="min-w-0 text-left">
+                <span className="mr-1.5">Last run</span>
+                {run.timestamp ? (
+                  <Tooltip
+                    content={new Date(run.timestamp).toLocaleString()}
+                    asChild
+                  >
+                    <time
+                      className="relative font-medium text-gray-700"
+                      tabIndex={0}
+                      dateTime={run.timestamp}
+                    >
+                      {formatDistanceToNowStrict(new Date(run.timestamp), {
+                        addSuffix: true,
+                      })}
+                    </time>
+                  </Tooltip>
+                ) : (
+                  <span className="font-medium text-gray-600">{run.label}</span>
+                )}
               </div>
             </div>
-            <div className="mt-4 flex items-end justify-between gap-3 text-xs text-gray-500">
-              <div><p className="uppercase tracking-wide text-gray-400">Digest</p><AutomationDigest digest={row.active_digest} /></div>
-              <div className="text-right"><p className="uppercase tracking-wide text-gray-400">Last run</p>{run.timestamp ? <Tooltip content={run.timestamp} asChild><time tabIndex={0} dateTime={run.timestamp}>{run.label}</time></Tooltip> : run.label}</div>
-            </div>
-          </Card>
+          </article>
         );
       })}
     </div>
