@@ -7,16 +7,23 @@ import { randomUUID } from "node:crypto";
  * extend this, so they share one auth/transport implementation — the API analog
  * of the page objects' shared `components`.
  *
- * Drives the live gateway (:8080) and workflows services directly so specs can
- * SEED data and ASSERT backend truth without going through the UI. Auth: a
- * constant `x-api-key` — under AUTH_TYPE=noauth the gateway accepts any key and
- * resolves to the `keep` single tenant with admin scope. Ingest is eventually
- * consistent, so reads come with `poll`.
+ * Drives the live gateway (:8080), keep-ingestion (:8084) and workflows services
+ * directly so specs can SEED data and ASSERT backend truth without going through
+ * the UI. Auth: a constant `x-api-key` — under AUTH_TYPE=noauth the gateway
+ * accepts any key and resolves to the `keep` single tenant with admin scope.
+ * keep-ingestion is different: it checks the key against its own
+ * `KEEP_INGESTION_API_KEY`, so ingest sends `ingestionApiKey` instead. Ingest is
+ * eventually consistent (ingestion → Kafka → event-handler → Postgres), so reads
+ * come with `poll`.
  */
 export interface KeepApiOptions {
   gateway: string;
+  /** Base URL of keep-ingestion — the only service serving `POST /alerts/event`. */
+  ingestion: string;
   workflows: string;
   apiKey: string;
+  /** Must equal keep-ingestion's `KEEP_INGESTION_API_KEY`. */
+  ingestionApiKey: string;
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -24,14 +31,19 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 export class HttpClient {
   /** Base URL of the gateway (alerts / incidents / presets / dashboards). */
   readonly gateway: string;
+  /** Base URL of keep-ingestion (alert intake). */
+  readonly ingestion: string;
   /** Base URL of the workflows service. */
   readonly workflowsUrl: string;
   private readonly apiKey: string;
+  protected readonly ingestionApiKey: string;
 
   constructor(opts: KeepApiOptions) {
     this.gateway = opts.gateway.replace(/\/$/, "");
+    this.ingestion = opts.ingestion.replace(/\/$/, "");
     this.workflowsUrl = opts.workflows.replace(/\/$/, "");
     this.apiKey = opts.apiKey;
+    this.ingestionApiKey = opts.ingestionApiKey;
   }
 
   // ---- transport ----------------------------------------------------------
@@ -50,12 +62,14 @@ export class HttpClient {
     const headers = this.headers(
       isForm || body === undefined ? {} : { "Content-Type": "application/json" }
     );
+    // Pull headers out of `init` so spreading the rest can't replace the merged set.
+    const { headers: extraHeaders, ...rest } = init;
     return fetch(`${base}${path}`, {
       method,
-      headers: { ...headers, ...(init.headers as Record<string, string>) },
+      headers: { ...headers, ...(extraHeaders as Record<string, string>) },
       body:
         body === undefined ? undefined : isForm ? (body as FormData) : JSON.stringify(body),
-      ...init,
+      ...rest,
     });
   }
 

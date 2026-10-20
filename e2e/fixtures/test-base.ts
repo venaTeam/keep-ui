@@ -9,9 +9,12 @@ import {
 
 export const env = {
   gateway: process.env.GATEWAY_URL ?? "http://localhost:8080",
+  ingestion: process.env.INGESTION_URL ?? "http://localhost:8084",
   workflows: process.env.WORKFLOWS_URL ?? "http://localhost:8082",
   uiBaseUrl: process.env.UI_BASE_URL ?? "http://localhost:3000",
   apiKey: process.env.KEEP_API_KEY ?? "keep-sanity-check",
+  // Same default the sanity-check deploy gives keep-ingestion's KEEP_INGESTION_API_KEY.
+  ingestionApiKey: process.env.KEEP_INGESTION_API_KEY ?? "keep-sanity-check",
 };
 
 /**
@@ -35,7 +38,13 @@ type Fixtures = {
 
 export const test = base.extend<Fixtures>({
   api: async ({}, use) => {
-    const api = new KeepApi({ gateway: env.gateway, workflows: env.workflows, apiKey: env.apiKey });
+    const api = new KeepApi({
+      gateway: env.gateway,
+      ingestion: env.ingestion,
+      workflows: env.workflows,
+      apiKey: env.apiKey,
+      ingestionApiKey: env.ingestionApiKey,
+    });
     // Snapshot existing resources, run the test, then delete whatever it created
     // (alerts, incidents, presets, dashboards, workflows) — even if the test failed.
     const baseline = await api.snapshotResources();

@@ -3,7 +3,7 @@ import { test, expect } from "../fixtures/test-base";
 /**
  * [check:01] send-alert
  *
- * The most basic end-to-end path: ingest a single alert through the gateway,
+ * The most basic end-to-end path: ingest a single alert through keep-ingestion,
  * wait for it to land in the backend (firing), then assert the alerts feed
  * renders its row.
  */
@@ -15,7 +15,7 @@ test.describe("[check:01] send-alert", () => {
   }) => {
     const { fingerprint, status } = await api.alerts.sendAlert({ name: "sanity-send" });
 
-    // The gateway accepts the alert event asynchronously → 202 Accepted.
+    // keep-ingestion publishes to Kafka and answers asynchronously → 202 Accepted.
     expect(status).toBe(202);
 
     const alert = await api.alerts.waitForAlert(fingerprint);

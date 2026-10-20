@@ -36,7 +36,11 @@ export class AlertsApi extends HttpClient {
       fingerprint,
       ...seed,
     };
-    const res = await this.req(this.gateway, "POST", "/alerts/event", payload);
+    // Intake lives in keep-ingestion (gateway PR #100), which authenticates with
+    // its own shared key rather than the gateway's noauth fallback.
+    const res = await this.req(this.ingestion, "POST", "/alerts/event", payload, {
+      headers: { "x-api-key": this.ingestionApiKey },
+    });
     if (res.status !== 202 && !res.ok) {
       const text = await res.text().catch(() => "");
       throw new Error(`sendAlert → HTTP ${res.status}: ${text.slice(0, 500)}`);

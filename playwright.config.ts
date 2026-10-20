@@ -2,14 +2,15 @@ import { defineConfig, devices } from "@playwright/test";
 
 /**
  * Sanity-check E2E suite — runs against the LIVE deployed Keep stack the
- * sanity-check skill brings up (UI :3000, gateway :8080, workflows :8081).
+ * sanity-check skill brings up (UI :3000, gateway :8080, ingestion :8084,
+ * workflows :8081).
  *
  * Requirements:
  *  - The stack must be deployed with AUTH_TYPE=noauth (asserted in global-setup).
- *  - The pipeline is eventually consistent (Gateway → Kafka → event-handler →
- *    Postgres → UI), so assertions POLL: web-first `expect` timeout is 30s and
- *    the REST helper has its own poll loops. Specs run serially on one worker so
- *    the shared Postgres stays deterministic.
+ *  - The pipeline is eventually consistent (keep-ingestion → Kafka →
+ *    event-handler → Postgres → gateway → UI), so assertions POLL: web-first
+ *    `expect` timeout is 30s and the REST helper has its own poll loops. Specs
+ *    run serially on one worker so the shared Postgres stays deterministic.
  *
  * Output the agent reads: e2e/results/checks.json (flat, keyed by [check:NN]).
  */
