@@ -30,6 +30,7 @@ export enum WidgetType {
   SERVICE_NOW = "SERVICE_NOW",
   IMAGE = "IMAGE",
   HTML = "HTML",
+  GRAFANA_PANEL = "GRAFANA_PANEL",
 }
 
 export type ImageFit = "contain" | "cover";
@@ -44,6 +45,10 @@ export interface ImageWidgetConfig {
 
 export interface HtmlWidgetConfig {
   html: string;
+}
+
+export interface GrafanaPanelWidgetConfig {
+  url: string;
 }
 
 export enum PresetPanelType {
@@ -67,6 +72,7 @@ export interface WidgetData extends LayoutItem {
   customLink?: string;
   image?: ImageWidgetConfig;
   html?: HtmlWidgetConfig;
+  grafanaPanel?: GrafanaPanelWidgetConfig;
 }
 
 export interface Threshold {
