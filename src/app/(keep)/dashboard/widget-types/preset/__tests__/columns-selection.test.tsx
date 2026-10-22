@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { useFacetPotentialFields } from "@/features/filter/hooks";
 import ColumnsSelection from "../columns-selection";
 
@@ -12,16 +12,20 @@ function mockFacetFields(data: string[] | undefined) {
 }
 
 function renderSelection(selectedColumns?: string[]) {
-  return render(
-    <ColumnsSelection selectedColumns={selectedColumns} onChange={jest.fn()} />
+  const onChange = jest.fn();
+  render(
+    <ColumnsSelection selectedColumns={selectedColumns} onChange={onChange} />
   );
+  return onChange;
 }
 
-function selectedChip(text: string) {
-  const trigger = screen
-    .getAllByRole("button")
-    .find((button) => button.getAttribute("aria-haspopup") === "listbox")!;
-  return within(trigger).queryByText(text);
+async function openDropdown() {
+  fireEvent.click(screen.getByRole("button", { expanded: false }));
+  return within(await screen.findByRole("listbox"));
+}
+
+function lastSelection(onChange: jest.Mock): string[] {
+  return [...onChange.mock.lastCall![0]].sort();
 }
 
 describe("ColumnsSelection", () => {
@@ -30,8 +34,9 @@ describe("ColumnsSelection", () => {
 
     renderSelection(["name", "labels.team"]);
 
-    expect(selectedChip("name")).toBeInTheDocument();
-    expect(selectedChip("labels.team")).toBeInTheDocument();
+    const trigger = screen.getByRole("button", { expanded: false });
+    expect(trigger).toHaveAccessibleName(/labels\.team/);
+    expect(trigger).toHaveAccessibleName(/name/);
   });
 
   it("shows a saved column that is missing from the fetched fields", () => {
@@ -39,7 +44,9 @@ describe("ColumnsSelection", () => {
 
     renderSelection(["name", "labels.team"]);
 
-    expect(selectedChip("labels.team")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /labels\.team/ })
+    ).toBeInTheDocument();
   });
 
   it("shows the saved columns while the fields are still loading", () => {
@@ -47,17 +54,33 @@ describe("ColumnsSelection", () => {
 
     renderSelection(["name"]);
 
-    expect(selectedChip("name")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "name" })).toBeInTheDocument();
   });
 
-  it("lists a saved column once when it is also a fetched field", () => {
+  it("lists a saved column once when it is also a fetched field", async () => {
     mockFacetFields(["name", "severity"]);
 
-    const { container } = renderSelection(["name"]);
+    renderSelection(["name"]);
 
-    const options = Array.from(
-      container.querySelectorAll('select[title="multi-select-hidden"] option')
-    ).filter((option) => option.textContent === "name");
-    expect(options).toHaveLength(1);
+    const listbox = await openDropdown();
+    expect(listbox.getAllByRole("option", { name: "name" })).toHaveLength(1);
+  });
+
+  it("keeps a deselected saved column in the options so it can be selected again", async () => {
+    mockFacetFields([]);
+
+    const onChange = renderSelection(["name", "labels.team"]);
+    const listbox = await openDropdown();
+
+    fireEvent.click(
+      listbox.getByRole("option", { name: "name", selected: true })
+    );
+
+    expect(lastSelection(onChange)).toEqual(["labels.team"]);
+    fireEvent.click(
+      listbox.getByRole("option", { name: "name", selected: false })
+    );
+
+    expect(lastSelection(onChange)).toEqual(["labels.team", "name"]);
   });
 });
