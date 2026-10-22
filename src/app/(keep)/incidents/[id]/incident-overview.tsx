@@ -533,10 +533,7 @@ export function IncidentOverview({ incident: initialIncidentData }: Props) {
       <div className="pr-10 grid grid-cols-1 xl:grid-cols-2 gap-4">
         <div>
           <FieldHeader>Status</FieldHeader>
-          <IncidentChangeStatusSelect
-            incidentId={incident.id}
-            value={incident.status}
-          />
+          <IncidentChangeStatusSelect incident={incident} />
         </div>
         <div>
           <FieldHeader>Severity</FieldHeader>

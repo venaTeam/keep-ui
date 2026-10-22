@@ -198,7 +198,9 @@ export function useIncidentActions(): UseIncidentActionsValue {
     async (incidentId: string, skipConfirmation = false) => {
       if (
         !skipConfirmation &&
-        !confirm("Are you sure you want to delete this incident?")
+        !confirm(
+          "Are you sure you want to delete this incident? This action cannot be undone."
+        )
       ) {
         return false;
       }
@@ -223,7 +225,7 @@ export function useIncidentActions(): UseIncidentActionsValue {
           `Are you sure you want to delete ${incidentIds.length === 1
             ? "this incident?"
             : `${incidentIds.length} incidents?`
-          }`
+          } This action cannot be undone.`
         )
       ) {
         return false;
