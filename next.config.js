@@ -23,6 +23,8 @@ const nextConfig = {
   },
   experimental: {
     turbo: {
+      // Worktrees may share node_modules outside the checkout.
+      root: process.env.KEEP_TURBOPACK_ROOT,
       resolveAlias: turbopackAliases,
     },
   },

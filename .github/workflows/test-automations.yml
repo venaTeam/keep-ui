@@ -1,0 +1,40 @@
+name: Automations UI tests
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  automations:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      AUTH_TYPE: noauth
+      AUTH_SECRET: g27-test-session-secret-do-not-use-in-production
+      SENTRY_DISABLED: "true"
+      SSE_DISABLED: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --legacy-peer-deps
+      - run: npm run test -- --runInBand
+      - run: npm run typecheck
+      - run: npx playwright install --with-deps chromium
+      - run: npx next build
+      - run: npm run test:e2e -- --config=playwright.automations.config.ts
+      - run: npm run test:e2e -- --config=playwright.automations.config.ts
+        env:
+          AUTOMATIONS_TEST_FLAG_OFF: "true"
+      - run: npm run test:e2e -- --config=playwright.automations.config.ts
+        env:
+          AUTOMATIONS_TEST_READ_ONLY: "true"
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: automations-test-results
+          path: |
+            test-results/
+            e2e/results/

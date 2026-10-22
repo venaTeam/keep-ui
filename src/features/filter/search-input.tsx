@@ -14,7 +14,7 @@ export const SearchInput = ({
   onValueChange,
   value,
 }: SearchInputProps) => {
-  const [inputValue, setInputValue] = useState("");
+  const [inputValue, setInputValue] = useState(value || "");
 
   useEffect(() => {
     const timeoutId = setTimeout(() => onValueChange(inputValue), 500);

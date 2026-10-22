@@ -36,6 +36,7 @@ export function getConfig(): InternalConfig {
 
   return {
     AUTH_TYPE: authType,
+    KEEP_AUTOMATIONS_ENABLED: process.env.KEEP_AUTOMATIONS_ENABLED === "true",
     KEYCLOAK_SECRET: process.env.KEYCLOAK_SECRET,
     KEYCLOAK_ID: process.env.KEYCLOAK_ID,
     KEYCLOAK_ISSUER: process.env.KEYCLOAK_ISSUER,

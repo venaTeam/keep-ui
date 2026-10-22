@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getApiURL } from "@/utils/apiUrl";
 import { config as authConfig } from "@/auth.config";
 import NextAuth from "next-auth";
+import { automationUpstreamPath } from "@/shared/api/automationRouting";
 import {
   SESSION_HEADER,
   serializeSession,
@@ -43,8 +44,42 @@ export const middleware = auth(async (request) => {
   }
   // Handle legacy /backend/ redirects (when API_URL is not set and frontend act as a proxy)
   if (pathname.startsWith("/backend/")) {
-    const workflowsApiUrl = process.env.WORKFLOWS_API_URL || "http://localhost:8082";
-    const isWorkflowServicePath = pathname === "/backend/workflows" || pathname.startsWith("/backend/workflows/");
+    const automationPath = automationUpstreamPath(
+      pathname.slice("/backend".length)
+    );
+    if (automationPath) {
+      if (process.env.KEEP_AUTOMATIONS_ENABLED !== "true") {
+        return NextResponse.json({ detail: "Not found" }, { status: 404 });
+      }
+      if (!isAuthenticated)
+        return NextResponse.json(
+          { detail: "Sign in required" },
+          { status: 401 }
+        );
+      if (role === "noc")
+        return NextResponse.json({ detail: "Access denied" }, { status: 403 });
+      if (
+        process.env.KEEP_READ_ONLY === "true" &&
+        !["GET", "OPTIONS"].includes(request.method)
+      ) {
+        return NextResponse.json({ detail: "Read only" }, { status: 403 });
+      }
+      const origin = process.env.AUTOMATIONS_API_URL;
+      if (!origin)
+        return NextResponse.json(
+          { detail: "Automation service is not configured" },
+          { status: 503 }
+        );
+      const target = `${origin.replace(/\/$/, "")}${automationPath}${request.nextUrl.search}`;
+      return NextResponse.rewrite(target, {
+        request: { headers: requestHeaders },
+      });
+    }
+    const workflowsApiUrl =
+      process.env.WORKFLOWS_API_URL || "http://localhost:8082";
+    const isWorkflowServicePath =
+      pathname === "/backend/workflows" ||
+      pathname.startsWith("/backend/workflows/");
     const apiUrl = isWorkflowServicePath ? workflowsApiUrl : getApiURL();
     const newURL = pathname.replace("/backend/", apiUrl + "/");
     const queryString = searchParams.toString();
