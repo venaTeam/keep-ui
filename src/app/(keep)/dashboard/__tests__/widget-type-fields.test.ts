@@ -57,4 +57,18 @@ describe("stripForeignTypeFields", () => {
     stripForeignTypeFields(presetWidget, WidgetType.METRIC);
     expect(presetWidget).toEqual(copy);
   });
+
+  it("drops countBy when a preset widget becomes another type but keeps it for presets", () => {
+    const grouped = {
+      ...presetWidget,
+      countBy: { field: "incident", incidentStatus: "active" },
+    } as unknown as WidgetData;
+
+    expect(stripForeignTypeFields(grouped, WidgetType.IMAGE)).not.toHaveProperty(
+      "countBy"
+    );
+    expect(stripForeignTypeFields(grouped, WidgetType.PRESET)).toHaveProperty(
+      "countBy"
+    );
+  });
 });
