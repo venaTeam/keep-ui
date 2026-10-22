@@ -108,7 +108,7 @@ describe("validateGrafanaPanelUrl", () => {
     ).toMatch(/not an allowed grafana/i);
   });
 
-  it("accepts only single-panel /d-solo/ URLs on an allowed Grafana", () => {
+  it("accepts only URLs whose path starts with /d-solo/", () => {
     expect(
       validateGrafanaPanelUrl(`${GRAFANA}/d/abc/demo?orgId=1`, allowed, APP)
     ).toMatch(/d-solo/);
@@ -120,9 +120,50 @@ describe("validateGrafanaPanelUrl", () => {
     ).toMatch(/d-solo/);
     expect(
       validateGrafanaPanelUrl(
+        `${GRAFANA}/api/datasources/proxy/1/d-solo/x`,
+        allowed,
+        APP
+      )
+    ).toMatch(/d-solo/);
+    expect(
+      validateGrafanaPanelUrl(`${GRAFANA}/login/d-solo/`, allowed, APP)
+    ).toMatch(/d-solo/);
+    expect(
+      validateGrafanaPanelUrl(
         `${GRAFANA}/grafana/d-solo/abc/demo?panelId=1`,
         allowed,
         APP
+      )
+    ).toMatch(/d-solo/);
+  });
+
+  it("rejects URLs that carry a username or password", () => {
+    expect(
+      validateGrafanaPanelUrl(
+        "https://user:pw@grafana.example.com/d-solo/a",
+        allowed,
+        APP
+      )
+    ).toMatch(/username/i);
+    expect(
+      validateGrafanaPanelUrl(
+        "https://user@grafana.example.com/d-solo/a",
+        allowed,
+        APP
+      )
+    ).toMatch(/username/i);
+  });
+
+  it("rejects an http panel only when Keep is served over https", () => {
+    const httpGrafana = "http://grafana.example.com";
+    expect(
+      validateGrafanaPanelUrl(`${httpGrafana}/d-solo/a`, [httpGrafana], APP)
+    ).toMatch(/served over https/i);
+    expect(
+      validateGrafanaPanelUrl(
+        `${httpGrafana}/d-solo/a`,
+        [httpGrafana],
+        "http://keep.example.com"
       )
     ).toBeNull();
   });

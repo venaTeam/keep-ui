@@ -46,7 +46,9 @@ describe("HtmlWidgetForm", () => {
     render(<HtmlWidgetForm onChange={jest.fn()} />);
     expect(screen.queryByText(/grafana panel widget/i)).toBeNull();
     type('<iframe src="https://grafana.example.com/d-solo/x"></iframe>');
-    expect(screen.getByText(/grafana panel widget/i)).toBeInTheDocument();
+    expect(screen.getByText(/grafana panel widget/i)).toHaveTextContent(
+      /not enabled/i
+    );
   });
 
   it("keeps an existing widget valid when editing, without layout fields", () => {

@@ -32,6 +32,17 @@ describe("DashboardGrafanaPanelView", () => {
     expect(frame).not.toHaveAttribute("srcdoc");
   });
 
+  it("frames the URL exactly as it was validated", () => {
+    allow([GRAFANA]);
+    const { container } = render(
+      <DashboardGrafanaPanelView
+        url="  HTTPS://Grafana.Example.com/d-solo/abc/demo?orgId=1&panelId=2  "
+        title="CPU"
+      />
+    );
+    expect(container.querySelector("iframe")).toHaveAttribute("src", PANEL);
+  });
+
   it("refuses a stored URL whose origin is not allowlisted", () => {
     allow([GRAFANA]);
     const { container } = render(

@@ -43,7 +43,7 @@ export function DashboardGrafanaPanelView({
   return (
     <iframe
       title={title}
-      src={url.trim()}
+      src={new URL(url.trim()).href}
       sandbox={GRAFANA_PANEL_SANDBOX}
       referrerPolicy="no-referrer"
       loading="lazy"

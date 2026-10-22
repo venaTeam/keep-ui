@@ -59,7 +59,8 @@ export function HtmlWidgetForm({
             data-cy="dashboard-widget-form-html-iframe-hint"
           >
             Embedded frames are blocked in HTML widgets. To show a Grafana
-            panel, use the Grafana Panel widget type.
+            panel, use the Grafana Panel widget type. If that type is not
+            listed, Grafana panels are not enabled on this Keep instance.
           </p>
         )}
       </div>
