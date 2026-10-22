@@ -49,4 +49,9 @@ export interface InternalConfig {
    */
   ALERT_REFETCH_DEBOUNCE_MS?: number;
   ALERT_REFETCH_MAX_WAIT_MS?: number;
+  /**
+   * Grafana origins (scheme://host[:port]) whose panels dashboard Grafana
+   * Panel widgets may frame. Empty disables the Grafana Panel widget type.
+   */
+  GRAFANA_EMBED_ALLOWED_ORIGINS?: string[];
 }
