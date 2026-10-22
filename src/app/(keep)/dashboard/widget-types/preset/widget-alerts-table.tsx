@@ -6,7 +6,7 @@ import { Button, Icon } from "@tremor/react";
 import { FireIcon } from "@heroicons/react/24/outline";
 import { DynamicImageProviderIcon } from "@/components/ui";
 import { getStatusColor, getStatusIcon } from "@/shared/lib/status-utils";
-import { getNestedValue } from "@/shared/lib/object-utils";
+import { getColumnValue } from "./get-column-value";
 import { SeverityBorderIcon, UISeverity } from "@/shared/ui";
 import { severityMapping } from "@/entities/alerts/model";
 import * as Tooltip from "@radix-ui/react-tooltip";
@@ -165,7 +165,7 @@ const WidgetAlertsTable: React.FC<WidgetAlertsTableProps> = ({
             columnValue = columnMeta.renderValue(alert);
           } else {
             columnValue = (
-              <div className="truncate overflow-hidden text-ellipsis select-text">{getNestedValue(alert, column)}</div>
+              <div className="truncate overflow-hidden text-ellipsis select-text">{getColumnValue(alert, column)}</div>
             );
           }
           const _columnsGapClass =
