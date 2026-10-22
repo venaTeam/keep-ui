@@ -68,6 +68,7 @@ const PresetGridItem: React.FC<GridItemProps> = ({
           showFiringOnly={item.showFiringOnly}
           thresholds={item.thresholds}
           customLink={item.customLink}
+          countBy={item.countBy}
           dashboardName={dashboardName}
           widgetName={item.name}
           onEdit={onEdit}

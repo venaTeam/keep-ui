@@ -19,6 +19,10 @@ import {
 } from "react-hook-form";
 import { LayoutItem, Threshold, PresetPanelType } from "../../types";
 import ColumnsSelection from "./columns-selection";
+import { CountByControl } from "./count-by-control";
+import { CountBy } from "@/entities/presets/model/count-by";
+
+const GROUPED_COUNTER_ROWS = 4;
 
 interface PresetForm {
   selectedPreset: string;
@@ -62,6 +66,9 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
   const [presetColumns, setPresetColumns] = useState<string[] | undefined>(
     editingItem ? editingItem.presetColumns : undefined
   );
+  const [countBy, setCountBy] = useState<CountBy | undefined>(
+    editingItem?.countBy
+  );
 
   const { fields, append, remove, move, replace } = useFieldArray({
     control,
@@ -82,24 +89,37 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
       presetPanelType: formValues.presetPanelType || PresetPanelType.ALERT_TABLE,
       showFiringOnly: formValues.showFiringOnly ?? false,
       customLink: formValues.customLink || "",
+      countBy,
     };
-  }, [formValues, presetColumns]);
+  }, [formValues, presetColumns, countBy]);
 
   function getLayoutValues(): LayoutItem {
-    if (editingItem) {
-      return {} as LayoutItem;
-    }
-
     const isAlertTable = normalizedFormValues.presetPanelType === PresetPanelType.ALERT_TABLE;
     const isAlertCountPanel = normalizedFormValues.presetPanelType === PresetPanelType.ALERT_COUNT_PANEL;
+
+    if (editingItem) {
+      if (!isAlertCountPanel) {
+        return {} as LayoutItem;
+      }
+      const isGrouped = Boolean(normalizedFormValues.countBy);
+      const savedHeight = editingItem.h;
+      const needsRows =
+        isGrouped &&
+        !(typeof savedHeight === "number" && savedHeight >= GROUPED_COUNTER_ROWS);
+      return {
+        ...(needsRows ? { h: GROUPED_COUNTER_ROWS } : {}),
+        minH: isGrouped ? GROUPED_COUNTER_ROWS : 2,
+      } as LayoutItem;
+    }
     
     if (isAlertCountPanel) {
       // Narrower, more compact layout for count panels with no minimum width
+      const isGrouped = Boolean(normalizedFormValues.countBy);
       return {
         w: 4,
-        h: 3,
+        h: isGrouped ? GROUPED_COUNTER_ROWS : 3,
         minW: 0,
-        minH: 2,
+        minH: isGrouped ? GROUPED_COUNTER_ROWS : 2,
         static: false,
       } as LayoutItem;
     }
@@ -130,6 +150,7 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
         presetPanelType: normalizedFormValues.presetPanelType,
         showFiringOnly: normalizedFormValues.showFiringOnly,
         customLink: normalizedFormValues.customLink,
+        countBy: normalizedFormValues.countBy,
       },
       isValid
     );
@@ -215,23 +236,26 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
           )}
         />
       </div>
+      <CountByControl value={countBy} onChange={setCountBy} />
       {formValues.presetPanelType === PresetPanelType.ALERT_COUNT_PANEL && (
         <>
-          <div className="mb-4 mt-2">
-            <div className="flex items-center justify-between">
-              <Subtitle>Show Firing Alerts Only</Subtitle>
-              <Controller
-                name="showFiringOnly"
-                control={control}
-                render={({ field }) => (
-                  <Switch
-                    checked={field.value}
-                    onChange={field.onChange}
-                  />
-                )}
-              />
+          {countBy?.field !== "incident" && (
+            <div className="mb-4 mt-2">
+              <div className="flex items-center justify-between">
+                <Subtitle>Show Firing Alerts Only</Subtitle>
+                <Controller
+                  name="showFiringOnly"
+                  control={control}
+                  render={({ field }) => (
+                    <Switch
+                      checked={field.value}
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
+              </div>
             </div>
-          </div>
+          )}
           <div className="mb-4 mt-2">
             <Subtitle>Custom Link (optional)</Subtitle>
             <Controller
