@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { Table, Card, Button, Badge } from "@tremor/react";
-import { HosstedWrapper } from "@hossted/keep-integration";
-import "@hossted/keep-integration/styles.css";
 import { AlertsTableBody } from "@/widgets/alerts-table/ui/alerts-table-body";
 import {
   AlertDto,
@@ -811,7 +809,6 @@ export function AlertTableServerSide({
   const widgetName = searchParams?.get("widgetName");
 
   return (
-    <HosstedWrapper>
     <div className="flex flex-col gap-4">
       <div className="flex-none">
         <div className="flex justify-between">
@@ -993,6 +990,5 @@ export function AlertTableServerSide({
         }}
       />
     </div>
-    </HosstedWrapper>
   );
 }

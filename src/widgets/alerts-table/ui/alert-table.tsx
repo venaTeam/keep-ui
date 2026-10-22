@@ -50,8 +50,6 @@ import { useGroupExpansion } from "@/utils/hooks/useGroupExpansion";
 import { PageTitle } from "@/shared/ui";
 import SettingsSelection from "./SettingsSelection";
 import { useHydratedSession } from "@/shared/lib/hooks/useHydratedSession";
-import { HosstedWrapper } from "@hossted/keep-integration";
-import "@hossted/keep-integration/styles.css";
 
 interface PresetTab {
   name: string;
@@ -363,7 +361,6 @@ export function AlertTable({
   };
 
   return (
-    <HosstedWrapper>
     <div className="h-screen flex flex-col gap-4">
       <div className="px-4 flex-none">
         <TitleAndFilters
@@ -487,6 +484,5 @@ export function AlertTable({
         }}
       />
     </div>
-    </HosstedWrapper>
   );
 }
