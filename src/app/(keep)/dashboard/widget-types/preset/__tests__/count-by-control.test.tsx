@@ -163,3 +163,124 @@ describe("CountByControl other fields", () => {
     ]);
   });
 });
+
+describe("CountByControl missing alerts toggle", () => {
+  const toggleRoot = (container: HTMLElement) =>
+    container.querySelector(
+      '[data-cy="dashboard-widget-form-count-missing"]'
+    ) as HTMLElement | null;
+
+  const toggle = (container: HTMLElement) =>
+    within(toggleRoot(container) as HTMLElement).getByRole("switch");
+
+  it("is not offered when counting alerts", () => {
+    const { container } = setup(undefined);
+
+    expect(toggleRoot(container)).toBeNull();
+  });
+
+  it("is labelled for incidents and off by default", () => {
+    const { container } = setup({ field: "incident", incidentStatus: "active" });
+
+    expect(screen.getByText("Show alerts not in an incident")).toBeInTheDocument();
+    expect(
+      screen.getByText("Adds how many matching alerts aren't in any incident.")
+    ).toBeInTheDocument();
+    expect(toggle(container)).toHaveAttribute("aria-checked", "false");
+  });
+
+  it("is labelled for the chosen field", () => {
+    setup({ field: "service" });
+
+    expect(screen.getByText("Show alerts with no service")).toBeInTheDocument();
+  });
+
+  it("shows a saved toggle as on", () => {
+    const { container } = setup({ field: "service", showMissing: true });
+
+    expect(toggle(container)).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("turns the toggle on", () => {
+    const { onChange, container } = setup({
+      field: "incident",
+      incidentStatus: "active",
+    });
+
+    fireEvent.click(toggle(container));
+
+    expect(onChange).toHaveBeenCalledWith({
+      field: "incident",
+      incidentStatus: "active",
+      showMissing: true,
+    });
+  });
+
+  it("turns the toggle off", () => {
+    const { onChange, container } = setup({
+      field: "service",
+      showMissing: true,
+    });
+
+    fireEvent.click(toggle(container));
+
+    expect(onChange).toHaveBeenCalledWith({
+      field: "service",
+      showMissing: false,
+    });
+  });
+
+  it("keeps the toggle when the incident status changes", async () => {
+    const { onChange, container } = setup({
+      field: "incident",
+      incidentStatus: "active",
+      showMissing: true,
+    });
+
+    await choose(
+      container,
+      "dashboard-widget-form-incident-status-select",
+      "Firing only"
+    );
+
+    expect(onChange).toHaveBeenCalledWith({
+      field: "incident",
+      incidentStatus: "firing",
+      showMissing: true,
+    });
+  });
+
+  it("keeps the toggle when the field changes", async () => {
+    const { onChange, container } = setup({
+      field: "service",
+      showMissing: true,
+    });
+
+    await choose(container, "dashboard-widget-form-count-field-select", "Host");
+
+    expect(onChange).toHaveBeenCalledWith({
+      field: "node_name",
+      showMissing: true,
+    });
+  });
+
+  it("keeps the toggle between incidents and another field", () => {
+    const { onChange } = setup({
+      field: "incident",
+      incidentStatus: "active",
+      showMissing: true,
+    });
+
+    fireEvent.click(radio("Other field"));
+
+    expect(onChange).toHaveBeenCalledWith({ field: "name", showMissing: true });
+  });
+
+  it("does not carry the toggle into an alerts count", () => {
+    const { onChange } = setup({ field: "service", showMissing: true });
+
+    fireEvent.click(radio("Alerts"));
+
+    expect(onChange).toHaveBeenCalledWith(undefined);
+  });
+});
