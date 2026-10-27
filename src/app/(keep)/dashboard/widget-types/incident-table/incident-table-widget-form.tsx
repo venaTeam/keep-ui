@@ -26,13 +26,6 @@ function keepKnown<T extends string>(known: T[], selected: string[]): T[] {
   return known.filter((value) => selected.includes(value));
 }
 
-function FieldError({ message }: { message?: string }) {
-  if (!message) {
-    return null;
-  }
-  return <p className="mt-1 text-xs text-red-500">{message}</p>;
-}
-
 /**
  * Incident table widget settings: which incident statuses and severities to
  * list, which columns to show, and how many incidents to show at most.
@@ -95,6 +88,7 @@ export function IncidentTableWidgetForm({
             )
           }
           error={!!errors.statuses}
+          errorMessage={errors.statuses}
           aria-label="Incident statuses to display"
           data-cy="dashboard-widget-form-incident-table-statuses"
         >
@@ -104,7 +98,6 @@ export function IncidentTableWidgetForm({
             </MultiSelectItem>
           ))}
         </MultiSelect>
-        <FieldError message={errors.statuses} />
       </div>
 
       <div className="mb-4">
@@ -120,6 +113,7 @@ export function IncidentTableWidgetForm({
             )
           }
           error={!!errors.severities}
+          errorMessage={errors.severities}
           aria-label="Incident severities to display"
           data-cy="dashboard-widget-form-incident-table-severities"
         >
@@ -129,7 +123,6 @@ export function IncidentTableWidgetForm({
             </MultiSelectItem>
           ))}
         </MultiSelect>
-        <FieldError message={errors.severities} />
       </div>
 
       <div className="mb-4">
@@ -145,6 +138,7 @@ export function IncidentTableWidgetForm({
             )
           }
           error={!!errors.columns}
+          errorMessage={errors.columns}
           aria-label="Columns"
           data-cy="dashboard-widget-form-incident-table-columns"
         >
@@ -154,7 +148,6 @@ export function IncidentTableWidgetForm({
             </MultiSelectItem>
           ))}
         </MultiSelect>
-        <FieldError message={errors.columns} />
       </div>
 
       <div className="mb-4">
