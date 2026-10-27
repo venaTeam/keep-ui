@@ -2,7 +2,7 @@
 
 Date: 2026-10-27
 Repo: `keep-ui` (frontend only; no gateway, event-handler, workflows or migration change)
-Approved mock: `.superpowers/brainstorm/28053-1793112460/content/incident-table-v1.html` (in the session scratchpad)
+Approved mock: reviewed in the brainstorming session (not committed)
 
 ## 1. Intent and why
 
@@ -85,7 +85,8 @@ Two further answers from the user, 2026-10-27:
   - The dashboard header has a single date filter named "Last received" (`DASHBOARD_FILTERS` in `[id]/dashboard.tsx`). It's stored in the URL as `time_stamp`, a JSON value `{ start, end }`.
   - `widget-types/preset/preset-grid-item.tsx` turns it into `lastReceived >= "<start>" && lastReceived <= "<end>"` and ANDs that with the preset CEL. With no `time_stamp`, there's no time clause.
   - Metric, Image, HTML and Grafana widgets ignore the filter.
-- **The Incidents page's own time picker** (`useTimeframeState`, URL params `timeFrameType`, `startDate`, `endDate`, `deltaMs`) filters on `creation_time`, not on last activity (`useIncidentsTableData.tsx`).- **Dark mode** is a global CSS `invert()` filter (`workaround-dark` class). Build for light mode only and let the filter handle dark.
+- **The Incidents page's own time picker** (`useTimeframeState`, URL params `timeFrameType`, `startDate`, `endDate`, `deltaMs`) filters on `creation_time`, not on last activity (`useIncidentsTableData.tsx`).
+- **Dark mode** is a global CSS `invert()` filter (`workaround-dark` class). Build for light mode only and let the filter handle dark.
 - **Team conventions.**
   - No inline explanatory comments; docstrings and JSDoc are fine.
   - Run `npm run typecheck` and `npm run lint` yourself, because the Next build ignores both.
@@ -138,7 +139,7 @@ These fields come below the shared Widget Name and Widget Type fields, in this o
   | `status` | Status | A small coloured badge with the capitalised status: Firing (red), Acknowledged (blue), Suppressed (gray). |
   | `severity` | Severity | The existing severity colour bar (`SeverityBorderIcon`) plus the capitalised label. |
   | `name` | Name | `user_generated_name` if present, else `ai_generated_name`. One line, truncated, full text on hover. |
-  | `description` | Description | `user_summary` if present, else `generated_summary`, shown as **plain text** with any HTML or markdown stripped. One line, truncated, full text on hover. |
+  | `description` | Description | `user_summary` if present, else `generated_summary`, shown as **plain text** with HTML stripped (summaries are HTML, as the Incidents page renders them). One line, truncated, full text on hover. |
   | `alertsCount` | Alerts | `alerts_count`. |
   | `creationTime` | Created | Relative time ("12 min ago"), with the absolute date and time on hover. |
   | `snLink` | SN Link | The URL saved by "Link ticket", which the user confirmed is the only source. A link that opens the ticket in a new tab. It shows `servicenow_ticket_id`, or "Open" when there's no ID, followed by ↗. If there's no `servicenow_ticket_url`, it falls back to `ticketing_ticket_url` and `ticketing_ticket_id`. If neither URL exists, it shows a muted "—". |

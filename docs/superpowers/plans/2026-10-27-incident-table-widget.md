@@ -18,7 +18,7 @@ No backend change.
 ## Global Constraints
 
 - **Worktree and branch.**
-  - Worktree: `/Users/yarin/keep-namespace/.worktrees/incident-table/keep-ui`. Branch: `feat/incident-table-widget`, cut from `origin/dev`.
+  - Worktree: `incident-table/keep-ui` under the workspace's `.worktrees/` directory. Branch: `feat/incident-table-widget`, cut from `origin/dev`.
   - Never commit to `dev` or `main`. Never push, open a PR or comment without the user's explicit go.
 - **Comments.** No inline explanatory comments. JSDoc on exported functions and components is fine.
 - **Styling.** Light-mode styles only. Dark mode is a global `invert()` filter.
@@ -60,7 +60,7 @@ No backend change.
 ### Task 1: Worktree, config model and pure helpers
 
 **Files:**
-- Create: `docs/superpowers/specs/2026-10-27-incident-table-widget-design.md`, copied from `/private/tmp/claude-501/-Users-yarin-keep-namespace/6f8811fd-adfd-4ba6-92de-e2a211844171/scratchpad/2026-10-27-incident-table-widget-design.md`
+- Create: `docs/superpowers/specs/2026-10-27-incident-table-widget-design.md`, copied from the brainstorming session
 - Create: `docs/superpowers/plans/2026-10-27-incident-table-widget.md` (this file)
 - Modify: `src/app/(keep)/dashboard/types.tsx`
 - Modify: `src/app/(keep)/dashboard/widget-type-fields.ts`
@@ -95,11 +95,11 @@ No backend change.
 
 - [ ] **Step 1: Create the worktree and commit the spec and plan.** Use superpowers:using-git-worktrees:
   ```bash
-  git -C /Users/yarin/keep-namespace/keep-ui fetch origin dev
-  git -C /Users/yarin/keep-namespace/keep-ui worktree add -b feat/incident-table-widget /Users/yarin/keep-namespace/.worktrees/incident-table/keep-ui origin/dev
+  git -C <workspace>/keep-ui fetch origin dev
+  git -C <workspace>/keep-ui worktree add -b feat/incident-table-widget <workspace>/.worktrees/incident-table/keep-ui origin/dev
   ```
   Then:
-  1. Clone `node_modules` into the worktree with `cp -Rc` from `/Users/yarin/keep-namespace/keep-ui/node_modules`. Don't symlink it, because Turbopack needs a real copy. Copy `.env.local` too, if it exists.
+  1. Clone `node_modules` into the worktree with `cp -Rc` from `<workspace>/keep-ui/node_modules`, where `<workspace>` is the keep-namespace directory. Don't symlink it, because Turbopack needs a real copy. Copy `.env.local` too, if it exists.
   2. Copy the spec and this plan into `docs/superpowers/`.
   3. Commit with message `docs: incident table widget spec and plan`.
 
