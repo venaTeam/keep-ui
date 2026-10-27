@@ -32,6 +32,7 @@ export enum WidgetType {
   IMAGE = "IMAGE",
   HTML = "HTML",
   GRAFANA_PANEL = "GRAFANA_PANEL",
+  INCIDENT_TABLE = "INCIDENT_TABLE",
 }
 
 export type ImageFit = "contain" | "cover";
@@ -50,6 +51,26 @@ export interface HtmlWidgetConfig {
 
 export interface GrafanaPanelWidgetConfig {
   url: string;
+}
+
+export type IncidentTableStatus = "firing" | "acknowledged" | "suppressed";
+
+export type IncidentTableSeverity = "critical" | "high" | "warning";
+
+export type IncidentTableColumn =
+  | "status"
+  | "severity"
+  | "name"
+  | "description"
+  | "alertsCount"
+  | "creationTime"
+  | "snLink";
+
+export interface IncidentTableWidgetConfig {
+  statuses: IncidentTableStatus[];
+  severities: IncidentTableSeverity[];
+  columns: IncidentTableColumn[];
+  limit: number;
 }
 
 export enum PresetPanelType {
@@ -75,6 +96,7 @@ export interface WidgetData extends LayoutItem {
   image?: ImageWidgetConfig;
   html?: HtmlWidgetConfig;
   grafanaPanel?: GrafanaPanelWidgetConfig;
+  incidentTable?: IncidentTableWidgetConfig;
 }
 
 export interface Threshold {
