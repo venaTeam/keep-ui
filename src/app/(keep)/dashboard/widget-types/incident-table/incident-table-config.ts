@@ -91,7 +91,8 @@ export function buildIncidentTableCel(
 
 /**
  * Builds the Incidents page URL whose facet panel starts with the widget's
- * status and severity selection.
+ * status and severity selection. Severity numbers are encoded as quoted
+ * strings because the severity facet's options carry string values.
  */
 export function buildIncidentsPageUrl(
   config: IncidentTableWidgetConfig
@@ -106,7 +107,7 @@ export function buildIncidentsPageUrl(
   params.set(
     "facet_severity",
     selectedSeverities(config)
-      .map((option) => valueToString(option.order))
+      .map((option) => valueToString(String(option.order)))
       .join(",")
   );
   return `/incidents?${params.toString()}`;

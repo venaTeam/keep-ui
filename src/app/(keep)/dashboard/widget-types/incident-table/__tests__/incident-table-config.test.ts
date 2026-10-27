@@ -1,4 +1,5 @@
 import { IncidentDto } from "@/entities/incidents/model";
+import { stringToValue } from "@/features/filter/store/utils";
 import {
   DEFAULT_INCIDENT_TABLE_CONFIG,
   INCIDENT_TABLE_COLUMNS,
@@ -118,11 +119,25 @@ describe("buildIncidentsPageUrl", () => {
     expect(url.searchParams.get("facet_status")).toBe(
       "'firing','acknowledged'"
     );
-    expect(url.searchParams.get("facet_severity")).toBe("5");
+    expect(url.searchParams.get("facet_severity")).toBe("'5'");
     expect([...url.searchParams.keys()].sort()).toEqual([
       "facet_severity",
       "facet_status",
     ]);
+  });
+});
+
+describe("buildIncidentsPageUrl severity tokens", () => {
+  it("encodes severities as the quoted string tokens the severity facet options use", () => {
+    const url = new URL(
+      buildIncidentsPageUrl(DEFAULT_INCIDENT_TABLE_CONFIG),
+      "http://x"
+    );
+    const tokens = (url.searchParams.get("facet_severity") ?? "").split(",");
+    expect(tokens).toEqual(["'5'", "'4'", "'3'"]);
+    tokens.forEach((token) => {
+      expect(typeof stringToValue(token)).toBe("string");
+    });
   });
 });
 
