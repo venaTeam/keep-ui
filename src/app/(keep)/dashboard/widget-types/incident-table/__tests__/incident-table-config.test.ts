@@ -316,6 +316,28 @@ describe("toPlainText", () => {
     );
   });
 
+  it("separates words across paragraph boundaries", () => {
+    expect(toPlainText("<p>a</p><p>b</p>")).toBe("a b");
+  });
+
+  it("separates words across line breaks", () => {
+    expect(toPlainText("a<br>b")).toBe("a b");
+  });
+
+  it("keeps inline markup inside a word together", () => {
+    expect(toPlainText("<b>wo</b>rd")).toBe("word");
+  });
+
+  it("falls back to stripping tags when DOMParser is unavailable", () => {
+    const original = window.DOMParser;
+    (window as unknown as { DOMParser?: unknown }).DOMParser = undefined;
+    try {
+      expect(toPlainText("<p>a</p><p>b</p>")).toBe("a b");
+    } finally {
+      window.DOMParser = original;
+    }
+  });
+
   it("returns an empty string for missing input", () => {
     expect(toPlainText(null)).toBe("");
     expect(toPlainText(undefined)).toBe("");

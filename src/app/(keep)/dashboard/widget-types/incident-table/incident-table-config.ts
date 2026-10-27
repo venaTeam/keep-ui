@@ -183,15 +183,29 @@ export function getIncidentTicketLink(
   return null;
 }
 
+const WORD_BREAKING_ELEMENTS =
+  "br, hr, p, div, li, ul, ol, h1, h2, h3, h4, h5, h6, blockquote, pre, table, tr, td, th, section, article";
+
 /**
  * Reduces an HTML fragment to its visible text with whitespace collapsed.
+ * Line breaks and block elements separate words, inline elements do not.
  */
 export function toPlainText(html: string | null | undefined): string {
   if (!html) {
     return "";
   }
+  if (typeof DOMParser === "undefined") {
+    return html
+      .replace(/<[^>]*>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
   const doc = new DOMParser().parseFromString(html, "text/html");
   doc.querySelectorAll("script, style").forEach((node) => node.remove());
+  doc.querySelectorAll(WORD_BREAKING_ELEMENTS).forEach((node) => {
+    node.before(" ");
+    node.after(" ");
+  });
   return (doc.body.textContent ?? "").replace(/\s+/g, " ").trim();
 }
 
