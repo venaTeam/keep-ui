@@ -12,8 +12,10 @@ import {
   buildIncidentsPageUrl,
   describeIncidentTableFilters,
   getIncidentTicketLink,
+  normalizeIncidentTableConfig,
   orderIncidentTableColumns,
   toPlainText,
+  toUtcTimestamp,
   validateIncidentTableConfig,
 } from "../incident-table-config";
 
@@ -326,9 +328,173 @@ describe("getIncidentTicketLink", () => {
     ).toEqual({ url: "https://sn/1", label: "42" });
   });
 
+  it("skips a non-http ServiceNow url and uses the generic ticketing url", () => {
+    expect(
+      getIncidentTicketLink(
+        inc({
+          enrichments: {
+            servicenow_ticket_url: "javascript:alert(1)",
+            ticketing_ticket_url: "https://t/2",
+            ticketing_ticket_id: "T2",
+          },
+        })
+      )
+    ).toEqual({ url: "https://t/2", label: "T2" });
+  });
+
+  it("returns null when every candidate url is not http(s)", () => {
+    expect(
+      getIncidentTicketLink(
+        inc({
+          enrichments: {
+            servicenow_ticket_url: "javascript:alert(1)",
+            ticketing_ticket_url: "ftp://t/2",
+          },
+        })
+      )
+    ).toBeNull();
+  });
+
+  it("trims the url", () => {
+    expect(
+      getIncidentTicketLink(
+        inc({ enrichments: { servicenow_ticket_url: "  https://sn/1  " } })
+      )
+    ).toEqual({ url: "https://sn/1", label: "Open" });
+  });
+
+  it("accepts an upper-case scheme", () => {
+    expect(
+      getIncidentTicketLink(
+        inc({ enrichments: { servicenow_ticket_url: "HTTPS://sn/1" } })
+      )
+    ).toEqual({ url: "HTTPS://sn/1", label: "Open" });
+  });
+
   it("returns null when no ticket is linked", () => {
     expect(getIncidentTicketLink(inc({ enrichments: {} }))).toBeNull();
     expect(getIncidentTicketLink(inc({}))).toBeNull();
+  });
+});
+
+describe("toUtcTimestamp", () => {
+  it("marks a timezone-less gateway timestamp as UTC", () => {
+    expect(toUtcTimestamp("2026-10-27T16:30:47.243739")).toBe(
+      "2026-10-27T16:30:47.243739Z"
+    );
+  });
+
+  it("leaves a Z timestamp unchanged", () => {
+    expect(toUtcTimestamp("2026-10-27T16:30:47Z")).toBe("2026-10-27T16:30:47Z");
+  });
+
+  it("leaves a timestamp with a colon offset unchanged", () => {
+    expect(toUtcTimestamp("2026-10-27T16:30:47+03:00")).toBe(
+      "2026-10-27T16:30:47+03:00"
+    );
+    expect(toUtcTimestamp("2026-10-27T16:30:47-05:30")).toBe(
+      "2026-10-27T16:30:47-05:30"
+    );
+  });
+
+  it("leaves a timestamp with a compact offset unchanged", () => {
+    expect(toUtcTimestamp("2026-10-27T16:30:47+0300")).toBe(
+      "2026-10-27T16:30:47+0300"
+    );
+  });
+
+  it("serialises a Date as an ISO string", () => {
+    expect(toUtcTimestamp(new Date("2026-10-27T16:30:47.000Z"))).toBe(
+      "2026-10-27T16:30:47.000Z"
+    );
+  });
+});
+
+describe("normalizeIncidentTableConfig", () => {
+  it("returns the defaults for a missing or non-object value", () => {
+    expect(normalizeIncidentTableConfig(undefined)).toEqual(
+      DEFAULT_INCIDENT_TABLE_CONFIG
+    );
+    expect(normalizeIncidentTableConfig(null)).toEqual(
+      DEFAULT_INCIDENT_TABLE_CONFIG
+    );
+    expect(normalizeIncidentTableConfig("firing")).toEqual(
+      DEFAULT_INCIDENT_TABLE_CONFIG
+    );
+    expect(normalizeIncidentTableConfig([])).toEqual(
+      DEFAULT_INCIDENT_TABLE_CONFIG
+    );
+  });
+
+  it("keeps a complete valid config", () => {
+    const config = {
+      statuses: ["suppressed" as const],
+      severities: ["critical" as const],
+      columns: ["name" as const],
+      limit: 5,
+    };
+    expect(normalizeIncidentTableConfig(config)).toEqual(config);
+  });
+
+  it("fills the fields a partial config is missing", () => {
+    expect(normalizeIncidentTableConfig({ statuses: ["firing"] })).toEqual({
+      ...DEFAULT_INCIDENT_TABLE_CONFIG,
+      statuses: ["firing"],
+    });
+  });
+
+  it("uses the default for a field of the wrong type", () => {
+    expect(
+      normalizeIncidentTableConfig({
+        statuses: "firing",
+        severities: { critical: true },
+        columns: 3,
+        limit: "5",
+      })
+    ).toEqual(DEFAULT_INCIDENT_TABLE_CONFIG);
+  });
+
+  it("drops unknown values from the lists", () => {
+    expect(
+      normalizeIncidentTableConfig({
+        statuses: ["firing", "resolved", 7],
+        severities: ["low", "high"],
+        columns: ["name", "bogus", "status"],
+      })
+    ).toEqual({
+      ...DEFAULT_INCIDENT_TABLE_CONFIG,
+      statuses: ["firing"],
+      severities: ["high"],
+      columns: ["status", "name"],
+    });
+  });
+
+  it("uses the default for a list that is empty after filtering", () => {
+    expect(
+      normalizeIncidentTableConfig({
+        statuses: [],
+        severities: ["low"],
+        columns: ["bogus"],
+      })
+    ).toEqual(DEFAULT_INCIDENT_TABLE_CONFIG);
+  });
+
+  it("uses the default limit when it is not a whole number from 1 to 50", () => {
+    for (const limit of [0, 51, -3, 2.5, NaN, null, "7"]) {
+      expect(normalizeIncidentTableConfig({ limit }).limit).toBe(
+        DEFAULT_INCIDENT_TABLE_CONFIG.limit
+      );
+    }
+    expect(normalizeIncidentTableConfig({ limit: 1 }).limit).toBe(1);
+    expect(normalizeIncidentTableConfig({ limit: 50 }).limit).toBe(50);
+  });
+
+  it("does not hand out the default arrays", () => {
+    const normalized = normalizeIncidentTableConfig(undefined);
+    expect(normalized.statuses).not.toBe(
+      DEFAULT_INCIDENT_TABLE_CONFIG.statuses
+    );
+    expect(normalized.columns).not.toBe(DEFAULT_INCIDENT_TABLE_CONFIG.columns);
   });
 });
 

@@ -58,6 +58,72 @@ export const INCIDENT_TABLE_NEW_WIDGET_LAYOUT: Partial<LayoutItem> = {
   static: false,
 };
 
+/**
+ * Rebuilds a widget config from saved data that may be partial or stale.
+ * Each field keeps only known values and falls back to its default when it
+ * is missing, of the wrong type, empty after filtering, or out of range.
+ */
+export function normalizeIncidentTableConfig(
+  raw: unknown
+): IncidentTableWidgetConfig {
+  const source =
+    typeof raw === "object" && raw !== null && !Array.isArray(raw)
+      ? (raw as Record<string, unknown>)
+      : {};
+
+  const pickKnown = <T extends string>(
+    value: unknown,
+    known: readonly T[],
+    fallback: T[]
+  ): T[] => {
+    if (!Array.isArray(value)) {
+      return [...fallback];
+    }
+    const picked = known.filter((item) => value.includes(item));
+    return picked.length > 0 ? picked : [...fallback];
+  };
+
+  const limit = source.limit;
+  return {
+    statuses: pickKnown(
+      source.statuses,
+      INCIDENT_TABLE_STATUS_OPTIONS.map((option) => option.value),
+      DEFAULT_INCIDENT_TABLE_CONFIG.statuses
+    ),
+    severities: pickKnown(
+      source.severities,
+      INCIDENT_TABLE_SEVERITY_OPTIONS.map((option) => option.value),
+      DEFAULT_INCIDENT_TABLE_CONFIG.severities
+    ),
+    columns: pickKnown(
+      source.columns,
+      INCIDENT_TABLE_COLUMNS.map((column) => column.id),
+      DEFAULT_INCIDENT_TABLE_CONFIG.columns
+    ),
+    limit:
+      typeof limit === "number" &&
+      Number.isInteger(limit) &&
+      limit >= INCIDENT_TABLE_LIMIT_MIN &&
+      limit <= INCIDENT_TABLE_LIMIT_MAX
+        ? limit
+        : DEFAULT_INCIDENT_TABLE_CONFIG.limit,
+  };
+}
+
+const UTC_OFFSET_SUFFIX = /(?:Z|[+-]\d{2}:?\d{2})$/i;
+
+/**
+ * Returns an ISO timestamp that carries its timezone. The gateway sends
+ * creation times without one, in UTC, so a missing offset is read as UTC
+ * instead of the viewer's local time.
+ */
+export function toUtcTimestamp(value: string | Date): string {
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+  return UTC_OFFSET_SUFFIX.test(value) ? value : `${value}Z`;
+}
+
 const TICKET_KEYS = [
   { url: "servicenow_ticket_url", id: "servicenow_ticket_id" },
   { url: "ticketing_ticket_url", id: "ticketing_ticket_id" },
@@ -169,14 +235,16 @@ function readIncidentField(
 
 /**
  * Finds the ticket linked to an incident, preferring ServiceNow over the
- * generic ticketing fields. The label is the ticket id, or "Open" without one.
+ * generic ticketing fields. Only http(s) urls count, so an unusable one falls
+ * through to the next candidate. The label is the ticket id, or "Open"
+ * without one.
  */
 export function getIncidentTicketLink(
   incident: IncidentDto
 ): { url: string; label: string } | null {
   for (const key of TICKET_KEYS) {
-    const url = readIncidentField(incident, key.url);
-    if (url) {
+    const url = readIncidentField(incident, key.url)?.trim();
+    if (url && /^https?:\/\//i.test(url)) {
       return { url, label: readIncidentField(incident, key.id) ?? "Open" };
     }
   }

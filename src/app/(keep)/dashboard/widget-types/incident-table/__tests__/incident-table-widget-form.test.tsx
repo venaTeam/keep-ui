@@ -82,6 +82,31 @@ describe("IncidentTableWidgetForm", () => {
     expect(value).not.toHaveProperty("w");
   });
 
+  it("fills the fields a partial saved config is missing", () => {
+    const editingItem = {
+      i: "w-1",
+      name: "Open incidents",
+      widgetType: WidgetType.INCIDENT_TABLE,
+      incidentTable: { statuses: ["firing"] },
+    } as unknown as WidgetData;
+    const onChange = jest.fn();
+    render(
+      <IncidentTableWidgetForm editingItem={editingItem} onChange={onChange} />
+    );
+
+    const [value, isValid] = lastCall(onChange);
+    expect(isValid).toBe(true);
+    expect(value).toEqual({
+      incidentTable: {
+        ...DEFAULT_INCIDENT_TABLE_CONFIG,
+        statuses: ["firing"],
+      },
+    });
+    expect(screen.getByLabelText(LIMIT_LABEL)).toHaveValue(
+      DEFAULT_INCIDENT_TABLE_CONFIG.limit
+    );
+  });
+
   it("emits the new limit as a number", () => {
     const onChange = jest.fn();
     render(<IncidentTableWidgetForm onChange={onChange} />);

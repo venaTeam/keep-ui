@@ -8,6 +8,7 @@ import {
 } from "../../../types";
 import {
   DEFAULT_INCIDENT_TABLE_CONFIG,
+  INCIDENT_TABLE_COLUMNS,
   buildIncidentTableCel,
   buildIncidentsPageUrl,
 } from "../incident-table-config";
@@ -24,6 +25,16 @@ jest.mock("next/navigation", () => ({
 
 jest.mock("@/utils/hooks/useIncidents", () => ({
   useIncidents: jest.fn(),
+}));
+
+jest.mock("react-timeago", () => ({
+  __esModule: true,
+  default: ({ date, title }: { date: unknown; title?: string }) =>
+    require("react").createElement(
+      "time",
+      { "data-testid": "time-ago", "data-date": String(date), title },
+      "ago"
+    ),
 }));
 
 const mockUseIncidents = useIncidents as unknown as jest.Mock;
@@ -169,6 +180,114 @@ describe("IncidentTableGridItem", () => {
     );
   });
 
+  it("falls back to the generated summary when the user summary is empty", () => {
+    setIncidents({
+      data: {
+        count: 1,
+        limit: 10,
+        offset: 0,
+        items: [
+          {
+            ...i1,
+            user_summary: "",
+            generated_summary: "<p>Auto <b>generated</b> summary</p>",
+          },
+        ],
+      },
+    });
+    renderTable();
+
+    const description = screen.getByText("Auto generated summary");
+    expect(description).toHaveAttribute("title", "Auto generated summary");
+  });
+
+  it("treats a timezone-less creation time as UTC", () => {
+    setIncidents({
+      data: {
+        count: 1,
+        limit: 10,
+        offset: 0,
+        items: [{ ...i1, creation_time: "2026-10-27T16:30:47.243739" }],
+      },
+    });
+    renderTable({ columns: ["creationTime"] });
+
+    const timeAgo = screen.getByTestId("time-ago");
+    expect(timeAgo).toHaveAttribute("data-date", "2026-10-27T16:30:47.243739Z");
+    expect(timeAgo).toHaveAttribute(
+      "title",
+      new Date("2026-10-27T16:30:47.243739Z").toLocaleString()
+    );
+  });
+
+  it("leaves a creation time that already has an offset alone", () => {
+    setIncidents({
+      data: {
+        count: 1,
+        limit: 10,
+        offset: 0,
+        items: [{ ...i1, creation_time: "2026-10-27T16:30:47+03:00" }],
+      },
+    });
+    renderTable({ columns: ["creationTime"] });
+
+    expect(screen.getByTestId("time-ago")).toHaveAttribute(
+      "data-date",
+      "2026-10-27T16:30:47+03:00"
+    );
+  });
+
+  it("renders a partial saved config with the default columns", () => {
+    const item = {
+      i: "w1",
+      name: "Incident Table",
+      widgetType: WidgetType.INCIDENT_TABLE,
+      incidentTable: { statuses: ["firing"] },
+    } as unknown as WidgetData;
+
+    expect(() => render(<IncidentTableGridItem item={item} />)).not.toThrow();
+
+    expect(
+      screen.getAllByRole("columnheader").map((header) => header.textContent)
+    ).toEqual(INCIDENT_TABLE_COLUMNS.map((column) => column.header));
+    expect(mockUseIncidents).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cel: buildIncidentTableCel({
+          ...DEFAULT_INCIDENT_TABLE_CONFIG,
+          statuses: ["firing"],
+        }),
+        limit: DEFAULT_INCIDENT_TABLE_CONFIG.limit,
+      }),
+      expect.anything()
+    );
+  });
+
+  it("falls through a non-http ServiceNow url to the generic ticket link", () => {
+    setIncidents({
+      data: {
+        count: 1,
+        limit: 10,
+        offset: 0,
+        items: [
+          {
+            ...i1,
+            enrichments: {
+              servicenow_ticket_url: "javascript:alert(1)",
+              ticketing_ticket_url: "https://t/2",
+              ticketing_ticket_id: "T2",
+            },
+          },
+        ],
+      },
+    });
+    renderTable();
+
+    expect(screen.getByRole("link", { name: "T2" })).toHaveAttribute(
+      "href",
+      "https://t/2"
+    );
+  });
+
   it("shows a dash instead of a link for a non-http ticket url", () => {
     setIncidents({
       data: {
@@ -255,6 +374,49 @@ describe("IncidentTableGridItem", () => {
     mockPush.mockClear();
     fireEvent.click(screen.getByRole("link", { name: "INC001" }));
     expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it("row click does nothing while text is selected", () => {
+    const selection = jest
+      .spyOn(window, "getSelection")
+      .mockReturnValue({ toString: () => "Payments" } as unknown as Selection);
+    try {
+      renderTable();
+
+      fireEvent.click(screen.getByText("Payments down"));
+
+      expect(mockPush).not.toHaveBeenCalled();
+    } finally {
+      selection.mockRestore();
+    }
+  });
+
+  it("row click opens the incident when the selection is empty", () => {
+    const selection = jest
+      .spyOn(window, "getSelection")
+      .mockReturnValue({ toString: () => "" } as unknown as Selection);
+    try {
+      renderTable();
+
+      fireEvent.click(screen.getByText("Payments down"));
+
+      expect(mockPush).toHaveBeenCalledWith("/incidents/i1/alerts");
+    } finally {
+      selection.mockRestore();
+    }
+  });
+
+  it("row click opens the incident when there is no selection object", () => {
+    const selection = jest.spyOn(window, "getSelection").mockReturnValue(null);
+    try {
+      renderTable();
+
+      fireEvent.click(screen.getByText("Payments down"));
+
+      expect(mockPush).toHaveBeenCalledWith("/incidents/i1/alerts");
+    } finally {
+      selection.mockRestore();
+    }
   });
 
   it("shows an empty state", () => {

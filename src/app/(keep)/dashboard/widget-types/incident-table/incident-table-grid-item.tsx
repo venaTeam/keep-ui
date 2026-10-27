@@ -11,14 +11,15 @@ import { SeverityBorderIcon, UISeverity } from "@/shared/ui";
 import { useIncidents } from "@/utils/hooks/useIncidents";
 import { IncidentTableColumn, WidgetData } from "../../types";
 import {
-  DEFAULT_INCIDENT_TABLE_CONFIG,
   INCIDENT_TABLE_COLUMNS,
   buildIncidentTableCel,
   buildIncidentsPageUrl,
   describeIncidentTableFilters,
   getIncidentTicketLink,
+  normalizeIncidentTableConfig,
   orderIncidentTableColumns,
   toPlainText,
+  toUtcTimestamp,
 } from "./incident-table-config";
 
 const REFRESH_INTERVAL_MS = 30000;
@@ -86,16 +87,18 @@ function renderCell(column: IncidentTableColumn, incident: IncidentDto) {
     }
     case "alertsCount":
       return <span>{incident.alerts_count}</span>;
-    case "creationTime":
+    case "creationTime": {
+      const createdAt = toUtcTimestamp(incident.creation_time);
       return (
         <TimeAgo
-          date={incident.creation_time}
-          title={new Date(incident.creation_time).toLocaleString()}
+          date={createdAt}
+          title={new Date(createdAt).toLocaleString()}
         />
       );
+    }
     case "snLink": {
       const ticket = getIncidentTicketLink(incident);
-      if (ticket && /^https?:\/\//i.test(ticket.url)) {
+      if (ticket) {
         return (
           <a
             href={ticket.url}
@@ -122,7 +125,7 @@ function renderCell(column: IncidentTableColumn, incident: IncidentDto) {
  */
 export default function IncidentTableGridItem({ item }: { item: WidgetData }) {
   const router = useRouter();
-  const config = item.incidentTable ?? DEFAULT_INCIDENT_TABLE_CONFIG;
+  const config = normalizeIncidentTableConfig(item.incidentTable);
   const { data, isLoading, error } = useIncidents(
     {
       candidate: null,
@@ -189,7 +192,12 @@ export default function IncidentTableGridItem({ item }: { item: WidgetData }) {
         key={incident.id}
         role="row"
         className="contents"
-        onClick={() => router.push(`/incidents/${incident.id}/alerts`)}
+        onClick={() => {
+          if (window.getSelection()?.toString()) {
+            return;
+          }
+          router.push(`/incidents/${incident.id}/alerts`);
+        }}
       >
         {columns.map((column, index) => (
           <div

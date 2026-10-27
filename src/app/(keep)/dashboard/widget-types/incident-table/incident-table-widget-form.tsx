@@ -13,11 +13,11 @@ import {
   WidgetData,
 } from "../../types";
 import {
-  DEFAULT_INCIDENT_TABLE_CONFIG,
   INCIDENT_TABLE_COLUMNS,
   INCIDENT_TABLE_NEW_WIDGET_LAYOUT,
   INCIDENT_TABLE_SEVERITY_OPTIONS,
   INCIDENT_TABLE_STATUS_OPTIONS,
+  normalizeIncidentTableConfig,
   orderIncidentTableColumns,
   validateIncidentTableConfig,
 } from "./incident-table-config";
@@ -37,7 +37,7 @@ export function IncidentTableWidgetForm({
   editingItem?: WidgetData | null;
   onChange: (formValue: Partial<WidgetData>, isValid: boolean) => void;
 }) {
-  const initial = editingItem?.incidentTable ?? DEFAULT_INCIDENT_TABLE_CONFIG;
+  const initial = normalizeIncidentTableConfig(editingItem?.incidentTable);
   const [statuses, setStatuses] = useState<IncidentTableStatus[]>(
     initial.statuses
   );
