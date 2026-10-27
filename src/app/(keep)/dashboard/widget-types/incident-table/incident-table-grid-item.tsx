@@ -258,17 +258,19 @@ export default function IncidentTableGridItem({ item }: { item: WidgetData }) {
           </Button>
         </div>
       </div>
-      {failed ? (
+      {!!error && (
         <div className="py-4 text-center text-sm text-gray-500">
           Couldn&apos;t load incidents
         </div>
-      ) : !isLoading && incidents.length === 0 ? (
-        <div className="py-4 text-center text-sm text-gray-500">
-          No incidents match these filters
-        </div>
-      ) : (
-        renderTable()
       )}
+      {!failed &&
+        (!isLoading && incidents.length === 0 ? (
+          <div className="py-4 text-center text-sm text-gray-500">
+            No incidents match these filters
+          </div>
+        ) : (
+          renderTable()
+        ))}
     </div>
   );
 }

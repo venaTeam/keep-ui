@@ -283,11 +283,24 @@ describe("IncidentTableGridItem", () => {
     expect(screen.getByText("Couldn't load incidents")).toBeInTheDocument();
   });
 
-  it("keeps the last results when a refresh fails", () => {
+  it("shows the error above the last results when a refresh fails", () => {
     setIncidents({ error: new Error() });
     renderTable();
 
+    const errorLine = screen.getByText("Couldn't load incidents");
     expect(screen.getByText("Payments down")).toBeInTheDocument();
-    expect(screen.queryByText("Couldn't load incidents")).toBeNull();
+    expect(screen.getByText("Disk full")).toBeInTheDocument();
+    expect(
+      screen.getByText("Incidents count:").nextElementSibling
+    ).toHaveTextContent(/^2$/);
+    expect(
+      errorLine.compareDocumentPosition(screen.getByRole("table")) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    expect(
+      screen
+        .getByText("Firing, Acknowledged, Suppressed · Critical, High, Warning")
+        .compareDocumentPosition(errorLine) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
   });
 });
