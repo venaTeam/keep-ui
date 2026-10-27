@@ -29,8 +29,8 @@ describe("IncidentTableWidgetForm", () => {
 
     expect(lastCall(onChange)).toEqual([
       {
-        w: 8,
-        h: 6,
+        w: 16,
+        h: 11,
         minW: 0,
         minH: 2,
         static: false,

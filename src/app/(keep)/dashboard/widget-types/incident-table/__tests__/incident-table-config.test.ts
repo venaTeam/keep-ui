@@ -62,10 +62,10 @@ describe("incident table defaults", () => {
     expect(INCIDENT_TABLE_LIMIT_MAX).toBe(50);
   });
 
-  it("lays a new widget out at 8 by 6", () => {
+  it("lays a new widget out at 16 by 11", () => {
     expect(INCIDENT_TABLE_NEW_WIDGET_LAYOUT).toEqual({
-      w: 8,
-      h: 6,
+      w: 16,
+      h: 11,
       minW: 0,
       minH: 2,
       static: false,

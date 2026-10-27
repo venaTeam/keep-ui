@@ -26,7 +26,7 @@ No backend change.
 - **Statuses** offered, in order: `firing`, `acknowledged`, `suppressed`. Labels: Firing, Acknowledged, Suppressed.
 - **Severities** offered, in order: `critical`, `high`, `warning`. Labels: Critical, High, Warning. CEL and facet numbers: critical=5, high=4, warning=3.
 - **Columns**, in this fixed order: `status`, `severity`, `name`, `description`, `alertsCount`, `creationTime`, `snLink`. Headers: Status, Severity, Name, Description, Alerts, Created, SN Link.
-- **New-widget defaults:** all 3 statuses, all 3 severities, all 7 columns, `limit` 10. `limit` must be an integer from 1 to 50. The layout is `w: 8, h: 6, minW: 0, minH: 2, static: false`.
+- **New-widget defaults:** all 3 statuses, all 3 severities, all 7 columns, `limit` 10. `limit` must be an integer from 1 to 50. The layout is `w: 16, h: 11, minW: 0, minH: 2, static: false` (changed from the Alert Table's w 8, h 6 after the browser proof: too small to read).
 - **Exact copy:**
   - "Incident Table"
   - "Incident statuses to display"
@@ -174,7 +174,7 @@ No backend change.
 - Produces: `export function IncidentTableWidgetForm({ editingItem, onChange }: { editingItem?: WidgetData | null; onChange: (formValue: Partial<WidgetData>, isValid: boolean) => void }): JSX.Element`. It has the same contract as `GrafanaPanelWidgetForm` (`widget-types/grafana-panel/grafana-panel-widget-form.tsx`), including the `onChangeRef` pattern. Root element: `data-cy="dashboard-widget-form-incident-table"`.
 
 - [ ] **Step 1: Write the failing tests.** Follow `grafana-panel-widget-form.test.tsx` for `lastCall`, and `columns-selection.test.tsx` for opening a Tremor `MultiSelect`.
-  - `emits the defaults and the new-widget layout`: the last call is `[{ w: 8, h: 6, minW: 0, minH: 2, static: false, incidentTable: DEFAULT_INCIDENT_TABLE_CONFIG }, true]`.
+  - `emits the defaults and the new-widget layout`: the last call is `[{ w: 16, h: 11, minW: 0, minH: 2, static: false, incidentTable: DEFAULT_INCIDENT_TABLE_CONFIG }, true]`.
   - `pre-fills from the edited widget and emits no layout`: `editingItem.incidentTable = { statuses: ["suppressed"], severities: ["critical"], columns: ["name"], limit: 5 }`. The last call is `[{ incidentTable: thatConfig }, true]`, with no `w` property.
   - `falls back to defaults when the edited widget has no incidentTable`: `editingItem` is a preset widget, and the last call's `incidentTable` equals `DEFAULT_INCIDENT_TABLE_CONFIG`.
   - `rejects an out-of-range limit`: change the input labelled "Max incidents to show" to `0`. The last call's `[1]` is `false`, and the text "Enter a whole number from 1 to 50" is visible.

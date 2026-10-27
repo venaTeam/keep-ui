@@ -51,8 +51,8 @@ export const DEFAULT_INCIDENT_TABLE_CONFIG: IncidentTableWidgetConfig = {
 };
 
 export const INCIDENT_TABLE_NEW_WIDGET_LAYOUT: Partial<LayoutItem> = {
-  w: 8,
-  h: 6,
+  w: 16,
+  h: 11,
   minW: 0,
   minH: 2,
   static: false,

@@ -120,7 +120,7 @@ These fields come below the shared Widget Name and Widget Type fields, in this o
 - Editing an existing widget pre-fills every field from `incidentTable`.
 - The Add/Update button stays disabled while a required field is empty or out of range, and the form shows an inline error under the offending field.
 - The Widget Name stays required, as it is for every type. There is no auto-fill, because there's no preset name to borrow.
-- A new widget is created at the Alert Table's size (w 8, h 6), so the table is readable without resizing.
+- A new widget is created at w 16, h 11 (changed from the Alert Table's w 8, h 6 after the browser proof: too small to read), so the table is readable without resizing.
 
 ### 4.3 The widget on a dashboard
 **Header and count line.** The card header (drag handle, title, kebab menu) is the shared `GridItem` header and is unchanged. Under it, one row holds the following.
