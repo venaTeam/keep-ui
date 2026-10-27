@@ -68,7 +68,7 @@ Two further answers from the user, 2026-10-27:
     - `enrichments`
   - The gateway also merges enrichments onto the top level of the DTO.
 - **Default Incidents-page CEL.** `DEFAULT_INCIDENTS_CEL` is `is_candidate == false && (status in [...])`.
-- **Severity encoding.** The DB stores severity as a number: critical=5, high=4, warning=3. The incidents CEL field `severity` maps to that column, and the Incidents page's Severity facet works with the numeric values (it renders them through `severityMapping`). The builder must use whatever literal form the Incidents page's own facet CEL produces for severity, and confirm it against a running gateway.
+- **Severity encoding.** The DB stores severity as a number: critical=5, high=4, warning=3. The incidents CEL field `severity` maps to that column. The gateway's severity facet option values are strings (`"5"`, `"4"`, `"3"`), and the Incidents page renders them through `severityMapping`. Because the option values are strings, the page quotes them in both its URL (`facet_severity='5','4','3'`) and its facet CEL (`severity in ['5', '4', '3']`). The builder uses those same quoted tokens, from one shared helper, for the widget's CEL and for the Go to INC page URL. The gateway also accepts bare numbers in the CEL, but a bare numeric URL token matches no facet option and crashes the Incidents facet panel. Confirm the form against a running gateway.
 - **Suppressed.**
   - On `dev` today, the incident `Status` enum is firing, resolved, acknowledged, merged, deleted.
   - ui#71 (branch `incidents-be`) replaces `Deleted` with `Suppressed = "suppressed"`.

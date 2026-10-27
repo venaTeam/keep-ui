@@ -24,7 +24,7 @@ No backend change.
 - **Styling.** Light-mode styles only. Dark mode is a global `invert()` filter.
 - **Gates.** `npm run typecheck` and `npm run lint` must be clean, because the Next build ignores both. Lint only the changed paths. Never run repo-wide formatters.
 - **Statuses** offered, in order: `firing`, `acknowledged`, `suppressed`. Labels: Firing, Acknowledged, Suppressed.
-- **Severities** offered, in order: `critical`, `high`, `warning`. Labels: Critical, High, Warning. CEL and facet numbers: critical=5, high=4, warning=3.
+- **Severities** offered, in order: `critical`, `high`, `warning`. Labels: Critical, High, Warning. CEL and facet tokens are quoted strings of those numbers: critical=`'5'`, high=`'4'`, warning=`'3'`. The gateway's severity option values are the strings `"5"`, `"4"`, `"3"`, which is why the Incidents page quotes them.
 - **Columns**, in this fixed order: `status`, `severity`, `name`, `description`, `alertsCount`, `creationTime`, `snLink`. Headers: Status, Severity, Name, Description, Alerts, Created, SN Link.
 - **New-widget defaults:** all 3 statuses, all 3 severities, all 7 columns, `limit` 10. `limit` must be an integer from 1 to 50. The layout is `w: 16, h: 11, minW: 0, minH: 2, static: false` (changed from the Alert Table's w 8, h 6 after the browser proof: too small to read).
 - **Exact copy:**
@@ -49,7 +49,7 @@ No backend change.
 
 ## Review Focus
 
-1. **Severity literal form.** If the gateway's severity facet values aren't the numbers 5/4/3, the widget silently shows zero rows. Task 1 Step 6 probes a live gateway.
+1. **Severity literal form.** The gateway's severity facet option values are the strings `"5"`, `"4"`, `"3"`, so the Incidents page quotes them. The widget's CEL and its Go to INC page URL must both use `'5'`, `'4'`, `'3'`, built by one shared helper. A bare numeric token in the URL matches no facet option and crashes the facet panel. Task 1 Step 6 probes a live gateway.
 2. **Description HTML.** Summaries are HTML, possibly with `<script>`, entities or nested tags. They must render as inert plain text. Task 1 covers this with `toPlainText` tests on `<p>a &amp; b</p><script>x</script>`.
 3. **SN-link click.** Clicking the link must not also navigate the row. Task 3 asserts that `router.push` is not called when the link is clicked.
 4. **Editing an existing widget into a different type** must drop `incidentTable`, and editing it back must start from defaults. Task 1 has the `stripForeignTypeFields` tests. Task 2 tests that the form with an `editingItem` lacking `incidentTable` emits the defaults.
@@ -106,13 +106,13 @@ No backend change.
 - [ ] **Step 2: Write the failing tests in `incident-table-config.test.ts`.**
   ```ts
   expect(buildIncidentTableCel(DEFAULT_INCIDENT_TABLE_CONFIG)).toBe(
-    "is_candidate == false && status in ['firing', 'acknowledged', 'suppressed'] && severity in [5, 4, 3]");
+    "is_candidate == false && status in ['firing', 'acknowledged', 'suppressed'] && severity in ['5', '4', '3']");
   expect(buildIncidentTableCel({ ...DEFAULT_INCIDENT_TABLE_CONFIG, statuses: ["suppressed"], severities: ["high"] })).toBe(
-    "is_candidate == false && status in ['suppressed'] && severity in [4]");
+    "is_candidate == false && status in ['suppressed'] && severity in ['4']");
   const url = new URL(buildIncidentsPageUrl({ ...DEFAULT_INCIDENT_TABLE_CONFIG, statuses: ["firing", "acknowledged"], severities: ["critical"] }), "http://x");
   expect(url.pathname).toBe("/incidents");
   expect(url.searchParams.get("facet_status")).toBe("'firing','acknowledged'");
-  expect(url.searchParams.get("facet_severity")).toBe("5");
+  expect(url.searchParams.get("facet_severity")).toBe("'5'");
   expect([...url.searchParams.keys()].sort()).toEqual(["facet_severity", "facet_status"]);
   expect(validateIncidentTableConfig(DEFAULT_INCIDENT_TABLE_CONFIG)).toEqual({});
   expect(validateIncidentTableConfig({ ...DEFAULT_INCIDENT_TABLE_CONFIG, statuses: [], severities: [], columns: [], limit: 0 })).toEqual({
@@ -142,7 +142,7 @@ No backend change.
 - [ ] **Step 4: Implement the types, `TYPE_FIELDS[WidgetType.INCIDENT_TABLE] = ["incidentTable"]`, and the helpers.**
   - **`buildIncidentTableCel`:**
     - Statuses are quoted with `valueToString` from `@/features/filter/store/utils` and joined with `", "`.
-    - Severities map to their `order` numbers.
+    - Severities become quoted strings of their `order` numbers, `valueToString(String(order))`. One shared helper builds them for both this function and `buildIncidentsPageUrl`.
     - Both lists follow the option order, not the selection order.
   - **`buildIncidentsPageUrl`:** uses `URLSearchParams` with the same literals, joined with `","` (no space). That's the facet query-param form `use-query-params.ts` reads.
   - **`getIncidentTicketLink`:**
@@ -155,7 +155,7 @@ No backend change.
 
 - [ ] **Step 6: Probe the severity and status literal form against a live gateway.**
   1. With a running gateway, either local noauth or `integration/incidents-behavior`, call `GET /incidents/facets/options?cel=` for the incident `severity` and `status` facets. The facet ids come from `GET /incidents/facets`.
-  2. Confirm the severity option values are numbers (5/4/3) and the status values are strings.
+  2. Confirm the severity option values are the strings `"5"`, `"4"`, `"3"` and the status values are strings.
   3. Call `GET /incidents?cel=<buildIncidentTableCel(default)>&limit=1` and confirm a 200 response with a `count`.
 
   If the values differ, fix the literal mapping and the Step 2 expectations before committing. If no gateway is running, record "probe pending" in the commit body; Task 4 Step 3 must then do this probe.

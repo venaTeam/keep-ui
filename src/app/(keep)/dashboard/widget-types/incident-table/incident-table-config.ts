@@ -73,9 +73,15 @@ const selectedSeverities = (config: IncidentTableWidgetConfig) =>
     config.severities.includes(option.value)
   );
 
+const selectedSeverityTokens = (config: IncidentTableWidgetConfig) =>
+  selectedSeverities(config).map((option) =>
+    valueToString(String(option.order))
+  );
+
 /**
- * Builds the CEL the Incidents page uses for the same status and severity
- * selection, always excluding candidate incidents.
+ * Builds the CEL the Incidents page's facets produce for the same status and
+ * severity selection, always excluding candidate incidents. Severity numbers
+ * are quoted strings, matching the facet option values.
  */
 export function buildIncidentTableCel(
   config: IncidentTableWidgetConfig
@@ -83,9 +89,7 @@ export function buildIncidentTableCel(
   const statuses = selectedStatuses(config)
     .map((option) => valueToString(option.value))
     .join(", ");
-  const severities = selectedSeverities(config)
-    .map((option) => option.order)
-    .join(", ");
+  const severities = selectedSeverityTokens(config).join(", ");
   return `is_candidate == false && status in [${statuses}] && severity in [${severities}]`;
 }
 
@@ -104,12 +108,7 @@ export function buildIncidentsPageUrl(
       .map((option) => valueToString(option.value))
       .join(",")
   );
-  params.set(
-    "facet_severity",
-    selectedSeverities(config)
-      .map((option) => valueToString(String(option.order)))
-      .join(",")
-  );
+  params.set("facet_severity", selectedSeverityTokens(config).join(","));
   return `/incidents?${params.toString()}`;
 }
 

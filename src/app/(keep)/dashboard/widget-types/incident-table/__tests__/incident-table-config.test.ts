@@ -74,9 +74,21 @@ describe("incident table defaults", () => {
 });
 
 describe("buildIncidentTableCel", () => {
-  it("quotes statuses and maps severities to their numbers", () => {
+  it("quotes statuses and severity numbers the way the Incidents page facets do", () => {
     expect(buildIncidentTableCel(DEFAULT_INCIDENT_TABLE_CONFIG)).toBe(
-      "is_candidate == false && status in ['firing', 'acknowledged', 'suppressed'] && severity in [5, 4, 3]"
+      "is_candidate == false && status in ['firing', 'acknowledged', 'suppressed'] && severity in ['5', '4', '3']"
+    );
+  });
+
+  it("uses the same severity tokens in the CEL and in the page URL", () => {
+    const cel = buildIncidentTableCel(DEFAULT_INCIDENT_TABLE_CONFIG);
+    const celTokens = /severity in \[(.*)\]$/.exec(cel)?.[1].split(", ");
+    const url = new URL(
+      buildIncidentsPageUrl(DEFAULT_INCIDENT_TABLE_CONFIG),
+      "http://x"
+    );
+    expect(celTokens).toEqual(
+      url.searchParams.get("facet_severity")?.split(",")
     );
   });
 
@@ -88,7 +100,7 @@ describe("buildIncidentTableCel", () => {
         severities: ["high"],
       })
     ).toBe(
-      "is_candidate == false && status in ['suppressed'] && severity in [4]"
+      "is_candidate == false && status in ['suppressed'] && severity in ['4']"
     );
   });
 
@@ -100,7 +112,7 @@ describe("buildIncidentTableCel", () => {
         severities: ["warning", "critical"],
       })
     ).toBe(
-      "is_candidate == false && status in ['firing', 'suppressed'] && severity in [5, 3]"
+      "is_candidate == false && status in ['firing', 'suppressed'] && severity in ['5', '3']"
     );
   });
 });
