@@ -182,3 +182,56 @@ describe("usePresetAlertCount failures", () => {
     });
   });
 });
+
+describe("usePresetAlertCount missing alerts", () => {
+  it("asks for the missing count when a grouped count wants it", async () => {
+    mockPost.mockResolvedValue({ count: 4, group_by: "service", missing: 7 });
+    const { result } = renderCount({ groupBy: "service", includeMissing: true });
+
+    await waitFor(() => expect(result.current.missingCount).toBe(7));
+    expect(result.current.totalCount).toBe(4);
+    expect(mockPost).toHaveBeenCalledWith(COUNT_URL, {
+      cel: WRAPPED_CEL,
+      group_by: "service",
+      include_missing: true,
+    });
+  });
+
+  it("does not ask for it when the toggle is off", async () => {
+    mockPost.mockResolvedValue({ count: 4, group_by: "service" });
+    const { result } = renderCount({ groupBy: "service" });
+
+    await waitFor(() => expect(result.current.totalCount).toBe(4));
+    expect(mockPost).toHaveBeenCalledWith(COUNT_URL, {
+      cel: WRAPPED_CEL,
+      group_by: "service",
+    });
+    expect(result.current.missingCount).toBeUndefined();
+  });
+
+  it("never asks for it on an ungrouped count", async () => {
+    mockPost.mockResolvedValue(12);
+    const { result } = renderCount({ includeMissing: true });
+
+    await waitFor(() => expect(result.current.totalCount).toBe(12));
+    expect(mockPost).toHaveBeenCalledWith(COUNT_URL, { cel: WRAPPED_CEL });
+    expect(result.current.missingCount).toBeUndefined();
+  });
+
+  it("treats a reply without the missing count as unavailable, not zero", async () => {
+    mockPost.mockResolvedValue({ count: 4, group_by: "service" });
+    const { result } = renderCount({ groupBy: "service", includeMissing: true });
+
+    await waitFor(() => expect(result.current.totalCount).toBe(4));
+    expect(result.current.isError).toBe(false);
+    expect(result.current.missingCount).toBeUndefined();
+  });
+
+  it("ignores a missing count that is not a number", async () => {
+    mockPost.mockResolvedValue({ count: 4, group_by: "service", missing: "7" });
+    const { result } = renderCount({ groupBy: "service", includeMissing: true });
+
+    await waitFor(() => expect(result.current.totalCount).toBe(4));
+    expect(result.current.missingCount).toBeUndefined();
+  });
+});

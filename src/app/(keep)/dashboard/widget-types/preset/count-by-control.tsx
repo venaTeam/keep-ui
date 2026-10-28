@@ -1,5 +1,5 @@
 import React from "react";
-import { Select, SelectItem, Subtitle, Text } from "@tremor/react";
+import { Select, SelectItem, Subtitle, Switch, Text } from "@tremor/react";
 import {
   COUNT_BY_ALERT_FIELD_OPTIONS,
   CountBy,
@@ -9,6 +9,9 @@ import {
   INCIDENT_STATUS_OPTIONS,
   IncidentStatusFilter,
   getCountMode,
+  getMissingToggleHelp,
+  getMissingToggleLabel,
+  isShowingMissing,
 } from "@/entities/presets/model/count-by";
 
 interface CountByControlProps {
@@ -24,13 +27,19 @@ const MODES: ReadonlyArray<{ mode: CountMode; label: string }> = [
 
 /**
  * Chooses what a preset widget counts: alerts (the default), distinct
- * incidents, or distinct values of one allowlisted alert field.
+ * incidents, or distinct values of one allowlisted alert field. A grouped
+ * count can also show the alerts it leaves out; that choice survives changes
+ * of status, field and grouped mode, and is dropped with the grouping.
  */
 export const CountByControl: React.FC<CountByControlProps> = ({
   value,
   onChange,
 }) => {
   const mode = getCountMode(value);
+  const showMissing = isShowingMissing(value);
+
+  const change = (next: CountBy) =>
+    onChange(showMissing ? { ...next, showMissing: true } : next);
 
   const selectMode = (nextMode: CountMode) => {
     if (nextMode === mode) {
@@ -39,9 +48,9 @@ export const CountByControl: React.FC<CountByControlProps> = ({
     if (nextMode === "alerts") {
       onChange(undefined);
     } else if (nextMode === "incidents") {
-      onChange({ field: "incident", incidentStatus: DEFAULT_INCIDENT_STATUS });
+      change({ field: "incident", incidentStatus: DEFAULT_INCIDENT_STATUS });
     } else {
-      onChange({ field: COUNT_BY_ALERT_FIELD_OPTIONS[0].value });
+      change({ field: COUNT_BY_ALERT_FIELD_OPTIONS[0].value });
     }
   };
 
@@ -84,7 +93,7 @@ export const CountByControl: React.FC<CountByControlProps> = ({
             <Select
               value={value?.incidentStatus ?? DEFAULT_INCIDENT_STATUS}
               onValueChange={(status) =>
-                onChange({
+                change({
                   field: "incident",
                   incidentStatus: status as IncidentStatusFilter,
                 })
@@ -107,7 +116,7 @@ export const CountByControl: React.FC<CountByControlProps> = ({
             <Select
               value={value?.field ?? COUNT_BY_ALERT_FIELD_OPTIONS[0].value}
               onValueChange={(field) =>
-                onChange({ field: field as CountByAlertField })
+                change({ field: field as CountByAlertField })
               }
               data-cy="dashboard-widget-form-count-field-select"
             >
@@ -123,6 +132,20 @@ export const CountByControl: React.FC<CountByControlProps> = ({
             counted.
           </Text>
         </>
+      )}
+      {value && mode !== "alerts" && (
+        <div className="mt-3" data-cy="dashboard-widget-form-count-missing">
+          <div className="flex items-center justify-between gap-2">
+            <Subtitle>{getMissingToggleLabel(value)}</Subtitle>
+            <Switch
+              checked={showMissing}
+              onChange={(checked) =>
+                onChange({ ...value, showMissing: checked })
+              }
+            />
+          </div>
+          <Text className="mt-1 text-xs">{getMissingToggleHelp(value)}</Text>
+        </div>
       )}
     </div>
   );

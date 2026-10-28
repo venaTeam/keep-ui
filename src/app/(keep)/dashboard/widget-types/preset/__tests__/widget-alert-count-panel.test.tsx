@@ -33,6 +33,7 @@ const incidents: CountBy = { field: "incident", incidentStatus: "active" };
 
 const hookState = (state: {
   totalCount?: number;
+  missingCount?: number;
   isLoading?: boolean;
   isError?: boolean;
 }) =>
@@ -220,5 +221,81 @@ describe("WidgetAlertCountPanel with a saved field the UI does not know", () => 
     expect(valueOf(container)).toHaveStyle({ color: "#9ca3af" });
     expect(captionOf(container)).toHaveTextContent("Couldn't load count");
     expect(screen.queryByText("0")).toBeNull();
+  });
+});
+
+describe("WidgetAlertCountPanel alerts left out of the count", () => {
+  const withMissing: CountBy = { ...incidents, showMissing: true };
+
+  const stripOf = (container: HTMLElement) =>
+    container.querySelector('[data-cy="dashboard-widget-count-missing"]');
+
+  it("asks for the missing count only when the toggle is on", () => {
+    hookState({ totalCount: 10 });
+    renderPanel({ countBy: withMissing });
+    expect(mockUsePresetAlertCount).toHaveBeenLastCalledWith(
+      expect.objectContaining({ includeMissing: true })
+    );
+
+    renderPanel({ countBy: incidents });
+    expect(mockUsePresetAlertCount).toHaveBeenLastCalledWith(
+      expect.objectContaining({ includeMissing: false })
+    );
+  });
+
+  it("shows no strip when the toggle is off", () => {
+    hookState({ totalCount: 10, missingCount: 10 });
+    const { container } = renderPanel({ countBy: incidents });
+
+    expect(stripOf(container)).toBeNull();
+  });
+
+  it("shows the left-out alerts in a strip under the count", () => {
+    hookState({ totalCount: 10, missingCount: 10 });
+    const { container } = renderPanel({ countBy: withMissing });
+
+    expect(stripOf(container)).toHaveTextContent(
+      "+ 10 alerts not in an incident"
+    );
+    expect(valueOf(container)).toHaveTextContent("10");
+  });
+
+  it("says every alert is covered at zero", () => {
+    hookState({ totalCount: 4, missingCount: 0 });
+    const { container } = renderPanel({
+      countBy: { field: "service", showMissing: true },
+    });
+
+    expect(stripOf(container)).toHaveTextContent("Every alert has a service");
+  });
+
+  it("shows a dash when the gateway leaves the number out", () => {
+    hookState({ totalCount: 4 });
+    const { container } = renderPanel({ countBy: withMissing });
+
+    expect(stripOf(container)).toHaveTextContent(/^—$/);
+  });
+
+  it("shows no strip when the count fails", () => {
+    hookState({ isError: true, missingCount: 3 });
+    const { container } = renderPanel({ countBy: withMissing });
+
+    expect(stripOf(container)).toBeNull();
+    expect(valueOf(container)).toHaveTextContent("—");
+  });
+
+  it("keeps the strip without a number while loading", () => {
+    hookState({ isLoading: true });
+    const { container } = renderPanel({ countBy: withMissing });
+
+    expect(stripOf(container)).not.toBeNull();
+    expect(stripOf(container)).not.toHaveTextContent(/\d|—/);
+  });
+
+  it("colours the tile from the grouped count only", () => {
+    hookState({ totalCount: 3, missingCount: 50 });
+    const { container } = renderPanel({ countBy: withMissing });
+
+    expect(valueOf(container)).toHaveStyle({ color: "#10b981" });
   });
 });
