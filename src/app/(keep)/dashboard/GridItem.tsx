@@ -10,6 +10,7 @@ import WidgetServiceNow from "./widget-types/service-now/widget-service-now";
 import ImageGridItem from "./widget-types/image/image-grid-item";
 import HtmlGridItem from "./widget-types/html/html-grid-item";
 import GrafanaPanelGridItem from "./widget-types/grafana-panel/grafana-panel-grid-item";
+import IncidentTableGridItem from "./widget-types/incident-table/incident-table-grid-item";
 
 interface GridItemProps {
   item: WidgetData;
@@ -95,6 +96,9 @@ const GridItem: React.FC<GridItemProps> = ({
         {item.widgetType === WidgetType.HTML && <HtmlGridItem item={item} />}
         {item.widgetType === WidgetType.GRAFANA_PANEL && (
           <GrafanaPanelGridItem item={item} />
+        )}
+        {item.widgetType === WidgetType.INCIDENT_TABLE && (
+          <IncidentTableGridItem item={item} />
         )}
       </div>
     </Card>

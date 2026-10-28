@@ -15,6 +15,7 @@ import { ImageWidgetForm } from "./widget-types/image/image-widget-form";
 import { HtmlWidgetForm } from "./widget-types/html/html-widget-form";
 import { GrafanaPanelWidgetForm } from "./widget-types/grafana-panel/grafana-panel-widget-form";
 import { useGrafanaEmbedPolicy } from "./widget-types/grafana-panel/grafana-panel-grid-item";
+import { IncidentTableWidgetForm } from "./widget-types/incident-table/incident-table-widget-form";
 
 interface WidgetForm {
   widgetName: string;
@@ -170,6 +171,7 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
                 >
                   {[
                     { key: WidgetType.PRESET, value: "Preset" },
+                    { key: WidgetType.INCIDENT_TABLE, value: "Incident Table" },
                     {
                       key: WidgetType.GENERICS_METRICS,
                       value: "Generic Metrics",
@@ -252,6 +254,14 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
         )}
         {widgetType === WidgetType.GRAFANA_PANEL && (
           <GrafanaPanelWidgetForm
+            editingItem={editingItem}
+            onChange={(formValue, isValid) =>
+              setInnerFormState({ formValue, isValid })
+            }
+          />
+        )}
+        {widgetType === WidgetType.INCIDENT_TABLE && (
+          <IncidentTableWidgetForm
             editingItem={editingItem}
             onChange={(formValue, isValid) =>
               setInnerFormState({ formValue, isValid })
