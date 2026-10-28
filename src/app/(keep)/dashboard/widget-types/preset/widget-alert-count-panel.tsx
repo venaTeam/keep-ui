@@ -4,7 +4,10 @@ import { usePresetAlertCount } from "@/features/presets/custom-preset-links";
 import {
   COUNT_LOAD_ERROR_LABEL,
   CountBy,
+  MISSING_UNAVAILABLE_LABEL,
   getCountUnitLabel,
+  getMissingCountLabel,
+  isShowingMissing,
 } from "@/entities/presets/model/count-by";
 import { useDashboardPreset } from "@/utils/hooks/useDashboardPresets";
 import { Button, Icon } from "@tremor/react";
@@ -69,9 +72,11 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
   );
 
   const appliesFiringOnly = showFiringOnly && countBy?.field !== "incident";
+  const showMissing = isShowingMissing(countBy);
 
   const {
     totalCount: alertsCount,
+    missingCount,
     isLoading,
     isError,
   } = usePresetAlertCount({
@@ -79,6 +84,7 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
     counterShowsFiringOnly: appliesFiringOnly,
     groupBy: countBy?.field,
     incidentStatus: countBy?.incidentStatus,
+    includeMissing: showMissing,
     refreshInterval: 30000,
     enabled: !!preset,
   });
@@ -159,6 +165,11 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
       ? COUNT_LOAD_ERROR_LABEL
       : getCountUnitLabel(countBy, alertsCount)
     : undefined;
+
+  const missingLabel =
+    countBy && missingCount !== undefined
+      ? getMissingCountLabel(countBy, missingCount)
+      : MISSING_UNAVAILABLE_LABEL;
 
   return (
     <div className="flex flex-col h-full" data-cy="dashboard-widget-alert-count-panel">
@@ -260,6 +271,19 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
               <Skeleton containerClassName="h-8 w-16" />
             ) : (
               alertsCount
+            )}
+          </div>
+        )}
+        {countBy && showMissing && !isError && (
+          <div
+            className="-mx-2 -mb-2 mt-1 flex-none truncate rounded-b-md border-t border-black/10 bg-white/75 px-2 py-1 text-center text-xs text-gray-600"
+            title={isCountLoading ? undefined : missingLabel}
+            data-cy="dashboard-widget-count-missing"
+          >
+            {isCountLoading ? (
+              <Skeleton containerClassName="inline-block w-32" />
+            ) : (
+              missingLabel
             )}
           </div>
         )}

@@ -54,6 +54,7 @@ const renderPanel = (item: WidgetData) =>
 
 const groupState = (state: {
   totalCount?: number;
+  missingCount?: number;
   isLoading?: boolean;
   isError?: boolean;
 }) =>
@@ -212,5 +213,64 @@ describe("PresetAlertTablePanel with a saved field the UI does not know", () => 
       container.querySelector('[data-cy="dashboard-widget-group-count"]')
     ).toHaveTextContent("—");
     expect(screen.getByTitle("Couldn't load count")).toBeInTheDocument();
+  });
+});
+
+describe("PresetAlertTablePanel alerts left out of the count", () => {
+  const withMissing: CountBy = { ...incidents, showMissing: true };
+
+  const missingLine = (container: HTMLElement) =>
+    container.querySelector('[data-cy="dashboard-widget-group-missing"]');
+
+  it("asks for the missing count only when the toggle is on", () => {
+    renderPanel(buildItem({ countBy: withMissing }));
+    expect(mockUsePresetAlertCount).toHaveBeenLastCalledWith(
+      expect.objectContaining({ includeMissing: true })
+    );
+
+    renderPanel(buildItem({ countBy: incidents }));
+    expect(mockUsePresetAlertCount).toHaveBeenLastCalledWith(
+      expect.objectContaining({ includeMissing: false })
+    );
+  });
+
+  it("shows no line when the toggle is off", () => {
+    groupState({ totalCount: 3, missingCount: 4 });
+    const { container } = renderPanel(buildItem({ countBy: incidents }));
+
+    expect(missingLine(container)).toBeNull();
+  });
+
+  it("shows the left-out alerts under the group count", () => {
+    groupState({ totalCount: 3, missingCount: 4 });
+    const { container } = renderPanel(buildItem({ countBy: withMissing }));
+
+    expect(missingLine(container)).toHaveTextContent(
+      "+ 4 alerts not in an incident"
+    );
+    expect(screen.getByTestId("alerts-table")).toBeInTheDocument();
+    expect(screen.getByText("showing 5 out of 120")).toBeInTheDocument();
+  });
+
+  it("shows a dash when the gateway leaves the number out", () => {
+    groupState({ totalCount: 3 });
+    const { container } = renderPanel(buildItem({ countBy: withMissing }));
+
+    expect(missingLine(container)).toHaveTextContent(/^—$/);
+  });
+
+  it("shows no line when the group count fails", () => {
+    groupState({ isError: true, missingCount: 4 });
+    const { container } = renderPanel(buildItem({ countBy: withMissing }));
+
+    expect(missingLine(container)).toBeNull();
+  });
+
+  it("keeps the line without a number while loading", () => {
+    groupState({ isLoading: true });
+    const { container } = renderPanel(buildItem({ countBy: withMissing }));
+
+    expect(missingLine(container)).not.toBeNull();
+    expect(missingLine(container)).not.toHaveTextContent(/\d|—/);
   });
 });

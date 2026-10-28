@@ -22,7 +22,7 @@ const renderCount = (params: Partial<HookParams> = {}) =>
   );
 
 const swrState = (state: {
-  data?: number;
+  data?: { count: number; missing?: number };
   error?: Error;
   isLoading: boolean;
 }) => mockUseSWR.mockReturnValue({ mutate: jest.fn(), ...state });
@@ -44,7 +44,7 @@ describe("usePresetAlertCount states", () => {
   });
 
   it("keeps a grouped request without an error loading", () => {
-    swrState({ data: 4, error: undefined, isLoading: true });
+    swrState({ data: { count: 4 }, error: undefined, isLoading: true });
     const { result } = renderCount({ groupBy: "incident" });
 
     expect(result.current).toEqual({
@@ -55,7 +55,7 @@ describe("usePresetAlertCount states", () => {
   });
 
   it("returns the stale number next to a grouped error", () => {
-    swrState({ data: 5, error: new Error("x"), isLoading: false });
+    swrState({ data: { count: 5 }, error: new Error("x"), isLoading: false });
     const { result } = renderCount({ groupBy: "incident" });
 
     expect(result.current).toEqual({
