@@ -28,7 +28,8 @@ function keepKnown<T extends string>(known: T[], selected: string[]): T[] {
 
 /**
  * Incident table widget settings: which incident statuses and severities to
- * list, which columns to show, and how many incidents to show at most.
+ * list, which columns to show, how many incidents to show at most, and an
+ * optional extra button that opens an external link.
  */
 export function IncidentTableWidgetForm({
   editingItem,
@@ -48,18 +49,22 @@ export function IncidentTableWidgetForm({
     initial.columns
   );
   const [limitInput, setLimitInput] = useState(String(initial.limit));
+  const [linkUrl, setLinkUrl] = useState(initial.externalLink?.url ?? "");
+  const [linkLabel, setLinkLabel] = useState(initial.externalLink?.label ?? "");
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
 
-  const config = useMemo<IncidentTableWidgetConfig>(
-    () => ({
+  const config = useMemo<IncidentTableWidgetConfig>(() => {
+    const url = linkUrl.trim();
+    const label = linkLabel.trim();
+    return {
       statuses,
       severities,
       columns: orderIncidentTableColumns(columns),
       limit: Number(limitInput),
-    }),
-    [statuses, severities, columns, limitInput]
-  );
+      ...(url === "" && label === "" ? {} : { externalLink: { url, label } }),
+    };
+  }, [statuses, severities, columns, limitInput, linkUrl, linkLabel]);
   const errors = validateIncidentTableConfig(config);
   const isValid = Object.keys(errors).length === 0;
 
@@ -161,6 +166,30 @@ export function IncidentTableWidgetForm({
           errorMessage={errors.limit}
           data-cy="dashboard-widget-form-incident-table-limit"
         />
+      </div>
+
+      <div className="mb-4">
+        <Subtitle>Extra button (optional)</Subtitle>
+        <div className="space-y-2">
+          <TextInput
+            value={linkUrl}
+            onValueChange={setLinkUrl}
+            placeholder="https://"
+            aria-label="Button URL"
+            error={!!errors.linkUrl}
+            errorMessage={errors.linkUrl}
+            data-cy="dashboard-widget-form-incident-table-link-url"
+          />
+          <TextInput
+            value={linkLabel}
+            onValueChange={setLinkLabel}
+            placeholder="Button label"
+            aria-label="Button label"
+            error={!!errors.linkLabel}
+            errorMessage={errors.linkLabel}
+            data-cy="dashboard-widget-form-incident-table-link-label"
+          />
+        </div>
       </div>
     </div>
   );

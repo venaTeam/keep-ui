@@ -8,6 +8,8 @@ const STATUSES_LABEL = "Incident statuses to display";
 const SEVERITIES_LABEL = "Incident severities to display";
 const COLUMNS_LABEL = "Columns";
 const LIMIT_LABEL = "Max incidents to show";
+const LINK_URL_LABEL = "Button URL";
+const LINK_LABEL_LABEL = "Button label";
 
 function lastCall(onChange: jest.Mock) {
   return onChange.mock.calls[onChange.mock.calls.length - 1];
@@ -20,6 +22,19 @@ async function openMultiSelect(label: string) {
     })
   );
   return within(await screen.findByRole("listbox"));
+}
+
+function typeInto(label: string, value: string) {
+  fireEvent.change(screen.getByLabelText(label), { target: { value } });
+}
+
+function editingItemWith(incidentTable: unknown) {
+  return {
+    i: "w-1",
+    name: "Open incidents",
+    widgetType: WidgetType.INCIDENT_TABLE,
+    incidentTable,
+  } as unknown as WidgetData;
 }
 
 describe("IncidentTableWidgetForm", () => {
@@ -38,6 +53,9 @@ describe("IncidentTableWidgetForm", () => {
       },
       true,
     ]);
+    expect(lastCall(onChange)[0].incidentTable).not.toHaveProperty(
+      "externalLink"
+    );
   });
 
   it("pre-fills from the edited widget and emits no layout", () => {
@@ -208,5 +226,179 @@ describe("IncidentTableWidgetForm", () => {
       "creationTime",
       "snLink",
     ]);
+  });
+
+  it("starts with empty button fields and no link errors", () => {
+    render(<IncidentTableWidgetForm onChange={jest.fn()} />);
+
+    expect(screen.getByText("Extra button (optional)")).toBeInTheDocument();
+    expect(screen.getByLabelText(LINK_URL_LABEL)).toHaveValue("");
+    expect(screen.getByLabelText(LINK_URL_LABEL)).toHaveAttribute(
+      "placeholder",
+      "https://"
+    );
+    expect(screen.getByLabelText(LINK_LABEL_LABEL)).toHaveValue("");
+    expect(screen.getByLabelText(LINK_LABEL_LABEL)).toHaveAttribute(
+      "placeholder",
+      "Button label"
+    );
+    expect(screen.queryByText("Enter the URL this button opens")).toBeNull();
+    expect(screen.queryByText("Enter a label for this button")).toBeNull();
+  });
+
+  it("exposes the e2e selectors for the button fields", () => {
+    render(<IncidentTableWidgetForm onChange={jest.fn()} />);
+
+    expect(
+      document.querySelector(
+        '[data-cy="dashboard-widget-form-incident-table-link-url"]'
+      )
+    ).toBe(screen.getByLabelText(LINK_URL_LABEL));
+    expect(
+      document.querySelector(
+        '[data-cy="dashboard-widget-form-incident-table-link-label"]'
+      )
+    ).toBe(screen.getByLabelText(LINK_LABEL_LABEL));
+  });
+
+  it("rejects a url without a label", () => {
+    const onChange = jest.fn();
+    render(<IncidentTableWidgetForm onChange={onChange} />);
+
+    typeInto(LINK_URL_LABEL, "https://wiki/runbook");
+
+    expect(lastCall(onChange)[1]).toBe(false);
+    expect(
+      screen.getByText("Enter a label for this button")
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Enter the URL this button opens")).toBeNull();
+  });
+
+  it("rejects a label without a url", () => {
+    const onChange = jest.fn();
+    render(<IncidentTableWidgetForm onChange={onChange} />);
+
+    typeInto(LINK_LABEL_LABEL, "Runbook");
+
+    expect(lastCall(onChange)[1]).toBe(false);
+    expect(
+      screen.getByText("Enter the URL this button opens")
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Enter a label for this button")).toBeNull();
+  });
+
+  it("rejects a url that does not start with http:// or https://", () => {
+    const onChange = jest.fn();
+    render(<IncidentTableWidgetForm onChange={onChange} />);
+
+    typeInto(LINK_LABEL_LABEL, "Runbook");
+    typeInto(LINK_URL_LABEL, "javascript:alert(1)");
+
+    expect(lastCall(onChange)[1]).toBe(false);
+    expect(
+      screen.getByText("Enter a full link starting with http:// or https://")
+    ).toBeInTheDocument();
+  });
+
+  it("rejects a label longer than 30 characters instead of cutting it off", () => {
+    const onChange = jest.fn();
+    render(<IncidentTableWidgetForm onChange={onChange} />);
+
+    typeInto(LINK_URL_LABEL, "https://wiki/runbook");
+    typeInto(LINK_LABEL_LABEL, "a".repeat(31));
+
+    expect(screen.getByLabelText(LINK_LABEL_LABEL)).toHaveValue("a".repeat(31));
+    expect(lastCall(onChange)[1]).toBe(false);
+    expect(screen.getByText("Use 30 characters or fewer")).toBeInTheDocument();
+  });
+
+  it("emits a valid link with its url and label trimmed", () => {
+    const onChange = jest.fn();
+    render(<IncidentTableWidgetForm onChange={onChange} />);
+
+    typeInto(LINK_URL_LABEL, "  https://wiki/runbook  ");
+    typeInto(LINK_LABEL_LABEL, "  Runbook ");
+
+    const [value, isValid] = lastCall(onChange);
+    expect(isValid).toBe(true);
+    expect(value.incidentTable).toEqual({
+      ...DEFAULT_INCIDENT_TABLE_CONFIG,
+      externalLink: { url: "https://wiki/runbook", label: "Runbook" },
+    });
+  });
+
+  it("treats blank button fields as no link", () => {
+    const onChange = jest.fn();
+    render(<IncidentTableWidgetForm onChange={onChange} />);
+
+    typeInto(LINK_URL_LABEL, "   ");
+    typeInto(LINK_LABEL_LABEL, "  ");
+
+    const [value, isValid] = lastCall(onChange);
+    expect(isValid).toBe(true);
+    expect(value.incidentTable).not.toHaveProperty("externalLink");
+  });
+
+  it("pre-fills the button fields from the edited widget", () => {
+    const incidentTable = {
+      ...DEFAULT_INCIDENT_TABLE_CONFIG,
+      externalLink: { url: "https://wiki/runbook", label: "Runbook" },
+    };
+    const onChange = jest.fn();
+    render(
+      <IncidentTableWidgetForm
+        editingItem={editingItemWith(incidentTable)}
+        onChange={onChange}
+      />
+    );
+
+    expect(screen.getByLabelText(LINK_URL_LABEL)).toHaveValue(
+      "https://wiki/runbook"
+    );
+    expect(screen.getByLabelText(LINK_LABEL_LABEL)).toHaveValue("Runbook");
+    const [value, isValid] = lastCall(onChange);
+    expect(isValid).toBe(true);
+    expect(value).toEqual({ incidentTable });
+  });
+
+  it("removes the link from an edited widget when both fields are cleared", () => {
+    const onChange = jest.fn();
+    render(
+      <IncidentTableWidgetForm
+        editingItem={editingItemWith({
+          ...DEFAULT_INCIDENT_TABLE_CONFIG,
+          externalLink: { url: "https://wiki/runbook", label: "Runbook" },
+        })}
+        onChange={onChange}
+      />
+    );
+
+    typeInto(LINK_URL_LABEL, "");
+    typeInto(LINK_LABEL_LABEL, "");
+
+    const [value, isValid] = lastCall(onChange);
+    expect(isValid).toBe(true);
+    expect(value).toEqual({ incidentTable: DEFAULT_INCIDENT_TABLE_CONFIG });
+    expect(value.incidentTable).not.toHaveProperty("externalLink");
+  });
+
+  it("flags the half that is left when only one field is cleared", () => {
+    const onChange = jest.fn();
+    render(
+      <IncidentTableWidgetForm
+        editingItem={editingItemWith({
+          ...DEFAULT_INCIDENT_TABLE_CONFIG,
+          externalLink: { url: "https://wiki/runbook", label: "Runbook" },
+        })}
+        onChange={onChange}
+      />
+    );
+
+    typeInto(LINK_LABEL_LABEL, "");
+
+    expect(lastCall(onChange)[1]).toBe(false);
+    expect(
+      screen.getByText("Enter a label for this button")
+    ).toBeInTheDocument();
   });
 });
