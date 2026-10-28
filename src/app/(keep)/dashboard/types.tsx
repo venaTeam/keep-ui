@@ -66,11 +66,17 @@ export type IncidentTableColumn =
   | "creationTime"
   | "snLink";
 
+export interface IncidentTableExternalLink {
+  url: string;
+  label: string;
+}
+
 export interface IncidentTableWidgetConfig {
   statuses: IncidentTableStatus[];
   severities: IncidentTableSeverity[];
   columns: IncidentTableColumn[];
   limit: number;
+  externalLink?: IncidentTableExternalLink;
 }
 
 export enum PresetPanelType {

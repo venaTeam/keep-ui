@@ -1,5 +1,6 @@
 import React from "react";
 import { Button } from "@tremor/react";
+import { ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline";
 import { startCase } from "lodash";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
@@ -121,11 +122,12 @@ function renderCell(column: IncidentTableColumn, incident: IncidentDto) {
  * Lists the newest incidents matching the widget's status and severity
  * selection, refreshing every 30 seconds. The dashboard time filter does not
  * apply. Rows open the incident and the button opens the filtered Incidents
- * page.
+ * page. An optional second button opens a fixed external link in a new tab.
  */
 export default function IncidentTableGridItem({ item }: { item: WidgetData }) {
   const router = useRouter();
   const config = normalizeIncidentTableConfig(item.incidentTable);
+  const { externalLink } = config;
   const { data, isLoading, error } = useIncidents(
     {
       candidate: null,
@@ -254,7 +256,23 @@ export default function IncidentTableGridItem({ item }: { item: WidgetData }) {
             {filters}
           </div>
         </div>
-        <div className="flex items-center">
+        <div className="flex items-center gap-2">
+          {externalLink && (
+            <Button
+              color="blue"
+              variant="secondary"
+              size="xs"
+              icon={ArrowTopRightOnSquareIcon}
+              iconPosition="right"
+              title={externalLink.url}
+              onClick={() =>
+                window.open(externalLink.url, "_blank", "noopener,noreferrer")
+              }
+              data-cy="dashboard-widget-incident-table-link-btn"
+            >
+              {externalLink.label}
+            </Button>
+          )}
           <Button
             color="orange"
             variant="secondary"

@@ -4,6 +4,7 @@ import {
   DEFAULT_INCIDENT_TABLE_CONFIG,
   INCIDENT_TABLE_COLUMNS,
   INCIDENT_TABLE_LIMIT_MAX,
+  INCIDENT_TABLE_LINK_LABEL_MAX,
   INCIDENT_TABLE_LIMIT_MIN,
   INCIDENT_TABLE_NEW_WIDGET_LAYOUT,
   INCIDENT_TABLE_SEVERITY_OPTIONS,
@@ -12,6 +13,7 @@ import {
   buildIncidentsPageUrl,
   describeIncidentTableFilters,
   getIncidentTicketLink,
+  isHttpUrl,
   normalizeIncidentTableConfig,
   orderIncidentTableColumns,
   toPlainText,
@@ -21,6 +23,11 @@ import {
 
 const inc = (partial: Partial<IncidentDto>) =>
   partial as unknown as IncidentDto;
+
+const withLink = (url: string, label: string) => ({
+  ...DEFAULT_INCIDENT_TABLE_CONFIG,
+  externalLink: { url, label },
+});
 
 describe("incident table defaults", () => {
   it("offers statuses, severities and columns in the fixed order", () => {
@@ -62,6 +69,11 @@ describe("incident table defaults", () => {
     });
     expect(INCIDENT_TABLE_LIMIT_MIN).toBe(1);
     expect(INCIDENT_TABLE_LIMIT_MAX).toBe(50);
+  });
+
+  it("has no external link by default and caps its label at 30 characters", () => {
+    expect(DEFAULT_INCIDENT_TABLE_CONFIG).not.toHaveProperty("externalLink");
+    expect(INCIDENT_TABLE_LINK_LABEL_MAX).toBe(30);
   });
 
   it("lays a new widget out at 16 by 11", () => {
@@ -219,6 +231,77 @@ describe("validateIncidentTableConfig", () => {
         limit: Number.NaN,
       }).limit
     ).toBeDefined();
+  });
+
+  it("reports no link errors when there is no external link", () => {
+    const errors = validateIncidentTableConfig(DEFAULT_INCIDENT_TABLE_CONFIG);
+    expect(errors).not.toHaveProperty("linkUrl");
+    expect(errors).not.toHaveProperty("linkLabel");
+  });
+
+  it("asks for the url when the external link url is empty", () => {
+    expect(validateIncidentTableConfig(withLink("", "Runbook")).linkUrl).toBe(
+      "Enter the URL this button opens"
+    );
+  });
+
+  it("asks for a full http(s) link when the url is not one", () => {
+    for (const url of ["example.com", "javascript:alert(1)", "ftp://x"]) {
+      expect(validateIncidentTableConfig(withLink(url, "Runbook"))).toEqual({
+        linkUrl: "Enter a full link starting with http:// or https://",
+      });
+    }
+  });
+
+  it("asks for a label when the external link label is empty", () => {
+    expect(
+      validateIncidentTableConfig(withLink("https://wiki/x", "")).linkLabel
+    ).toBe("Enter a label for this button");
+  });
+
+  it("rejects a label longer than 30 characters and accepts exactly 30", () => {
+    expect(
+      validateIncidentTableConfig(withLink("https://wiki/x", "a".repeat(31)))
+    ).toEqual({ linkLabel: "Use 30 characters or fewer" });
+    expect(
+      validateIncidentTableConfig(withLink("https://wiki/x", "a".repeat(30)))
+    ).toEqual({});
+  });
+
+  it("reports the url and label errors together", () => {
+    expect(validateIncidentTableConfig(withLink("", ""))).toEqual({
+      linkUrl: "Enter the URL this button opens",
+      linkLabel: "Enter a label for this button",
+    });
+    expect(
+      validateIncidentTableConfig(withLink("example.com", "a".repeat(31)))
+    ).toEqual({
+      linkUrl: "Enter a full link starting with http:// or https://",
+      linkLabel: "Use 30 characters or fewer",
+    });
+  });
+
+  it("accepts a valid external link", () => {
+    expect(
+      validateIncidentTableConfig(withLink("https://wiki/runbook", "Runbook"))
+    ).toEqual({});
+  });
+});
+
+describe("isHttpUrl", () => {
+  it("accepts http and https urls", () => {
+    expect(isHttpUrl("http://example.com")).toBe(true);
+    expect(isHttpUrl("https://example.com/path?q=1#top")).toBe(true);
+    expect(isHttpUrl("HTTPS://example.com")).toBe(true);
+  });
+
+  it("rejects other schemes, bare hosts and unparsable values", () => {
+    expect(isHttpUrl("javascript:alert(1)")).toBe(false);
+    expect(isHttpUrl("ftp://x")).toBe(false);
+    expect(isHttpUrl("mailto:a@b.c")).toBe(false);
+    expect(isHttpUrl("example.com")).toBe(false);
+    expect(isHttpUrl("https://")).toBe(false);
+    expect(isHttpUrl("")).toBe(false);
   });
 });
 
@@ -495,6 +578,70 @@ describe("normalizeIncidentTableConfig", () => {
       DEFAULT_INCIDENT_TABLE_CONFIG.statuses
     );
     expect(normalized.columns).not.toBe(DEFAULT_INCIDENT_TABLE_CONFIG.columns);
+  });
+
+  it("keeps a valid external link with its url and label trimmed", () => {
+    expect(
+      normalizeIncidentTableConfig({
+        externalLink: { url: "  https://wiki/runbook  ", label: "  Runbook " },
+      }).externalLink
+    ).toEqual({ url: "https://wiki/runbook", label: "Runbook" });
+  });
+
+  it("keeps only the url and label of a saved external link", () => {
+    expect(
+      normalizeIncidentTableConfig({
+        externalLink: { url: "https://wiki/x", label: "Wiki", target: "_self" },
+      }).externalLink
+    ).toStrictEqual({ url: "https://wiki/x", label: "Wiki" });
+  });
+
+  it("keeps a label of exactly 30 characters and one that is 30 after trimming", () => {
+    const label = "a".repeat(INCIDENT_TABLE_LINK_LABEL_MAX);
+    expect(
+      normalizeIncidentTableConfig({
+        externalLink: { url: "https://wiki/x", label },
+      }).externalLink
+    ).toEqual({ url: "https://wiki/x", label });
+    expect(
+      normalizeIncidentTableConfig({
+        externalLink: { url: "https://wiki/x", label: `  ${label}  ` },
+      }).externalLink
+    ).toEqual({ url: "https://wiki/x", label });
+  });
+
+  it("drops an external link that is not usable and leaves no key behind", () => {
+    const unusable: unknown[] = [
+      { url: "javascript:alert(1)", label: "Runbook" },
+      { url: "ftp://x", label: "Runbook" },
+      { url: "example.com", label: "Runbook" },
+      { url: "", label: "Runbook" },
+      { url: "https://wiki/x", label: "" },
+      { url: "https://wiki/x", label: "   " },
+      { url: "https://wiki/x", label: "a".repeat(31) },
+      { url: 5, label: "Runbook" },
+      { url: "https://wiki/x", label: 5 },
+      { label: "Runbook" },
+      { url: "https://wiki/x" },
+      "https://wiki/x",
+      ["https://wiki/x", "Runbook"],
+      42,
+      null,
+    ];
+    for (const externalLink of unusable) {
+      const result = normalizeIncidentTableConfig({ externalLink });
+      expect("externalLink" in result).toBe(false);
+      expect(result).toEqual(DEFAULT_INCIDENT_TABLE_CONFIG);
+    }
+  });
+
+  it("leaves no external link key when none was saved", () => {
+    expect("externalLink" in normalizeIncidentTableConfig(undefined)).toBe(
+      false
+    );
+    expect("externalLink" in normalizeIncidentTableConfig({ limit: 5 })).toBe(
+      false
+    );
   });
 });
 

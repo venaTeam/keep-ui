@@ -103,12 +103,18 @@ Two further answers from the user, 2026-10-27:
     severities: ("critical" | "high" | "warning")[];
     columns: IncidentTableColumn[];
     limit: number;
+    externalLink?: IncidentTableExternalLink;
+  }
+  interface IncidentTableExternalLink {
+    url: string;
+    label: string;
   }
   type IncidentTableColumn =
     | "status" | "severity" | "name" | "description"
     | "alertsCount" | "creationTime" | "snLink";
   ```
   `TYPE_FIELDS[WidgetType.INCIDENT_TABLE] = ["incidentTable"]`.
+  `externalLink` is optional and was added on 2026-10-28 (see §7). The default config does not carry it.
 
 ### 4.2 Create/edit modal
 These fields come below the shared Widget Name and Widget Type fields, in this order:
@@ -192,3 +198,32 @@ These fields come below the shared Widget Name and Widget Type fields, in this o
 - Whether to reuse the alert table's grid markup by extracting shared pieces, or to write a small sibling component. Prefer the smaller diff.
 - The exact shades of the badge colours. The hues follow the approved mock: Firing red, Acknowledged blue, Suppressed gray. This is deliberately not `getStatusColor`, which makes Acknowledged and Suppressed both gray and the badges impossible to tell apart. *(Designer's call.)*
 - How the HTML in summaries gets stripped (an existing helper, if one exists).
+
+## 7. Extra link button (added 2026-10-28)
+
+**Purpose.** A widget can carry one fixed shortcut to somewhere outside Keep, such as a runbook or a wiki page. The user sets the URL and the button's label in the create/edit modal, per widget. It is a single link: it does not change per incident and takes no `{{ }}` templating.
+
+**Placement.** The button sits just left of "Go to INC page" in the widget header and is blue (secondary, `xs`), like the external-link buttons on the Preset count panel and Service Now widgets, with a trailing "open in new tab" icon. That keeps it visually distinct from the orange "Go to INC page" button, which stays in the top-right corner. The full URL shows as the button's hover title.
+
+**Behaviour.**
+- Clicking opens the URL in a new tab with `noopener,noreferrer`. It does not navigate the dashboard, and it does not touch the Incidents page URL.
+- Only `http://` and `https://` URLs are accepted. `javascript:`, `ftp:` and bare hosts such as `example.com` are rejected in the modal. The widget also ignores a saved link that breaks the rule, so a stale or hand-edited config can't hand a script URL to `window.open`.
+- The label is at most 30 characters. The input doesn't cut typing off; going over shows an error instead.
+- URL and label are trimmed. With both blank there is no link. Filling in only one is invalid, so the Add/Update button stays disabled.
+
+**Modal.** A new section, "Extra button (optional)", comes after "Max incidents to show", with two stacked fields: the URL (placeholder `https://`) and the label. The inline errors are:
+
+| Field | Case | Message |
+|---|---|---|
+| URL | empty | Enter the URL this button opens |
+| URL | not an `http(s)` URL | Enter a full link starting with http:// or https:// |
+| Label | empty | Enter a label for this button |
+| Label | over 30 characters | Use 30 characters or fewer |
+
+The URL and label errors are independent, so both can show at once. They only apply once either field has text.
+
+**Storage.** The link is optional and is saved as `incidentTable.externalLink` (`{ url, label }`) in the dashboard's existing `dashboard_config` JSON. A widget without it renders as before. Clearing both fields on an edited widget removes the key. The config normalizer keeps a saved link only if it passes the same URL and label rules, trimmed, and otherwise leaves the key out.
+
+**Scope.** Frontend only. No gateway, event-handler, workflows or migration change. `stripForeignTypeFields` is unchanged, because `incidentTable` already owns the whole config.
+
+**Selectors.** `dashboard-widget-incident-table-link-btn` for the button, and `dashboard-widget-form-incident-table-link-url` and `dashboard-widget-form-incident-table-link-label` for the modal fields.

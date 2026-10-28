@@ -88,6 +88,10 @@ function renderTable(config: Partial<IncidentTableWidgetConfig> = {}) {
 
 const dataRows = () => screen.getAllByRole("row").slice(1);
 
+const LINK_BTN_SELECTOR =
+  '[data-cy="dashboard-widget-incident-table-link-btn"]';
+const RUNBOOK_LINK = { url: "https://wiki/runbook", label: "Runbook" };
+
 beforeEach(() => {
   jest.clearAllMocks();
   mockSearchParams = new URLSearchParams();
@@ -349,6 +353,123 @@ describe("IncidentTableGridItem", () => {
 
     expect(mockPush).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledWith(buildIncidentsPageUrl(cfg));
+  });
+
+  it("shows no extra button when the widget has no external link", () => {
+    renderTable();
+
+    expect(document.querySelector(LINK_BTN_SELECTOR)).toBeNull();
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+  });
+
+  it("shows the external link button with its label and url as the title", () => {
+    renderTable({ externalLink: RUNBOOK_LINK });
+
+    const button = screen.getByRole("button", { name: "Runbook" });
+    expect(button).toHaveAttribute("title", "https://wiki/runbook");
+    expect(document.querySelector(LINK_BTN_SELECTOR)).toBe(button);
+  });
+
+  it("styles the external link button blue and leaves Go to INC page orange", () => {
+    renderTable({ externalLink: RUNBOOK_LINK });
+
+    const linkButton = screen.getByRole("button", { name: "Runbook" });
+    const goButton = screen.getByRole("button", { name: "Go to INC page" });
+    expect(linkButton.className).toMatch(/blue/);
+    expect(linkButton.className).not.toMatch(/orange/);
+    expect(goButton.className).toMatch(/orange/);
+    expect(goButton.className).not.toMatch(/blue/);
+  });
+
+  it("places the external link button before Go to INC page", () => {
+    renderTable({ externalLink: RUNBOOK_LINK });
+
+    const linkButton = screen.getByRole("button", { name: "Runbook" });
+    const goButton = screen.getByRole("button", { name: "Go to INC page" });
+    expect(linkButton.parentElement).toBe(goButton.parentElement);
+    expect(
+      linkButton.compareDocumentPosition(goButton) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
+
+  it("opens the external link in a new tab without navigating", () => {
+    const open = jest.spyOn(window, "open").mockImplementation(() => null);
+    try {
+      renderTable({ externalLink: RUNBOOK_LINK });
+
+      fireEvent.click(screen.getByRole("button", { name: "Runbook" }));
+
+      expect(open).toHaveBeenCalledTimes(1);
+      expect(open).toHaveBeenCalledWith(
+        "https://wiki/runbook",
+        "_blank",
+        "noopener,noreferrer"
+      );
+      expect(mockPush).not.toHaveBeenCalled();
+    } finally {
+      open.mockRestore();
+    }
+  });
+
+  it("Go to INC page still navigates when an external link is set", () => {
+    const open = jest.spyOn(window, "open").mockImplementation(() => null);
+    try {
+      const cfg = renderTable({ externalLink: RUNBOOK_LINK });
+
+      fireEvent.click(screen.getByRole("button", { name: "Go to INC page" }));
+
+      expect(mockPush).toHaveBeenCalledTimes(1);
+      expect(mockPush).toHaveBeenCalledWith(buildIncidentsPageUrl(cfg));
+      expect(open).not.toHaveBeenCalled();
+    } finally {
+      open.mockRestore();
+    }
+  });
+
+  it("uses the trimmed url and label of a saved external link", () => {
+    const open = jest.spyOn(window, "open").mockImplementation(() => null);
+    try {
+      renderTable({
+        externalLink: { url: "  https://wiki/runbook ", label: " Runbook  " },
+      });
+
+      fireEvent.click(screen.getByRole("button", { name: "Runbook" }));
+
+      expect(open).toHaveBeenCalledWith(
+        "https://wiki/runbook",
+        "_blank",
+        "noopener,noreferrer"
+      );
+    } finally {
+      open.mockRestore();
+    }
+  });
+
+  it("shows no external link button for a saved link that is not usable", () => {
+    const unusable = [
+      { url: "javascript:alert(1)", label: "Runbook" },
+      { url: "https://wiki/runbook", label: "" },
+      { url: "https://wiki/runbook", label: "a".repeat(31) },
+    ];
+    for (const externalLink of unusable) {
+      const { unmount } = render(
+        <IncidentTableGridItem
+          item={
+            {
+              i: "w1",
+              name: "Incident Table",
+              widgetType: WidgetType.INCIDENT_TABLE,
+              incidentTable: { ...DEFAULT_INCIDENT_TABLE_CONFIG, externalLink },
+            } as unknown as WidgetData
+          }
+        />
+      );
+
+      expect(document.querySelector(LINK_BTN_SELECTOR)).toBeNull();
+      expect(screen.getAllByRole("button")).toHaveLength(1);
+      unmount();
+    }
   });
 
   it("exposes the e2e selectors", () => {

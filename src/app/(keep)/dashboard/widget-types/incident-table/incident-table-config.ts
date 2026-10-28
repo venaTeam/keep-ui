@@ -2,6 +2,7 @@ import { valueToString } from "@/features/filter/store/utils";
 import { IncidentDto } from "@/entities/incidents/model";
 import {
   IncidentTableColumn,
+  IncidentTableExternalLink,
   IncidentTableSeverity,
   IncidentTableStatus,
   IncidentTableWidgetConfig,
@@ -42,6 +43,7 @@ export const INCIDENT_TABLE_COLUMNS: {
 
 export const INCIDENT_TABLE_LIMIT_MIN = 1;
 export const INCIDENT_TABLE_LIMIT_MAX = 50;
+export const INCIDENT_TABLE_LINK_LABEL_MAX = 30;
 
 export const DEFAULT_INCIDENT_TABLE_CONFIG: IncidentTableWidgetConfig = {
   statuses: INCIDENT_TABLE_STATUS_OPTIONS.map((option) => option.value),
@@ -59,9 +61,46 @@ export const INCIDENT_TABLE_NEW_WIDGET_LAYOUT: Partial<LayoutItem> = {
 };
 
 /**
+ * True only for absolute http(s) urls, so javascript: and data: urls never
+ * reach window.open.
+ */
+export function isHttpUrl(value: string): boolean {
+  try {
+    const { protocol } = new URL(value);
+    return protocol === "http:" || protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function readExternalLink(
+  value: unknown
+): IncidentTableExternalLink | undefined {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return undefined;
+  }
+  const { url, label } = value as Record<string, unknown>;
+  if (typeof url !== "string" || typeof label !== "string") {
+    return undefined;
+  }
+  const trimmedUrl = url.trim();
+  const trimmedLabel = label.trim();
+  if (
+    !isHttpUrl(trimmedUrl) ||
+    trimmedLabel === "" ||
+    trimmedLabel.length > INCIDENT_TABLE_LINK_LABEL_MAX
+  ) {
+    return undefined;
+  }
+  return { url: trimmedUrl, label: trimmedLabel };
+}
+
+/**
  * Rebuilds a widget config from saved data that may be partial or stale.
  * Each field keeps only known values and falls back to its default when it
- * is missing, of the wrong type, empty after filtering, or out of range.
+ * is missing, of the wrong type, empty after filtering, or out of range. The
+ * optional external link is kept, trimmed, only when it is complete and
+ * usable, and is otherwise left out.
  */
 export function normalizeIncidentTableConfig(
   raw: unknown
@@ -84,6 +123,7 @@ export function normalizeIncidentTableConfig(
   };
 
   const limit = source.limit;
+  const externalLink = readExternalLink(source.externalLink);
   return {
     statuses: pickKnown(
       source.statuses,
@@ -107,6 +147,7 @@ export function normalizeIncidentTableConfig(
       limit <= INCIDENT_TABLE_LIMIT_MAX
         ? limit
         : DEFAULT_INCIDENT_TABLE_CONFIG.limit,
+    ...(externalLink ? { externalLink } : {}),
   };
 }
 
@@ -178,15 +219,21 @@ export function buildIncidentsPageUrl(
   return `/incidents?${params.toString()}`;
 }
 
+type IncidentTableConfigErrors = Partial<
+  Record<
+    "statuses" | "severities" | "columns" | "limit" | "linkUrl" | "linkLabel",
+    string
+  >
+>;
+
 /**
  * Returns an error message for each part of the config that is not usable.
+ * The external link is checked only when the config has one.
  */
 export function validateIncidentTableConfig(
   config: IncidentTableWidgetConfig
-): Partial<Record<"statuses" | "severities" | "columns" | "limit", string>> {
-  const errors: Partial<
-    Record<"statuses" | "severities" | "columns" | "limit", string>
-  > = {};
+): IncidentTableConfigErrors {
+  const errors: IncidentTableConfigErrors = {};
   if (config.statuses.length === 0) {
     errors.statuses = "Select at least one status";
   }
@@ -202,6 +249,20 @@ export function validateIncidentTableConfig(
     config.limit > INCIDENT_TABLE_LIMIT_MAX
   ) {
     errors.limit = `Enter a whole number from ${INCIDENT_TABLE_LIMIT_MIN} to ${INCIDENT_TABLE_LIMIT_MAX}`;
+  }
+  if (config.externalLink) {
+    const url = config.externalLink.url.trim();
+    const label = config.externalLink.label.trim();
+    if (url === "") {
+      errors.linkUrl = "Enter the URL this button opens";
+    } else if (!isHttpUrl(url)) {
+      errors.linkUrl = "Enter a full link starting with http:// or https://";
+    }
+    if (label === "") {
+      errors.linkLabel = "Enter a label for this button";
+    } else if (label.length > INCIDENT_TABLE_LINK_LABEL_MAX) {
+      errors.linkLabel = `Use ${INCIDENT_TABLE_LINK_LABEL_MAX} characters or fewer`;
+    }
   }
   return errors;
 }
