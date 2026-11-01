@@ -29,13 +29,19 @@ declare module "@hossted/keep-integration" {
     onOpenDetail?: (request: HosstedRequest) => void;
     disableHosstedSidePanel?: boolean;
     disableTooltip?: boolean;
+    variant?: "icon" | "primary";
   }): JSX.Element | null;
 
   export function HosstedSidebarSection(props: {
     request: HosstedRequest;
   }): JSX.Element | null;
 
-  export type HosstedResponseStatus = "loading" | "success" | "error";
+  // "analyzing" is set by the host app once the platform reports the analysis has started.
+  export type HosstedResponseStatus =
+    | "loading"
+    | "analyzing"
+    | "success"
+    | "error";
 
   export type HosstedResponse = {
     id: string;

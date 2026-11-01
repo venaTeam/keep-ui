@@ -290,14 +290,7 @@ export const AlertSidebar = ({
                     <CollapsibleIncidentsList incidents={alert.incident_dto} />
                   </div>
                 )}
-                <AlertTimeline
-                  key={auditData ? auditData.length : 1}
-                  alert={alert}
-                  auditData={auditData || []}
-                  isLoading={isLoading}
-                  onRefresh={handleRefresh}
-                />
-                <div>
+                <div className="pb-6">
                   <FieldHeader>Hossted</FieldHeader>
                   <HosstedSidebarSection
                     request={{
@@ -306,6 +299,13 @@ export const AlertSidebar = ({
                     }}
                   />
                 </div>
+                <AlertTimeline
+                  key={auditData ? auditData.length : 1}
+                  alert={alert}
+                  auditData={auditData || []}
+                  isLoading={isLoading}
+                  onRefresh={handleRefresh}
+                />
               </div>
             )}
           </Dialog.Panel>
