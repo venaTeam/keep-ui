@@ -27,6 +27,10 @@ async function getRedis() {
 const CACHE_TTL_SECONDS = 60 * 60 * 24 * 30; // 30 days
 const cacheKey = (id: string) => `hossted:response:${id}`;
 
+// The cache is optional: it is used only when HOSSTED_REDIS_URL is set. Without
+// it the route does not connect to Redis and every request goes to Hossted.
+const cacheEnabled = () => Boolean(process.env.HOSSTED_REDIS_URL);
+
 export async function POST(req: NextRequest) {
   const id = req.nextUrl.searchParams.get("id");
   if (!id) {
@@ -53,13 +57,15 @@ export async function POST(req: NextRequest) {
   });
   const data = await upstreamRes.json();
 
-  try {
-    const redis = await getRedis();
-    await redis.set(cacheKey(id), JSON.stringify(data), {
-      EX: CACHE_TTL_SECONDS,
-    });
-  } catch (err) {
-    console.error("Hossted proxy: failed to cache response", err);
+  if (cacheEnabled()) {
+    try {
+      const redis = await getRedis();
+      await redis.set(cacheKey(id), JSON.stringify(data), {
+        EX: CACHE_TTL_SECONDS,
+      });
+    } catch (err) {
+      console.error("Hossted proxy: failed to cache response", err);
+    }
   }
 
   return NextResponse.json(data, { status: upstreamRes.status });
@@ -69,6 +75,10 @@ export async function GET(req: NextRequest) {
   const id = req.nextUrl.searchParams.get("id");
   if (!id) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
+  }
+
+  if (!cacheEnabled()) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
   try {
