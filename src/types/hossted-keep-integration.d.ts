@@ -62,6 +62,10 @@ declare module "@hossted/keep-integration" {
 
   export function setHosstedResponse(response: HosstedResponse): void;
   export function refreshHosstedResponse(response: HosstedResponse): void;
+
+  // Counts a reply's `_metadata.sources` list by source type and kind, in the
+  // shape of HosstedResponse["sources"]. Returns undefined if nothing counts.
+  export function countSources(items: unknown): HosstedResponse["sources"];
 }
 
 declare module "@hossted/keep-integration/styles.css";
