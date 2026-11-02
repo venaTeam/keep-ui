@@ -14,7 +14,7 @@ import { AlertName } from "@/entities/alerts/ui";
 import AlertAssignee from "../ui/alert-assignee";
 import AlertExtraPayload from "../ui/alert-extra-payload";
 import { AlertMenu } from "@/features/alerts/alert-menu";
-import { HosstedButton } from "@hossted/keep-integration";
+import { RestoredHosstedButton } from "@/features/alerts/hossted-restore";
 import { isSameDay, isValid, isWithinInterval } from "date-fns";
 import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
 import { getNestedValue } from "@/shared/lib/object-utils";
@@ -734,7 +734,7 @@ export const useAlertTableCols = (
         header: "Hossted",
         minSize: 100,
         cell: (context) => (
-          <HosstedButton
+          <RestoredHosstedButton
             request={{
               fingerprint: context.row.original.fingerprint,
               payload: context.row.original,

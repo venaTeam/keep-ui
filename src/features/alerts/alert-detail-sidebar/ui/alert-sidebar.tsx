@@ -28,6 +28,7 @@ import { IncidentDto } from "@/entities/incidents/model";
 import { DOCS_CLIPBOARD_COPY_ERROR_PATH } from "@/shared/constants";
 import CollapsibleIncidentsList from "./alert-sidebar-incidents";
 import { HosstedSidebarSection } from "@hossted/keep-integration";
+import { useRestoreHosstedResponse } from "@/features/alerts/hossted-restore";
 
 type AlertSidebarProps = {
   isOpen: boolean;
@@ -50,6 +51,7 @@ export const AlertSidebar = ({
   setAssignModalAlert,
   setIsIncidentSelectorOpen,
 }: AlertSidebarProps) => {
+  useRestoreHosstedResponse(alert?.fingerprint);
   const { useAlertAudit } = useAlerts();
   const {
     data: auditData,

@@ -1,0 +1,28 @@
+# Redis for the Hossted proxy route (src/app/api/hossted/route.ts). The route
+# stores each successful Hossted answer under the tenant and the alert
+# fingerprint, and returns it to the Keep UI on GET, so an analysis is shown
+# after a page reload without a new request to Hossted. This is separate from
+# keep-event-handler's infra Redis (different purpose, different container).
+#
+#   docker compose -f docker-compose.hossted.yml up -d
+#
+# keep-ui runs as a host process (npm run dev), so it reaches this container
+# through the published port: HOSSTED_REDIS_URL=redis://localhost:6381
+services:
+  keep-hossted-cache:
+    image: redis:7
+    container_name: keep-hossted-cache
+    ports:
+      # Only the Keep services on this machine use this Redis, so it is not
+      # published on the network.
+      - "127.0.0.1:6381:6379"
+    volumes:
+      - hossted_cache_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  hossted_cache_data:
