@@ -30,6 +30,11 @@ jest.mock("../widget-types/service-now/widget-service-now", () => ({
   default: () => <div data-testid="service-now" />,
 }));
 
+jest.mock("../widget-types/incident-table/incident-table-grid-item", () => ({
+  __esModule: true,
+  default: () => <div data-testid="incident-table-grid-item" />,
+}));
+
 const baseItem = (overrides: Partial<WidgetData> = {}): WidgetData =>
   ({
     i: "w1",
@@ -100,5 +105,27 @@ describe("GridItem menu save", () => {
 
     fireEvent.click(screen.getByText("header-save"));
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ name: "After edit" }));
+  });
+});
+
+describe("GridItem incident table", () => {
+  it("renders the incident table for an incident table widget", () => {
+    renderItem(
+      baseItem({
+        widgetType: WidgetType.INCIDENT_TABLE,
+        preset: undefined,
+        presetPanelType: undefined,
+        name: "Open incidents",
+      })
+    );
+
+    expect(screen.getByTestId("incident-table-grid-item")).toBeInTheDocument();
+    expect(screen.getByText("Open incidents")).toBeInTheDocument();
+  });
+
+  it("does not render it for other widgets", () => {
+    renderItem(baseItem());
+
+    expect(screen.queryByTestId("incident-table-grid-item")).toBeNull();
   });
 });

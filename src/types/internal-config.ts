@@ -58,4 +58,9 @@ export interface InternalConfig {
   HOSSTED_API_TOKEN: string | undefined;
   HOSSTED_DASHBOARD_URL: string | undefined;
   HOSSTED_TOAST_DISABLED: boolean;
+  /**
+   * Grafana origins (scheme://host[:port]) whose panels dashboard Grafana
+   * Panel widgets may frame. Empty disables the Grafana Panel widget type.
+   */
+  GRAFANA_EMBED_ALLOWED_ORIGINS?: string[];
 }

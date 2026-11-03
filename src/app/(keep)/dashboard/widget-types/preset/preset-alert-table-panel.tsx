@@ -1,6 +1,16 @@
 import React from "react";
 import { Preset } from "@/entities/presets/model/types";
-import { usePresetAlertsCount } from "@/features/presets/custom-preset-links";
+import {
+  usePresetAlertCount,
+  usePresetAlertsCount,
+} from "@/features/presets/custom-preset-links";
+import {
+  COUNT_LOAD_ERROR_LABEL,
+  MISSING_UNAVAILABLE_LABEL,
+  getCountUnitLabel,
+  getMissingCountLabel,
+  isShowingMissing,
+} from "@/entities/presets/model/count-by";
 import { Button } from "@tremor/react";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
@@ -18,6 +28,8 @@ interface PresetAlertTablePanelProps {
 const getCountOfLastAlerts = (item: WidgetData) =>
   ((item.preset as { countOfLastAlerts?: number } | undefined)
     ?.countOfLastAlerts ?? 0);
+
+const ERROR_COLOR = "#9ca3af";
 
 const hexToRgb = (hex: string, alpha: number = 1) => {
   hex = hex.replace(/^#/, "");
@@ -57,6 +69,22 @@ const PresetAlertTablePanel: React.FC<PresetAlertTablePanelProps> = ({
     30000,
     !!preset
   );
+  const countBy = item.countBy;
+  const showMissing = isShowingMissing(countBy);
+  const {
+    totalCount: groupCount,
+    missingCount,
+    isLoading: isGroupLoading,
+    isError: isGroupError,
+  } = usePresetAlertCount({
+    presetCel: filterCel,
+    counterShowsFiringOnly: false,
+    groupBy: countBy?.field,
+    incidentStatus: countBy?.incidentStatus,
+    includeMissing: showMissing,
+    refreshInterval: 30000,
+    enabled: !!preset && !!countBy,
+  });
 
   function handleGoToPresetClick() {
     const presetUrl = `/alerts/${preset?.name.toLowerCase()}`;
@@ -68,6 +96,10 @@ const PresetAlertTablePanel: React.FC<PresetAlertTablePanelProps> = ({
   }
 
   const getColor = () => {
+    if (countBy && isGroupError) {
+      return ERROR_COLOR;
+    }
+    const thresholdCount = countBy ? groupCount : presetAlertsCount;
     let color = "#000000";
     if (
       item.widgetType === WidgetType.PRESET &&
@@ -75,7 +107,7 @@ const PresetAlertTablePanel: React.FC<PresetAlertTablePanelProps> = ({
       item.preset
     ) {
       for (let i = item.thresholds.length - 1; i >= 0; i--) {
-        if (presetAlertsCount >= item.thresholds[i].value) {
+        if (thresholdCount >= item.thresholds[i].value) {
           color = item.thresholds[i].color;
           break;
         }
@@ -97,11 +129,17 @@ const PresetAlertTablePanel: React.FC<PresetAlertTablePanelProps> = ({
     }
 
     return (
-      <div className="flex gap-1 items-center">
+      <div
+        className={
+          countBy
+            ? "flex gap-1 items-center text-gray-500"
+            : "flex gap-1 items-center"
+        }
+      >
         <div>Alerts count:</div>
         <div
-          className="flex items-center text-base font-bold"
-          style={{ color: getColor() }}
+          className={`flex items-center text-base font-bold ${countBy ? "text-gray-500" : ""}`}
+          style={countBy ? undefined : { color: getColor() }}
         >
           {isLoading && (
             <Skeleton containerClassName="h-4 w-8 relative -top-0.5" />
@@ -126,10 +164,74 @@ const PresetAlertTablePanel: React.FC<PresetAlertTablePanelProps> = ({
     );
   };
 
+  const renderGroupCountLine = () => {
+    if (!countBy) {
+      return null;
+    }
+    const color = getColor();
+
+    return (
+      <div
+        className="flex gap-1.5 items-center"
+        data-cy="dashboard-widget-group-count"
+      >
+        <span
+          className="inline-block h-[7px] w-[7px] shrink-0 rounded-full"
+          style={{
+            background: color,
+            boxShadow: `0 0 0 3px ${hexToRgb(color, 0.28)}`,
+          }}
+        />
+        <div>{getCountUnitLabel(countBy, groupCount)}:</div>
+        <div
+          className="flex items-center text-base font-bold"
+          style={{ color }}
+          title={isGroupError ? COUNT_LOAD_ERROR_LABEL : undefined}
+        >
+          {isGroupLoading ? (
+            <Skeleton containerClassName="h-4 w-8 relative -top-0.5" />
+          ) : isGroupError ? (
+            "—"
+          ) : (
+            groupCount
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderMissingLine = () => {
+    if (!countBy || !showMissing || isGroupError) {
+      return null;
+    }
+    const label =
+      missingCount === undefined
+        ? MISSING_UNAVAILABLE_LABEL
+        : getMissingCountLabel(countBy, missingCount);
+
+    return (
+      <div
+        className="flex gap-1.5 items-center text-gray-600"
+        data-cy="dashboard-widget-group-missing"
+      >
+        <span className="inline-block h-[7px] w-[7px] shrink-0 rounded-full border-[1.5px] border-gray-400" />
+        {isGroupLoading ? (
+          <Skeleton containerClassName="h-4 w-40 relative -top-0.5" />
+        ) : (
+          <span className="truncate" title={label}>
+            {label}
+          </span>
+        )}
+      </div>
+    );
+  };
+
   return (
     <>
       <div className="flex gap-2">
         <div className="flex-1 min-w-0 overflow-hidden whitespace-nowrap">
+          {renderGroupCountLine()}
+          {renderMissingLine()}
           {renderAlertsCountText()}
         </div>
         <div className="flex items-center">
@@ -149,7 +251,11 @@ const PresetAlertTablePanel: React.FC<PresetAlertTablePanelProps> = ({
           presetName={preset?.name as string}
           alerts={isLoading ? undefined : alerts}
           columns={(item as any)?.presetColumns}
-          background={isLoading ? undefined : hexToRgb(getColor(), 0.1)}
+          background={
+            isLoading || (countBy && isGroupLoading)
+              ? undefined
+              : hexToRgb(getColor(), 0.1)
+          }
         />
       )}
     </>

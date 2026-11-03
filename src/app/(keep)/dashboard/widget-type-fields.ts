@@ -8,6 +8,7 @@ const TYPE_FIELDS: Record<WidgetType, readonly string[]> = {
     "presetPanelType",
     "showFiringOnly",
     "customLink",
+    "countBy",
   ],
   [WidgetType.METRIC]: ["metric"],
   [WidgetType.GENERICS_METRICS]: ["genericMetrics"],
@@ -20,6 +21,8 @@ const TYPE_FIELDS: Record<WidgetType, readonly string[]> = {
   ],
   [WidgetType.IMAGE]: ["image"],
   [WidgetType.HTML]: ["html"],
+  [WidgetType.GRAFANA_PANEL]: ["grafanaPanel"],
+  [WidgetType.INCIDENT_TABLE]: ["incidentTable"],
 };
 
 /**

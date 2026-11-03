@@ -1,5 +1,6 @@
 import { MetricsWidget } from "@/utils/hooks/useDashboardMetricWidgets";
 import { Preset } from "@/entities/presets/model/types";
+import { CountBy } from "@/entities/presets/model/count-by";
 
 export interface LayoutItem {
   i: string;
@@ -30,6 +31,8 @@ export enum WidgetType {
   SERVICE_NOW = "SERVICE_NOW",
   IMAGE = "IMAGE",
   HTML = "HTML",
+  GRAFANA_PANEL = "GRAFANA_PANEL",
+  INCIDENT_TABLE = "INCIDENT_TABLE",
 }
 
 export type ImageFit = "contain" | "cover";
@@ -44,6 +47,36 @@ export interface ImageWidgetConfig {
 
 export interface HtmlWidgetConfig {
   html: string;
+}
+
+export interface GrafanaPanelWidgetConfig {
+  url: string;
+}
+
+export type IncidentTableStatus = "firing" | "acknowledged" | "suppressed";
+
+export type IncidentTableSeverity = "critical" | "high" | "warning";
+
+export type IncidentTableColumn =
+  | "status"
+  | "severity"
+  | "name"
+  | "description"
+  | "alertsCount"
+  | "creationTime"
+  | "snLink";
+
+export interface IncidentTableExternalLink {
+  url: string;
+  label: string;
+}
+
+export interface IncidentTableWidgetConfig {
+  statuses: IncidentTableStatus[];
+  severities: IncidentTableSeverity[];
+  columns: IncidentTableColumn[];
+  limit: number;
+  externalLink?: IncidentTableExternalLink;
 }
 
 export enum PresetPanelType {
@@ -65,8 +98,11 @@ export interface WidgetData extends LayoutItem {
   presetPanelType?: PresetPanelType;
   showFiringOnly?: boolean;
   customLink?: string;
+  countBy?: CountBy;
   image?: ImageWidgetConfig;
   html?: HtmlWidgetConfig;
+  grafanaPanel?: GrafanaPanelWidgetConfig;
+  incidentTable?: IncidentTableWidgetConfig;
 }
 
 export interface Threshold {

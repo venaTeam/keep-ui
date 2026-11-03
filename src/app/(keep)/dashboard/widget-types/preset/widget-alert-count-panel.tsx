@@ -1,6 +1,14 @@
 import React, { useMemo } from "react";
 import { Threshold } from "../../types";
 import { usePresetAlertCount } from "@/features/presets/custom-preset-links";
+import {
+  COUNT_LOAD_ERROR_LABEL,
+  CountBy,
+  MISSING_UNAVAILABLE_LABEL,
+  getCountUnitLabel,
+  getMissingCountLabel,
+  isShowingMissing,
+} from "@/entities/presets/model/count-by";
 import { useDashboardPreset } from "@/utils/hooks/useDashboardPresets";
 import { Button, Icon } from "@tremor/react";
 import { FireIcon, ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline";
@@ -10,6 +18,8 @@ import "react-loading-skeleton/dist/skeleton.css";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
 import { buildTimeRangeCel } from "./time-range-cel";
+
+const ERROR_COLOR = "#9ca3af";
 
 interface WidgetAlertCountPanelProps {
   presetName: string;
@@ -21,6 +31,7 @@ interface WidgetAlertCountPanelProps {
   onEdit?: () => void;
   onDelete?: () => void;
   onSave?: () => void;
+  countBy?: CountBy;
 }
 
 const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
@@ -33,6 +44,7 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
   onEdit,
   onDelete,
   onSave,
+  countBy,
 }) => {
   const searchParams = useSearchParams();
   const timeRangeCel = useMemo(
@@ -56,9 +68,20 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
     [presetCel, timeRangeCel]
   );
 
-  const { totalCount: alertsCount, isLoading } = usePresetAlertCount({
+  const appliesFiringOnly = showFiringOnly && countBy?.field !== "incident";
+  const showMissing = isShowingMissing(countBy);
+
+  const {
+    totalCount: alertsCount,
+    missingCount,
+    isLoading,
+    isError,
+  } = usePresetAlertCount({
     presetCel: filterCel,
-    counterShowsFiringOnly: showFiringOnly,
+    counterShowsFiringOnly: appliesFiringOnly,
+    groupBy: countBy?.field,
+    incidentStatus: countBy?.incidentStatus,
+    includeMissing: showMissing,
     refreshInterval: 30000,
     enabled: !!preset,
   });
@@ -130,7 +153,20 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
     return `rgb(${r}, ${g}, ${b}, ${alpha})`;
   }
 
-  const color = getColor(isCountLoading ? 0 : alertsCount);
+  const color = isError
+    ? ERROR_COLOR
+    : getColor(isCountLoading ? 0 : alertsCount);
+
+  const caption = countBy
+    ? isError
+      ? COUNT_LOAD_ERROR_LABEL
+      : getCountUnitLabel(countBy, alertsCount)
+    : undefined;
+
+  const missingLabel =
+    countBy && missingCount !== undefined
+      ? getMissingCountLabel(countBy, missingCount)
+      : MISSING_UNAVAILABLE_LABEL;
 
   return (
     <div className="flex flex-col h-full" data-cy="dashboard-widget-alert-count-panel">
@@ -151,7 +187,7 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
         <div className="flex-none flex items-center gap-1 min-w-0">
           <div className="flex-1 min-w-0 flex items-center justify-center gap-1 text-xl font-bold text-gray-700">
             <span className="truncate">{title}</span>
-            {showFiringOnly && (
+            {appliesFiringOnly && (
               <Icon
                 className="p-0 shrink-0"
                 style={{ color }}
@@ -186,19 +222,68 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
             </div>
           )}
         </div>
-        <div
-          className="flex-1 flex items-center justify-center min-h-0 text-4xl font-black tracking-tight"
-          style={{
-            color,
-            textShadow: "0 1px 2px rgba(0,0,0,0.1)",
-          }}
-        >
-          {isCountLoading ? (
-            <Skeleton containerClassName="h-8 w-16" />
-          ) : (
-            alertsCount
-          )}
-        </div>
+        {countBy ? (
+          <div className="flex-1 flex flex-col items-center justify-center min-h-0 gap-1.5">
+            <div
+              className="text-4xl font-black tracking-tight leading-none"
+              style={{
+                color,
+                textShadow: "0 1px 2px rgba(0,0,0,0.1)",
+              }}
+              data-cy="dashboard-widget-count-value"
+            >
+              {isCountLoading ? (
+                <Skeleton containerClassName="h-8 w-16" />
+              ) : isError ? (
+                "—"
+              ) : (
+                alertsCount
+              )}
+            </div>
+            <div
+              className="flex max-w-full items-center gap-1.5 text-xs font-semibold text-gray-700"
+              data-cy="dashboard-widget-count-caption"
+            >
+              <span
+                className="inline-block h-[7px] w-[7px] shrink-0 rounded-full"
+                style={{
+                  background: color,
+                  boxShadow: `0 0 0 3px ${hexToRgb(color, 0.28)}`,
+                }}
+              />
+              <span className="truncate" title={caption}>
+                {caption}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div
+            className="flex-1 flex items-center justify-center min-h-0 text-4xl font-black tracking-tight"
+            style={{
+              color,
+              textShadow: "0 1px 2px rgba(0,0,0,0.1)",
+            }}
+          >
+            {isCountLoading ? (
+              <Skeleton containerClassName="h-8 w-16" />
+            ) : (
+              alertsCount
+            )}
+          </div>
+        )}
+        {countBy && showMissing && !isError && (
+          <div
+            className="-mx-2 -mb-2 mt-1 flex-none truncate rounded-b-md border-t border-black/10 bg-white/75 px-2 py-1 text-center text-xs text-gray-600"
+            title={isCountLoading ? undefined : missingLabel}
+            data-cy="dashboard-widget-count-missing"
+          >
+            {isCountLoading ? (
+              <Skeleton containerClassName="inline-block w-32" />
+            ) : (
+              missingLabel
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

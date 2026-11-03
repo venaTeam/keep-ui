@@ -101,6 +101,9 @@ export function getConfig(): InternalConfig {
     HOSSTED_API_TOKEN: process.env.HOSSTED_API_TOKEN,
     HOSSTED_DASHBOARD_URL: process.env.HOSSTED_DASHBOARD_URL,
     HOSSTED_TOAST_DISABLED: process.env.HOSSTED_TOAST_DISABLED === "true",
+    GRAFANA_EMBED_ALLOWED_ORIGINS: parseOriginListEnv(
+      process.env.KEEP_GRAFANA_EMBED_ALLOWED_ORIGINS
+    ),
   };
 }
 
@@ -115,4 +118,29 @@ function parsePositiveIntEnv(value: string | undefined): number | undefined {
   }
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+/**
+ * Normalized http(s) origins from a comma-separated env var. Entries that are
+ * not valid http(s) URLs are dropped, and any path is reduced to its origin.
+ */
+function parseOriginListEnv(value: string | undefined): string[] {
+  if (!value) {
+    return [];
+  }
+  const origins = value
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .flatMap((entry) => {
+      try {
+        const url = new URL(entry);
+        return url.protocol === "http:" || url.protocol === "https:"
+          ? [url.origin]
+          : [];
+      } catch {
+        return [];
+      }
+    });
+  return Array.from(new Set(origins));
 }

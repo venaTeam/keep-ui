@@ -57,4 +57,47 @@ describe("stripForeignTypeFields", () => {
     stripForeignTypeFields(presetWidget, WidgetType.METRIC);
     expect(presetWidget).toEqual(copy);
   });
+
+  it("drops countBy when a preset widget becomes another type but keeps it for presets", () => {
+    const grouped = {
+      ...presetWidget,
+      countBy: { field: "incident", incidentStatus: "active" },
+    } as unknown as WidgetData;
+
+    expect(stripForeignTypeFields(grouped, WidgetType.IMAGE)).not.toHaveProperty(
+      "countBy"
+    );
+    expect(stripForeignTypeFields(grouped, WidgetType.PRESET)).toHaveProperty(
+      "countBy"
+    );
+  });
+
+  it("keeps incidentTable only for incident table widgets", () => {
+    const incidentWidget = {
+      ...presetWidget,
+      widgetType: WidgetType.INCIDENT_TABLE,
+      incidentTable: {
+        statuses: ["firing"],
+        severities: ["critical"],
+        columns: ["name"],
+        limit: 10,
+      },
+    } as unknown as WidgetData;
+
+    expect(stripForeignTypeFields(incidentWidget, WidgetType.IMAGE)).not.toHaveProperty(
+      "incidentTable"
+    );
+    expect(
+      stripForeignTypeFields(incidentWidget, WidgetType.INCIDENT_TABLE)
+    ).toHaveProperty("incidentTable", incidentWidget.incidentTable);
+  });
+
+  it("drops preset fields when a preset widget becomes an incident table", () => {
+    const result = stripForeignTypeFields(presetWidget, WidgetType.INCIDENT_TABLE);
+    expect(result).not.toHaveProperty("preset");
+    expect(result).not.toHaveProperty("presetPanelType");
+    expect(result).not.toHaveProperty("thresholds");
+    expect(result).not.toHaveProperty("customLink");
+    expect(result).not.toHaveProperty("countBy");
+  });
 });

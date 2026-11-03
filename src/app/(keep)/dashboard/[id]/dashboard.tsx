@@ -29,6 +29,7 @@ import {
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
 import { describeInvalidImageError } from "../widget-types/image/image-widget-validation";
+import { applyEditedItemToLayout } from "../widget-layout";
 import "../styles.css";
 import { Preset } from "@/entities/presets/model/types";
 import { recordAction, recordPageLoad, recordError } from "@/utils/metrics";
@@ -129,6 +130,7 @@ const DashboardPage = () => {
     setWidgetData((prevData) =>
       prevData.map((item) => (item.i === updatedItem.i ? updatedItem : item))
     );
+    setLayout((prevLayout) => applyEditedItemToLayout(prevLayout, updatedItem));
     closeModal();
   };
 
