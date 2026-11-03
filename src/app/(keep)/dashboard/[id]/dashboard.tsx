@@ -331,25 +331,26 @@ const DashboardPage = () => {
                 {dashboardName}
               </Subtitle>
             )}
-            {isEditMode ? (
+            {isEditMode && (
               <Badge color="orange" size="xs" data-cy="dashboard-edit-mode-badge">
                 Editing
               </Badge>
-            ) : (
+            )}
+          </div>
+          <div className="flex gap-1 items-end">
+            <GenericFilters filters={DASHBOARD_FILTERS} />
+            {!isEditMode && (
               <Button
                 icon={FiEdit2}
                 color="orange"
-                variant="light"
-                size="xs"
+                variant="secondary"
                 onClick={enterEditMode}
+                className="ml-2"
                 tooltip="Edit dashboard"
                 aria-label="Edit dashboard"
                 data-cy="dashboard-enter-edit-btn"
               />
             )}
-          </div>
-          <div className="flex gap-1 items-end">
-            <GenericFilters filters={DASHBOARD_FILTERS} />
             {isEditMode && (
               <div className="flex">
                 <Button color="orange" onClick={openModal} className="ml-2" data-cy="dashboard-add-widget-btn">
