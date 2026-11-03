@@ -7,10 +7,11 @@ const mockPost = jest.fn();
 const mockMutate = jest.fn();
 let mockDashboards: any[] | undefined;
 let mockId = "Ops";
+const mockRouter = { push: jest.fn(), replace: jest.fn() };
 
 jest.mock("next/navigation", () => ({
   useParams: () => ({ id: mockId }),
-  useRouter: () => ({ push: jest.fn() }),
+  useRouter: () => mockRouter,
   useSearchParams: () => new URLSearchParams(),
 }));
 
@@ -104,6 +105,9 @@ beforeEach(() => {
   mockDashboards = [savedDashboard()];
   mockPost.mockReset();
   mockMutate.mockReset();
+  mockRouter.push.mockReset();
+  mockRouter.replace.mockReset();
+  window.history.replaceState(null, "", "/dashboard/Ops");
 });
 
 describe("dashboard view mode", () => {
@@ -158,17 +162,14 @@ describe("dashboard edit mode", () => {
     expect(byCy("dashboard-name-input")).toBeInTheDocument();
   });
 
-  it("cancel throws away the changes and returns to view mode", () => {
+  it("cancel without changes returns to view mode without asking", () => {
     render(<DashboardPage />);
     click("dashboard-enter-edit-btn");
-    fireEvent.click(screen.getByText("move-panels"));
-    expect(screen.getByTestId("pos-w1")).toHaveTextContent("5");
 
     click("dashboard-cancel-edit-btn");
 
-    expect(screen.getByTestId("pos-w1")).toHaveTextContent("0");
+    expect(byCy("dashboard-leave-modal")).toBeNull();
     expect(byCy("dashboard-enter-edit-btn")).toBeInTheDocument();
-    expect(mockPost).not.toHaveBeenCalled();
   });
 
   it("save persists the changes and returns to view mode", async () => {
@@ -240,5 +241,77 @@ describe("dashboard switching and new dashboards", () => {
     expect(byCy("dashboard-name")).toHaveTextContent("Noc");
     expect(byCy("dashboard-enter-edit-btn")).toBeInTheDocument();
     expect(screen.getByTestId("pos-w1")).toHaveTextContent("0");
+  });
+});
+
+describe("leaving edit mode with unsaved changes", () => {
+  const editAndMove = () => {
+    render(<DashboardPage />);
+    click("dashboard-enter-edit-btn");
+    fireEvent.click(screen.getByText("move-panels"));
+    expect(screen.getByTestId("pos-w1")).toHaveTextContent("5");
+  };
+
+  it("cancel asks before throwing the changes away", () => {
+    editAndMove();
+    click("dashboard-cancel-edit-btn");
+
+    expect(byCy("dashboard-leave-modal")).toBeInTheDocument();
+    expect(screen.getByText("Discard unsaved changes?")).toBeInTheDocument();
+    expect(screen.getByTestId("pos-w1")).toHaveTextContent("5");
+  });
+
+  it("Cancel in the warning keeps editing with the changes", async () => {
+    editAndMove();
+    click("dashboard-cancel-edit-btn");
+    click("dashboard-leave-cancel-btn");
+
+    await waitFor(() => expect(byCy("dashboard-leave-modal")).toBeNull());
+    expect(byCy("dashboard-save-layout-btn")).toBeInTheDocument();
+    expect(screen.getByTestId("pos-w1")).toHaveTextContent("5");
+  });
+
+  it("Continue in the warning throws the changes away and leaves edit mode", async () => {
+    editAndMove();
+    click("dashboard-cancel-edit-btn");
+    click("dashboard-leave-continue-btn");
+
+    await waitFor(() => expect(byCy("dashboard-leave-modal")).toBeNull());
+    expect(screen.getByTestId("pos-w1")).toHaveTextContent("0");
+    expect(byCy("dashboard-enter-edit-btn")).toBeInTheDocument();
+    expect(mockPost).not.toHaveBeenCalled();
+  });
+
+  it("a link out of the page asks first and navigates only on Continue", async () => {
+    editAndMove();
+    const link = document.createElement("a");
+    link.href = "/alerts/feed";
+    link.textContent = "Feed";
+    document.body.appendChild(link);
+
+    fireEvent.click(link, { button: 0 });
+    expect(byCy("dashboard-leave-modal")).toBeInTheDocument();
+    expect(mockRouter.push).not.toHaveBeenCalled();
+    expect(mockRouter.replace).not.toHaveBeenCalled();
+
+    click("dashboard-leave-continue-btn");
+    expect(mockRouter.replace).toHaveBeenCalledWith("/alerts/feed");
+    expect(byCy("dashboard-enter-edit-btn")).toBeInTheDocument();
+    link.remove();
+  });
+
+  it("does not ask after the changes are saved", async () => {
+    mockPost.mockResolvedValue({});
+    editAndMove();
+    await act(async () => click("dashboard-save-layout-btn"));
+
+    const link = document.createElement("a");
+    link.href = "/alerts/feed";
+    document.body.appendChild(link);
+    link.addEventListener("click", (e) => e.preventDefault());
+    fireEvent.click(link, { button: 0 });
+
+    expect(byCy("dashboard-leave-modal")).toBeNull();
+    link.remove();
   });
 });
