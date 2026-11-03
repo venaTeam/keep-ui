@@ -18,6 +18,10 @@ import {
 } from "../dashboard-appearance/dashboard-appearance-validation";
 import { DashboardSettingsPanel } from "../dashboard-appearance/DashboardSettingsPanel";
 import { FiEdit2, FiSave, FiSliders } from "react-icons/fi";
+import { DashboardEditModeProvider } from "../DashboardEditModeContext";
+import { DashboardEditState, dashboardEditKey } from "../dashboard-edit-state";
+import { LeaveEditModeModal } from "../LeaveEditModeModal";
+import { useLeaveGuard } from "@/shared/lib/hooks/useLeaveGuard";
 import { useDashboards } from "utils/hooks/useDashboards";
 import { toast } from "react-toastify";
 import { GenericFilters } from "@/components/filters/GenericFilters";
@@ -64,20 +68,108 @@ const DashboardPage = () => {
     useState<DashboardAppearance>(DEFAULT_APPEARANCE);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const settingsSnapshot = useRef<DashboardAppearance>(DEFAULT_APPEARANCE);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const isEditModeRef = useRef(false);
+  isEditModeRef.current = isEditMode;
+  const editSnapshot = useRef<DashboardEditState | null>(null);
+  const editSnapshotKey = useRef<string | null>(null);
+  const loadedId = useRef<string | null>(null);
+  // The action held back by the leave warning; null while it is closed.
+  const [pendingLeave, setPendingLeave] = useState<(() => void) | null>(null);
+
+  const startEditing = (state: DashboardEditState) => {
+    editSnapshot.current = structuredClone(state);
+    editSnapshotKey.current = dashboardEditKey(state);
+    setIsEditMode(true);
+  };
+
+  const stopEditing = () => {
+    editSnapshot.current = null;
+    editSnapshotKey.current = null;
+    setPendingLeave(null);
+    setIsEditMode(false);
+    setIsEditingName(false);
+    setIsModalOpen(false);
+    setIsSettingsOpen(false);
+  };
 
   useEffect(() => {
-    if (!isLoading) {
-      const dashboard = dashboards?.find(
-        (d) => d.dashboard_name === decodeURIComponent(id)
-      );
-      if (dashboard) {
-        setLayout(dashboard.dashboard_config.layout);
-        setWidgetData(dashboard.dashboard_config.widget_data);
-        setDashboardName(dashboard.dashboard_name);
-        setAppearance(clampAppearance(dashboard.dashboard_config.appearance));
-      }
+    if (isLoading || !dashboards) {
+      return;
     }
+    // Same page instance is reused when switching dashboards, so the first
+    // load for an id always resets, even out of edit mode.
+    const isFirstLoad = loadedId.current !== id;
+    loadedId.current = id;
+    if (isFirstLoad) {
+      stopEditing();
+    }
+    const dashboard = dashboards.find(
+      (d) => d.dashboard_name === decodeURIComponent(id)
+    );
+    if (!dashboard) {
+      if (isFirstLoad) {
+        // A brand-new (unsaved) dashboard opens in edit mode so it can be saved.
+        const empty: DashboardEditState = {
+          layout: [],
+          widgetData: [],
+          appearance: DEFAULT_APPEARANCE,
+          dashboardName: decodeURIComponent(id),
+        };
+        setLayout(empty.layout);
+        setWidgetData(empty.widgetData);
+        setAppearance(empty.appearance);
+        setDashboardName(empty.dashboardName);
+        startEditing(empty);
+      }
+      return;
+    }
+    // A refetch must not overwrite edits that are not saved yet.
+    if (isEditModeRef.current && !isFirstLoad) {
+      return;
+    }
+    setLayout(dashboard.dashboard_config.layout);
+    setWidgetData(dashboard.dashboard_config.widget_data);
+    setDashboardName(dashboard.dashboard_name);
+    setAppearance(clampAppearance(dashboard.dashboard_config.appearance));
   }, [id, dashboards, isLoading]);
+
+  const hasUnsavedChanges =
+    isEditMode &&
+    editSnapshotKey.current !== null &&
+    editSnapshotKey.current !==
+      dashboardEditKey({ layout, widgetData, appearance, dashboardName });
+
+  useLeaveGuard(hasUnsavedChanges, (proceed) => setPendingLeave(() => proceed));
+
+  const enterEditMode = () =>
+    startEditing({ layout, widgetData, appearance, dashboardName });
+
+  const cancelEditMode = () => {
+    const snapshot = editSnapshot.current;
+    if (snapshot) {
+      setLayout(snapshot.layout);
+      setWidgetData(snapshot.widgetData);
+      setAppearance(snapshot.appearance);
+      setDashboardName(snapshot.dashboardName);
+    }
+    stopEditing();
+  };
+
+  // Leaving edit mode any way but Save asks first when there are changes.
+  const requestCancelEditMode = () => {
+    if (hasUnsavedChanges) {
+      setPendingLeave(() => () => {});
+    } else {
+      cancelEditMode();
+    }
+  };
+
+  const continueLeaving = () => {
+    const proceed = pendingLeave;
+    cancelEditMode();
+    proceed?.();
+  };
 
   const openModal = () => {
     setEditingItem(null); // Ensure new modal opens without editing item context
@@ -183,6 +275,7 @@ const DashboardPage = () => {
       }
 
       console.log("Dashboard saved successfully", result);
+      stopEditing();
       mutateDashboard();
       toast.success("Dashboard saved successfully");
     } catch (error) {
@@ -203,125 +296,165 @@ const DashboardPage = () => {
   };
 
   return (
-    <div
-      className={`flex flex-col h-full relative ${
-        isSettingsOpen ? "pr-80" : ""
-      }`}
-      data-cy="dashboard-page"
-    >
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-        <div className="relative">
-          {isEditingName ? (
-            <TextInput
-              value={dashboardName}
-              onChange={handleNameChange}
-              onBlur={toggleEditingName}
-              placeholder="Dashboard Name"
-              className="border-orange-500 focus:border-orange-600 focus:ring-orange-600"
-              data-cy="dashboard-name-input"
-            />
-          ) : (
-            <Subtitle color="orange" className="mr-2" data-cy="dashboard-name">
-              {dashboardName}
-            </Subtitle>
-          )}
-          <Icon
-            size="xs"
-            icon={FiEdit2}
-            onClick={toggleEditingName}
-            className="cursor-pointer absolute right-0 top-0 transform -translate-y-1/2 translate-x-1/2 text-sm"
-            color="orange"
-            data-cy="dashboard-edit-btn"
-          />
-        </div>
-        <div className="flex gap-1 items-end">
-          <GenericFilters filters={DASHBOARD_FILTERS} />
-          <div className="flex">
-            <Button
-              icon={FiSave}
-              color="orange"
-              size="sm"
-              onClick={handleSaveDashboard}
-              tooltip="Save current dashboard"
-              data-cy="dashboard-save-layout-btn"
-            />
-            <Button color="orange" onClick={openModal} className="ml-2" data-cy="dashboard-add-widget-btn">
-              Add Widget
-            </Button>
-            <Button
-              color="orange"
-              variant="secondary"
-              icon={FiSliders}
-              onClick={openSettings}
-              className="ml-2"
-              tooltip="Customize this dashboard"
-              data-cy="dashboard-customize-btn"
-            >
-              Customize
-            </Button>
+    <DashboardEditModeProvider value={isEditMode}>
+      <div
+        className={`flex flex-col h-full relative ${
+          isSettingsOpen ? "pr-80" : ""
+        }`}
+        data-cy="dashboard-page"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <div className="relative">
+            {isEditingName ? (
+              <TextInput
+                value={dashboardName}
+                onChange={handleNameChange}
+                onBlur={toggleEditingName}
+                placeholder="Dashboard Name"
+                className="border-orange-500 focus:border-orange-600 focus:ring-orange-600"
+                data-cy="dashboard-name-input"
+              />
+            ) : (
+              <Subtitle color="orange" className="mr-2" data-cy="dashboard-name">
+                {dashboardName}
+              </Subtitle>
+            )}
+            {isEditMode && (
+              <Icon
+                size="xs"
+                icon={FiEdit2}
+                onClick={toggleEditingName}
+                className="cursor-pointer absolute right-0 top-0 transform -translate-y-1/2 translate-x-1/2 text-sm"
+                color="orange"
+                data-cy="dashboard-edit-btn"
+              />
+            )}
+          </div>
+          <div className="flex gap-1 items-end">
+            <GenericFilters filters={DASHBOARD_FILTERS} />
+            {!isEditMode && (
+              <Button
+                icon={FiEdit2}
+                color="orange"
+                size="sm"
+                onClick={enterEditMode}
+                className="ml-2"
+                tooltip="Edit dashboard"
+                aria-label="Edit dashboard"
+                data-cy="dashboard-enter-edit-btn"
+              />
+            )}
+            {isEditMode && (
+              <div className="flex">
+                <Button
+                  icon={FiSave}
+                  color="orange"
+                  size="sm"
+                  onClick={handleSaveDashboard}
+                  className="ml-2"
+                  tooltip="Save current dashboard"
+                  data-cy="dashboard-save-layout-btn"
+                />
+                <Button color="orange" onClick={openModal} className="ml-2" data-cy="dashboard-add-widget-btn">
+                  Add Widget
+                </Button>
+                <Button
+                  color="orange"
+                  variant="secondary"
+                  icon={FiSliders}
+                  onClick={openSettings}
+                  className="ml-2"
+                  tooltip="Customize this dashboard"
+                  data-cy="dashboard-customize-btn"
+                >
+                  Customize
+                </Button>
+                <Button
+                  color="gray"
+                  variant="secondary"
+                  onClick={requestCancelEditMode}
+                  className="ml-2"
+                  tooltip="Discard changes and stop editing"
+                  data-cy="dashboard-cancel-edit-btn"
+                >
+                  Cancel
+                </Button>
+              </div>
+            )}
           </div>
         </div>
-      </div>
-      {layout.length === 0 ? (
-        <Card
-          className="w-full h-full flex items-center justify-center cursor-pointer"
-          onClick={openModal}
-          data-cy="dashboard-empty-state"
-          style={
-            appearance.backgroundColor
-              ? { backgroundColor: appearance.backgroundColor }
-              : undefined
-          }
-        >
-          <div className="text-center">
-            <p className="text-lg font-medium">No widgets available</p>
-            <p className="text-gray-500">Click to add your first widget</p>
-          </div>
-        </Card>
-      ) : (
-        <Card
-          className="w-full h-full overflow-auto"
-          data-cy="dashboard-grid-container"
-          style={
-            appearance.backgroundColor
-              ? { backgroundColor: appearance.backgroundColor }
-              : undefined
-          }
-        >
-          <GridLayout
-            layout={layout}
-            onLayoutChange={handleLayoutChange}
-            data={widgetData}
-            onEdit={handleEditWidget}
-            onDelete={handleDeleteWidget}
-            onSave={handleSaveEdit}
+        {layout.length === 0 ? (
+          <Card
+            className={`w-full h-full flex items-center justify-center ${
+              isEditMode ? "cursor-pointer" : ""
+            }`}
+            onClick={isEditMode ? openModal : undefined}
+            data-cy="dashboard-empty-state"
+            style={
+              appearance.backgroundColor
+                ? { backgroundColor: appearance.backgroundColor }
+                : undefined
+            }
+          >
+            <div className="text-center">
+              <p className="text-lg font-medium">No widgets available</p>
+              <p className="text-gray-500">
+                {isEditMode
+                  ? "Click to add your first widget"
+                  : "Click the edit icon to add widgets"}
+              </p>
+            </div>
+          </Card>
+        ) : (
+          <Card
+            className="w-full h-full overflow-auto"
+            data-cy="dashboard-grid-container"
+            style={
+              appearance.backgroundColor
+                ? { backgroundColor: appearance.backgroundColor }
+                : undefined
+            }
+          >
+            <GridLayout
+              layout={layout}
+              onLayoutChange={handleLayoutChange}
+              data={widgetData}
+              onEdit={handleEditWidget}
+              onDelete={handleDeleteWidget}
+              onSave={handleSaveEdit}
+              presets={allPresets}
+              metrics={allMetricWidgets}
+              density={appearance.density}
+            />
+          </Card>
+        )}
+        {isModalOpen && (
+          <WidgetModal
+            isOpen={true}
+            onClose={closeModal}
+            onAddWidget={handleAddWidget}
+            onEditWidget={handleSaveEdit}
             presets={allPresets}
-            metrics={allMetricWidgets}
-            density={appearance.density}
+            editingItem={editingItem}
+            metricWidgets={allMetricWidgets}
           />
-        </Card>
-      )}
-      {isModalOpen && (
-        <WidgetModal
-          isOpen={true}
-          onClose={closeModal}
-          onAddWidget={handleAddWidget}
-          onEditWidget={handleSaveEdit}
-          presets={allPresets}
-          editingItem={editingItem}
-          metricWidgets={allMetricWidgets}
+        )}
+        {isSettingsOpen && (
+          <DashboardSettingsPanel
+            appearance={appearance}
+            onChange={setAppearance}
+            onReset={resetAppearance}
+            onCancel={cancelSettings}
+            onClose={closeSettings}
+          />
+        )}
+        <LeaveEditModeModal
+          isOpen={pendingLeave !== null}
+          onCancel={() => setPendingLeave(null)}
+          onContinue={continueLeaving}
         />
-      )}
-      {isSettingsOpen && (
-        <DashboardSettingsPanel
-          appearance={appearance}
-          onChange={setAppearance}
-          onReset={resetAppearance}
-          onCancel={cancelSettings}
-          onClose={closeSettings}
-        />
-      )}
-    </div>
+      </div>
+    </DashboardEditModeProvider>
   );
 };
 

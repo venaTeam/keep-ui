@@ -10,6 +10,9 @@ import { expect, type Locator, type Page } from "@playwright/test";
  * POST /dashboard. The name is chosen by the app, not the test — `addViaNav()`
  * reads it back off the rendered page.
  *
+ * The page opens in view mode; the pencil (`enterEditButton`) switches to edit
+ * mode, which shows Save / Cancel. A brand-new dashboard opens in edit mode.
+ *
  * Locators are centralized in the `locators` map; methods reference it.
  */
 export class DashboardPage {
@@ -18,6 +21,8 @@ export class DashboardPage {
     name: Locator;
     addButton: Locator;
     saveButton: Locator;
+    enterEditButton: Locator;
+    cancelEditButton: Locator;
     navLink: (name: string) => Locator;
   };
 
@@ -28,6 +33,8 @@ export class DashboardPage {
       // Sidebar "Add Dashboard" button (DashboardLinks renders it in the nav).
       addButton: page.locator('[data-cy="nav-btn-add-dashboard"]'),
       saveButton: page.locator('[data-cy="dashboard-save-layout-btn"]'),
+      enterEditButton: page.locator('[data-cy="dashboard-enter-edit-btn"]'),
+      cancelEditButton: page.locator('[data-cy="dashboard-cancel-edit-btn"]'),
       // Sidebar nav link for a saved dashboard (DashboardLink renders the name).
       navLink: (name) =>
         page
@@ -74,6 +81,12 @@ export class DashboardPage {
   }
   get saveButton(): Locator {
     return this.locators.saveButton;
+  }
+  get enterEditButton(): Locator {
+    return this.locators.enterEditButton;
+  }
+  get cancelEditButton(): Locator {
+    return this.locators.cancelEditButton;
   }
   navLink(name: string): Locator {
     return this.locators.navLink(name);

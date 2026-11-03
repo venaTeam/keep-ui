@@ -1,6 +1,7 @@
 import React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import GridItem from "../GridItem";
+import { DashboardEditModeProvider } from "../DashboardEditModeContext";
 import { PresetPanelType, WidgetData, WidgetType } from "../types";
 
 jest.mock("../MenuButton", () => ({
@@ -49,15 +50,20 @@ const baseItem = (overrides: Partial<WidgetData> = {}): WidgetData =>
     ...overrides,
   }) as unknown as WidgetData;
 
-const renderItem = (item: WidgetData, props: { isDraggable?: boolean } = {}) =>
+const renderItem = (
+  item: WidgetData,
+  { isEditMode = true, ...props }: { isDraggable?: boolean; isEditMode?: boolean } = {}
+) =>
   render(
-    <GridItem
-      item={item}
-      onEdit={jest.fn()}
-      onDelete={jest.fn()}
-      onSave={jest.fn()}
-      {...props}
-    />
+    <DashboardEditModeProvider value={isEditMode}>
+      <GridItem
+        item={item}
+        onEdit={jest.fn()}
+        onDelete={jest.fn()}
+        onSave={jest.fn()}
+        {...props}
+      />
+    </DashboardEditModeProvider>
   );
 
 describe("GridItem drag handle", () => {
@@ -95,12 +101,16 @@ describe("GridItem menu save", () => {
     const onSave = jest.fn();
     const original = baseItem({ name: "Before edit" });
     const { rerender } = render(
-      <GridItem item={original} onEdit={jest.fn()} onDelete={jest.fn()} onSave={onSave} />
+      <DashboardEditModeProvider value={true}>
+        <GridItem item={original} onEdit={jest.fn()} onDelete={jest.fn()} onSave={onSave} />
+      </DashboardEditModeProvider>
     );
 
     const edited = baseItem({ name: "After edit" });
     rerender(
-      <GridItem item={edited} onEdit={jest.fn()} onDelete={jest.fn()} onSave={onSave} />
+      <DashboardEditModeProvider value={true}>
+        <GridItem item={edited} onEdit={jest.fn()} onDelete={jest.fn()} onSave={onSave} />
+      </DashboardEditModeProvider>
     );
 
     fireEvent.click(screen.getByText("header-save"));
@@ -127,5 +137,39 @@ describe("GridItem incident table", () => {
     renderItem(baseItem());
 
     expect(screen.queryByTestId("incident-table-grid-item")).toBeNull();
+  });
+});
+
+describe("GridItem edit mode", () => {
+  const widgetBody = (container: HTMLElement) =>
+    container.querySelector('[data-cy="dashboard-widget-body"]');
+
+  it("hides the panel menu in view mode", () => {
+    renderItem(baseItem(), { isEditMode: false });
+    expect(screen.queryByText("header-save")).toBeNull();
+    expect(screen.getByText("My Alerts")).toBeInTheDocument();
+  });
+
+  it("shows the panel menu in edit mode", () => {
+    renderItem(baseItem(), { isEditMode: true });
+    expect(screen.getByText("header-save")).toBeInTheDocument();
+  });
+
+  it("leaves panel content interactive in view mode", () => {
+    const { container } = renderItem(baseItem(), { isEditMode: false });
+    expect(widgetBody(container)).not.toHaveAttribute("inert");
+  });
+
+  it("makes panel content inert in edit mode so it cannot navigate", () => {
+    const { container } = renderItem(baseItem(), { isEditMode: true });
+    expect(widgetBody(container)).toHaveAttribute("inert");
+  });
+
+  it("does not make a counter panel inert, since its menu lives in its body", () => {
+    const { container } = renderItem(
+      baseItem({ presetPanelType: PresetPanelType.ALERT_COUNT_PANEL }),
+      { isEditMode: true }
+    );
+    expect(widgetBody(container)).not.toHaveAttribute("inert");
   });
 });

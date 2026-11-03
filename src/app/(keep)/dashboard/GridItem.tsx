@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Card } from "@tremor/react";
 import { RxDragHandleDots2 } from "react-icons/rx";
 import MenuButton from "./MenuButton";
+import { useDashboardEditMode } from "./DashboardEditModeContext";
 import { WidgetData, WidgetType, PresetPanelType } from "./types";
 import PresetGridItem from "./widget-types/preset/preset-grid-item";
 import MetricGridItem from "./widget-types/metric/metric-grid-item";
@@ -40,6 +41,7 @@ const GridItem: React.FC<GridItemProps> = ({
   const handleDelete = () => onDelete(item.i);
   const handleSave = () => onSave(updatedItem);
 
+  const isEditMode = useDashboardEditMode();
   const isAlertCountPanel =
     item.presetPanelType === PresetPanelType.ALERT_COUNT_PANEL;
 
@@ -61,45 +63,55 @@ const GridItem: React.FC<GridItemProps> = ({
             <span className="text-lg font-bold grid-item__widget" title={item.name} data-cy="dashboard-widget-title">
               {item.name}
             </span>
-            <MenuButton
+            {isEditMode && (
+              <MenuButton
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onSave={handleSave}
+              />
+            )}
+          </div>
+        )}
+        {/* While editing, panel content must not navigate or open links. The
+            counter panel keeps its menu in its body, so it blocks its own clicks. */}
+        <div
+          className="contents"
+          inert={isEditMode && !isAlertCountPanel}
+          data-cy="dashboard-widget-body"
+        >
+          {item.preset && (
+            <PresetGridItem
+              item={item}
               onEdit={handleEdit}
               onDelete={handleDelete}
               onSave={handleSave}
             />
-          </div>
-        )}
-        {item.preset && (
-          <PresetGridItem
-            item={item}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onSave={handleSave}
-          />
-        )}
-        {item.metric && <MetricGridItem item={item} />}
-        {item.genericMetrics && (
-          <GenericMetricsGridItem
-            item={item}
-            onEdit={setUpdatedItem}
-          ></GenericMetricsGridItem>
-        )}
-        {item.widgetType === WidgetType.SERVICE_NOW && (
-          <WidgetServiceNow
-            thresholds={item.thresholds}
-            team={item.serviceNowTeam}
-            status={item.serviceNowStatus}
-            detection={item.serviceNowDetection}
-            customLink={item.customLink}
-          />
-        )}
-        {item.widgetType === WidgetType.IMAGE && <ImageGridItem item={item} />}
-        {item.widgetType === WidgetType.HTML && <HtmlGridItem item={item} />}
-        {item.widgetType === WidgetType.GRAFANA_PANEL && (
-          <GrafanaPanelGridItem item={item} />
-        )}
-        {item.widgetType === WidgetType.INCIDENT_TABLE && (
-          <IncidentTableGridItem item={item} />
-        )}
+          )}
+          {item.metric && <MetricGridItem item={item} />}
+          {item.genericMetrics && (
+            <GenericMetricsGridItem
+              item={item}
+              onEdit={setUpdatedItem}
+            ></GenericMetricsGridItem>
+          )}
+          {item.widgetType === WidgetType.SERVICE_NOW && (
+            <WidgetServiceNow
+              thresholds={item.thresholds}
+              team={item.serviceNowTeam}
+              status={item.serviceNowStatus}
+              detection={item.serviceNowDetection}
+              customLink={item.customLink}
+            />
+          )}
+          {item.widgetType === WidgetType.IMAGE && <ImageGridItem item={item} />}
+          {item.widgetType === WidgetType.HTML && <HtmlGridItem item={item} />}
+          {item.widgetType === WidgetType.GRAFANA_PANEL && (
+            <GrafanaPanelGridItem item={item} />
+          )}
+          {item.widgetType === WidgetType.INCIDENT_TABLE && (
+            <IncidentTableGridItem item={item} />
+          )}
+        </div>
       </div>
     </Card>
   );
