@@ -3,7 +3,7 @@ import { useParams } from "next/navigation";
 import { ChangeEvent, useEffect, useRef, useState } from "react";
 import GridLayout from "../GridLayout";
 import WidgetModal from "../WidgetModal";
-import { Badge, Button, Card, Subtitle, TextInput } from "@tremor/react";
+import { Button, Card, Icon, Subtitle, TextInput } from "@tremor/react";
 import {
   GenericsMetrics,
   LayoutItem,
@@ -304,7 +304,7 @@ const DashboardPage = () => {
         data-cy="dashboard-page"
       >
         <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-          <div className="flex items-center gap-2">
+          <div className="relative">
             {isEditingName ? (
               <TextInput
                 value={dashboardName}
@@ -313,28 +313,21 @@ const DashboardPage = () => {
                 placeholder="Dashboard Name"
                 className="border-orange-500 focus:border-orange-600 focus:ring-orange-600"
                 data-cy="dashboard-name-input"
-                autoFocus
               />
-            ) : isEditMode ? (
-              <button
-                type="button"
-                onClick={toggleEditingName}
-                title="Click to rename"
-                className="border-b border-dashed border-orange-300"
-              >
-                <Subtitle color="orange" data-cy="dashboard-name">
-                  {dashboardName}
-                </Subtitle>
-              </button>
             ) : (
-              <Subtitle color="orange" data-cy="dashboard-name">
+              <Subtitle color="orange" className="mr-2" data-cy="dashboard-name">
                 {dashboardName}
               </Subtitle>
             )}
             {isEditMode && (
-              <Badge color="orange" size="xs" data-cy="dashboard-edit-mode-badge">
-                Editing
-              </Badge>
+              <Icon
+                size="xs"
+                icon={FiEdit2}
+                onClick={toggleEditingName}
+                className="cursor-pointer absolute right-0 top-0 transform -translate-y-1/2 translate-x-1/2 text-sm"
+                color="orange"
+                data-cy="dashboard-edit-btn"
+              />
             )}
           </div>
           <div className="flex gap-1 items-end">
@@ -343,7 +336,7 @@ const DashboardPage = () => {
               <Button
                 icon={FiEdit2}
                 color="orange"
-                variant="secondary"
+                size="sm"
                 onClick={enterEditMode}
                 className="ml-2"
                 tooltip="Edit dashboard"
@@ -353,6 +346,15 @@ const DashboardPage = () => {
             )}
             {isEditMode && (
               <div className="flex">
+                <Button
+                  icon={FiSave}
+                  color="orange"
+                  size="sm"
+                  onClick={handleSaveDashboard}
+                  className="ml-2"
+                  tooltip="Save current dashboard"
+                  data-cy="dashboard-save-layout-btn"
+                />
                 <Button color="orange" onClick={openModal} className="ml-2" data-cy="dashboard-add-widget-btn">
                   Add Widget
                 </Button>
@@ -376,16 +378,6 @@ const DashboardPage = () => {
                   data-cy="dashboard-cancel-edit-btn"
                 >
                   Cancel
-                </Button>
-                <Button
-                  icon={FiSave}
-                  color="orange"
-                  onClick={handleSaveDashboard}
-                  className="ml-2"
-                  tooltip="Save current dashboard"
-                  data-cy="dashboard-save-layout-btn"
-                >
-                  Save
                 </Button>
               </div>
             )}

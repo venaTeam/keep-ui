@@ -136,8 +136,7 @@ describe("dashboard view mode", () => {
   it("does not let the name be renamed", () => {
     render(<DashboardPage />);
 
-    click("dashboard-name");
-    expect(byCy("dashboard-name-input")).toBeNull();
+    expect(byCy("dashboard-edit-btn")).toBeNull();
   });
 });
 
@@ -154,10 +153,10 @@ describe("dashboard edit mode", () => {
     expect(screen.getByTestId("grid")).toHaveAttribute("data-edit-mode", "true");
   });
 
-  it("renames by clicking the name", () => {
+  it("renames with the pencil next to the name", () => {
     render(<DashboardPage />);
     click("dashboard-enter-edit-btn");
-    click("dashboard-name");
+    click("dashboard-edit-btn");
 
     expect(byCy("dashboard-name-input")).toBeInTheDocument();
   });
