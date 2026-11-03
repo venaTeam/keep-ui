@@ -16,6 +16,7 @@ import { IoChevronUp } from "react-icons/io5";
 import clsx from "clsx";
 import { useDashboards } from "utils/hooks/useDashboards";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { confirmNavigation } from "@/shared/lib/navigation-guard";
 import { PlusIcon } from "@radix-ui/react-icons";
 import { DashboardLink } from "./DashboardLink";
 
@@ -41,7 +42,10 @@ export const DashboardLinks = () => {
     }
   };
 
-  const deleteDashboard = async (id: string) => {
+  const deleteDashboard = (id: string) =>
+    confirmNavigation(() => deleteDashboardConfirmed(id));
+
+  const deleteDashboardConfirmed = async (id: string) => {
     const isDeleteConfirmed = confirm(
       "You are about to delete this dashboard. Are you sure?"
     );
@@ -78,7 +82,9 @@ export const DashboardLinks = () => {
 
   const handleCreateDashboard = () => {
     const uniqueName = generateUniqueName("My Dashboard");
-    router.push(`/dashboard/${encodeURIComponent(uniqueName)}`);
+    confirmNavigation(() =>
+      router.push(`/dashboard/${encodeURIComponent(uniqueName)}`)
+    );
   };
 
   return (

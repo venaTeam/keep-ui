@@ -39,6 +39,7 @@ import styles from "./Search.module.css";
 import OperatorModal from "./manage-tenants/OperatorModal";
 import TenantFormModal from "./manage-tenants/TenantFormModal";
 import { useTenants, useWhoami } from "./manage-tenants/useManageTenants";
+import { confirmNavigation } from "@/shared/lib/navigation-guard";
 
 const NAVIGATION_OPTIONS = [
   {
@@ -156,7 +157,7 @@ export const Search = ({ session }: SearchProps) => {
     setSelectedOption(value);
     if (value && comboboxInputRef.current) {
       comboboxInputRef.current.blur();
-      router.push(value);
+      confirmNavigation(() => router.push(value));
     }
   };
 
