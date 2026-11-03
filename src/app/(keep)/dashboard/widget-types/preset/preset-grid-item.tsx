@@ -4,6 +4,7 @@ import { useDashboardPreset } from "@/utils/hooks/useDashboardPresets";
 import { useParams, useSearchParams } from "next/navigation";
 import WidgetAlertCountPanel from "./widget-alert-count-panel";
 import PresetAlertTablePanel from "./preset-alert-table-panel";
+import { buildTimeRangeCel } from "./time-range-cel";
 
 interface GridItemProps {
   item: WidgetData;
@@ -19,14 +20,10 @@ const PresetGridItem: React.FC<GridItemProps> = ({
   onSave,
 }) => {
   const searchParams = useSearchParams();
-  const timeRangeCel = useMemo(() => {
-    const timeRangeSearchParam = searchParams.get("time_stamp");
-    if (timeRangeSearchParam) {
-      const parsedTimeRange = JSON.parse(timeRangeSearchParam);
-      return `lastReceived >= "${parsedTimeRange.start}" && lastReceived <= "${parsedTimeRange.end}"`;
-    }
-    return "";
-  }, [searchParams]);
+  const timeRangeCel = useMemo(
+    () => buildTimeRangeCel(searchParams.get("time_stamp")),
+    [searchParams]
+  );
 
   const presets = useDashboardPreset();
   const preset = useMemo(
