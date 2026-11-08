@@ -67,10 +67,12 @@ export const DashboardLinks = () => {
       await api.delete(`/dashboard/${id}`);
       const remaining = dashboards.filter((dashboard) => dashboard.id !== id);
       mutate(remaining, false);
-      // now redirect to the first dashboard
-      if (redirect && remaining[0]) {
+      // now redirect to the first dashboard, or the feed if none is left
+      if (redirect) {
         router.push(
-          `/dashboard/${encodeURIComponent(remaining[0].dashboard_name)}`
+          remaining[0]
+            ? `/dashboard/${encodeURIComponent(remaining[0].dashboard_name)}`
+            : "/alerts/feed"
         );
       }
     } catch (error) {
