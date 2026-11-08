@@ -39,7 +39,6 @@ const GridItem: React.FC<GridItemProps> = ({
   };
 
   const handleDelete = () => onDelete(item.i);
-  const handleSave = () => onSave(updatedItem);
 
   const isEditMode = useDashboardEditMode();
   const isAlertCountPanel =
@@ -64,11 +63,7 @@ const GridItem: React.FC<GridItemProps> = ({
               {item.name}
             </span>
             {isEditMode && (
-              <MenuButton
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                onSave={handleSave}
-              />
+              <MenuButton onEdit={handleEdit} onDelete={handleDelete} />
             )}
           </div>
         )}
@@ -86,14 +81,15 @@ const GridItem: React.FC<GridItemProps> = ({
               item={item}
               onEdit={handleEdit}
               onDelete={handleDelete}
-              onSave={handleSave}
             />
           )}
           {item.metric && <MetricGridItem item={item} />}
           {item.genericMetrics && (
             <GenericMetricsGridItem
               item={item}
-              onEdit={setUpdatedItem}
+              // Filter changes made while editing go into the dashboard, so
+              // the dashboard's Save keeps them; in view mode they stay local.
+              onEdit={isEditMode ? onSave : setUpdatedItem}
             ></GenericMetricsGridItem>
           )}
           {item.widgetType === WidgetType.SERVICE_NOW && (

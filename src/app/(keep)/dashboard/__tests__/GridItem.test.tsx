@@ -6,8 +6,8 @@ import { PresetPanelType, WidgetData, WidgetType } from "../types";
 
 jest.mock("../MenuButton", () => ({
   __esModule: true,
-  default: ({ onSave }: { onSave: () => void }) => (
-    <button onClick={onSave}>header-save</button>
+  default: ({ onEdit }: { onEdit: () => void }) => (
+    <button onClick={onEdit}>widget-menu</button>
   ),
 }));
 
@@ -23,7 +23,11 @@ jest.mock("../widget-types/metric/metric-grid-item", () => ({
 
 jest.mock("../widget-types/generic-metrics/generic-metrics-grid-item", () => ({
   __esModule: true,
-  default: () => <div data-testid="generic-metrics-grid-item" />,
+  default: ({ onEdit }: { onEdit: (item: unknown) => void }) => (
+    <button onClick={() => onEdit({ i: "w1", changed: true })}>
+      change-filters
+    </button>
+  ),
 }));
 
 jest.mock("../widget-types/service-now/widget-service-now", () => ({
@@ -96,25 +100,28 @@ describe("GridItem drag handle", () => {
   });
 });
 
-describe("GridItem menu save", () => {
-  it("saves the latest item after the item prop changes", () => {
-    const onSave = jest.fn();
+describe("GridItem menu edit", () => {
+  it("edits the latest item after the item prop changes", () => {
+    const onEdit = jest.fn();
     const original = baseItem({ name: "Before edit" });
     const { rerender } = render(
       <DashboardEditModeProvider value={true}>
-        <GridItem item={original} onEdit={jest.fn()} onDelete={jest.fn()} onSave={onSave} />
+        <GridItem item={original} onEdit={onEdit} onDelete={jest.fn()} onSave={jest.fn()} />
       </DashboardEditModeProvider>
     );
 
     const edited = baseItem({ name: "After edit" });
     rerender(
       <DashboardEditModeProvider value={true}>
-        <GridItem item={edited} onEdit={jest.fn()} onDelete={jest.fn()} onSave={onSave} />
+        <GridItem item={edited} onEdit={onEdit} onDelete={jest.fn()} onSave={jest.fn()} />
       </DashboardEditModeProvider>
     );
 
-    fireEvent.click(screen.getByText("header-save"));
-    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ name: "After edit" }));
+    fireEvent.click(screen.getByText("widget-menu"));
+    expect(onEdit).toHaveBeenCalledWith(
+      "w1",
+      expect.objectContaining({ name: "After edit" })
+    );
   });
 });
 
@@ -146,13 +153,13 @@ describe("GridItem edit mode", () => {
 
   it("hides the panel menu in view mode", () => {
     renderItem(baseItem(), { isEditMode: false });
-    expect(screen.queryByText("header-save")).toBeNull();
+    expect(screen.queryByText("widget-menu")).toBeNull();
     expect(screen.getByText("My Alerts")).toBeInTheDocument();
   });
 
   it("shows the panel menu in edit mode", () => {
     renderItem(baseItem(), { isEditMode: true });
-    expect(screen.getByText("header-save")).toBeInTheDocument();
+    expect(screen.getByText("widget-menu")).toBeInTheDocument();
   });
 
   it("leaves panel content interactive in view mode", () => {
@@ -183,6 +190,35 @@ describe("GridItem edit mode", () => {
       { isEditMode: true }
     );
     expect(widgetBody(container)).not.toHaveAttribute("inert");
-    expect(screen.getByText("header-save")).toBeInTheDocument();
+    expect(screen.getByText("widget-menu")).toBeInTheDocument();
+  });
+
+  const genericMetricsItem = () =>
+    baseItem({
+      preset: undefined,
+      widgetType: WidgetType.GENERICS_METRICS,
+      genericMetrics: { key: "alert_quality", label: "Alert Quality" },
+    } as Partial<WidgetData>);
+
+  it("puts generic metrics filter changes into the dashboard while editing", () => {
+    const onSave = jest.fn();
+    render(
+      <DashboardEditModeProvider value={true}>
+        <GridItem item={genericMetricsItem()} onEdit={jest.fn()} onDelete={jest.fn()} onSave={onSave} />
+      </DashboardEditModeProvider>
+    );
+    fireEvent.click(screen.getByText("change-filters"));
+    expect(onSave).toHaveBeenCalledWith({ i: "w1", changed: true });
+  });
+
+  it("keeps generic metrics filter changes local in view mode", () => {
+    const onSave = jest.fn();
+    render(
+      <DashboardEditModeProvider value={false}>
+        <GridItem item={genericMetricsItem()} onEdit={jest.fn()} onDelete={jest.fn()} onSave={onSave} />
+      </DashboardEditModeProvider>
+    );
+    fireEvent.click(screen.getByText("change-filters"));
+    expect(onSave).not.toHaveBeenCalled();
   });
 });

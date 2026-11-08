@@ -30,7 +30,6 @@ interface WidgetAlertCountPanelProps {
   widgetName?: string;
   onEdit?: () => void;
   onDelete?: () => void;
-  onSave?: () => void;
   countBy?: CountBy;
 }
 
@@ -43,7 +42,6 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
   widgetName,
   onEdit,
   onDelete,
-  onSave,
   countBy,
 }) => {
   const searchParams = useSearchParams();
@@ -226,7 +224,6 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
                   compact
                   onEdit={onEdit!}
                   onDelete={onDelete!}
-                  onSave={onSave}
                 />
               )}
             </div>
