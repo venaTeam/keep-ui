@@ -73,10 +73,12 @@ const GridItem: React.FC<GridItemProps> = ({
           </div>
         )}
         {/* While editing, panel content must not navigate or open links. The
-            counter panel keeps its menu in its body, so it blocks its own clicks. */}
+            counter panel keeps its menu in its body, so it blocks its own clicks.
+            Generic metrics hold settings (filters saved from the menu) and no
+            links, so they stay usable. */}
         <div
           className="contents"
-          inert={isEditMode && !isAlertCountPanel}
+          inert={isEditMode && !isAlertCountPanel && !item.genericMetrics}
           data-cy="dashboard-widget-body"
         >
           {item.preset && (

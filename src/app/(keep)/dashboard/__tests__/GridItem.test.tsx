@@ -172,4 +172,17 @@ describe("GridItem edit mode", () => {
     );
     expect(widgetBody(container)).not.toHaveAttribute("inert");
   });
+
+  it("keeps generic metrics usable in edit mode so their filters can be saved", () => {
+    const { container } = renderItem(
+      baseItem({
+        preset: undefined,
+        widgetType: WidgetType.GENERICS_METRICS,
+        genericMetrics: { key: "alert_quality", label: "Alert Quality" },
+      } as Partial<WidgetData>),
+      { isEditMode: true }
+    );
+    expect(widgetBody(container)).not.toHaveAttribute("inert");
+    expect(screen.getByText("header-save")).toBeInTheDocument();
+  });
 });
