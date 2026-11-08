@@ -20,7 +20,20 @@ import {
 // reachable that way (and Forward lands on the leftover copy after Save or
 // Cancel). Accepted: nothing is lost but the Forward shortcut, and without the
 // copy Back would silently discard unsaved changes.
+//
+// The page may push its own entries on top of the copy (e.g. a filter writing
+// `?range=` to the URL). Back onto the copy then only steps through the page's
+// own URLs and is let through; Save or Cancel from there leaves the copy in
+// place, which costs one extra Back press on the same page.
 const SENTINEL = "__keepLeaveGuard";
+
+// Where Continue goes when Back has no earlier page (opened in a new tab).
+const FALLBACK_ROUTE = "/";
+
+// True while our own history.back() (dropping the copy) is in flight. If the
+// guard turns on again before it lands, its popstate must not look like the
+// user pressing Back.
+let droppingSentinel = false;
 
 const isSentinelCurrent = () => Boolean(window.history.state?.[SENTINEL]);
 
@@ -62,6 +75,7 @@ export function useLeaveGuard(enabled: boolean, onBlocked: NavigationBlocker) {
     let active = true;
     let leaving = false;
     let removeBlocker = () => {};
+    const pagePath = window.location.pathname;
 
     const block: NavigationBlocker = (proceed) => {
       if (!active) {
@@ -97,8 +111,9 @@ export function useLeaveGuard(enabled: boolean, onBlocked: NavigationBlocker) {
       ) {
         return;
       }
+      // preventDefault alone stops Next's <Link>; the link's own onClick
+      // (e.g. closing the mobile sidebar) still runs.
       e.preventDefault();
-      e.stopPropagation();
       block(() => {
         if (url.origin !== here.origin) {
           window.location.assign(url.href);
@@ -128,8 +143,27 @@ export function useLeaveGuard(enabled: boolean, onBlocked: NavigationBlocker) {
       if (!active) {
         return;
       }
+      if (droppingSentinel) {
+        // Our own cleanup landed, not the user: just put the copy back.
+        droppingSentinel = false;
+        pushSentinel();
+        return;
+      }
+      if (isSentinelCurrent() && window.location.pathname === pagePath) {
+        // Stepped back through the page's own URLs onto the copy.
+        return;
+      }
       pushSentinel();
-      block(() => window.history.go(-2));
+      // Right after pushState there are no Forward entries, so the length is
+      // the position: 2 means the copy and the real entry are all there is.
+      const hasEarlierPage = window.history.length > 2;
+      block(() => {
+        if (hasEarlierPage) {
+          window.history.go(-2);
+        } else {
+          routerRef.current.replace(FALLBACK_ROUTE);
+        }
+      });
     };
 
     if (!isSentinelCurrent()) {
@@ -147,6 +181,14 @@ export function useLeaveGuard(enabled: boolean, onBlocked: NavigationBlocker) {
       removeBlocker();
       // Changes were saved or discarded in place: drop the extra entry.
       if (!leaving && isSentinelCurrent()) {
+        droppingSentinel = true;
+        window.addEventListener(
+          "popstate",
+          // A guard that turned on again handles it in its own listener first;
+          // otherwise nobody does, so clear it once this event is done.
+          () => setTimeout(() => (droppingSentinel = false)),
+          { once: true }
+        );
         window.history.back();
       }
     };
