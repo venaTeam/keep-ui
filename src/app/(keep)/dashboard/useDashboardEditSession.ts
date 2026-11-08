@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useLeaveGuard } from "@/shared/lib/hooks/useLeaveGuard";
 import { DashboardEditState, dashboardEditKey } from "./dashboard-edit-state";
 
@@ -40,8 +40,18 @@ export function useDashboardEditSession({
   const pendingLeave = useRef<(() => void) | null>(null);
 
   const isEditMode = session !== null;
+  // Serializes the whole dashboard, so only when it changes (not on every
+  // render) and only while editing.
+  const { layout, widgetData, appearance, dashboardName } = current;
+  const currentKey = useMemo(
+    () =>
+      isEditMode
+        ? dashboardEditKey({ layout, widgetData, appearance, dashboardName })
+        : null,
+    [isEditMode, layout, widgetData, appearance, dashboardName]
+  );
   const hasUnsavedChanges =
-    session !== null && session.snapshotKey !== dashboardEditKey(current);
+    session !== null && session.snapshotKey !== currentKey;
 
   useLeaveGuard(hasUnsavedChanges, (proceed) => {
     pendingLeave.current = proceed;

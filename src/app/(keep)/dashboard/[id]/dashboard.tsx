@@ -70,14 +70,16 @@ const DashboardPage = () => {
   const settingsSnapshot = useRef<DashboardAppearance>(DEFAULT_APPEARANCE);
   const loadedId = useRef<string | null>(null);
 
+  const restoreState = (state: DashboardEditState) => {
+    setLayout(state.layout);
+    setWidgetData(state.widgetData);
+    setAppearance(state.appearance);
+    setDashboardName(state.dashboardName);
+  };
+
   const edit = useDashboardEditSession({
     current: { layout, widgetData, appearance, dashboardName },
-    restore: (state) => {
-      setLayout(state.layout);
-      setWidgetData(state.widgetData);
-      setAppearance(state.appearance);
-      setDashboardName(state.dashboardName);
-    },
+    restore: restoreState,
     onStop: () => {
       setIsEditingName(false);
       setIsModalOpen(false);
@@ -109,10 +111,7 @@ const DashboardPage = () => {
           appearance: DEFAULT_APPEARANCE,
           dashboardName: decodeURIComponent(id),
         };
-        setLayout(empty.layout);
-        setWidgetData(empty.widgetData);
-        setAppearance(empty.appearance);
-        setDashboardName(empty.dashboardName);
+        restoreState(empty);
         edit.start(empty);
       }
       return;
