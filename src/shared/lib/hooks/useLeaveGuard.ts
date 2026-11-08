@@ -8,6 +8,18 @@ import {
 } from "@/shared/lib/navigation-guard";
 
 // Marks the extra history entry pushed so browser Back can be intercepted.
+//
+// Next's App Router cannot cancel a Back navigation: by the time popstate
+// fires the previous page is already rendering. So while the guard is on we
+// push a copy of the current URL; Back then lands on the real entry (same URL,
+// page stays mounted), we push the copy again and ask. Continue goes back two
+// entries to the page the user meant.
+//
+// Known trade-off: pushState always drops the browser's Forward entries, so
+// pages the user could reach with Forward before editing are no longer
+// reachable that way (and Forward lands on the leftover copy after Save or
+// Cancel). Accepted: nothing is lost but the Forward shortcut, and without the
+// copy Back would silently discard unsaved changes.
 const SENTINEL = "__keepLeaveGuard";
 
 const isSentinelCurrent = () => Boolean(window.history.state?.[SENTINEL]);
