@@ -61,7 +61,7 @@ export function useLeaveGuard(enabled: boolean, onBlocked: NavigationBlocker) {
     }
     let active = true;
     let leaving = false;
-    const { setBlocker } = useNavigationGuardStore.getState();
+    let removeBlocker = () => {};
 
     const block: NavigationBlocker = (proceed) => {
       if (!active) {
@@ -72,11 +72,11 @@ export function useLeaveGuard(enabled: boolean, onBlocked: NavigationBlocker) {
         // Disarm first so the navigation that follows is not held back again.
         active = false;
         leaving = true;
-        setBlocker(null);
+        removeBlocker();
         proceed();
       });
     };
-    setBlocker(block);
+    removeBlocker = useNavigationGuardStore.getState().addBlocker(block);
 
     const onClick = (e: MouseEvent) => {
       if (!active || e.defaultPrevented) {
@@ -144,9 +144,7 @@ export function useLeaveGuard(enabled: boolean, onBlocked: NavigationBlocker) {
       document.removeEventListener("click", onClick, true);
       window.removeEventListener("beforeunload", onBeforeUnload);
       window.removeEventListener("popstate", onPopState);
-      if (useNavigationGuardStore.getState().blocker === block) {
-        setBlocker(null);
-      }
+      removeBlocker();
       // Changes were saved or discarded in place: drop the extra entry.
       if (!leaving && isSentinelCurrent()) {
         window.history.back();

@@ -108,7 +108,36 @@ describe("useLeaveGuard confirmNavigation", () => {
   it("clears the guard when disabled again", () => {
     const { rerender } = render(<Page enabled={true} />);
     rerender(<Page enabled={false} />);
-    expect(useNavigationGuardStore.getState().blocker).toBeNull();
+    expect(useNavigationGuardStore.getState().blockers).toHaveLength(0);
+  });
+
+  it("keeps an earlier guard working when a later one is removed", () => {
+    const first: Array<() => void> = [];
+    const second: Array<() => void> = [];
+    function Guard({ on, into }: { on: boolean; into: Array<() => void> }) {
+      useLeaveGuard(on, (proceed) => into.push(proceed));
+      return null;
+    }
+    const { rerender } = render(
+      <>
+        <Guard on={true} into={first} />
+        <Guard on={true} into={second} />
+      </>
+    );
+    const go = jest.fn();
+    confirmNavigation(go);
+    expect(second).toHaveLength(1);
+    expect(first).toHaveLength(0);
+
+    rerender(
+      <>
+        <Guard on={true} into={first} />
+        <Guard on={false} into={second} />
+      </>
+    );
+    confirmNavigation(go);
+    expect(first).toHaveLength(1);
+    expect(go).not.toHaveBeenCalled();
   });
 });
 

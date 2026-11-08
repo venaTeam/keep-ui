@@ -4,19 +4,28 @@ import { create } from "zustand";
 export type NavigationBlocker = (proceed: () => void) => void;
 
 type NavigationGuardState = {
-  blocker: NavigationBlocker | null;
-  setBlocker: (blocker: NavigationBlocker | null) => void;
+  // Active guards, oldest first. The newest one decides; removing one leaves
+  // the others in place, so guards never overwrite each other.
+  blockers: NavigationBlocker[];
+  addBlocker: (blocker: NavigationBlocker) => () => void;
 };
 
-// One page at a time can hold back navigation (e.g. a dashboard with unsaved
-// edits). Code that navigates without a link goes through `confirmNavigation`.
+// Pages with unsaved changes register a blocker here. Code that navigates
+// without a link goes through `confirmNavigation`.
 export const useNavigationGuardStore = create<NavigationGuardState>()((set) => ({
-  blocker: null,
-  setBlocker: (blocker) => set({ blocker }),
+  blockers: [],
+  addBlocker: (blocker) => {
+    set((state) => ({ blockers: [...state.blockers, blocker] }));
+    return () =>
+      set((state) => ({
+        blockers: state.blockers.filter((b) => b !== blocker),
+      }));
+  },
 }));
 
 export function confirmNavigation(proceed: () => void) {
-  const { blocker } = useNavigationGuardStore.getState();
+  const { blockers } = useNavigationGuardStore.getState();
+  const blocker = blockers[blockers.length - 1];
   if (blocker) {
     blocker(proceed);
   } else {
