@@ -19,9 +19,9 @@ import {
 import { DashboardSettingsPanel } from "../dashboard-appearance/DashboardSettingsPanel";
 import { FiEdit2, FiSave, FiSliders } from "react-icons/fi";
 import { DashboardEditModeProvider } from "../DashboardEditModeContext";
-import { DashboardEditState, dashboardEditKey } from "../dashboard-edit-state";
+import { DashboardEditState } from "../dashboard-edit-state";
 import { LeaveEditModeModal } from "../LeaveEditModeModal";
-import { useLeaveGuard } from "@/shared/lib/hooks/useLeaveGuard";
+import { useDashboardEditSession } from "../useDashboardEditSession";
 import { useDashboards } from "utils/hooks/useDashboards";
 import { toast } from "react-toastify";
 import { GenericFilters } from "@/components/filters/GenericFilters";
@@ -68,30 +68,23 @@ const DashboardPage = () => {
     useState<DashboardAppearance>(DEFAULT_APPEARANCE);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const settingsSnapshot = useRef<DashboardAppearance>(DEFAULT_APPEARANCE);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const isEditModeRef = useRef(false);
-  isEditModeRef.current = isEditMode;
-  const editSnapshot = useRef<DashboardEditState | null>(null);
-  const editSnapshotKey = useRef<string | null>(null);
   const loadedId = useRef<string | null>(null);
-  // The action held back by the leave warning; null while it is closed.
-  const [pendingLeave, setPendingLeave] = useState<(() => void) | null>(null);
 
-  const startEditing = (state: DashboardEditState) => {
-    editSnapshot.current = structuredClone(state);
-    editSnapshotKey.current = dashboardEditKey(state);
-    setIsEditMode(true);
-  };
-
-  const stopEditing = () => {
-    editSnapshot.current = null;
-    editSnapshotKey.current = null;
-    setPendingLeave(null);
-    setIsEditMode(false);
-    setIsEditingName(false);
-    setIsModalOpen(false);
-    setIsSettingsOpen(false);
-  };
+  const edit = useDashboardEditSession({
+    current: { layout, widgetData, appearance, dashboardName },
+    restore: (state) => {
+      setLayout(state.layout);
+      setWidgetData(state.widgetData);
+      setAppearance(state.appearance);
+      setDashboardName(state.dashboardName);
+    },
+    onStop: () => {
+      setIsEditingName(false);
+      setIsModalOpen(false);
+      setIsSettingsOpen(false);
+    },
+  });
+  const { isEditMode } = edit;
 
   useEffect(() => {
     if (isLoading || !dashboards) {
@@ -102,7 +95,7 @@ const DashboardPage = () => {
     const isFirstLoad = loadedId.current !== id;
     loadedId.current = id;
     if (isFirstLoad) {
-      stopEditing();
+      edit.stop();
     }
     const dashboard = dashboards.find(
       (d) => d.dashboard_name === decodeURIComponent(id)
@@ -120,12 +113,12 @@ const DashboardPage = () => {
         setWidgetData(empty.widgetData);
         setAppearance(empty.appearance);
         setDashboardName(empty.dashboardName);
-        startEditing(empty);
+        edit.start(empty);
       }
       return;
     }
     // A refetch must not overwrite edits that are not saved yet.
-    if (isEditModeRef.current && !isFirstLoad) {
+    if (isEditMode && !isFirstLoad) {
       return;
     }
     setLayout(dashboard.dashboard_config.layout);
@@ -133,43 +126,6 @@ const DashboardPage = () => {
     setDashboardName(dashboard.dashboard_name);
     setAppearance(clampAppearance(dashboard.dashboard_config.appearance));
   }, [id, dashboards, isLoading]);
-
-  const hasUnsavedChanges =
-    isEditMode &&
-    editSnapshotKey.current !== null &&
-    editSnapshotKey.current !==
-      dashboardEditKey({ layout, widgetData, appearance, dashboardName });
-
-  useLeaveGuard(hasUnsavedChanges, (proceed) => setPendingLeave(() => proceed));
-
-  const enterEditMode = () =>
-    startEditing({ layout, widgetData, appearance, dashboardName });
-
-  const cancelEditMode = () => {
-    const snapshot = editSnapshot.current;
-    if (snapshot) {
-      setLayout(snapshot.layout);
-      setWidgetData(snapshot.widgetData);
-      setAppearance(snapshot.appearance);
-      setDashboardName(snapshot.dashboardName);
-    }
-    stopEditing();
-  };
-
-  // Leaving edit mode any way but Save asks first when there are changes.
-  const requestCancelEditMode = () => {
-    if (hasUnsavedChanges) {
-      setPendingLeave(() => () => {});
-    } else {
-      cancelEditMode();
-    }
-  };
-
-  const continueLeaving = () => {
-    const proceed = pendingLeave;
-    cancelEditMode();
-    proceed?.();
-  };
 
   const openModal = () => {
     setEditingItem(null); // Ensure new modal opens without editing item context
@@ -275,7 +231,7 @@ const DashboardPage = () => {
       }
 
       console.log("Dashboard saved successfully", result);
-      stopEditing();
+      edit.stop();
       mutateDashboard();
       toast.success("Dashboard saved successfully");
     } catch (error) {
@@ -337,7 +293,7 @@ const DashboardPage = () => {
                 icon={FiEdit2}
                 color="orange"
                 size="sm"
-                onClick={enterEditMode}
+                onClick={() => edit.start()}
                 className="ml-2"
                 tooltip="Edit dashboard"
                 aria-label="Edit dashboard"
@@ -372,7 +328,7 @@ const DashboardPage = () => {
                 <Button
                   color="gray"
                   variant="secondary"
-                  onClick={requestCancelEditMode}
+                  onClick={edit.requestCancel}
                   className="ml-2"
                   tooltip="Discard changes and stop editing"
                   data-cy="dashboard-cancel-edit-btn"
@@ -449,9 +405,9 @@ const DashboardPage = () => {
           />
         )}
         <LeaveEditModeModal
-          isOpen={pendingLeave !== null}
-          onCancel={() => setPendingLeave(null)}
-          onContinue={continueLeaving}
+          isOpen={edit.isLeaveWarningOpen}
+          onCancel={edit.keepEditing}
+          onContinue={edit.discardAndLeave}
         />
       </div>
     </DashboardEditModeProvider>
