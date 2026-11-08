@@ -36,7 +36,7 @@ export class AlertsApi extends HttpClient {
       fingerprint,
       ...seed,
     };
-    const res = await this.req(this.gateway, "POST", "/alerts/event", payload);
+    const res = await this.req(this.ingestion, "POST", "/alerts/event", payload);
     if (res.status !== 202 && !res.ok) {
       const text = await res.text().catch(() => "");
       throw new Error(`sendAlert → HTTP ${res.status}: ${text.slice(0, 500)}`);

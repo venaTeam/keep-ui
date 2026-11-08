@@ -50,6 +50,7 @@ async function assertNoAuth(gateway: string, apiKey: string): Promise<void> {
 
 export default async function globalSetup(_config: FullConfig): Promise<void> {
   await waitForHealthy(`${env.gateway}/healthcheck`);
+  await waitForHealthy(`${env.ingestion}/healthcheck`);
   await waitForHealthy(`${env.workflows}/healthcheck`);
   await waitForHealthy(env.uiBaseUrl);
   await assertNoAuth(env.gateway, env.apiKey);
