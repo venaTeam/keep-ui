@@ -662,8 +662,10 @@ export const AlertsRulesBuilder = ({
               title="Delete preset"
               onClick={() =>
                 deletePreset(selectedPreset!.id!, selectedPreset!.name).then(
-                  () => {
-                    router.push("/alerts/feed");
+                  (deleted) => {
+                    if (deleted) {
+                      router.push("/alerts/feed");
+                    }
                   }
                 )
               }

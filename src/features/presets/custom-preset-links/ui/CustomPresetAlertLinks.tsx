@@ -159,9 +159,17 @@ export const CustomPresetAlertLinks = ({
     })
   );
 
+  // Leave only the page of the preset that was deleted; anywhere else (e.g. a
+  // dashboard being edited) stays put.
   const deletePresetAndRedirect = (presetId: string, presetName: string) => {
-    deletePreset(presetId, presetName).then(() => {
-      router.push("/alerts/feed");
+    const presetHref = `/alerts/${presetName.toLowerCase()}`;
+    deletePreset(presetId, presetName).then((deleted) => {
+      const isOnPreset =
+        decodeURIComponent(window.location.pathname).toLowerCase() ===
+        presetHref;
+      if (deleted && isOnPreset) {
+        router.push("/alerts/feed");
+      }
     });
   };
 

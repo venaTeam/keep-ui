@@ -14,6 +14,7 @@ import { useDashboardPreset } from "@/utils/hooks/useDashboardPresets";
 import { Button, Icon } from "@tremor/react";
 import { FireIcon, ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline";
 import MenuButton from "../../MenuButton";
+import { useDashboardEditMode } from "../../DashboardEditModeContext";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { useRouter } from "next/navigation";
@@ -31,7 +32,6 @@ interface WidgetAlertCountPanelProps {
   widgetName?: string;
   onEdit?: () => void;
   onDelete?: () => void;
-  onSave?: () => void;
   countBy?: CountBy;
 }
 
@@ -44,7 +44,6 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
   widgetName,
   onEdit,
   onDelete,
-  onSave,
   countBy,
 }) => {
   const searchParams = useSearchParams();
@@ -57,6 +56,7 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
     return "";
   }, [searchParams]);
 
+  const isEditMode = useDashboardEditMode();
   const presets = useDashboardPreset();
   const preset = useMemo(
     () => presets.find((preset) => preset.name === presetName),
@@ -109,7 +109,7 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
   }
 
   function handleBoxClick() {
-    if (!preset) {
+    if (!preset || isEditMode) {
       return;
     }
     handleGoToPresetClick();
@@ -122,7 +122,8 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
     }
   }
 
-  const hasMenu = Boolean(onEdit && onDelete);
+  const hasMenu = isEditMode && Boolean(onEdit && onDelete);
+  const hasCustomLink = !isEditMode && Boolean(customLink);
   const title = widgetName?.trim() ? widgetName : preset?.name;
 
   const isCountLoading = isLoading || !preset;
@@ -183,9 +184,9 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
   return (
     <div className="flex flex-col h-full" data-cy="dashboard-widget-alert-count-panel">
       <div
-        role="link"
-        tabIndex={0}
-        aria-label={`Go to preset ${preset?.name ?? ""}`}
+        role={isEditMode ? undefined : "link"}
+        tabIndex={isEditMode ? undefined : 0}
+        aria-label={isEditMode ? undefined : `Go to preset ${preset?.name ?? ""}`}
         onClick={handleBoxClick}
         onKeyDown={handleBoxKeyDown}
         style={{
@@ -193,7 +194,11 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
           borderColor: color,
           borderWidth: "2px",
         }}
-        className="relative flex flex-col max-w-full border rounded-lg p-2 h-full shadow-sm cursor-pointer transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-1"
+        className={`relative flex flex-col max-w-full border rounded-lg p-2 h-full shadow-sm ${
+          isEditMode
+            ? ""
+            : "cursor-pointer transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-1"
+        }`}
         data-cy="dashboard-widget-alert-count-box"
       >
         <div className="flex-none flex items-center gap-1 min-w-0">
@@ -208,9 +213,9 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
               />
             )}
           </div>
-          {(customLink || hasMenu) && (
+          {(hasCustomLink || hasMenu) && (
             <div className="flex-none flex items-center space-x-1">
-              {customLink && (
+              {hasCustomLink && (
                 <Button
                   color="blue"
                   variant="secondary"
@@ -228,7 +233,6 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
                   compact
                   onEdit={onEdit!}
                   onDelete={onDelete!}
-                  onSave={onSave}
                 />
               )}
             </div>
