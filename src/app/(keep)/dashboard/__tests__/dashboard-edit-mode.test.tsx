@@ -138,6 +138,27 @@ describe("dashboard view mode", () => {
 
     expect(byCy("dashboard-edit-btn")).toBeNull();
   });
+
+  // A dashboard created straight through the API can miss parts of the
+  // config; entering edit mode must not break on the missing widget_data.
+  it.each([
+    ["no config", {}],
+    ["enters edit mode with missing widget_data", { layout: [] }],
+    ["enters edit mode with missing layout", { widget_data: [] }],
+  ])("%s", (name, config) => {
+    mockDashboards = [
+      {
+        id: "d1",
+        dashboard_name: "Ops",
+        dashboard_config: config,
+      },
+    ];
+
+    render(<DashboardPage />);
+    click("dashboard-enter-edit-btn");
+
+    expect(byCy("dashboard-save-layout-btn")).toBeInTheDocument();
+  });
 });
 
 describe("dashboard edit mode", () => {

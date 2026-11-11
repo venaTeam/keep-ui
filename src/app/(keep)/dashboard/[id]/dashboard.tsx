@@ -120,10 +120,12 @@ const DashboardPage = () => {
     if (isEditMode && !isFirstLoad) {
       return;
     }
-    setLayout(dashboard.dashboard_config.layout);
-    setWidgetData(dashboard.dashboard_config.widget_data);
+
+    const config = dashboard.dashboard_config ?? {};
+    setLayout(Array.isArray(config.layout) ? config.layout : []);
+    setWidgetData(Array.isArray(config.widget_data) ? config.widget_data : []);
     setDashboardName(dashboard.dashboard_name);
-    setAppearance(clampAppearance(dashboard.dashboard_config.appearance));
+    setAppearance(clampAppearance(config.appearance));
   }, [id, dashboards, isLoading]);
 
   const openModal = () => {
