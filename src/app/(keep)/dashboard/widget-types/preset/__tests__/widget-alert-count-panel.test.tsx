@@ -299,3 +299,103 @@ describe("WidgetAlertCountPanel alerts left out of the count", () => {
     expect(valueOf(container)).toHaveStyle({ color: "#10b981" });
   });
 });
+
+describe("WidgetAlertCountPanel blinking strip", () => {
+  const blinking: CountBy = {
+    ...incidents,
+    showMissing: true,
+    blinkMissing: true,
+  };
+  const BLINK = "motion-safe:animate-missing-blink";
+
+  const stripOf = (container: HTMLElement) =>
+    container.querySelector(
+      '[data-cy="dashboard-widget-count-missing"]'
+    ) as HTMLElement;
+
+  it("turns the strip red and blinks it while alerts are left out", () => {
+    hookState({ totalCount: 10, missingCount: 10 });
+    const { container } = renderPanel({ countBy: blinking });
+
+    expect(stripOf(container)).toHaveTextContent(
+      "+ 10 alerts not in an incident"
+    );
+    expect(stripOf(container)).toHaveClass("bg-red-600", "text-white", BLINK);
+    expect(stripOf(container)).not.toHaveClass("bg-white/75");
+  });
+
+  it("stays grey when the blink is off", () => {
+    hookState({ totalCount: 10, missingCount: 10 });
+    const { container } = renderPanel({
+      countBy: { ...blinking, blinkMissing: false },
+    });
+
+    expect(stripOf(container)).toHaveClass("bg-white/75");
+    expect(stripOf(container)).not.toHaveClass("bg-red-600");
+    expect(stripOf(container)).not.toHaveClass(BLINK);
+  });
+
+  it.each<[string, { missingCount?: number; isLoading?: boolean }]>([
+    ["nothing is left out", { missingCount: 0 }],
+    ["the gateway leaves the number out", {}],
+    ["the count is loading", { isLoading: true }],
+  ])("stays grey when %s", (_name, state) => {
+    hookState({ totalCount: 10, ...state });
+    const { container } = renderPanel({ countBy: blinking });
+
+    expect(stripOf(container)).toHaveClass("bg-white/75");
+    expect(stripOf(container)).not.toHaveClass("bg-red-600");
+    expect(stripOf(container)).not.toHaveClass(BLINK);
+  });
+
+  it("shows no strip when the count fails", () => {
+    hookState({ isError: true, missingCount: 3 });
+    const { container } = renderPanel({ countBy: blinking });
+
+    expect(stripOf(container)).toBeNull();
+  });
+
+  it("keeps colouring the tile from the grouped count only", () => {
+    hookState({ totalCount: 3, missingCount: 50 });
+    const { container } = renderPanel({ countBy: blinking });
+
+    expect(valueOf(container)).toHaveStyle({ color: "#10b981" });
+  });
+
+  describe("on the page's shared clock", () => {
+    let animatedElements: Element[];
+    let animation: { startTime: number | null };
+
+    beforeEach(() => {
+      animatedElements = [];
+      animation = { startTime: 640 };
+      Object.defineProperty(HTMLElement.prototype, "getAnimations", {
+        configurable: true,
+        value: function (this: HTMLElement) {
+          animatedElements.push(this);
+          return [animation];
+        },
+      });
+    });
+
+    afterEach(() => {
+      delete (HTMLElement.prototype as Partial<HTMLElement>).getAnimations;
+    });
+
+    it("starts the blink at the page's time zero so every strip blinks together", () => {
+      hookState({ totalCount: 10, missingCount: 10 });
+      const { container } = renderPanel({ countBy: blinking });
+
+      expect(animatedElements).toContain(stripOf(container));
+      expect(animation.startTime).toBe(0);
+    });
+
+    it("leaves a grey strip alone", () => {
+      hookState({ totalCount: 10, missingCount: 0 });
+      renderPanel({ countBy: blinking });
+
+      expect(animatedElements).toEqual([]);
+      expect(animation.startTime).toBe(640);
+    });
+  });
+});

@@ -284,3 +284,136 @@ describe("CountByControl missing alerts toggle", () => {
     expect(onChange).toHaveBeenCalledWith(undefined);
   });
 });
+
+describe("CountByControl blink toggle", () => {
+  const blinkRoot = (container: HTMLElement) =>
+    container.querySelector(
+      '[data-cy="dashboard-widget-form-count-missing-blink"]'
+    ) as HTMLElement | null;
+
+  const blinkSwitch = (container: HTMLElement) =>
+    within(blinkRoot(container) as HTMLElement).getByRole("switch");
+
+  const incidentsWithMissing: CountBy = {
+    field: "incident",
+    incidentStatus: "active",
+    showMissing: true,
+  };
+
+  it("is not offered while the left-out alerts are hidden", () => {
+    const { container } = setup({ field: "incident", incidentStatus: "active" });
+
+    expect(blinkRoot(container)).toBeNull();
+  });
+
+  it("is not offered when counting alerts", () => {
+    const { container } = setup(undefined);
+
+    expect(blinkRoot(container)).toBeNull();
+  });
+
+  it("is labelled and off by default once the left-out alerts are shown", () => {
+    const { container } = setup(incidentsWithMissing);
+
+    expect(screen.getByText("Make it blink red")).toBeInTheDocument();
+    expect(
+      screen.getByText("While any alert isn't in an incident.")
+    ).toBeInTheDocument();
+    expect(blinkSwitch(container)).toHaveAttribute("aria-checked", "false");
+  });
+
+  it("explains the blink for the chosen field", () => {
+    setup({ field: "service", showMissing: true });
+
+    expect(
+      screen.getByText("While any alert has no service.")
+    ).toBeInTheDocument();
+  });
+
+  it("shows a saved blink as on", () => {
+    const { container } = setup({ ...incidentsWithMissing, blinkMissing: true });
+
+    expect(blinkSwitch(container)).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("turns the blink on", () => {
+    const { onChange, container } = setup(incidentsWithMissing);
+
+    fireEvent.click(blinkSwitch(container));
+
+    expect(onChange).toHaveBeenCalledWith({
+      ...incidentsWithMissing,
+      blinkMissing: true,
+    });
+  });
+
+  it("turns the blink off", () => {
+    const { onChange, container } = setup({
+      ...incidentsWithMissing,
+      blinkMissing: true,
+    });
+
+    fireEvent.click(blinkSwitch(container));
+
+    expect(onChange).toHaveBeenCalledWith({
+      ...incidentsWithMissing,
+      blinkMissing: false,
+    });
+  });
+
+  it("keeps the blink when the incident status changes", async () => {
+    const { onChange, container } = setup({
+      ...incidentsWithMissing,
+      blinkMissing: true,
+    });
+
+    await choose(
+      container,
+      "dashboard-widget-form-incident-status-select",
+      "Firing only"
+    );
+
+    expect(onChange).toHaveBeenCalledWith({
+      field: "incident",
+      incidentStatus: "firing",
+      showMissing: true,
+      blinkMissing: true,
+    });
+  });
+
+  it("keeps the blink when the field changes", async () => {
+    const { onChange, container } = setup({
+      field: "service",
+      showMissing: true,
+      blinkMissing: true,
+    });
+
+    await choose(container, "dashboard-widget-form-count-field-select", "Host");
+
+    expect(onChange).toHaveBeenCalledWith({
+      field: "node_name",
+      showMissing: true,
+      blinkMissing: true,
+    });
+  });
+
+  it("keeps the blink between incidents and another field", () => {
+    const { onChange } = setup({ ...incidentsWithMissing, blinkMissing: true });
+
+    fireEvent.click(radio("Other field"));
+
+    expect(onChange).toHaveBeenCalledWith({
+      field: "name",
+      showMissing: true,
+      blinkMissing: true,
+    });
+  });
+
+  it("does not carry the blink into an alerts count", () => {
+    const { onChange } = setup({ ...incidentsWithMissing, blinkMissing: true });
+
+    fireEvent.click(radio("Alerts"));
+
+    expect(onChange).toHaveBeenCalledWith(undefined);
+  });
+});

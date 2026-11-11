@@ -1,4 +1,5 @@
 import {
+  BLINK_MISSING_TOGGLE_LABEL,
   COUNT_BY_ALERT_FIELD_OPTIONS,
   CountBy,
   DEFAULT_INCIDENT_STATUS,
@@ -6,10 +7,12 @@ import {
   MISSING_UNAVAILABLE_LABEL,
   UNKNOWN_COUNT_FIELD_LABEL,
   getCountMode,
+  getBlinkMissingToggleHelp,
   getCountUnitLabel,
   getMissingCountLabel,
   getMissingToggleHelp,
   getMissingToggleLabel,
+  isBlinkingMissing,
   isShowingMissing,
 } from "../count-by";
 
@@ -156,6 +159,55 @@ describe("isShowingMissing", () => {
     ],
   ])("is %s -> %s", (_name, countBy, expected) => {
     expect(isShowingMissing(countBy)).toBe(expected);
+  });
+});
+
+describe("isBlinkingMissing", () => {
+  it.each<[string, CountBy | undefined, boolean]>([
+    ["no countBy", undefined, false],
+    ["the blink unset", { field: "incident", showMissing: true }, false],
+    [
+      "the blink off",
+      { field: "incident", showMissing: true, blinkMissing: false },
+      false,
+    ],
+    [
+      "the blink on",
+      { field: "incident", showMissing: true, blinkMissing: true },
+      true,
+    ],
+    [
+      "the blink on with the strip off",
+      { field: "service", showMissing: false, blinkMissing: true },
+      false,
+    ],
+    [
+      "a saved value that is not a boolean",
+      {
+        field: "service",
+        showMissing: true,
+        blinkMissing: "true",
+      } as unknown as CountBy,
+      false,
+    ],
+  ])("is %s -> %s", (_name, countBy, expected) => {
+    expect(isBlinkingMissing(countBy)).toBe(expected);
+  });
+});
+
+describe("blink toggle labels", () => {
+  it("names the switch", () => {
+    expect(BLINK_MISSING_TOGGLE_LABEL).toBe("Make it blink red");
+  });
+
+  it.each<[CountBy, string]>([
+    [{ field: "incident" }, "While any alert isn't in an incident."],
+    [{ field: "service" }, "While any alert has no service."],
+    [{ field: "name" }, "While any alert has no alert name."],
+    [{ field: "team" } as unknown as CountBy, "While any alert has no team."],
+    [{ field: {} } as unknown as CountBy, "While any alert has no value."],
+  ])("explains when %j blinks", (countBy, help) => {
+    expect(getBlinkMissingToggleHelp(countBy)).toBe(help);
   });
 });
 

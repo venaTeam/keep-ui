@@ -9,6 +9,7 @@ import {
   MISSING_UNAVAILABLE_LABEL,
   getCountUnitLabel,
   getMissingCountLabel,
+  isBlinkingMissing,
   isShowingMissing,
 } from "@/entities/presets/model/count-by";
 import { Button } from "@tremor/react";
@@ -16,6 +17,7 @@ import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { useRouter } from "next/navigation";
 import WidgetAlertsTable from "./widget-alerts-table";
+import { useSyncedAnimation } from "./use-synced-animation";
 import { WidgetData, WidgetType } from "../../types";
 
 interface PresetAlertTablePanelProps {
@@ -85,6 +87,12 @@ const PresetAlertTablePanel: React.FC<PresetAlertTablePanelProps> = ({
     refreshInterval: 30000,
     enabled: !!preset && !!countBy,
   });
+  const blinksMissing =
+    isBlinkingMissing(countBy) &&
+    !isGroupLoading &&
+    missingCount !== undefined &&
+    missingCount > 0;
+  const syncBlink = useSyncedAnimation(blinksMissing);
 
   function handleGoToPresetClick() {
     const presetUrl = `/alerts/${preset?.name.toLowerCase()}`;
@@ -214,9 +222,19 @@ const PresetAlertTablePanel: React.FC<PresetAlertTablePanelProps> = ({
         className="flex gap-1.5 items-center text-gray-600"
         data-cy="dashboard-widget-group-missing"
       >
-        <span className="inline-block h-[7px] w-[7px] shrink-0 rounded-full border-[1.5px] border-gray-400" />
+        {!blinksMissing && (
+          <span className="inline-block h-[7px] w-[7px] shrink-0 rounded-full border-[1.5px] border-gray-400" />
+        )}
         {isGroupLoading ? (
           <Skeleton containerClassName="h-4 w-40 relative -top-0.5" />
+        ) : blinksMissing ? (
+          <span
+            className="truncate rounded-full bg-red-600 px-2 font-bold text-white motion-safe:animate-missing-blink"
+            title={label}
+            ref={syncBlink}
+          >
+            {label}
+          </span>
         ) : (
           <span className="truncate" title={label}>
             {label}
