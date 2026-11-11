@@ -39,6 +39,7 @@ import styles from "./Search.module.css";
 import OperatorModal from "./manage-tenants/OperatorModal";
 import TenantFormModal from "./manage-tenants/TenantFormModal";
 import { useTenants, useWhoami } from "./manage-tenants/useManageTenants";
+import { confirmNavigation } from "@/shared/lib/navigation-guard";
 
 const NAVIGATION_OPTIONS = [
   {
@@ -153,11 +154,17 @@ export const Search = ({ session }: SearchProps) => {
   }, []);
 
   const onOptionSelection = (value: string | null) => {
-    setSelectedOption(value);
-    if (value && comboboxInputRef.current) {
-      comboboxInputRef.current.blur();
-      router.push(value);
+    if (!value) {
+      setSelectedOption(value);
+      return;
     }
+    comboboxInputRef.current?.blur();
+    // Select the destination only once leaving is confirmed, so cancelling
+    // the unsaved-changes warning leaves the search box as it was.
+    confirmNavigation(() => {
+      setSelectedOption(value);
+      router.push(value);
+    });
   };
 
   const onLeave = () => {

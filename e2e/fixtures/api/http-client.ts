@@ -15,6 +15,7 @@ import { randomUUID } from "node:crypto";
  */
 export interface KeepApiOptions {
   gateway: string;
+  ingestion: string;
   workflows: string;
   apiKey: string;
 }
@@ -24,12 +25,15 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 export class HttpClient {
   /** Base URL of the gateway (alerts / incidents / presets / dashboards). */
   readonly gateway: string;
+  /** Base URL of keep-ingestion (POST /alerts/event). */
+  readonly ingestion: string;
   /** Base URL of the workflows service. */
   readonly workflowsUrl: string;
   private readonly apiKey: string;
 
   constructor(opts: KeepApiOptions) {
     this.gateway = opts.gateway.replace(/\/$/, "");
+    this.ingestion = opts.ingestion.replace(/\/$/, "");
     this.workflowsUrl = opts.workflows.replace(/\/$/, "");
     this.apiKey = opts.apiKey;
   }
