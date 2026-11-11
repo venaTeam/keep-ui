@@ -315,7 +315,7 @@ describe("CountByControl blink toggle", () => {
   it("is labelled and off by default once the left-out alerts are shown", () => {
     const { container } = setup(incidentsWithMissing);
 
-    expect(screen.getByText("Make it blink red")).toBeInTheDocument();
+    expect(screen.getByText("Make it blink")).toBeInTheDocument();
     expect(
       screen.getByText("While any alert isn't in an incident.")
     ).toBeInTheDocument();
@@ -411,6 +411,93 @@ describe("CountByControl blink toggle", () => {
 
   it("does not carry the blink into an alerts count", () => {
     const { onChange } = setup({ ...incidentsWithMissing, blinkMissing: true });
+
+    fireEvent.click(radio("Alerts"));
+
+    expect(onChange).toHaveBeenCalledWith(undefined);
+  });
+});
+
+describe("CountByControl blink color", () => {
+  const colorInput = (container: HTMLElement) =>
+    container.querySelector(
+      '[data-cy="dashboard-widget-form-count-missing-blink-color"]'
+    ) as HTMLInputElement | null;
+
+  const blinking: CountBy = {
+    field: "incident",
+    incidentStatus: "active",
+    showMissing: true,
+    blinkMissing: true,
+  };
+
+  it("is offered only while the blink is on", () => {
+    const { container } = setup({ ...blinking, blinkMissing: false });
+
+    expect(colorInput(container)).toBeNull();
+  });
+
+  it("starts at red", () => {
+    const { container } = setup(blinking);
+
+    expect(colorInput(container)).toHaveValue("#dc2626");
+    expect(colorInput(container)).toHaveAttribute("type", "color");
+    expect(colorInput(container)).toHaveAccessibleName("Blink color");
+  });
+
+  it("shows a saved color", () => {
+    const { container } = setup({ ...blinking, blinkColor: "#2563eb" });
+
+    expect(colorInput(container)).toHaveValue("#2563eb");
+  });
+
+  it("saves the chosen color", () => {
+    const { onChange, container } = setup(blinking);
+
+    fireEvent.change(colorInput(container) as HTMLInputElement, {
+      target: { value: "#16a34a" },
+    });
+
+    expect(onChange).toHaveBeenCalledWith({
+      ...blinking,
+      blinkColor: "#16a34a",
+    });
+  });
+
+  it("keeps the color when the incident status changes", async () => {
+    const { onChange, container } = setup({
+      ...blinking,
+      blinkColor: "#2563eb",
+    });
+
+    await choose(
+      container,
+      "dashboard-widget-form-incident-status-select",
+      "Firing only"
+    );
+
+    expect(onChange).toHaveBeenCalledWith({
+      ...blinking,
+      incidentStatus: "firing",
+      blinkColor: "#2563eb",
+    });
+  });
+
+  it("keeps the color between incidents and another field", () => {
+    const { onChange } = setup({ ...blinking, blinkColor: "#2563eb" });
+
+    fireEvent.click(radio("Other field"));
+
+    expect(onChange).toHaveBeenCalledWith({
+      field: "name",
+      showMissing: true,
+      blinkMissing: true,
+      blinkColor: "#2563eb",
+    });
+  });
+
+  it("does not carry the color into an alerts count", () => {
+    const { onChange } = setup({ ...blinking, blinkColor: "#2563eb" });
 
     fireEvent.click(radio("Alerts"));
 

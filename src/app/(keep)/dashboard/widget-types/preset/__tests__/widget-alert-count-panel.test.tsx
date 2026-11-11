@@ -320,8 +320,28 @@ describe("WidgetAlertCountPanel blinking strip", () => {
     expect(stripOf(container)).toHaveTextContent(
       "+ 10 alerts not in an incident"
     );
-    expect(stripOf(container)).toHaveClass("bg-red-600", "text-white", BLINK);
+    expect(stripOf(container)).toHaveClass(BLINK);
     expect(stripOf(container)).not.toHaveClass("bg-white/75");
+    expect(stripOf(container).style.getPropertyValue("--blink-strong")).toBe(
+      "#dc2626"
+    );
+    expect(stripOf(container)).toHaveStyle({
+      backgroundColor: "#dc2626",
+      color: "#ffffff",
+    });
+  });
+
+  it("blinks in the color the widget chose", () => {
+    hookState({ totalCount: 10, missingCount: 10 });
+    const { container } = renderPanel({
+      countBy: { ...blinking, blinkColor: "#2563eb" },
+    });
+
+    expect(stripOf(container)).toHaveClass(BLINK);
+    expect(stripOf(container).style.getPropertyValue("--blink-strong")).toBe(
+      "#2563eb"
+    );
+    expect(stripOf(container)).toHaveStyle({ backgroundColor: "#2563eb" });
   });
 
   it("stays grey when the blink is off", () => {
@@ -331,8 +351,8 @@ describe("WidgetAlertCountPanel blinking strip", () => {
     });
 
     expect(stripOf(container)).toHaveClass("bg-white/75");
-    expect(stripOf(container)).not.toHaveClass("bg-red-600");
     expect(stripOf(container)).not.toHaveClass(BLINK);
+    expect(stripOf(container).style.getPropertyValue("--blink-strong")).toBe("");
   });
 
   it.each<[string, { missingCount?: number; isLoading?: boolean }]>([
@@ -344,8 +364,8 @@ describe("WidgetAlertCountPanel blinking strip", () => {
     const { container } = renderPanel({ countBy: blinking });
 
     expect(stripOf(container)).toHaveClass("bg-white/75");
-    expect(stripOf(container)).not.toHaveClass("bg-red-600");
     expect(stripOf(container)).not.toHaveClass(BLINK);
+    expect(stripOf(container).style.getPropertyValue("--blink-strong")).toBe("");
   });
 
   it("shows no strip when the count fails", () => {

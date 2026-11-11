@@ -16,6 +16,7 @@ export interface CountBy {
   incidentStatus?: IncidentStatusFilter;
   showMissing?: boolean;
   blinkMissing?: boolean;
+  blinkColor?: string;
 }
 
 export type CountMode = "alerts" | "incidents" | "field";
@@ -28,7 +29,7 @@ export const UNKNOWN_COUNT_FIELD_LABEL = "Unknown field";
 
 export const MISSING_UNAVAILABLE_LABEL = "—";
 
-export const BLINK_MISSING_TOGGLE_LABEL = "Make it blink red";
+export const BLINK_MISSING_TOGGLE_LABEL = "Make it blink";
 
 export const INCIDENT_STATUS_OPTIONS: ReadonlyArray<{
   value: IncidentStatusFilter;
@@ -145,8 +146,8 @@ export function isShowingMissing(countBy?: CountBy): boolean {
 }
 
 /**
- * Whether a widget asked for its left-out alerts to blink red. Only a widget
- * that shows them can blink.
+ * Whether a widget asked for its left-out alerts to blink. Only a widget that
+ * shows them can blink.
  */
 export function isBlinkingMissing(countBy?: CountBy): boolean {
   return isShowingMissing(countBy) && countBy?.blinkMissing === true;
@@ -168,7 +169,7 @@ export function getMissingToggleHelp(countBy: CountBy): string {
   return `Adds how many matching alerts have no ${getMissingFieldNoun(countBy).noun}.`;
 }
 
-/** Help line under the switch that makes the left-out alerts blink red. */
+/** Help line under the switch that makes the left-out alerts blink. */
 export function getBlinkMissingToggleHelp(countBy: CountBy): string {
   if (countBy.field === "incident") {
     return "While any alert isn't in an incident.";

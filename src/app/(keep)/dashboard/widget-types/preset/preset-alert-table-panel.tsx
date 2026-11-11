@@ -18,6 +18,7 @@ import "react-loading-skeleton/dist/skeleton.css";
 import { useRouter } from "next/navigation";
 import WidgetAlertsTable from "./widget-alerts-table";
 import { useSyncedAnimation } from "./use-synced-animation";
+import { getBlinkColor, getBlinkStyle } from "./blink-palette";
 import { WidgetData, WidgetType } from "../../types";
 
 interface PresetAlertTablePanelProps {
@@ -229,7 +230,8 @@ const PresetAlertTablePanel: React.FC<PresetAlertTablePanelProps> = ({
           <Skeleton containerClassName="h-4 w-40 relative -top-0.5" />
         ) : blinksMissing ? (
           <span
-            className="truncate rounded-full bg-red-600 px-2 font-bold text-white motion-safe:animate-missing-blink"
+            className="truncate rounded-full px-2 font-bold motion-safe:animate-missing-blink"
+            style={getBlinkStyle(getBlinkColor(countBy))}
             title={label}
             ref={syncBlink}
           >

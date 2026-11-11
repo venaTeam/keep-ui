@@ -197,7 +197,7 @@ describe("isBlinkingMissing", () => {
 
 describe("blink toggle labels", () => {
   it("names the switch", () => {
-    expect(BLINK_MISSING_TOGGLE_LABEL).toBe("Make it blink red");
+    expect(BLINK_MISSING_TOGGLE_LABEL).toBe("Make it blink");
   });
 
   it.each<[CountBy, string]>([

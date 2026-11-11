@@ -299,7 +299,24 @@ describe("PresetAlertTablePanel blinking line", () => {
     expect(blinkingPart(container)).toHaveTextContent(
       "+ 4 alerts not in an incident"
     );
-    expect(blinkingPart(container)).toHaveClass("bg-red-600", "text-white");
+    expect(blinkingPart(container)).toHaveStyle({
+      backgroundColor: "#dc2626",
+      color: "#ffffff",
+    });
+  });
+
+  it("blinks in the color the widget chose", () => {
+    groupState({ totalCount: 3, missingCount: 4 });
+    const { container } = renderPanel(
+      buildItem({ countBy: { ...blinking, blinkColor: "#16a34a" } })
+    );
+
+    expect(
+      (blinkingPart(container) as HTMLElement).style.getPropertyValue(
+        "--blink-strong"
+      )
+    ).toBe("#16a34a");
+    expect(blinkingPart(container)).toHaveStyle({ backgroundColor: "#16a34a" });
   });
 
   it.each<[string, Partial<CountBy>, { missingCount?: number; isLoading?: boolean }]>([

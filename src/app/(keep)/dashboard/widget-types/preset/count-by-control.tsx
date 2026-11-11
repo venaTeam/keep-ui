@@ -16,6 +16,7 @@ import {
   isBlinkingMissing,
   isShowingMissing,
 } from "@/entities/presets/model/count-by";
+import { getBlinkColor } from "./blink-palette";
 
 interface CountByControlProps {
   value?: CountBy;
@@ -31,9 +32,9 @@ const MODES: ReadonlyArray<{ mode: CountMode; label: string }> = [
 /**
  * Chooses what a preset widget counts: alerts (the default), distinct
  * incidents, or distinct values of one allowlisted alert field. A grouped
- * count can also show the alerts it leaves out, and make them blink red; both
- * choices survive changes of status, field and grouped mode, and are dropped
- * with the grouping.
+ * count can also show the alerts it leaves out, and make them blink in a
+ * chosen color; those choices survive changes of status, field and grouped
+ * mode, and are dropped with the grouping.
  */
 export const CountByControl: React.FC<CountByControlProps> = ({
   value,
@@ -46,11 +47,16 @@ export const CountByControl: React.FC<CountByControlProps> = ({
   const change = (next: CountBy) => {
     if (!showMissing) {
       onChange(next);
-    } else if (blinkMissing) {
-      onChange({ ...next, showMissing: true, blinkMissing: true });
-    } else {
-      onChange({ ...next, showMissing: true });
+      return;
     }
+    const kept: CountBy = { ...next, showMissing: true };
+    if (blinkMissing) {
+      kept.blinkMissing = true;
+    }
+    if (value?.blinkColor !== undefined) {
+      kept.blinkColor = value.blinkColor;
+    }
+    onChange(kept);
   };
 
   const selectMode = (nextMode: CountMode) => {
@@ -166,6 +172,18 @@ export const CountByControl: React.FC<CountByControlProps> = ({
         >
           <div className="flex items-center justify-between gap-2">
             <Subtitle>{BLINK_MISSING_TOGGLE_LABEL}</Subtitle>
+            {blinkMissing && (
+              <input
+                type="color"
+                aria-label="Blink color"
+                value={getBlinkColor(value)}
+                onChange={(e) =>
+                  onChange({ ...value, blinkColor: e.target.value })
+                }
+                className="ml-auto h-7 w-9 cursor-pointer rounded border p-0.5"
+                data-cy="dashboard-widget-form-count-missing-blink-color"
+              />
+            )}
             <Switch
               checked={blinkMissing}
               onChange={(checked) =>

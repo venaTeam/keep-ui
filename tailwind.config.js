@@ -112,14 +112,14 @@ module.exports = {
       keyframes: {
         missingBlink: {
           "0%, 55%, 100%": {
-            backgroundColor: "#dc2626",
-            borderColor: "#b91c1c",
-            color: "#ffffff",
+            backgroundColor: "var(--blink-strong)",
+            borderColor: "var(--blink-strong-border)",
+            color: "var(--blink-strong-text)",
           },
           "62%, 93%": {
-            backgroundColor: "#fee2e2",
-            borderColor: "#fca5a5",
-            color: "#b91c1c",
+            backgroundColor: "var(--blink-soft)",
+            borderColor: "var(--blink-soft-border)",
+            color: "var(--blink-soft-text)",
           },
         },
         hide: {
