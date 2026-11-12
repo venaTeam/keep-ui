@@ -41,7 +41,7 @@ export function isHexColor(value: unknown): value is string {
 }
 
 /** Lowercase a valid hex color and expand `#rgb` to `#rrggbb` (which `<input type="color">` requires). */
-function normalizeHexColor(value: string): string {
+export function normalizeHexColor(value: string): string {
   const hex = value.toLowerCase();
   if (hex.length === 4) {
     return (

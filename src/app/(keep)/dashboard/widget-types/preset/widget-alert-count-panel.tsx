@@ -7,6 +7,7 @@ import {
   MISSING_UNAVAILABLE_LABEL,
   getCountUnitLabel,
   getMissingCountLabel,
+  isBlinkingMissing,
   isShowingMissing,
 } from "@/entities/presets/model/count-by";
 import { useDashboardPreset } from "@/utils/hooks/useDashboardPresets";
@@ -18,6 +19,8 @@ import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
+import { useSyncedAnimation } from "./use-synced-animation";
+import { getBlinkColor, getBlinkStyle } from "./blink-palette";
 
 const ERROR_COLOR = "#9ca3af";
 
@@ -172,6 +175,13 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
       ? getMissingCountLabel(countBy, missingCount)
       : MISSING_UNAVAILABLE_LABEL;
 
+  const blinksMissing =
+    isBlinkingMissing(countBy) &&
+    !isCountLoading &&
+    missingCount !== undefined &&
+    missingCount > 0;
+  const syncBlink = useSyncedAnimation(blinksMissing);
+
   return (
     <div className="flex flex-col h-full" data-cy="dashboard-widget-alert-count-panel">
       <div
@@ -280,8 +290,16 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
         )}
         {countBy && showMissing && !isError && (
           <div
-            className="-mx-2 -mb-2 mt-1 flex-none truncate rounded-b-md border-t border-black/10 bg-white/75 px-2 py-1 text-center text-xs text-gray-600"
+            className={`-mx-2 -mb-2 mt-1 flex-none truncate rounded-b-md border-t px-2 py-1 text-center text-xs ${
+              blinksMissing
+                ? "font-bold motion-safe:animate-missing-blink"
+                : "border-black/10 bg-white/75 text-gray-600"
+            }`}
+            style={
+              blinksMissing ? getBlinkStyle(getBlinkColor(countBy)) : undefined
+            }
             title={isCountLoading ? undefined : missingLabel}
+            ref={syncBlink}
             data-cy="dashboard-widget-count-missing"
           >
             {isCountLoading ? (
