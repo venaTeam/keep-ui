@@ -249,6 +249,32 @@ describe("dashboard switching and new dashboards", () => {
     expect(byCy("dashboard-empty-state")).toBeInTheDocument();
   });
 
+  it("a second save right after creating is an update, not a duplicate create", async () => {
+    mockPost
+      .mockResolvedValueOnce({ id: "nd1", dashboard_name: "Ops" })
+      .mockResolvedValueOnce({});
+    mockMutate.mockImplementation(async (arg: any) => {
+      if (typeof arg === "function") {
+        mockDashboards = arg(mockDashboards ?? []);
+      }
+    });
+    mockDashboards = [];
+    const { rerender } = render(<DashboardPage />);
+
+    await act(async () => click("dashboard-save-layout-btn"));
+    await waitFor(() =>
+      expect(mockPost.mock.calls[0]?.[2]).toEqual({ method: "POST" })
+    );
+    await waitFor(() => expect(mockDashboards).toHaveLength(1));
+    rerender(<DashboardPage />);
+    click("dashboard-enter-edit-btn");
+
+    await act(async () => click("dashboard-save-layout-btn"));
+
+    expect(mockPost).toHaveBeenCalledTimes(2);
+    expect(mockPost.mock.calls[1][2]).toEqual({ method: "PUT" });
+  });
+
   it("leaves edit mode and loads the other dashboard when the id changes", () => {
     mockDashboards = [savedDashboard("Ops"), { ...savedDashboard("Noc"), id: "d2" }];
     const { rerender } = render(<DashboardPage />);
