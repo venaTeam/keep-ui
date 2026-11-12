@@ -22,7 +22,7 @@ import { DashboardEditModeProvider } from "../DashboardEditModeContext";
 import { DashboardEditState } from "../dashboard-edit-state";
 import { LeaveEditModeModal } from "../LeaveEditModeModal";
 import { useDashboardEditSession } from "../useDashboardEditSession";
-import { useDashboards } from "utils/hooks/useDashboards";
+import { Dashboard, useDashboards } from "utils/hooks/useDashboards";
 import { toast } from "react-toastify";
 import { GenericFilters } from "@/components/filters/GenericFilters";
 import { useDashboardPreset } from "utils/hooks/useDashboardPresets";
@@ -229,11 +229,27 @@ const DashboardPage = () => {
 
       if (isNewDashboard) {
         recordAction("create_dashboard", (performance.now() - start) / 1000);
+        // Publish the created dashboard into the local list right away, so a
+        // second save in this session is an update, never a duplicate create
+        // racing the server's unique-name constraint. Revalidation then
+        // refreshes the cache with the server's current state.
+        if (result?.id) {
+          await mutateDashboard(
+            (current: Dashboard[] | undefined) => [
+              ...(current ?? []),
+              result as Dashboard,
+            ],
+            { revalidate: true }
+          );
+        } else {
+          mutateDashboard();
+        }
+      } else {
+        mutateDashboard();
       }
 
       console.log("Dashboard saved successfully", result);
       edit.stop();
-      mutateDashboard();
       toast.success("Dashboard saved successfully");
     } catch (error) {
       recordError("create_dashboard");
