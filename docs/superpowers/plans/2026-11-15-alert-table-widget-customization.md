@@ -35,7 +35,7 @@
   - `npx jest <touched test files>`;
   - `npx tsc --noEmit -p .` must not add new errors in touched files (compare against `origin/dev` output; the repo has pre-existing errors);
   - `npx eslint <touched files>`.
-- **Coordination:** another branch (`feat/alert-table-readability`) edits `alert-table-utils.tsx`, `widget-alerts-table.tsx` and one line of `alert-table-headers.tsx`. The only allowed change to `alert-table-utils.tsx` is Task 4b's one optional argument. See `/Users/yarin/keep-namespace/.worktrees/COORDINATION-alert-table.md`.
+- **Coordination:** another branch (`feat/alert-table-readability`) edits `alert-table-utils.tsx`, `widget-alerts-table.tsx` and one line of `alert-table-headers.tsx`. This branch does not edit `alert-table-utils.tsx` at all (Ruling R10). See `/Users/yarin/keep-namespace/.worktrees/COORDINATION-alert-table.md`.
 - **Spec resolutions:** the spec's "Builder-check resolutions" section is binding. It covers legacy snake_case ids, static-preset fallback, ignoring viewer preferences, the single empty group, and multi-key changes in one `onSave`.
 
 ## Review Focus
@@ -434,53 +434,64 @@ git add src/widgets/alerts-table/ui/alert-grouped-row.tsx src/widgets/alerts-tab
 git commit -m "feat(alerts-table): 'No <column>' group label and optional incident group details"
 ```
 
-### Task 4b: `useAlertTableCols` can ignore stored viewer preferences
+### Task 4b: Row-style override context (viewer preferences don't reach the widget)
+
+> Ruling R10 (2026-11-15) replaces the earlier `ignoreStoredPreferences` design.
+> - Editing `alert-table-utils.tsx` would sit next to `feat/alert-table-readability`'s hunk at lines 251-256, and the viewer's row style is also read directly by `AlertName`, `alert-table-headers.tsx`, `alerts-table-body.tsx` and `alert-grouped-row.tsx`.
+> - So the override lives in `useAlertRowStyle` itself, as a React context every reader picks up.
+> - Stored renames, time/list formats and expanded rows are neutralised by Ruling R9 instead: the widget passes a widget-scoped `presetName` (`dashboard-widget-<item.i>`), so those preset-keyed browser keys are never the presets page's.
+> - `alert-table-utils.tsx` is NOT edited by this branch.
 
 **Files:**
-- Modify: `src/widgets/alerts-table/lib/alert-table-utils.tsx`. This is the only change allowed in this file. It is additive: one optional field on `GenerateAlertTableColsArg` and the reads that honour it.
-- Test: `src/widgets/alerts-table/lib/__tests__/alert-table-cols-preferences.test.tsx` (new)
+- Modify: `src/entities/alerts/model/useAlertRowStyle.ts`
+- Modify: `src/entities/alerts/model/index.ts` (export the provider)
+- Test: `src/entities/alerts/model/__tests__/useAlertRowStyle.test.tsx` (new)
 
 **Interfaces:**
-- Produces: `GenerateAlertTableColsArg.ignoreStoredPreferences?: boolean` (default `false`). When true:
-  - `rowStyle` is `"default"` regardless of `useAlertRowStyle`;
-  - `columnRenameMapping` is `{}`;
-  - `columnTimeFormats` and `columnListFormats` are `{}` (so time cells fall back to `"timeago"`).
-  - The hooks themselves are still called (hook rules); only their values are ignored.
+- Produces:
+  - `RowStyleOverrideProvider`: a React context provider with prop `value: RowStyle | null`.
+  - `useAlertRowStyle()` keeps its signature `readonly [RowStyle, (v: RowStyle) => void]`. Inside a provider with a non-null value, it returns that value as the row style. The setter still writes the stored preference.
+  - Outside any provider, behaviour is unchanged.
 
 - [ ] **Step 1: Write the failing tests**
 
 ```tsx
-it("by default headers use the stored rename mapping", () => {
-  localStorage.setItem("keephq-column-rename-mapping-atw", JSON.stringify({ name: "Stale" }));
-  const { result } = renderHook(() => useAlertTableCols({ presetName: "atw" }), { wrapper });
-  expect(headerOf(result.current, "name")).toBe("Stale");
+it("returns the stored preference with no provider", () => {
+  localStorage.setItem("keephq-alert-table-row-style", JSON.stringify("relaxed"));
+  const { result } = renderHook(() => useAlertRowStyle());
+  expect(result.current[0]).toBe("relaxed");
 });
-it("ignoreStoredPreferences ignores stored renames and formats", () => {
-  localStorage.setItem("keephq-column-rename-mapping-atw", JSON.stringify({ name: "Stale" }));
-  localStorage.setItem("keephq-column-time-formats-atw", JSON.stringify({ lastReceived: "iso" }));
-  const { result } = renderHook(() => useAlertTableCols({ presetName: "atw", ignoreStoredPreferences: true }), { wrapper });
-  expect(headerOf(result.current, "name")).toBe("Name");
+it("returns the override inside RowStyleOverrideProvider", () => {
+  localStorage.setItem("keephq-alert-table-row-style", JSON.stringify("relaxed"));
+  const wrapper = ({ children }) => <RowStyleOverrideProvider value="default">{children}</RowStyleOverrideProvider>;
+  const { result } = renderHook(() => useAlertRowStyle(), { wrapper });
+  expect(result.current[0]).toBe("default");
+});
+it("a null override falls back to the stored preference", () => { /* value={null} → "relaxed" */ });
+it("AlertName inside the provider renders at the overridden density", () => {
+  /* render AlertName (src/entities/alerts/ui/AlertName) with stored "relaxed" inside value="default";
+     assert the default-density class it uses (e.g. line-clamp-1 rather than line-clamp-3) */
 });
 ```
 
-`wrapper` mocks `useProviders`, `useConfig` and `useExpandedRows` in the same way as the readability branch's `alert-table-cols.test.tsx`, if it has merged by then; otherwise mock them with `jest.mock`. `headerOf` finds the column by id and reads `header` when it is a string.
-
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `npx jest src/widgets/alerts-table/lib/__tests__/alert-table-cols-preferences.test.tsx`
-Expected: the second test FAILS.
+Run: `npx jest src/entities/alerts/model/__tests__/useAlertRowStyle.test.tsx`
+Expected: the provider tests FAIL (no provider export).
 
-- [ ] **Step 3: Implement** (read the stored values into local variables, then choose stored or default based on the flag)
+- [ ] **Step 3: Implement**
+
+Use `createContext<RowStyle | null>(null)`. `useAlertRowStyle` reads the context and the stored value, and returns `[override ?? stored, setter]`.
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
-Run: `npx jest src/widgets/alerts-table`. Expected: PASS.
+Run: `npx jest src/entities/alerts src/widgets/alerts-table`. Expected: PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/widgets/alerts-table/lib/alert-table-utils.tsx src/widgets/alerts-table/lib/__tests__/alert-table-cols-preferences.test.tsx
-git commit -m "feat(alerts-table): useAlertTableCols can ignore stored viewer preferences"
+git add src/entities/alerts/model/useAlertRowStyle.ts src/entities/alerts/model/index.ts src/entities/alerts/model/__tests__/useAlertRowStyle.test.tsx
+git commit -m "feat(alerts): row-style override context for embedded tables"
 ```
 
 ### Task 5: Column options and the Group by select
@@ -639,7 +650,9 @@ Expected: FAIL.
 
 - **Known ids:** the static column ids from `useAlertTableCols`, plus the keys of the loaded alerts. Derive the keys the same way `alert-table-tab-panel-server-side.tsx:59-85` does: move that derivation into `src/widgets/alerts-table/lib/additional-cols.ts` as `getAdditionalColsToGenerate(alerts: AlertDto[]): string[]`, and use it from both places. That file is in scope for this task.
 - **`additionalColsToGenerate`:** that list, plus the visible ids, the `groupBy` id and `incident`, minus the ids of the static columns `useAlertTableCols` already defines.
-- **`useAlertTableCols` arguments:** `isCheckboxDisplayed: false`, `isMenuDisplayed: false`, `presetName`, `presetNoisy`, `ignoreStoredPreferences: true` (Task 4b).
+- **`useAlertTableCols` arguments:** `isCheckboxDisplayed: false`, `isMenuDisplayed: false`, `presetName: \`dashboard-widget-${item.i}\`` (R9: widget-scoped, so the preset's stored renames, formats and expanded rows are never read), `presetNoisy`.
+- **Row style:** wrap the whole widget table in `<RowStyleOverrideProvider value="default">` (Task 4b), and pass the same widget-scoped name as `presetName` to `AlertsTableBody`.
+- **Pinned cells (R8):** plain rows make sticky pinned cells transparent. Give pinned header and body cells an opaque background (white, under the widget's tint) so horizontally scrolled content never shows through.
 - **Empty grouping values:** post-process the returned column defs with `normalizeEmptyGrouping(columns)`, which goes in `empty-group-row-model.ts`. Each column's grouping value (its `getGroupingValue`, else its accessor) returns `undefined` whenever `isEmptyGroupValue(value)`, so all empties share one group key.
 - **Header labels:** pass `AlertsTableHeaders` a rename mapping that has an entry for every visible non-icon column: the store's rename, else `getColumnLabel(id)`. A stale `columnDef.header` can never show through.
 - **`useReactTable`:**
