@@ -28,9 +28,8 @@
   - Values treated as empty: `undefined`, `null`, `""`, `"undefined"`, `"null"`, empty array. TanStack's grouped rows carry the **stringified** grouping key, so the strings matter.
 - **Narrow widget threshold:** `420` px. Below it, header controls are hidden even in edit mode.
 - **Grouping hint** in the form: `Grouping works best with 20 or more alerts`, shown when Group by is set and the count is under `10`.
-- **Group-by shortlist,** in this order:
-  - `incident` "Incident", `service` "Service", `node_name` "Host", `application` "Application", `assignee` "Assignee", `source` "Source", `status` "Status".
-  - **Spec deviation:** Severity is dropped. `severity` is a TanStack display column with no accessor (`alert-table-utils.tsx:432`), so it cannot be grouped. It remains reachable via the "Any other field…" search only if it ever becomes groupable.
+- **Group-by shortlist:** see Ruling R11 below. It is built from `COUNT_BY_ALERT_FIELD_OPTIONS`.
+  - **Spec deviation:** Severity is dropped, because `severity` is a TanStack display column with no accessor (`alert-table-utils.tsx:432`) and cannot be grouped.
 - **Checks before each commit:**
   - `npx jest <touched test files>`;
   - `npx tsc --noEmit -p .` must not add new errors in touched files (compare against `origin/dev` output; the repo has pre-existing errors);
@@ -45,6 +44,23 @@
 3. **Saved config naming unknown or excluded ids** (`checkbox`, a field no longer present, a stale `groupBy`) must be ignored with no crash. A `groupBy` naming a column that can't group renders ungrouped. Owner: Task 1 and Task 6 tests.
 4. **The 30-second refresh while grouped:** a collapsed group must stay collapsed after the alerts refetch, and settings must not reset. Owner: Task 6 test.
 5. **Edit-mode round trip:** a change inside the widget must survive the dashboard's Save, disappear on Cancel, and not change the widget's grid size. Owner: Task 7 test.
+
+## Coexistence with the existing Count feature (Ruling R11, user requirement 2026-11-15)
+
+The dashboard already has the **Count** feature (`item.countBy`, `count-by-control.tsx`, `src/entities/presets/model/count-by.ts`). It applies to the Alert Table and Alert Count widgets: Count Alerts / Incidents / Other field, a "+N alerts not in an incident" line, and an optional blink. This branch must not collide with it in storage, the widget, or the create/update modal.
+
+- **Storage:** row grouping is `alertTable.groupBy`. It never reads or writes `countBy`. The two settings are independent: no defaulting, no syncing.
+- **Modal:**
+  - The new control is labelled **"Group rows by"** (data-cy `dashboard-widget-form-group-rows-by`). The empty-group setting is labelled **"Rows with no value"** (`Top` / `Bottom`).
+  - Both appear only for Alert Table, placed after the Columns picker.
+  - The existing **Count** control, its position, labels, data-cy attributes and its tests are untouched. The Alert Count Panel form gets nothing new.
+- **Shared labels:** the Group rows by shortlist reuses the Count control's field ids and labels from `COUNT_BY_ALERT_FIELD_OPTIONS`. It is not a second copy.
+  - The shortlist is: `incident` "Incident", then each `COUNT_BY_ALERT_FIELD_OPTIONS` entry in its order (Alert name, Service, Host, Application, Site, Assignee), then `source` "Source", `status` "Status".
+  - `getColumnLabel` uses the same labels.
+- **⚙ panel and chip:** the panel section is titled "Group rows by". The chip above the table reads "Rows grouped by <label>".
+- **Two counts on one widget:** the Count line ("+13 alerts not in an incident") covers the whole preset, while groups cover the loaded rows. In the widget (`showIncidentDetails`), every group header's count reads "<n> shown". The "No incident" header reads "No incident · <n> shown".
+- **Panel layout:** the Count lines (group count, missing line, alerts count) and "Go to preset" keep their order and test ids. The ⚙ button goes immediately before "Go to preset", edit mode only.
+- **Regression guard:** `count-by-control.test.tsx`, `widget-alert-count-panel*.test.tsx`, `preset-alert-table-panel.test.tsx` and `preset-widget-form.test.tsx` count-by cases must stay green unchanged.
 
 ---
 
@@ -505,7 +521,7 @@ git commit -m "feat(alerts): row-style override context for embedded tables"
 **Interfaces:**
 - Produces:
   - `COMMON_ENRICHMENT_FIELDS: readonly string[]` (moved verbatim from `ColumnSelection.tsx`).
-  - `GROUP_BY_SHORTLIST: ReadonlyArray<{ value: string; label: string }>` (values and labels from Global Constraints).
+  - `GROUP_BY_SHORTLIST: ReadonlyArray<{ value: string; label: string }>`, built per R11 from `COUNT_BY_ALERT_FIELD_OPTIONS`. It is never a copied list.
   - `getAlertColumnOptions(tableColumnIds: readonly string[], extraFields: readonly string[]): string[]` returns the de-duplicated union, minus `checkbox`, `alertMenu`, `noise`, sorted alphabetically.
   - `getColumnLabel(columnId: string, renameMapping?: Record<string, string>): string` returns the rename, else the shortlist label, else `startCase(columnId)`.
   - `GroupBySelect` props `{ value: string | null; onChange: (value: string | null) => void; fieldOptions: string[]; "data-testid"?: string }`. It renders "None", the shortlist, a divider, then a search-filtered list of `fieldOptions` not in the shortlist ("Any other field…").
@@ -651,6 +667,7 @@ Expected: FAIL.
 - **Known ids:** the static column ids from `useAlertTableCols`, plus the keys of the loaded alerts. Derive the keys the same way `alert-table-tab-panel-server-side.tsx:59-85` does: move that derivation into `src/widgets/alerts-table/lib/additional-cols.ts` as `getAdditionalColsToGenerate(alerts: AlertDto[]): string[]`, and use it from both places. That file is in scope for this task.
 - **`additionalColsToGenerate`:** that list, plus the visible ids, the `groupBy` id and `incident`, minus the ids of the static columns `useAlertTableCols` already defines.
 - **`useAlertTableCols` arguments:** `isCheckboxDisplayed: false`, `isMenuDisplayed: false`, `presetName: \`dashboard-widget-${item.i}\`` (R9: widget-scoped, so the preset's stored renames, formats and expanded rows are never read), `presetNoisy`.
+- **Group counts (R11):** with `showIncidentDetails`, every group header's count reads `<n> shown` (not "(n alerts)"), and the empty incident group reads `No incident · <n> shown`. Make this change in `alert-grouped-row.tsx`, gated on `showIncidentDetails` so the presets page is unchanged, and test it.
 - **Row style:** wrap the whole widget table in `<RowStyleOverrideProvider value="default">` (Task 4b), and pass the same widget-scoped name as `presetName` to `AlertsTableBody`.
 - **Pinned cells (R8):** plain rows make sticky pinned cells transparent. Give pinned header and body cells an opaque background (white, under the widget's tint) so horizontally scrolled content never shows through.
 - **Empty grouping values:** post-process the returned column defs with `normalizeEmptyGrouping(columns)`, which goes in `empty-group-row-model.ts`. Each column's grouping value (its `getGroupingValue`, else its accessor) returns `undefined` whenever `isEmptyGroupValue(value)`, so all empties share one group key.
@@ -664,7 +681,7 @@ Expected: FAIL.
   - `getGroupedRowModel: withEmptyGroupPosition(getGroupedRowModel(), () => state.emptyGroupPosition)`.
 - **`AlertsTableHeaders`:** `interactive={isEditMode && !!onChange && !isNarrow}`, `showSortItems={false}`, `showFormatItems={false}`, the store's order/visibility/rename setters, and no-op time/list format setters with empty maps.
 - **`AlertsTableBody`:** `rowStyleOverride="default"`, `rowAppearance="plain"`, `selectable={false}`, `showIncidentDetails`, `linksDisabled={isEditMode}`, `getColumnLabel` bound to the rename mapping, an empty `theme`, `lastViewedAlert={null}`, no `onRowClick`, `showSkeleton={!alerts}`, `pageSize={5}`.
-- **Above the table when grouped:** the chip `Grouped by <label>` (with a ✕ calling `setGrouping([])` in edit mode only) and Expand all / Collapse all from `useGroupExpansion(true)`.
+- **Above the table when grouped:** the chip `Rows grouped by <label>` (with a ✕ calling `setGrouping([])` in edit mode only) and Expand all / Collapse all from `useGroupExpansion(true)`.
 - **Narrow:** a `ResizeObserver` on the wrapper sets `isNarrow` when the width is under `NARROW_WIDGET_PX`.
 - **Wrapper:** keep `data-cy="dashboard-widget-alerts-table"`, `overflow-x-auto`, the `background` style and `text-xs`.
 
@@ -758,7 +775,7 @@ it("unchecking a column calls setVisibleColumns without it", () => { /* … */ }
 it("renaming inline calls setColumnRenameMapping with the new name", () => { /* … */ });
 it("reordering with the keyboard sensor calls setColumnOrder", () => { /* dnd-kit KeyboardSensor: focus handle, Space, ArrowDown, Space */ });
 it("search adds a field as a visible column", () => { /* type 'region' → click 'labels.region' → setVisibleColumns([...visible, 'labels.region']) */ });
-it("'Alerts with no value' shows only when grouped and calls setEmptyGroupPosition", () => { /* … */ });
+it("'Rows with no value' shows only when grouped and calls setEmptyGroupPosition", () => { /* … */ });
 it("Reset to defaults calls reset and is disabled when not customized", () => { /* … */ });
 ```
 
@@ -772,7 +789,7 @@ Expected: FAIL.
 - Use a Headless UI `Popover` with `@floating-ui/react` placement `bottom-end`, the same as `SettingsSelection.tsx`.
 - The column list uses dnd-kit `SortableContext` with `verticalListSortingStrategy`, plus Pointer and Keyboard sensors.
 - Pinned columns (`WIDGET_PINNED_LEFT`) show no drag handle.
-- Copy: title `Table settings`; sections `Columns`, `Group by`, `Alerts with no value` (options `Top` / `Bottom`); footer `Customized for this widget` + `Reset to defaults`.
+- Copy: title `Table settings`; sections `Columns`, `Group rows by`, `Rows with no value` (options `Top` / `Bottom`); footer `Customized for this widget` + `Reset to defaults`.
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
@@ -786,7 +803,7 @@ git add "src/app/(keep)/dashboard/widget-types/preset/widget-table-settings.tsx"
 git commit -m "feat(dashboard): widget table settings panel"
 ```
 
-### Task 9: Widget form — Group by, no-value position, hint
+### Task 9: Widget form — Group rows by, no-value position, hint
 
 **Files:**
 - Modify: `src/app/(keep)/dashboard/widget-types/preset/preset-widget-form.tsx` (Alert Table section, below `ColumnsSelection`)
@@ -804,7 +821,7 @@ it("emits alertTable.groupBy when Group by is chosen, keeping other alertTable k
   chooseGroupBy("Incident");
   expect(lastPayload().alertTable).toEqual({ columnOrder: ["name"], groupBy: "incident", emptyGroupPosition: "top" });
 });
-it("shows 'Alerts with no value' only when Group by is set", () => { /* … */ });
+it("shows 'Rows with no value' only when Group by is set", () => { /* … */ });
 it("shows the hint when grouped with fewer than 10 alerts", () => {
   renderForm({ editingItem: { ...tableItem, preset: { ...tableItem.preset, countOfLastAlerts: 5 } } });
   chooseGroupBy("Incident");
@@ -842,7 +859,7 @@ git commit -m "feat(dashboard): Group by and no-value position in the alert tabl
 - [ ] **Step 3: Live demo** (`/Users/yarin/keep-namespace/.worktrees/alert-table-widget-customization/demo`, UI http://localhost:3004, dashboard `atw widget customization demo`). In a browser:
   1. The "Follows preset columns" widget shows Description before Name, and "Alert" as the name header.
   2. The "Grouped by incident" widget shows "No incident" on top, "ATW Checkout degraded · Firing · 6 shown · 6 in incident" (or the seeded counts), and the two-incident group.
-  3. Edit dashboard → ⚙ → set "Alerts with no value" to Bottom → drag a header → resize Description → Save → reload. Everything persisted.
+  3. Edit dashboard → ⚙ → set "Rows with no value" to Bottom → drag a header → resize Description → Save → reload. Everything persisted.
   4. Edit → change something → Cancel. Reverted.
   5. Narrow widget in edit mode: no header controls, ⚙ works.
   6. The presets page `/alerts/atw incidents` still groups, drags and sorts as before.
