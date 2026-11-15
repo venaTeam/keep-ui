@@ -147,14 +147,16 @@ git add "src/app/(keep)/dashboard/types.tsx" "src/app/(keep)/dashboard/widget-ty
 git commit -m "feat(dashboard): alert table widget config types and column-state helpers"
 ```
 
-### Task 2: `useWidgetColumnState` hook (widget settings store with preset fallback)
+### Task 2: `useWidgetColumnState` hook (widget settings store with shared defaults)
+
+> Ruling 2026-11-15 (spec "Builder-check resolutions" 2): the preset's presets-page layout is per user, so the store never reads `usePresetColumnState`. Fallback order = `normalizeColumnOrder(DEFAULT_COLS, allColumnIds)`; fallback renames = `{}`.
 
 **Files:**
 - Create: `src/app/(keep)/dashboard/widget-types/preset/use-widget-column-state.ts`
 - Test: `src/app/(keep)/dashboard/widget-types/preset/__tests__/use-widget-column-state.test.tsx`
 
 **Interfaces:**
-- Consumes: Task 1 helpers; `usePresetColumnState` from `@/entities/presets/model`; `STATIC_PRESET_IDS`, `STATIC_PRESETS_NAMES` from `@/entities/presets/model/constants`.
+- Consumes: Task 1 helpers; `DEFAULT_COLS` from `@/widgets/alerts-table/lib/alert-table-utils`.
 - Produces:
   ```ts
   interface WidgetColumnState {
@@ -178,69 +180,72 @@ git commit -m "feat(dashboard): alert table widget config types and column-state
   }
   function useWidgetColumnState(args: {
     item: WidgetData;
-    presetName: string;
-    presetId?: string;
     allColumnIds: string[];
     onChange?: (item: WidgetData) => void;
   }): WidgetColumnState;
   ```
 
-- [ ] **Step 1: Write the failing tests** (mock `@/entities/presets/model` so `usePresetColumnState` returns `{ columnOrder: ["description", "name"], columnRenameMapping: { name: "Alert" } }`)
+- [ ] **Step 1: Write the failing tests**
 
 ```tsx
-it("falls back to the preset's order and names when the widget has none", () => {
-  const { result } = renderHook(() => useWidgetColumnState({ item: baseItem, presetName: "atw", presetId: "p1", allColumnIds: ["severity", "name", "description"] }));
-  expect(result.current.columnOrder).toEqual(["description", "name", "severity"]);
-  expect(result.current.columnRenameMapping).toEqual({ name: "Alert" });
+it("falls back to the shared default order and no renames when the widget has none", () => {
+  const { result } = renderHook(() => useWidgetColumnState({ item: baseItem, allColumnIds: ["description", "service", "name", "severity"] }));
+  expect(result.current.columnOrder).toEqual(["severity", "name", "description", "service"]);
+  expect(result.current.columnRenameMapping).toEqual({});
   expect(result.current.isCustomized).toBe(false);
 });
-it("asks the preset store for the backend config of a custom preset", () => {
-  renderHook(() => useWidgetColumnState({ item: baseItem, presetName: "atw", presetId: "p1", allColumnIds: [] }));
-  expect(mockUsePresetColumnState).toHaveBeenCalledWith({ presetName: "atw", presetId: "p1", useBackend: true });
-});
-it("a static preset falls back to DEFAULT_COLS order and no renames, ignoring the viewer's storage", () => {
-  mockUsePresetColumnState.mockReturnValue({ columnOrder: ["description", "name"], columnRenameMapping: { name: "Mine" } });
-  const { result } = renderHook(() => useWidgetColumnState({ item: baseItem, presetName: "feed", presetId: undefined, allColumnIds: ["name", "description", "service"] }));
-  expect(result.current.columnOrder).toEqual(["name", "description", "service"]);
+it("ignores whatever the viewer's browser holds for the preset", () => {
+  localStorage.setItem("keephq-column-order-atw", JSON.stringify(["description", "name"]));
+  localStorage.setItem("keephq-column-rename-mapping-atw", JSON.stringify({ name: "Mine" }));
+  const { result } = renderHook(() => useWidgetColumnState({ item: baseItem, allColumnIds: ["name", "description"] }));
+  expect(result.current.columnOrder).toEqual(["name", "description"]);
   expect(result.current.columnRenameMapping).toEqual({});
 });
 it("two changes in the same tick both survive", () => {
   const onChange = jest.fn();
-  const { result } = renderHook(() => useWidgetColumnState({ item: baseItem, presetName: "atw", presetId: "p1", allColumnIds: ["name", "service"], onChange }));
+  const { result } = renderHook(() => useWidgetColumnState({ item: baseItem, allColumnIds: ["name", "service"], onChange }));
   act(() => { result.current.setGrouping(["incident"]); result.current.setEmptyGroupPosition("bottom"); });
   expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ alertTable: expect.objectContaining({ groupBy: "incident", emptyGroupPosition: "bottom" }) }));
 });
-it("widget order wins over the preset and is normalized", () => {
+it("widget order wins over the default and is normalized", () => {
   const item = { ...baseItem, alertTable: { columnOrder: ["name", "ghost"] } };
-  const { result } = renderHook(() => useWidgetColumnState({ item, presetName: "atw", presetId: "p1", allColumnIds: ["severity", "name", "service"] }));
+  const { result } = renderHook(() => useWidgetColumnState({ item, allColumnIds: ["severity", "name", "service"] }));
   expect(result.current.columnOrder).toEqual(["name", "severity", "service"]);
 });
 it("each setting falls back independently", () => {
   const item = { ...baseItem, alertTable: { columnRenameMapping: { description: "Details" } } };
-  const { result } = renderHook(() => useWidgetColumnState({ item, presetName: "atw", presetId: "p1", allColumnIds: ["name", "description"] }));
-  expect(result.current.columnOrder).toEqual(["description", "name"]);
+  const { result } = renderHook(() => useWidgetColumnState({ item, allColumnIds: ["description", "name"] }));
+  expect(result.current.columnOrder).toEqual(["name", "description"]);
   expect(result.current.columnRenameMapping).toEqual({ description: "Details" });
+});
+it("reset emits one change that removes presetColumns and alertTable", () => {
+  const onChange = jest.fn();
+  const item = { ...baseItem, presetColumns: ["name"], alertTable: { groupBy: "incident" } };
+  const { result } = renderHook(() => useWidgetColumnState({ item, allColumnIds: ["name"], onChange }));
+  act(() => result.current.reset());
+  expect(onChange).toHaveBeenCalledTimes(1);
+  expect(onChange.mock.calls[0][0].presetColumns).toBeUndefined();
+  expect(onChange.mock.calls[0][0].alertTable).toBeUndefined();
 });
 it("setters emit the updated item through onChange", () => {
   const onChange = jest.fn();
-  const { result } = renderHook(() => useWidgetColumnState({ item: baseItem, presetName: "atw", presetId: "p1", allColumnIds: ["name", "service"], onChange }));
+  const { result } = renderHook(() => useWidgetColumnState({ item: baseItem, allColumnIds: ["name", "service"], onChange }));
   act(() => result.current.setGrouping(["incident"]));
   expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ alertTable: expect.objectContaining({ groupBy: "incident" }) }));
   act(() => result.current.setColumnSizing((prev) => ({ ...prev, name: 240 })));
   expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ alertTable: expect.objectContaining({ columnSizing: { name: 240 } }) }));
 });
-it("dragging a column missing from the preset order keeps every column", () => {
-  const onChange = jest.fn();
-  const { result } = renderHook(() => useWidgetColumnState({ item: baseItem, presetName: "atw", presetId: "p1", allColumnIds: ["name", "description", "service"], onChange }));
-  expect(result.current.columnOrder).toContain("service");
+it("every column, including generated ones not in DEFAULT_COLS, is in the order", () => {
+  const { result } = renderHook(() => useWidgetColumnState({ item: baseItem, allColumnIds: ["name", "description", "service"] }));
+  expect(result.current.columnOrder).toEqual(["name", "description", "service"]);
 });
 it("without onChange the setters are no-ops and canEdit is false", () => {
-  const { result } = renderHook(() => useWidgetColumnState({ item: baseItem, presetName: "atw", presetId: "p1", allColumnIds: [] }));
+  const { result } = renderHook(() => useWidgetColumnState({ item: baseItem, allColumnIds: [] }));
   expect(result.current.canEdit).toBe(false);
   expect(() => act(() => result.current.setGrouping(["incident"]))).not.toThrow();
 });
 it("grouping defaults to none and emptyGroupPosition to top", () => {
-  const { result } = renderHook(() => useWidgetColumnState({ item: baseItem, presetName: "atw", presetId: "p1", allColumnIds: [] }));
+  const { result } = renderHook(() => useWidgetColumnState({ item: baseItem, allColumnIds: [] }));
   expect(result.current.grouping).toEqual([]);
   expect(result.current.emptyGroupPosition).toBe("top");
 });
@@ -253,8 +258,8 @@ Expected: FAIL (module not found).
 
 - [ ] **Step 3: Implement `useWidgetColumnState`**
 
-- Use the presets page's static-preset rule (`!presetId || STATIC_PRESET_IDS.includes(presetId) || STATIC_PRESETS_NAMES.includes(presetName)`) to decide `useBackend`.
-- Always call `usePresetColumnState` (hook rules), but for a static preset ignore its result and fall back to `DEFAULT_COLS` order with `{}` renames.
+- Fallbacks: order `normalizeColumnOrder(item.alertTable?.columnOrder ?? DEFAULT_COLS, allColumnIds)`; renames `item.alertTable?.columnRenameMapping ?? {}`; sizing `?? {}`.
+- `reset()` emits exactly one change: `resetWidgetColumns(latestItem)`.
 - Setters build on a ref holding the latest emitted widget. The ref is updated synchronously in each emit and re-synced when `item` changes. Two setter calls in one tick therefore compose instead of overwriting each other.
 - `grouping` = `groupBy && allColumnIds.includes(groupBy) ? [groupBy] : []`.
 - `setGrouping`/`setColumnSizing` resolve TanStack updaters against the current value before calling `applyWidgetColumnChange`.
@@ -741,7 +746,7 @@ it("renaming inline calls setColumnRenameMapping with the new name", () => { /* 
 it("reordering with the keyboard sensor calls setColumnOrder", () => { /* dnd-kit KeyboardSensor: focus handle, Space, ArrowDown, Space */ });
 it("search adds a field as a visible column", () => { /* type 'region' → click 'labels.region' → setVisibleColumns([...visible, 'labels.region']) */ });
 it("'Alerts with no value' shows only when grouped and calls setEmptyGroupPosition", () => { /* … */ });
-it("Reset to preset calls reset and is disabled when not customized", () => { /* … */ });
+it("Reset to defaults calls reset and is disabled when not customized", () => { /* … */ });
 ```
 
 - [ ] **Step 2: Run the tests to verify they fail**
@@ -754,7 +759,7 @@ Expected: FAIL.
 - Use a Headless UI `Popover` with `@floating-ui/react` placement `bottom-end`, the same as `SettingsSelection.tsx`.
 - The column list uses dnd-kit `SortableContext` with `verticalListSortingStrategy`, plus Pointer and Keyboard sensors.
 - Pinned columns (`WIDGET_PINNED_LEFT`) show no drag handle.
-- Copy: title `Table settings`; sections `Columns`, `Group by`, `Alerts with no value` (options `Top` / `Bottom`); footer `Customized for this widget` + `Reset to preset`.
+- Copy: title `Table settings`; sections `Columns`, `Group by`, `Alerts with no value` (options `Top` / `Bottom`); footer `Customized for this widget` + `Reset to defaults`.
 
 - [ ] **Step 4: Run the tests to verify they pass**
 

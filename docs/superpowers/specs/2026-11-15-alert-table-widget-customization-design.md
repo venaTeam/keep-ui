@@ -13,7 +13,11 @@ On a dashboard, the Alert Table widget shows a preset's latest alerts in a fixed
 
 The full alerts table on the presets page can do all of this. The two tables share no code for it.
 
-There is also a hidden bug. The widget is meant to follow the preset's column order and names, but it reads them from an old, unscoped browser-storage key (`column-order-<preset>`, `column-rename-mapping-<preset>`). The presets page no longer writes there. Custom presets keep their columns on the server (`GET/PUT /preset/{id}/column-config`), and static presets use per-user keys (`column-order-<email>-<preset>`). So the widget's order and names often don't match what the presets page shows.
+There is also a hidden bug. The widget is meant to follow the preset's column order and names, but it reads them from an old, unscoped browser-storage key (`column-order-<preset>`, `column-rename-mapping-<preset>`). The presets page no longer writes there. A preset's column layout on the presets page is per user:
+- custom presets use the server's `UserPresetColumnConfig` (one row per tenant, preset and **user email**);
+- static presets use per-user browser keys (`column-order-<email>-<preset>`).
+
+So no shared "preset column order" exists to follow. Each viewer of the widget sees whatever their own browser happens to hold, which is often stale.
 
 ### Why we got this assignment
 
@@ -38,7 +42,7 @@ A client asked to see dashboard alerts grouped by incident, so operators can tel
    - a search box that adds any alert field as a column;
    - a **Group by** select: None, Incident, then Service, Host, Application, Assignee, Source, Severity, Status, then "Any other field…" (search);
    - when Group by is set, **"Alerts with no value: Top / Bottom"** (default Top);
-   - **Reset to preset**.
+   - **Reset to defaults**.
 2. Hovering a column header shows a drag handle (reorder by drag and drop), a resize edge (drag to resize, double-click to auto-fit) and a column menu with: Rename, Group by / Ungroup, Auto-fit width, Reset width, Move left, Move right, Hide column. Sort and the time/list display formats are **not** offered in the widget.
 3. Every change shows immediately in the widget and is kept in the dashboard's unsaved edit state. Save dashboard persists it; Cancel discards it, as for any other widget edit.
 4. The widget form (Add widget / Edit widget) gains the same **Group by** select and, when it is set, the **Alerts with no value** setting. The existing Columns picker stays and controls the same visibility setting as the ⚙ panel.
@@ -68,13 +72,13 @@ A client asked to see dashboard alerts grouped by incident, so operators can tel
     | Setting | Falls back to |
     |---|---|
     | Visible columns | the widget's `presetColumns` (existing Columns picker), else the current widget defaults: severity, status, source, name, description, lastReceived |
-    | Column order | the preset's column order as the presets page shows it, read from the same source that page uses |
-    | Column names | the preset's rename mapping, from that same source |
+    | Column order | the default order: `DEFAULT_COLS` order for the ids it lists, then the remaining columns. The same for every viewer |
+    | Column names | default names (no renames) |
     | Widths | each column's default width |
     | Grouping | none |
 
     Each setting falls back independently. For example, renaming one column doesn't freeze the order.
-14. "Reset to preset" clears all of this widget's column and grouping settings, so the widget falls back again.
+14. "Reset to defaults" clears all of this widget's column and grouping settings, so the widget falls back again.
 15. The checkbox, row-menu and noise columns never appear in the widget.
     - The severity, status and source icon columns can still be shown or hidden, because existing widgets may already hide them through the form picker.
     - When visible, they are pinned to the left. They have no header menu, as on the presets page.
@@ -84,7 +88,7 @@ A client asked to see dashboard alerts grouped by incident, so operators can tel
 
 16. A configured column that none of the loaded alerts has renders empty cells. It never crashes and never disappears from the settings.
 17. A saved setting naming a column the widget can't build (an unknown id, or one of the excluded columns in requirement 15) is ignored.
-18. Existing dashboards keep working with no migration. Widgets saved before this change render their saved `presetColumns`. Their order now comes from the preset's real column order (requirement 13), which fixes the bug in the Intro.
+18. Existing dashboards keep working with no migration. Widgets saved before this change render their saved `presetColumns`. Their order is now the default order, the same for every viewer (requirement 13). It no longer comes from the stale per-browser key, which fixes the bug in the Intro. An editor who wants another order sets it on the widget.
 
 **Compact sizes**
 
@@ -94,7 +98,7 @@ A client asked to see dashboard alerts grouped by incident, so operators can tel
 ### Non-functional requirements
 
 - **No backend change.** The gateway stores `dashboard_config` as free-form JSON (`keep-api-gateway src/models/db/dashboard.py:13`, `src/routes/dashboard.py:34`), so new widget fields need no gateway or migration change. The widget keeps loading data with `usePresetAlertsCount` (`POST /alerts/query`, last N alerts, newest first, refreshed every 30s). That endpoint already returns each alert's incidents (`incident` = joined ids, `incident_dto` = name, status, severity, `alerts_count`).
-- **Network.** The only new request is the preset column config (`GET /preset/{id}/column-config`) for presets that store columns on the server. SWR dedupes it per preset, so a dashboard with five widgets on one preset makes one request.
+- **Network.** No new requests. The widget doesn't read the presets page's per-user column config.
 - **Presets page must not regress.** The shared header, body and grouped-row components keep their current behaviour on the presets page by default. The one intended change there is the empty-label fix in area 5: a grouped column with no value shows "No <column>" instead of "undefined" or "null".
 - **Saving.** Column resize saves once when the drag ends (TanStack `columnResizeMode: "onEnd"`), not on every pixel.
 - **Dark mode.** keep-ui dark mode is a global CSS invert filter, so the widget is styled for light mode only.
@@ -113,7 +117,6 @@ flowchart LR
     PATP -->|alerts: usePresetAlertsCount| WAT[WidgetAlertsTable]
   end
   WAT -->|column state| WS[useWidgetColumnState]
-  WS -->|fallback: order, names| PCS[usePresetColumnState]
   WS -->|writes| CFG[(item.presetColumns + item.alertTable)]
   WAT --> COLS[useAlertTableCols]
   WAT --> HDR[AlertsTableHeaders]
@@ -182,7 +185,7 @@ Trade-offs:
 - Pros:
   - No migration, because `presetColumns` keeps its meaning.
   - Each setting falls back independently.
-  - "Reset to preset" just deletes `alertTable` and `presetColumns`.
+  - "Reset to defaults" just deletes `alertTable` and `presetColumns`.
   - Copying the widget's JSON copies everything.
 - Cons: visibility lives outside the new object, so readers must know both fields.
 - Complexity / risk / cost / time: low.
@@ -208,13 +211,13 @@ A new widget hook returns that same set:
 
 - `columnOrder`, `columnVisibility`, `columnRenameMapping`, `columnSizing`, `grouping`, `emptyGroupPosition`, each with a setter.
 - Reads come from `item.presetColumns` and `item.alertTable`. Missing values fall back per requirement 13.
-- Order and names fall back to `usePresetColumnState({ presetName, presetId, useBackend: !isStaticPreset })`, the same call and the same static-preset check the presets page uses.
+- Order and names fall back to the widget defaults (requirement 13). The widget never reads `usePresetColumnState`, because that layout is per user (see the implementation ruling below).
 - Setters build the updated `WidgetData` and call `onChange(updatedItem)`.
 
 Trade-offs:
 - Pros:
   - The presets page is unchanged.
-  - The widget's fallback reads exactly what the presets page shows, which fixes the stale-key bug.
+  - The widget's fallback is the same for every viewer, which fixes the stale-key bug.
 - Cons: the widget hook re-states some of `AlertTableServerSide`'s glue, about 20 lines of state wiring.
 - Complexity / risk / cost / time: low.
 
@@ -334,7 +337,7 @@ Measure the widget's width (a container query or `ResizeObserver`). Below the bu
 
 - **Part (a):**
   - the widget renders through the shared parts (areas 1, 5 and 6);
-  - the order and name fallback reads the real preset config (area 3's fallback);
+  - the order and name fallback is the shared default (area 3's fallback);
   - show/hide still uses the existing form picker.
   - This part ships the bug fix and the shared-component groundwork, with no new settings.
 - **Part (b):**
@@ -367,7 +370,7 @@ Measure the widget's width (a container query or `ResizeObserver`). Below the bu
   - **Grouping covers the loaded alerts:** this keeps it UI-only. Incident headers show "x shown · y in incident" so a partial view is visible as partial.
   - **"No <column>" group, top by default, switchable per widget:** unlinked alerts are what this client acts on, as the count-by widget's "+N alerts not in an incident" already shows.
   - **`presetColumns` keeps meaning visibility, plus an optional `alertTable` object:** no migration, and each setting falls back on its own.
-  - **The order and name fallback reads the preset's real column config:** this fixes the stale browser-storage bug.
+  - **Uncustomized widgets use the default order and names for every viewer:** a preset's presets-page layout is per user, so there is nothing shared to follow. This fixes the stale browser-storage bug.
 - **Out of scope / follow-ups:**
   - Sorting and time/list formats in the widget.
   - Per-viewer tweaks.
@@ -381,7 +384,12 @@ Measure the widget's width (a container query or `ResizeObserver`). Below the bu
 ## Builder-check resolutions (2026-11-15, my calls)
 
 1. **Legacy snake_case column ids** (`last_received`, saved via the facet-list picker) are mapped on read to the matching table column (`lastReceived`). This uses the rule from `get-column-value.ts`: exact id first, then camelCase for undotted ids, only when that column exists. Order, renames and `groupBy` store the mapped ids from then on.
-2. **Static presets** (Feed and the other built-in presets) keep column order and names per viewer in browser storage. A widget on a static preset falls back to the default column order (`DEFAULT_COLS`) with no renames, not to the viewer's storage. This follows the decision that every viewer sees the same table.
+2. **Fallback is the shared default for every preset** (implementation ruling, 2026-11-15).
+   - The demo build found that the "server-side" preset column config (`UserPresetColumnConfig`, `GET/PUT /preset/{id}/column-config`) is **per user**: unique on tenant, preset and user email.
+   - Its table is created by no migration in keep-migrations (`origin/dev` or `origin/main`). On a schema built only from those migrations the endpoint returns 500, and the presets page silently falls back to per-user browser storage.
+   - Static presets were already per user.
+   - So every source of "the preset's column order" is per viewer. An uncustomized widget falls back to the default order and names for all presets, which keeps the decision that every viewer sees the same table.
+   - The ticket's "fall back to the preset's column order" can't be met in a way all viewers share. Editors set the order on the widget instead.
 3. **Viewer preferences don't reach the widget.**
    - `useAlertTableCols` gets one optional argument, `ignoreStoredPreferences` (default false). It makes the hook use the default row style, no stored renames and no stored time or list formats.
    - The widget passes it and supplies its own header labels. Its time columns render as "time ago", as today.
