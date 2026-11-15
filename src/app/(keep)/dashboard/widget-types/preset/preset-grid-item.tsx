@@ -9,12 +9,14 @@ interface GridItemProps {
   item: WidgetData;
   onEdit?: () => void;
   onDelete?: () => void;
+  onSave?: (item: WidgetData) => void;
 }
 
 const PresetGridItem: React.FC<GridItemProps> = ({
   item,
   onEdit,
   onDelete,
+  onSave,
 }) => {
   const searchParams = useSearchParams();
   const timeRangeCel = useMemo(() => {
@@ -58,6 +60,7 @@ const PresetGridItem: React.FC<GridItemProps> = ({
           preset={preset}
           filterCel={filterCel}
           dashboardName={dashboardName}
+          onSave={onSave}
         />
       )}
       {isAlertCountPanel && (

@@ -91,6 +91,28 @@ function useIsNarrow(ref: RefObject<HTMLElement | null>): boolean {
   return isNarrow;
 }
 
+function useLinkNavigationBlocked(
+  ref: RefObject<HTMLElement | null>,
+  blocked: boolean
+) {
+  useEffect(() => {
+    if (!blocked) {
+      return;
+    }
+    const blockLink = (event: MouseEvent) => {
+      const anchor =
+        event.target instanceof Element
+          ? event.target.closest("a[href]")
+          : null;
+      if (anchor && ref.current?.contains(anchor)) {
+        event.preventDefault();
+      }
+    };
+    window.addEventListener("click", blockLink, true);
+    return () => window.removeEventListener("click", blockLink, true);
+  }, [ref, blocked]);
+}
+
 function WidgetAlertsTableContent({
   item,
   presetNoisy,
@@ -101,9 +123,11 @@ function WidgetAlertsTableContent({
   renderToolbar,
 }: WidgetAlertsTableProps) {
   const widgetKey = `dashboard-widget-${item.i}`;
+  const rootRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const a11yContainerRef = useRef<HTMLDivElement>(null);
   const isNarrow = useIsNarrow(wrapperRef);
+  useLinkNavigationBlocked(rootRef, isEditMode);
 
   const { columns, allColumnIds } = useWidgetAlertColumns({
     item,
@@ -191,7 +215,7 @@ function WidgetAlertsTableContent({
     : "#fff";
 
   return (
-    <div className="flex flex-col gap-1">
+    <div ref={rootRef} className="flex flex-col gap-1">
       {(groupedBy || toolbar) && (
         <div
           className="flex items-center gap-2 text-xs"
@@ -290,6 +314,10 @@ function WidgetAlertsTableContent({
  * Header controls show only in edit mode with `onChange`, and not on a narrow
  * widget. Rows are plain, not clickable and always at the default density.
  * `renderToolbar` renders next to the grouping chip with the same column state.
+ *
+ * In edit mode no link inside the widget navigates. A capture listener on
+ * `window` cancels the click before the dashboard's leave guard (a capture
+ * listener on `document`) sees it, so it never asks to discard unsaved changes.
  */
 export default function WidgetAlertsTable(props: WidgetAlertsTableProps) {
   return (

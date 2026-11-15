@@ -587,6 +587,84 @@ describe("WidgetAlertsTable", () => {
     expect(within(groupHeader("Checkout degraded")).queryByRole("link")).toBeNull();
   });
 
+  describe("links inside the table", () => {
+    const seenByLeaveGuard: boolean[] = [];
+    const recordLikeLeaveGuard = (event: MouseEvent) => {
+      seenByLeaveGuard.push(event.defaultPrevented);
+      event.preventDefault();
+    };
+
+    beforeEach(() => {
+      seenByLeaveGuard.length = 0;
+      document.addEventListener("click", recordLikeLeaveGuard, true);
+    });
+
+    afterEach(() => {
+      document.removeEventListener("click", recordLikeLeaveGuard, true);
+    });
+
+    const alerts = () => [
+      alertWith({
+        incident: "i1",
+        incident_dto: [
+          { id: "i1", user_generated_name: "Checkout degraded", status: "firing", alerts_count: 3 },
+        ],
+        runbook: "https://runbook.example.com/checkout",
+      }),
+    ];
+    const item = { presetColumns: ["name", "incident", "runbook"] };
+    const linkIn = (columnId: string) =>
+      within(cellsOf(columnId)[0] as HTMLElement).getByRole("link");
+
+    it("a link in a cell navigates in view mode", () => {
+      renderWidget(item, alerts());
+
+      fireEvent.click(linkIn("incident"));
+      fireEvent.click(linkIn("runbook"));
+
+      expect(seenByLeaveGuard).toEqual([false, false]);
+    });
+
+    it("no link in a cell navigates in edit mode, before the leave guard sees the click", () => {
+      renderWidget(item, alerts(), { isEditMode: true, onChange: jest.fn() });
+
+      expect(linkIn("incident")).toHaveAttribute("href", "/incidents/i1");
+      fireEvent.click(linkIn("incident"));
+      fireEvent.click(linkIn("runbook"));
+
+      expect(seenByLeaveGuard).toEqual([true, true]);
+    });
+
+    it("links stop navigating on entering edit mode and navigate again after it", () => {
+      const data = alerts();
+      const { rerender } = renderWidget(item, data);
+      rerender(widget(item, data, { isEditMode: true, onChange: jest.fn() }));
+      fireEvent.click(linkIn("incident"));
+      rerender(widget(item, data));
+      fireEvent.click(linkIn("incident"));
+
+      expect(seenByLeaveGuard).toEqual([true, false]);
+    });
+
+    it("leaves links outside the widget and buttons inside it alone in edit mode", () => {
+      renderWidget(
+        { ...item, alertTable: { groupBy: "incident" } },
+        alerts(),
+        { isEditMode: true, onChange: jest.fn() }
+      );
+      const outside = document.createElement("a");
+      outside.href = "/alerts/feed";
+      document.body.appendChild(outside);
+
+      fireEvent.click(outside);
+      fireEvent.click(screen.getByRole("button", { name: "Collapse all" }));
+
+      expect(seenByLeaveGuard).toEqual([false, false]);
+      expect(bodyRows()).toHaveLength(0);
+      outside.remove();
+    });
+  });
+
   it("rows render plain and not selectable", () => {
     renderWidget({ presetColumns: ["name"] });
 

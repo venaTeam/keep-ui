@@ -1,13 +1,20 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import PresetAlertTablePanel from "../preset-alert-table-panel";
+import { DashboardEditModeProvider } from "../../../DashboardEditModeContext";
 import { Preset } from "@/entities/presets/model/types";
 import { CountBy } from "@/entities/presets/model/count-by";
 import { PresetPanelType, WidgetData, WidgetType } from "../../../types";
 
 const mockUsePresetAlertsCount = jest.fn();
 const mockUsePresetAlertCount = jest.fn();
+const mockPush = jest.fn();
 let mockLastTableBackground: string | undefined;
+let mockLastTableProps: Record<string, unknown> | undefined;
+
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({ push: mockPush }),
+}));
 
 jest.mock("@/features/presets/custom-preset-links", () => ({
   usePresetAlertsCount: (...args: unknown[]) =>
@@ -17,8 +24,9 @@ jest.mock("@/features/presets/custom-preset-links", () => ({
 
 jest.mock("../widget-alerts-table", () => ({
   __esModule: true,
-  default: ({ background }: { background?: string }) => {
-    mockLastTableBackground = background;
+  default: (props: { background?: string }) => {
+    mockLastTableBackground = props.background;
+    mockLastTableProps = props;
     return <div data-testid="alerts-table" />;
   },
 }));
@@ -71,6 +79,8 @@ beforeEach(() => {
   mockUsePresetAlertsCount.mockReset();
   mockUsePresetAlertCount.mockReset();
   mockLastTableBackground = undefined;
+  mockLastTableProps = undefined;
+  mockPush.mockReset();
   mockUsePresetAlertsCount.mockReturnValue({
     alerts: [],
     totalCount: 120,
@@ -354,5 +364,127 @@ describe("PresetAlertTablePanel blinking line", () => {
     } finally {
       delete (HTMLElement.prototype as Partial<HTMLElement>).getAnimations;
     }
+  });
+});
+
+describe("PresetAlertTablePanel in dashboard edit mode", () => {
+  const renderInMode = (
+    isEditMode: boolean,
+    {
+      onSave,
+      preset = { id: "p1", name: "feed" } as unknown as Preset,
+    }: { onSave?: (item: WidgetData) => void; preset?: Preset } = {}
+  ) =>
+    render(
+      <DashboardEditModeProvider value={isEditMode}>
+        <PresetAlertTablePanel
+          item={buildItem()}
+          preset={preset}
+          filterCel=""
+          dashboardName="Ops"
+          onSave={onSave}
+        />
+      </DashboardEditModeProvider>
+    );
+
+  const goToPreset = () =>
+    document.querySelector(
+      '[data-cy="dashboard-widget-preset-go-to-btn"]'
+    ) as HTMLButtonElement;
+
+  it("Go to preset works in view mode", () => {
+    renderInMode(false);
+
+    expect(goToPreset()).not.toBeDisabled();
+    fireEvent.click(goToPreset());
+    expect(mockPush).toHaveBeenCalledWith(
+      "/alerts/feed?fromDashboard=Ops&widgetName=Prod%20Critical"
+    );
+  });
+
+  it("Go to preset is disabled in edit mode", () => {
+    renderInMode(true, { onSave: jest.fn() });
+
+    expect(goToPreset()).toBeDisabled();
+    fireEvent.click(goToPreset());
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it("passes edits to onSave in edit mode and not in view mode", () => {
+    const onSave = jest.fn();
+
+    renderInMode(true, { onSave });
+    expect(mockLastTableProps).toEqual(
+      expect.objectContaining({ isEditMode: true, onChange: onSave })
+    );
+
+    renderInMode(false, { onSave });
+    expect(mockLastTableProps).toEqual(
+      expect.objectContaining({ isEditMode: false, onChange: undefined })
+    );
+  });
+
+  it("gives the table the widget, the preset id and whether the preset is noisy", () => {
+    const item = buildItem();
+    render(
+      <PresetAlertTablePanel
+        item={item}
+        preset={{ id: "p1", name: "feed", is_noisy: true } as unknown as Preset}
+        filterCel=""
+      />
+    );
+
+    expect(mockLastTableProps).toEqual(
+      expect.objectContaining({
+        item,
+        presetName: "feed",
+        presetId: "p1",
+        presetNoisy: true,
+      })
+    );
+
+    renderInMode(false);
+    expect(mockLastTableProps).toEqual(
+      expect.objectContaining({ presetNoisy: false })
+    );
+  });
+
+  it("keeps the count lines, the alerts line and Go to preset in order in edit mode", () => {
+    groupState({ totalCount: 3, missingCount: 4 });
+    render(
+      <DashboardEditModeProvider value={true}>
+        <PresetAlertTablePanel
+          item={buildItem({
+            countBy: { ...incidents, showMissing: true, blinkMissing: true },
+          })}
+          preset={{ id: "p1", name: "feed" } as unknown as Preset}
+          filterCel=""
+          onSave={jest.fn()}
+        />
+      </DashboardEditModeProvider>
+    );
+
+    const order = Array.from(
+      document.querySelectorAll(
+        '[data-cy="dashboard-widget-group-count"], [data-cy="dashboard-widget-group-missing"], [data-cy="dashboard-widget-preset-go-to-btn"]'
+      )
+    ).map((element) => element.getAttribute("data-cy"));
+    expect(order).toEqual([
+      "dashboard-widget-group-count",
+      "dashboard-widget-group-missing",
+      "dashboard-widget-preset-go-to-btn",
+    ]);
+    const missing = document.querySelector(
+      '[data-cy="dashboard-widget-group-missing"]'
+    )!;
+    const alertsLine = screen.getByText("Alerts count:");
+    expect(
+      missing.compareDocumentPosition(alertsLine) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    expect(
+      document.querySelector(".motion-safe\\:animate-missing-blink")
+    ).toHaveTextContent("+ 4 alerts not in an incident");
+    expect(screen.getByText("showing 5 out of 120")).toBeInTheDocument();
   });
 });

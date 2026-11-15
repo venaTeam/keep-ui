@@ -20,12 +20,14 @@ import WidgetAlertsTable from "./widget-alerts-table";
 import { useSyncedAnimation } from "./use-synced-animation";
 import { getBlinkColor, getBlinkStyle } from "./blink-palette";
 import { WidgetData, WidgetType } from "../../types";
+import { useDashboardEditMode } from "../../DashboardEditModeContext";
 
 interface PresetAlertTablePanelProps {
   item: WidgetData;
   preset?: Preset;
   filterCel: string;
   dashboardName?: string;
+  onSave?: (item: WidgetData) => void;
 }
 
 const getCountOfLastAlerts = (item: WidgetData) =>
@@ -57,8 +59,10 @@ const PresetAlertTablePanel: React.FC<PresetAlertTablePanelProps> = ({
   preset,
   filterCel,
   dashboardName,
+  onSave,
 }) => {
   const router = useRouter();
+  const isEditMode = useDashboardEditMode();
   const countOfLastAlerts = getCountOfLastAlerts(item);
   const {
     alerts,
@@ -260,6 +264,7 @@ const PresetAlertTablePanel: React.FC<PresetAlertTablePanelProps> = ({
             variant="secondary"
             size="xs"
             onClick={handleGoToPresetClick}
+            disabled={isEditMode}
             data-cy="dashboard-widget-preset-go-to-btn"
           >
             Go to preset
@@ -270,7 +275,10 @@ const PresetAlertTablePanel: React.FC<PresetAlertTablePanelProps> = ({
         <WidgetAlertsTable
           item={item}
           presetName={preset?.name as string}
-          isEditMode={false}
+          presetId={preset?.id}
+          presetNoisy={!!preset?.is_noisy}
+          isEditMode={isEditMode}
+          onChange={isEditMode ? onSave : undefined}
           alerts={isLoading ? undefined : alerts}
           background={
             isLoading || (countBy && isGroupLoading)
