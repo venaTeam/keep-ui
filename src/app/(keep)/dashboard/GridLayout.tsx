@@ -3,6 +3,7 @@ import { Responsive, WidthProvider, Layout, Layouts } from "react-grid-layout";
 import GridItemContainer from "./GridItemContainer";
 import { useDashboardEditMode } from "./DashboardEditModeContext";
 import { LayoutItem, WidgetData } from "./types";
+import { GRID_COLS, GRID_COMPACT_TYPE } from "./widget-layout";
 import "react-grid-layout/css/styles.css";
 import { MetricsWidget } from "@/utils/hooks/useDashboardMetricWidgets";
 import { Preset } from "@/entities/presets/model/types";
@@ -15,16 +16,9 @@ const ResponsiveGridLayout = WidthProvider(Responsive);
 
 const BREAKPOINTS = { lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 };
 
-const COLS = { lg: 24, md: 24, sm: 1, xs: 1, xxs: 1 };
+const COLS = { lg: GRID_COLS, md: GRID_COLS, sm: 1, xs: 1, xxs: 1 };
 
 const STACKED_COLS = 1;
-
-/**
- * Panels float up into free space, so a drag pushes other panels only as far
- * as needed and they return once the dragged panel moves away (the same
- * behaviour as Grafana and Metabase dashboards).
- */
-export const GRID_COMPACT_TYPE = "vertical" as const;
 
 const EDITABLE_BREAKPOINTS = ["lg", "md"];
 

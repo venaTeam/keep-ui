@@ -1,8 +1,9 @@
 import React from "react";
 import { act, render } from "@testing-library/react";
 import type { Layout } from "react-grid-layout";
-import GridLayout, { GRID_COMPACT_TYPE } from "../GridLayout";
+import GridLayout from "../GridLayout";
 import { DashboardEditModeProvider } from "../DashboardEditModeContext";
+import { GRID_COLS, GRID_COMPACT_TYPE, layoutBottom } from "../widget-layout";
 
 const mockGridProps: { current: Record<string, any> } = { current: {} };
 
@@ -42,7 +43,7 @@ interface GridUtils {
 
 const utils: GridUtils = jest.requireActual("react-grid-layout").utils;
 
-const COLS = 24;
+const COLS = GRID_COLS;
 const STEPS_PER_WAYPOINT = 25;
 
 const fixture = (): Layout[] => [
@@ -218,13 +219,13 @@ describe("dragging panels", () => {
     expect(item(layout, "c4").y).toBe(15);
   });
 
-  it("places a widget added at the top-left without overlapping", () => {
+  it("places a new widget below the panels without moving any", () => {
     const layout = utils.compact(
-      [...fixture(), { i: "new", x: 0, y: 0, w: 3, h: 3 }],
+      [...fixture(), { i: "new", x: 0, y: layoutBottom(fixture()), w: 3, h: 3 }],
       GRID_COMPACT_TYPE,
       COLS
     );
 
-    expect(hasOverlap(layout)).toBe(false);
+    expect(positions(layout)).toEqual({ ...positions(fixture()), new: [0, 19] });
   });
 });

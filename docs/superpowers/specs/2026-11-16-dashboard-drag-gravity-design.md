@@ -79,16 +79,36 @@ today. Two of the five dashboards on the local stack would shift.
 - `GridLayout.tsx` exports `GRID_COMPACT_TYPE = "vertical"` and passes it as `compactType`. Nothing else
   in the grid configuration changes: `preventCollision` and `allowOverlap` stay at their defaults of
   false.
+- The page compacts the saved layout once when the dashboard loads (`compactLayout` in
+  `widget-layout.ts`), so the page's layout state equals what the grid shows. Without this, a breakpoint
+  change while editing (opening Customize, resizing the window) reports the compacted positions and
+  falsely raises the "Discard unsaved changes?" warning on dashboards saved with gaps. The small-screen
+  stacking order also follows what desktop shows. Nothing is written until the user saves.
+- New widgets are added at the bottom of the layout (`layoutBottom`), not at (0,0). Under vertical
+  compaction, a widget at (0,0) would be wedged under the top-left panel and push only that column down,
+  breaking row alignment. From the bottom it floats up into free space only.
 - The responsive stacked layout for small screens (1 column, built by `buildStackedLayout`) is already
   gap-free, so vertical compaction leaves it unchanged.
+- `react-grid-layout`'s typings leave out its runtime `utils`. `src/types/react-grid-layout-utils.d.ts`
+  declares the one helper used (`compact`).
 - Tests (`src/app/(keep)/dashboard/__tests__/GridLayout.test.tsx`) cover two things:
   - wiring: the grid receives `compactType="vertical"`, collisions are not prevented and overlap is not
     allowed;
   - drag behaviour: real drags are replayed through react-grid-layout's own `moveElement`/`compact` with
     `GRID_COMPACT_TYPE`, step by step as the library's `onDrag` handler does. They assert the goals
     above (there-and-back restores, untouched panels stay put, the push goes just below the dropped
-    panel, no overlap at any step, a gap above a panel closes). Every one of these fails under the old
-    null setting.
+    panel, no overlap at any step, a gap above a panel closes). All of these fail under the old null
+    setting except no-overlap, which is a guard that passes there too.
+- Page tests (`__tests__/dashboard-edit-mode.test.tsx`) cover two cases. Cancel raises no warning when
+  the grid reports the positions it already shows on a gapped dashboard, and a new widget lands below the
+  existing panels.
+
+## Known limitation
+
+react-grid-layout's own vertical compaction has an edge case. A full-width panel dropped about one row
+below the top lands under the first panel, and the panels to its right stay under it. This leaves a hole
+at the top right until they are dragged up. It comes from the library's collision resolution, not
+Keep's code, and the panels can be dragged back up.
 
 ## Verification
 
