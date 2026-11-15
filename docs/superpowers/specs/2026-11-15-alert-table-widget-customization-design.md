@@ -56,7 +56,7 @@ A client asked to see dashboard alerts grouped by incident, so operators can tel
 10. Each group header shows the group value and the number of alerts in it.
 11. Grouping by **Incident**:
     - the header shows the incident's name, linked to `/incidents/<id>` (the link is inactive in edit mode), its status, and "<x> shown · <y> in incident", where y is the incident's own `alerts_count`;
-    - an alert that belongs to several incidents goes into one combined group named after all of them, which is how the presets page already groups;
+    - an alert that belongs to several incidents goes into one combined group, which is how the presets page already groups. Its header links each incident name separately, shows no status badge, and reads "<x> shown · in <N> incidents";
     - alerts with no incident go into "No incident", styled plainer than a real incident (no link, no status);
     - grouping by incident works whether or not the Incident column is visible.
 12. Only one column can be grouped at a time, the same rule as the presets page.
@@ -75,7 +75,10 @@ A client asked to see dashboard alerts grouped by incident, so operators can tel
 
     Each setting falls back independently. For example, renaming one column doesn't freeze the order.
 14. "Reset to preset" clears all of this widget's column and grouping settings, so the widget falls back again.
-15. The checkbox and row-menu columns never appear in the widget. The severity, status and source icon columns stay pinned to the left, as on the presets page.
+15. The checkbox, row-menu and noise columns never appear in the widget.
+    - The severity, status and source icon columns can still be shown or hidden, because existing widgets may already hide them through the form picker.
+    - When visible, they are pinned to the left. They have no header menu, as on the presets page.
+    - In the ⚙ list they have a checkbox but no drag handle and no rename.
 
 **Robustness**
 
@@ -158,7 +161,7 @@ Trade-offs:
 
 ```ts
 interface WidgetData {
-  /** Existing field: visible column ids, also written by the form's Columns picker. */
+  /** Visible column ids, written by the form's Columns picker. Already stored in saved dashboards but undeclared (read with `as any`); now declared. */
   presetColumns?: string[];
   alertTable?: AlertTableWidgetConfig;
 }
@@ -263,12 +266,16 @@ Other things the builder must check:
 - Add optional props, with defaults that keep today's behaviour:
   - `interactive` (default true): when false, no drag handle, resize edge or menu;
   - `showSortItems`, `showFormatItems` (default true).
-- **The fix the widget depends on:** today Rename and Group by sit inside the `column.getCanSort() && (...)` block (lines 354-417). With sorting disabled in the widget they would vanish, so they must move out of that block. The presets page always has sorting on, so this move changes nothing there.
+- **The fix the widget depends on:** today Rename and Group by sit inside the `column.getCanSort() && (...)` block (lines 354-417). With sorting disabled in the widget they would vanish.
+  - They render when `column.getCanSort() || !showSortItems`. On the presets page (`showSortItems` true) the menu stays exactly as today; `noise` and `extraPayload` don't gain a Rename item.
+- `isRightmostColumn` assumes `alertMenu` is the last column and throws with a single visible column. It becomes "the last visible column that isn't `alertMenu`", guarded for one column.
 
 **`AlertsTableBody`**
 
 - Make `onRowClick` optional.
-- Add a way to render at the widget's density (today `text-xs`, about 28px rows) whatever the user's global row-style preference. Pass no severity row theme, because the widget keeps its threshold-tinted background.
+- Add a way to render at the widget's density (today `text-xs`, about 28px rows) whatever the user's global row-style preference.
+- Add `rowAppearance?: "default" | "plain"`. `getRowClassName` falls back to `bg-white`, which would cover the widget's threshold tint, and adds `cursor-pointer` and an orange hover. "plain" rows are transparent, with no pointer cursor and no hover.
+- Add `selectable?: boolean` (default true). When false, rows render without `SelectableGroup`: its `globalMouse` drag-select must not run across a dashboard.
 
 **`AlertGroupedRow`** (`alert-grouped-row.tsx:47-66`)
 
@@ -337,6 +344,8 @@ Measure the widget's width (a container query or `ResizeObserver`). Below the bu
   - grouping with "No <column>" placement and incident details;
   - narrow widgets (area 8).
 
+**Decision (2026-11-15):** one branch and one delivery, demoed live as it is built. The split above stays only as a fallback if review needs smaller PRs.
+
 ### 10. Coordination with other in-flight work
 
 - **Alert Table readability** (local branch `feat/alert-table-readability`, spec commit `28e7e798`, not merged):
@@ -368,6 +377,18 @@ Measure the widget's width (a container query or `ResizeObserver`). Below the bu
   - Row click or opening the alert sidebar from the widget.
   - Dashboard duplication: there is no duplicate feature in the UI or gateway today. The settings live in the widget's JSON, so any future copy feature carries them.
   - Incident details in the presets page's group headers.
+
+## Builder-check resolutions (2026-11-15, my calls)
+
+1. **Legacy snake_case column ids** (`last_received`, saved via the facet-list picker) are mapped on read to the matching table column (`lastReceived`). This uses the rule from `get-column-value.ts`: exact id first, then camelCase for undotted ids, only when that column exists. Order, renames and `groupBy` store the mapped ids from then on.
+2. **Static presets** (Feed and the other built-in presets) keep column order and names per viewer in browser storage. A widget on a static preset falls back to the default column order (`DEFAULT_COLS`) with no renames, not to the viewer's storage. This follows the decision that every viewer sees the same table.
+3. **Viewer preferences don't reach the widget.**
+   - `useAlertTableCols` gets one optional argument, `ignoreStoredPreferences` (default false). It makes the hook use the default row style, no stored renames and no stored time or list formats.
+   - The widget passes it and supplies its own header labels. Its time columns render as "time ago", as today.
+   - This is the only change to `alert-table-utils.tsx`, and it is additive.
+4. **One "No <column>" group.** TanStack keys groups by the value's string form, so `null`, `undefined` and `""` would make three groups. The widget wraps its columns' grouping values so every empty value becomes one key. The presets page keeps its grouping and only gets the label fix.
+5. **Several changes at once.** `handleSaveEdit` replaces the whole widget. Multi-key changes (Reset, hide-and-reorder) go out in one `onSave` call, and the store's setters always build on the latest emitted widget, so two changes in one tick both survive.
+6. **Tests.** `GridItem.test.tsx` currently asserts that an Alert Table is inert in edit mode. That assertion flips with this change.
 
 ## What's left to the builder
 
