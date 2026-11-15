@@ -89,6 +89,9 @@ interface DraggableHeaderCellProps {
   columnVisibility: VisibilityState;
   setColumnVisibility: (visibility: VisibilityState) => Promise<void> | void;
   dropIndicatorSide?: "left" | "right" | null;
+  interactive: boolean;
+  showSortItems: boolean;
+  showFormatItems: boolean;
 }
 
 const DraggableHeaderCell = ({
@@ -109,6 +112,9 @@ const DraggableHeaderCell = ({
   columnVisibility,
   setColumnVisibility,
   dropIndicatorSide,
+  interactive,
+  showSortItems,
+  showFormatItems,
 }: DraggableHeaderCellProps) => {
   const { column, getResizeHandler } = header;
   const [rowStyle] = useAlertRowStyle();
@@ -122,7 +128,7 @@ const DraggableHeaderCell = ({
     isDragging,
   } = useSortable({
     id: column.id,
-    disabled: column.getIsPinned() !== false,
+    disabled: !interactive || column.getIsPinned() !== false,
   });
 
   const handleSortingMenuClick = useMemo(() => {
@@ -201,7 +207,7 @@ const DraggableHeaderCell = ({
     transform: CSS.Translate.toString(transform),
     transition,
     cursor:
-      column.getIsPinned() !== false
+      !interactive || column.getIsPinned() !== false
         ? "default"
         : isDragging
           ? "grabbing"
@@ -246,11 +252,11 @@ const DraggableHeaderCell = ({
   };
 
   const isRightmostColumn = () => {
-    const visibleColumns = table.getVisibleLeafColumns();
+    const movableColumns = table
+      .getVisibleLeafColumns()
+      .filter((col) => col.id !== "alertMenu");
 
-    // the alertMenu is always the rightmost column
-    // so we need to check the second rightmost column
-    return column.id === visibleColumns[visibleColumns.length - 2].id;
+    return column.id === movableColumns[movableColumns.length - 1]?.id;
   };
 
   const isLeftmostUnpinnedColumn = () => {
@@ -283,7 +289,7 @@ const DraggableHeaderCell = ({
           column.id === "checkbox" ? "justify-center" : "justify-between"
         )}
       >
-        {column.getIsPinned() === false && (
+        {interactive && column.getIsPinned() === false && (
           <button
             type="button"
             className={clsx(
@@ -340,7 +346,7 @@ const DraggableHeaderCell = ({
           )}
         </button>
 
-        {shouldShowMenu && (
+        {interactive && shouldShowMenu && (
           <DropdownMenu.Menu
             icon={ChevronDownIcon}
             label=""
@@ -351,7 +357,7 @@ const DraggableHeaderCell = ({
               event.stopPropagation();
             }}
           >
-            {column.getCanSort() && (
+            {showSortItems && column.getCanSort() && (
               <>
                 <DropdownMenu.Item
                   icon={BsSortAlphaDown}
@@ -363,6 +369,10 @@ const DraggableHeaderCell = ({
                   label="Sort descending"
                   onClick={() => column.toggleSorting(true)}
                 />
+              </>
+            )}
+            {showFormatItems && column.getCanSort() && (
+              <>
                 {isDateTimeColumn(column.id) &&
                   createTimeFormatMenuItems(
                     column.id,
@@ -377,6 +387,10 @@ const DraggableHeaderCell = ({
                     setColumnListFormats,
                     DropdownMenu
                   )}
+              </>
+            )}
+            {(column.getCanSort() || !showSortItems) && (
+              <>
                 {createColumnRenameMenuItems(
                   column.id,
                   columnRenameMapping,
@@ -477,7 +491,9 @@ const DraggableHeaderCell = ({
         />
       )}
 
-      {column.getIsPinned() === false && column.getCanResize() && (
+      {interactive &&
+        column.getIsPinned() === false &&
+        column.getCanResize() && (
         <div
           className={clsx(
             "absolute top-0 right-0 h-full w-3 flex justify-end items-stretch",
@@ -532,6 +548,9 @@ interface Props {
   setColumnVisibility: (visibility: VisibilityState) => Promise<void> | void;
   columnRenameMapping: ColumnRenameMapping;
   setColumnRenameMapping: (mapping: ColumnRenameMapping) => void;
+  interactive?: boolean;
+  showSortItems?: boolean;
+  showFormatItems?: boolean;
 }
 
 export default function AlertsTableHeaders({
@@ -549,6 +568,9 @@ export default function AlertsTableHeaders({
   setColumnVisibility,
   columnRenameMapping,
   setColumnRenameMapping,
+  interactive = true,
+  showSortItems = true,
+  showFormatItems = true,
 }: Props) {
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -676,6 +698,9 @@ export default function AlertsTableHeaders({
                     setColumnOrder={setColumnOrder}
                     columnVisibility={columnVisibility}
                     setColumnVisibility={setColumnVisibility}
+                    interactive={interactive}
+                    showSortItems={showSortItems}
+                    showFormatItems={showFormatItems}
                     dropIndicatorSide={
                       dropTarget?.columnId === header.column.id
                         ? dropTarget.side
