@@ -360,6 +360,55 @@ describe("GroupedRow", () => {
       expect(screen.getByText("1 shown · in 2 incidents")).toBeInTheDocument();
     });
 
+    it("with showIncidentDetails a group header counts what is shown", () => {
+      const { container } = renderGroupedBy(
+        "service",
+        [{ service: "checkout" } as any, { service: "checkout" } as any],
+        { showIncidentDetails: true }
+      );
+      expect(screen.getByText("2 shown")).toBeInTheDocument();
+      expect(screen.queryByText(/alerts?\)/)).toBeNull();
+      expect(
+        container.querySelector('[data-cy="alerts-group-header"]')!.textContent
+      ).toBe("checkout 2 shown");
+    });
+
+    it("with showIncidentDetails an empty generic group reads 'No <label>' and '<n> shown'", () => {
+      const { container } = renderGroupedBy(
+        "service",
+        [{ service: undefined }, { service: undefined }],
+        { showIncidentDetails: true, getColumnLabel: () => "Service" }
+      );
+      expect(
+        container.querySelector('[data-cy="alerts-group-header"]')!.textContent
+      ).toBe("No Service 2 shown");
+    });
+
+    it("with showIncidentDetails the empty incident group reads 'No incident · <n> shown'", () => {
+      const { container } = renderGroupedBy(
+        "incident",
+        [
+          { fingerprint: "a", incident: undefined },
+          { fingerprint: "b", incident: undefined },
+          { fingerprint: "c", incident: undefined },
+        ],
+        { showIncidentDetails: true }
+      );
+      expect(
+        container.querySelector('[data-cy="alerts-group-header"]')!.textContent
+      ).toBe("No incident · 3 shown");
+      expect(screen.getByText("No incident")).toHaveClass("italic");
+    });
+
+    it("without showIncidentDetails the count keeps the presets-page '(n alerts)' form", () => {
+      renderGroupedBy("service", [
+        { service: "checkout" } as any,
+        { service: "checkout" } as any,
+      ]);
+      expect(screen.getByText("(2 alerts)")).toBeInTheDocument();
+      expect(screen.queryByText(/shown/)).toBeNull();
+    });
+
     it("linksDisabled renders incident names as plain text", () => {
       renderGroupedBy(
         "incident",

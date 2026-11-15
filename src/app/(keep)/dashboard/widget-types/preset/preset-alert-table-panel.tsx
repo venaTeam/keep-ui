@@ -268,9 +268,10 @@ const PresetAlertTablePanel: React.FC<PresetAlertTablePanelProps> = ({
       </div>
       {countOfLastAlerts > 0 && (
         <WidgetAlertsTable
+          item={item}
           presetName={preset?.name as string}
+          isEditMode={false}
           alerts={isLoading ? undefined : alerts}
-          columns={(item as any)?.presetColumns}
           background={
             isLoading || (countBy && isGroupLoading)
               ? undefined

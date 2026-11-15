@@ -188,7 +188,7 @@ export const GroupedRow = ({
                     shownCount={row.subRows.length}
                     linksDisabled={linksDisabled}
                   />
-                ) : (
+                ) : showIncidentDetails ? (
                   <>
                     <span
                       className={clsx(
@@ -197,7 +197,16 @@ export const GroupedRow = ({
                       )}
                     >
                       {String(groupValue)}
+                    </span>{" "}
+                    <span className="text-gray-500 text-sm">
+                      {isPlainEmptyIncidentGroup
+                        ? `· ${row.subRows.length} shown`
+                        : `${row.subRows.length} shown`}
                     </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="font-medium">{String(groupValue)}</span>
                     <span className="text-gray-500 text-sm">
                       ({row.subRows.length}{" "}
                       {row.subRows.length === 1 ? "alert" : "alerts"})

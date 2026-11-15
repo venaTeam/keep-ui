@@ -1,26 +1,621 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  renderHook,
+  screen,
+  within,
+} from "@testing-library/react";
 import WidgetAlertsTable from "../widget-alerts-table";
+import { WidgetData, WidgetType } from "../../../types";
+import { WIDGET_STATIC_COLUMN_IDS } from "../alert-table-widget-config";
+import { AlertDto, Severity, Status } from "@/entities/alerts/model/types";
+import { useAlertTableCols } from "@/widgets/alerts-table/lib/alert-table-utils";
+import { useConfig } from "@/utils/hooks/useConfig";
+
+const mockUsePresetColumnState = jest.fn();
+
+jest.mock("@/entities/presets/model", () => ({
+  ...jest.requireActual("@/entities/presets/model"),
+  usePresetColumnState: (...args: unknown[]) =>
+    mockUsePresetColumnState(...args),
+}));
+
+jest.mock("@/utils/hooks/useProviders", () => ({
+  useProviders: () => ({ data: undefined }),
+}));
+
+jest.mock("@/utils/hooks/useConfig", () => ({
+  useConfig: jest.fn(() => ({ data: {} })),
+  useApiUrl: () => "http://localhost:8080",
+}));
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: jest.fn() }),
   useSearchParams: () => new URLSearchParams(),
+  usePathname: () => "/dashboard/atw",
 }));
 
-describe("WidgetAlertsTable", () => {
-  it("shows the payload value for a snake_case column named by the facet fields list", () => {
-    const alerts = [
-      { name: "disk-full", lastReceived: "2026-10-01T10:00:00Z" },
-    ];
+const baseItem: WidgetData = {
+  i: "w1",
+  x: 0,
+  y: 0,
+  w: 6,
+  h: 4,
+  static: false,
+  name: "Feed",
+  widgetType: WidgetType.PRESET,
+};
 
+let sequence = 0;
+
+const alertWith = (fields: Record<string, unknown> = {}): AlertDto => {
+  sequence += 1;
+  return {
+    id: `alert-${sequence}`,
+    event_id: `event-${sequence}`,
+    fingerprint: `fp-${sequence}`,
+    name: `alert-${sequence}`,
+    description: `description ${sequence}`,
+    status: Status.Firing,
+    severity: Severity.Warning,
+    lastReceived: new Date("2026-10-01T10:00:00Z"),
+    environment: "prod",
+    source: ["prometheus"],
+    pushed: true,
+    deleted: false,
+    ticket_url: "",
+    enriched_fields: [],
+    ...fields,
+  } as AlertDto;
+};
+
+const linkedAlert = (incidentId: string, incidentName: string) =>
+  alertWith({
+    incident: incidentId,
+    incident_dto: [
+      {
+        id: incidentId,
+        user_generated_name: incidentName,
+        status: "firing",
+        alerts_count: 14,
+      },
+    ],
+  });
+
+const unlinkedAlert = () => alertWith({ incident: undefined });
+
+type WidgetOptions = {
+  isEditMode?: boolean;
+  onChange?: (item: WidgetData) => void;
+};
+
+const widget = (
+  overrides: Partial<WidgetData> = {},
+  alerts: AlertDto[] | "loading" = [alertWith(), alertWith()],
+  { isEditMode = false, onChange }: WidgetOptions = {}
+) => (
+  <WidgetAlertsTable
+    item={{ ...baseItem, ...overrides }}
+    presetName="atw"
+    alerts={alerts === "loading" ? undefined : alerts}
+    isEditMode={isEditMode}
+    onChange={onChange}
+  />
+);
+
+const renderWidget = (...args: Parameters<typeof widget>) =>
+  render(widget(...args));
+
+const headerIds = () =>
+  screen
+    .queryAllByTestId(/^header-cell-/)
+    .map((cell) => cell.getAttribute("data-testid")!.slice("header-cell-".length));
+
+const groupHeaders = () =>
+  Array.from(
+    document.querySelectorAll<HTMLElement>('[data-cy="alerts-group-header"]')
+  );
+
+const groupHeaderTexts = () =>
+  groupHeaders().map((header) => header.textContent?.trim() ?? "");
+
+const groupHeader = (text: string) =>
+  groupHeaders().find((header) => header.textContent?.includes(text))!;
+
+const bodyRows = () =>
+  Array.from(document.querySelectorAll('[data-cy="alerts-row"]'));
+
+const cellsOf = (columnId: string) =>
+  Array.from(document.querySelectorAll(`[data-cy="alerts-cell-${columnId}"]`));
+
+const widgetRoot = () =>
+  document.querySelector('[data-cy="dashboard-widget-alerts-table"]') as HTMLElement;
+
+const mockedUseConfig = useConfig as jest.Mock;
+const OriginalResizeObserver = window.ResizeObserver;
+
+const observeWidth = (width: number) => {
+  window.ResizeObserver = class {
+    private readonly callback: ResizeObserverCallback;
+    constructor(callback: ResizeObserverCallback) {
+      this.callback = callback;
+    }
+    observe(target: Element) {
+      this.callback(
+        [{ target, contentRect: { width } } as unknown as ResizeObserverEntry],
+        this as unknown as ResizeObserver
+      );
+    }
+    unobserve() {}
+    disconnect() {}
+  } as unknown as typeof ResizeObserver;
+};
+
+beforeEach(() => {
+  localStorage.clear();
+  mockUsePresetColumnState.mockReset();
+  mockUsePresetColumnState.mockReturnValue({
+    columnOrder: ["description", "name"],
+    columnVisibility: {},
+    columnRenameMapping: { name: "Alert" },
+    setColumnOrder: jest.fn(),
+    setColumnVisibility: jest.fn(),
+    setColumnRenameMapping: jest.fn(),
+  });
+  mockedUseConfig.mockReturnValue({ data: {} });
+});
+
+afterEach(() => {
+  window.ResizeObserver = OriginalResizeObserver;
+});
+
+describe("WidgetAlertsTable", () => {
+  it("every static widget column id is one useAlertTableCols defines", () => {
+    const { result } = renderHook(() =>
+      useAlertTableCols({
+        isCheckboxDisplayed: false,
+        isMenuDisplayed: false,
+        presetName: "drift-guard",
+      })
+    );
+    const ids = result.current.map((column) => column.id);
+
+    WIDGET_STATIC_COLUMN_IDS.forEach((id) => expect(ids).toContain(id));
+  });
+
+  it("legacy snake_case column shows the camelCase value", () => {
+    renderWidget({ presetColumns: ["name", "last_received"] }, [
+      alertWith({ lastReceived: "2026-10-01T10:00:00Z" }),
+    ]);
+
+    expect(screen.getByTestId("header-cell-lastReceived")).toBeInTheDocument();
+    expect(cellsOf("lastReceived")[0].querySelector("span")).toHaveAttribute(
+      "title",
+      "2026-10-01T10:00:00.000Z"
+    );
+  });
+
+  it("an uncustomized widget uses the default columns, pinned icons first", () => {
+    renderWidget();
+
+    expect(headerIds()).toEqual([
+      "severity",
+      "status",
+      "source",
+      "name",
+      "description",
+      "lastReceived",
+    ]);
+  });
+
+  it("an uncustomized widget uses the shared default order and names, not the preset store or old local storage", () => {
+    localStorage.setItem(
+      "keephq-column-order-atw",
+      JSON.stringify(["description", "name"])
+    );
+    renderWidget({ presetColumns: ["description", "name"] });
+
+    expect(headerIds()).toEqual(["name", "description"]);
+    expect(screen.queryByText("Alert")).toBeNull();
+    expect(screen.getByText("Alert name")).toBeInTheDocument();
+  });
+
+  it("widget order and renames win", () => {
+    renderWidget({
+      presetColumns: ["name", "description"],
+      alertTable: {
+        columnOrder: ["description", "name"],
+        columnRenameMapping: { description: "Details" },
+      },
+    });
+
+    expect(headerIds()).toEqual(["description", "name"]);
+    expect(screen.getByText("Details")).toBeInTheDocument();
+  });
+
+  it("a configured column no alert has renders empty cells", () => {
+    renderWidget({ presetColumns: ["name", "ticket_id"] });
+
+    expect(screen.getByTestId("header-cell-ticket_id")).toHaveTextContent(
+      "Ticket Id"
+    );
+    const cells = cellsOf("ticket_id");
+    expect(cells).toHaveLength(2);
+    cells.forEach((cell) => expect(cell.textContent).toBe(""));
+  });
+
+  it("unknown and excluded ids in config are ignored", () => {
+    expect(() =>
+      renderWidget({
+        presetColumns: ["checkbox", "name"],
+        alertTable: {
+          columnOrder: ["alertMenu", "name"],
+          groupBy: "does_not_exist",
+        },
+      })
+    ).not.toThrow();
+
+    expect(headerIds()).toEqual(["name"]);
+    expect(groupHeaderTexts()).toEqual(["No Does Not Exist 2 shown"]);
+  });
+
+  it("never shows the noise column, even when noisy alerts are enabled", () => {
+    mockedUseConfig.mockReturnValue({ data: { NOISY_ALERTS_ENABLED: true } });
+
+    renderWidget({ presetColumns: ["noise", "name"] });
+
+    expect(headerIds()).toEqual(["name"]);
+  });
+
+  it("groups by incident with 'No incident' first by default", () => {
+    renderWidget({ alertTable: { groupBy: "incident" } }, [
+      linkedAlert("i1", "Checkout degraded"),
+      unlinkedAlert(),
+    ]);
+
+    const texts = groupHeaderTexts();
+    expect(texts).toHaveLength(2);
+    expect(texts[0]).toMatch(/^No incident · 1 shown$/);
+    expect(texts[1]).toContain("Checkout degraded");
+    expect(texts[1]).toContain("1 shown · 14 in incident");
+  });
+
+  it("groups by incident while the Incident column is hidden", () => {
+    renderWidget(
+      { presetColumns: ["name"], alertTable: { groupBy: "incident" } },
+      [linkedAlert("i1", "Checkout degraded"), unlinkedAlert()]
+    );
+
+    expect(headerIds()).toEqual(["name"]);
+    expect(groupHeaders()).toHaveLength(2);
+  });
+
+  it("null, undefined and empty-string values form ONE 'No Service' group", () => {
+    renderWidget({ alertTable: { groupBy: "service" } }, [
+      alertWith({ service: null }),
+      alertWith({ service: undefined }),
+      alertWith({ service: "" }),
+      alertWith({ service: "checkout" }),
+    ]);
+
+    const texts = groupHeaderTexts();
+    expect(texts.filter((text) => text.startsWith("No Service"))).toEqual([
+      "No Service 3 shown",
+    ]);
+    expect(texts).toContain("checkout 1 shown");
+  });
+
+  it("a display-only group-by column renders ungrouped", () => {
+    renderWidget({ alertTable: { groupBy: "severity" } });
+
+    expect(groupHeaders()).toHaveLength(0);
+    expect(bodyRows()).toHaveLength(2);
+    expect(screen.queryByText(/Rows grouped by/)).toBeNull();
+  });
+
+  it("headers ignore the stale unscoped rename key in local storage", () => {
+    localStorage.setItem(
+      "keephq-column-rename-mapping-atw",
+      JSON.stringify({ description: "Stale" })
+    );
+
+    renderWidget({ presetColumns: ["name", "description"] });
+
+    expect(screen.queryByText("Stale")).toBeNull();
+    expect(screen.getByTestId("header-cell-description")).toHaveTextContent(
+      "Description"
+    );
+  });
+
+  it("emptyGroupPosition bottom puts 'No incident' last", () => {
+    renderWidget(
+      { alertTable: { groupBy: "incident", emptyGroupPosition: "bottom" } },
+      [unlinkedAlert(), linkedAlert("i1", "Checkout degraded")]
+    );
+
+    const texts = groupHeaderTexts();
+    expect(texts[0]).toContain("Checkout degraded");
+    expect(texts.at(-1)).toMatch(/^No incident/);
+  });
+
+  it("a changed emptyGroupPosition reorders the groups", () => {
+    const alerts = [linkedAlert("i1", "Checkout degraded"), unlinkedAlert()];
+    const { rerender } = renderWidget(
+      { alertTable: { groupBy: "incident" } },
+      alerts
+    );
+    expect(groupHeaderTexts()[0]).toMatch(/^No incident/);
+
+    rerender(
+      widget(
+        { alertTable: { groupBy: "incident", emptyGroupPosition: "bottom" } },
+        alerts
+      )
+    );
+
+    expect(groupHeaderTexts().at(-1)).toMatch(/^No incident/);
+  });
+
+  it("group labels, the chip and empty groups use the widget's renames", () => {
+    renderWidget(
+      {
+        alertTable: {
+          groupBy: "service",
+          columnRenameMapping: { service: "Svc" },
+        },
+      },
+      [alertWith({ service: undefined }), alertWith({ service: "checkout" })]
+    );
+
+    expect(screen.getByText("Rows grouped by Svc")).toBeInTheDocument();
+    expect(groupHeaderTexts()[0]).toBe("No Svc 1 shown");
+  });
+
+  it("view mode has no header controls; edit mode does", () => {
+    const alerts = [alertWith(), alertWith()];
+    const { rerender } = renderWidget({}, alerts, { isEditMode: false });
+    expect(screen.queryByTestId("drag-handle-name")).toBeNull();
+    expect(screen.queryByTestId("resize-handle-name")).toBeNull();
+
+    rerender(widget({}, alerts, { isEditMode: true }));
+    expect(screen.queryByTestId("drag-handle-name")).toBeNull();
+
+    rerender(widget({}, alerts, { isEditMode: true, onChange: jest.fn() }));
+    expect(screen.getByTestId("drag-handle-name")).toBeInTheDocument();
+    expect(screen.getByTestId("resize-handle-name")).toBeInTheDocument();
+  });
+
+  it("a narrow widget hides the header controls in edit mode", () => {
+    observeWidth(300);
+    const { unmount } = renderWidget({}, undefined, {
+      isEditMode: true,
+      onChange: jest.fn(),
+    });
+    expect(screen.queryByTestId("drag-handle-name")).toBeNull();
+    unmount();
+
+    observeWidth(640);
+    renderWidget({}, undefined, { isEditMode: true, onChange: jest.fn() });
+    expect(screen.getByTestId("drag-handle-name")).toBeInTheDocument();
+  });
+
+  it("Group by in the header menu writes the widget's groupBy", async () => {
+    const onChange = jest.fn();
+    renderWidget({ presetColumns: ["name", "description"] }, undefined, {
+      isEditMode: true,
+      onChange,
+    });
+
+    const cell = screen.getByTestId("header-cell-description");
+    const trigger = within(cell).getByTestId("dropdown-menu-button");
+    fireEvent.mouseDown(trigger);
+    fireEvent.click(trigger);
+    await screen.findByTestId("dropdown-menu-list");
+    expect(screen.queryByText("Sort ascending")).toBeNull();
+    fireEvent.click(screen.getByText("Group by"));
+
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        alertTable: expect.objectContaining({ groupBy: "description" }),
+      })
+    );
+  });
+
+  it("shows the grouping chip with a clear button only in edit mode", () => {
+    const onChange = jest.fn();
+    const alerts = [linkedAlert("i1", "Checkout degraded"), unlinkedAlert()];
+    const item = { alertTable: { groupBy: "incident" } };
+    const { rerender } = renderWidget(item, alerts);
+
+    expect(screen.getByText("Rows grouped by Incident")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Clear grouping" })).toBeNull();
+
+    rerender(widget(item, alerts, { isEditMode: true, onChange }));
+    fireEvent.click(screen.getByRole("button", { name: "Clear grouping" }));
+
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        alertTable: expect.objectContaining({ groupBy: null }),
+      })
+    );
+  });
+
+  it("Collapse all and Expand all toggle every group", () => {
+    renderWidget({ alertTable: { groupBy: "incident" } }, [
+      linkedAlert("i1", "Checkout degraded"),
+      unlinkedAlert(),
+    ]);
+    expect(bodyRows()).toHaveLength(2);
+
+    fireEvent.click(screen.getByRole("button", { name: "Collapse all" }));
+    expect(bodyRows()).toHaveLength(0);
+
+    fireEvent.click(screen.getByRole("button", { name: "Expand all" }));
+    expect(bodyRows()).toHaveLength(2);
+  });
+
+  it("a collapsed group stays collapsed after the alerts refresh", () => {
+    const { rerender } = renderWidget({ alertTable: { groupBy: "incident" } }, [
+      linkedAlert("i1", "Checkout degraded"),
+    ]);
+    expect(bodyRows()).toHaveLength(1);
+
+    fireEvent.click(groupHeader("Checkout degraded"));
+    expect(bodyRows()).toHaveLength(0);
+
+    rerender(
+      widget({ alertTable: { groupBy: "incident" } }, [
+        linkedAlert("i1", "Checkout degraded"),
+        linkedAlert("i1", "Checkout degraded"),
+      ])
+    );
+
+    expect(groupHeaderTexts()[0]).toContain("2 shown");
+    expect(bodyRows()).toHaveLength(0);
+  });
+
+  it("incident links in group headers work in view mode and are plain text in edit mode", () => {
+    const alerts = [linkedAlert("i1", "Checkout degraded")];
+    const item = { presetColumns: ["name"], alertTable: { groupBy: "incident" } };
+    const { rerender } = renderWidget(item, alerts);
+
+    expect(
+      within(groupHeader("Checkout degraded")).getByRole("link", {
+        name: "Checkout degraded",
+      })
+    ).toHaveAttribute("href", "/incidents/i1");
+
+    rerender(widget(item, alerts, { isEditMode: true, onChange: jest.fn() }));
+
+    expect(within(groupHeader("Checkout degraded")).queryByRole("link")).toBeNull();
+  });
+
+  it("rows render plain and not selectable", () => {
+    renderWidget({ presetColumns: ["name"] });
+
+    const rows = bodyRows();
+    expect(rows).toHaveLength(2);
+    rows.forEach((row) => {
+      expect(row).not.toHaveClass("cursor-pointer");
+      expect(row).not.toHaveClass("bg-white");
+    });
+  });
+
+  it("rows keep the default density whatever the viewer's row style", () => {
+    localStorage.setItem(
+      "keephq-alert-table-row-style",
+      JSON.stringify("relaxed")
+    );
+
+    renderWidget({ presetColumns: ["name", "description"] });
+
+    bodyRows().forEach((row) => {
+      expect(row).toHaveClass("h-8");
+      expect(row).not.toHaveClass("h-12");
+    });
+    cellsOf("description").forEach((cell) => {
+      expect(cell.querySelector(".line-clamp-1")).not.toBeNull();
+      expect(cell.querySelector(".line-clamp-3")).toBeNull();
+    });
+  });
+
+  it("does not read the preset's expanded rows", () => {
+    const alerts = [alertWith()];
+    localStorage.setItem(
+      "keephq-expanded-rows-atw",
+      JSON.stringify({ [alerts[0].fingerprint]: true })
+    );
+
+    renderWidget({ presetColumns: ["name"] }, alerts);
+
+    expect(bodyRows()[0]).not.toHaveClass("!h-auto");
+  });
+
+  it("pinned cells get an opaque background under the widget tint", () => {
     render(
       <WidgetAlertsTable
-        presetName="feed"
-        alerts={alerts}
-        columns={["name", "last_received"]}
+        item={baseItem}
+        presetName="atw"
+        alerts={[alertWith()]}
+        background="rgb(220, 38, 38, 0.1)"
+        isEditMode={false}
       />
     );
 
-    expect(screen.getByText("2026-10-01T10:00:00Z")).toBeInTheDocument();
+    expect(widgetRoot().style.getPropertyValue("--widget-opaque-bg")).toBe(
+      "linear-gradient(rgb(220, 38, 38, 0.1), rgb(220, 38, 38, 0.1)), #fff"
+    );
+    expect(cellsOf("severity")[0]).toHaveClass("sticky");
+  });
+
+  it("keeps the wrapper hooks: data-cy, sideways scroll, tint and small text", () => {
+    render(
+      <WidgetAlertsTable
+        item={baseItem}
+        presetName="atw"
+        alerts={[alertWith()]}
+        background="rgba(16, 185, 129, 0.1)"
+        isEditMode={false}
+      />
+    );
+
+    expect(widgetRoot()).toHaveClass("overflow-x-auto", "text-xs");
+    expect(widgetRoot().style.background).toBe("rgba(16, 185, 129, 0.1)");
+  });
+
+  it("shows 5 skeleton rows while alerts are undefined", () => {
+    renderWidget({}, "loading");
+
+    expect(
+      document.querySelectorAll('[data-cy="alerts-row-skeleton"]')
+    ).toHaveLength(5);
+    expect(bodyRows()).toHaveLength(0);
+  });
+
+  it("passes the widget state and column ids to renderToolbar", () => {
+    const renderToolbar = jest.fn(() => <span>toolbar</span>);
+    render(
+      <WidgetAlertsTable
+        item={{ ...baseItem, presetColumns: ["name"] }}
+        presetName="atw"
+        alerts={[alertWith({ service: "checkout" })]}
+        isEditMode
+        onChange={jest.fn()}
+        renderToolbar={renderToolbar}
+      />
+    );
+
+    expect(screen.getByText("toolbar")).toBeInTheDocument();
+    const [{ state, columnIds }] = renderToolbar.mock.calls.at(-1) as unknown as [
+      { state: { visibleColumns: string[]; canEdit: boolean }; columnIds: string[] },
+    ];
+    expect(state.visibleColumns).toEqual(["name"]);
+    expect(state.canEdit).toBe(true);
+    expect(columnIds).toEqual(expect.arrayContaining(["name", "service", "incident"]));
+    expect(columnIds).not.toContain("checkbox");
+    expect(columnIds).not.toContain("alertMenu");
+  });
+
+  it("never reads the preset's per-user column state", () => {
+    renderWidget({ presetColumns: ["name", "description"] });
+
+    expect(mockUsePresetColumnState).not.toHaveBeenCalled();
+  });
+
+  it("re-renders after an act-wrapped alerts refresh without losing the order", () => {
+    const item = {
+      presetColumns: ["name", "description"],
+      alertTable: { columnOrder: ["description", "name"] },
+    };
+    const { rerender } = renderWidget(item, [alertWith()]);
+
+    act(() => {
+      rerender(widget(item, [alertWith({ region: "eu" }), alertWith()]));
+    });
+
+    expect(headerIds()).toEqual(["description", "name"]);
+    expect(bodyRows()).toHaveLength(2);
   });
 });
