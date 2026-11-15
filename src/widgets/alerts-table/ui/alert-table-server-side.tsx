@@ -283,9 +283,7 @@ export function AlertTableServerSide({
   const [isIncidentSelectorOpen, setIsIncidentSelectorOpen] =
     useState<boolean>(false);
 
-  const leftPinnedColumns = noisyAlertsEnabled
-    ? ["severity", "checkbox", "status", "source", "noise"]
-    : ["severity", "checkbox", "status", "source"];
+  const leftPinnedColumns = ["severity", "checkbox", "status", "source"];
 
   const isShiftPressed = useIsShiftKeyHeld();
 

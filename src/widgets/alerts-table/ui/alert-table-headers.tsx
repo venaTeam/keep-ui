@@ -195,7 +195,7 @@ const DraggableHeaderCell = ({
         : column.id === "source"
           ? "44px !important"
           : column.id === "status"
-            ? "36px !important"
+            ? "160px !important"
             : column.getSize(),
     opacity: isDragging ? 0.5 : 1,
     transform: CSS.Translate.toString(transform),

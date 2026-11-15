@@ -60,7 +60,7 @@ Noise ("Rings now"):
 
 Columns and layout:
 
-14. Presets page: the `severity` column gets the header "Severity" and a fixed width (~96px). The `status` column gets the header "Status" and a fixed width (~152px, the widest pill being Critical + Firing + Noisy or "Acknowledged"). The `noise` column is removed.
+14. Presets page: the `severity` column gets the header "Severity" and a fixed width (~96px). The `status` column gets the header "Status" and a fixed width (~160px, the widest pill being Critical + Firing + Noisy or "Acknowledged"). The `noise` column is removed.
 15. Presets page: column ids `severity` and `status` are kept, so each user's saved column order, visibility and pinning (localStorage) keeps working. `noise` is removed from both `leftPinnedColumns` lists.
 16. Presets page: status grouping, and the default `noise` sort sent to the server when `NOISY_ALERTS_ENABLED` is on, behave exactly as today (the sort is a server field name and does not need the column).
 17. Dashboard widget: the `severity` and `status` columns get the headers "Severity" and "Status"; the cells size to the badge and pill (`min-content`). Name and Description absorb the extra width, and the widget scrolls horizontally sooner than today (about 190px earlier).
@@ -188,7 +188,7 @@ export function AlertStatusPill(props: {
 ### Presets page columns
 
 **Option A: Reuse the `severity` and `status` column ids, widen them, drop `noise`**
-In `alert-table-utils.tsx`, the `severity` display column renders `TableSeverityCell` and `AlertSeverityBadge`. Its meta changes from `w-1 !p-0` to a fixed width, with a "Severity" header. The `status` column renders `AlertStatusPill` with `noisy={isAlertRingingNow(row, presetNoisy)}`, a "Status" header and a fixed ~152px width. The `noise` column definition is deleted, and the 36px special case in `alert-table-headers.tsx` (`dragStyle`) is updated to the new width.
+In `alert-table-utils.tsx`, the `severity` display column renders `TableSeverityCell` and `AlertSeverityBadge`. Its meta changes from `w-1 !p-0` to a fixed width, with a "Severity" header. The `status` column renders `AlertStatusPill` with `noisy={isAlertRingingNow(row, presetNoisy)}`, a "Status" header and a fixed ~160px width. The `noise` column definition is deleted, and the 36px special case in `alert-table-headers.tsx` (`dragStyle`) is updated to the new width.
 
 **Option B: Add new column ids next to the old ones**
 Leaves the old icon columns in place.

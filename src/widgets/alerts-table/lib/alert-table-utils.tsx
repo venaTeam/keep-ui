@@ -9,7 +9,7 @@ import {
   AccessorKeyColumnDef,
 } from "@tanstack/react-table";
 import { AlertDto } from "@/entities/alerts/model";
-import { Accordion, AccordionBody, AccordionHeader, Icon } from "@tremor/react";
+import { Accordion, AccordionBody, AccordionHeader } from "@tremor/react";
 import { AlertName } from "@/entities/alerts/ui";
 import AlertAssignee from "../ui/alert-assignee";
 import AlertExtraPayload from "../ui/alert-extra-payload";
@@ -25,11 +25,10 @@ import {
   ListItem,
 } from "@/widgets/alerts-table/lib/alert-table-list-format";
 import {
-  MdOutlineNotificationsActive,
-  MdOutlineNotificationsOff,
-} from "react-icons/md";
-import { getStatusIcon, getStatusColor } from "@/shared/lib/status-utils";
-import { useConfig } from "@/utils/hooks/useConfig";
+  AlertSeverityBadge,
+  AlertStatusPill,
+  isAlertRingingNow,
+} from "@/widgets/alerts-table/lib/status-severity-cells";
 import {
   TableIndeterminateCheckbox,
   TableSeverityCell,
@@ -72,7 +71,6 @@ export const SORT_FIELD_BY_COLUMN_ID: Record<string, string> = {
 export const DEFAULT_COLS = [
   "severity",
   "checkbox",
-  "noise",
   "source",
   "status",
   "name",
@@ -250,9 +248,6 @@ export const useAlertTableCols = (
   const [columnListFormats, setColumnListFormats] = useLocalStorage<
     Record<string, ListFormatOption>
   >(`column-list-formats-${presetName}`, {});
-  const { data: configData } = useConfig();
-  // check if noisy alerts are enabled
-  const noisyAlertsEnabled = configData?.NOISY_ALERTS_ENABLED;
   const [columnRenameMapping] = useLocalStorage<ColumnRenameMapping>(
     `column-rename-mapping-${presetName}`,
     {}
@@ -431,16 +426,25 @@ export const useAlertTableCols = (
     return [
       columnHelper.display({
         id: "severity",
-        maxSize: 2,
-        header: () => <></>,
+        header: "Severity",
+        size: 96,
+        minSize: 96,
+        maxSize: 96,
+        enableResizing: false,
         cell: (context) => (
-          <TableSeverityCell
-            severity={context.row.original.severity as unknown as UISeverity}
-          />
+          <div className="flex items-center h-full min-w-0 overflow-hidden pl-1.5">
+            <TableSeverityCell
+              severity={context.row.original.severity as unknown as UISeverity}
+            />
+            <AlertSeverityBadge
+              severity={context.row.original.severity}
+              size="sm"
+            />
+          </div>
         ),
         meta: {
-          tdClassName: "w-1 !p-0",
-          thClassName: "w-1 !p-0",
+          tdClassName: "!p-0 !min-w-[96px] !max-w-[96px] !w-[96px] !box-border flex-none",
+          thClassName: "!py-0 !pr-0 !pl-3 !min-w-[96px] !max-w-[96px] !w-[96px] !box-border flex-none",
         },
       }),
       ...(isCheckboxDisplayed
@@ -473,73 +477,27 @@ export const useAlertTableCols = (
           }),
         ]
         : ([] as ColumnDef<AlertDto>[])),
-      // noisy column
-      ...(noisyAlertsEnabled
-        ? [
-          columnHelper.display({
-            id: "noise",
-            size: 5,
-            header: () => <></>,
-            cell: (context) => {
-              // Get the status of the alert
-              const status = context.row.original.status;
-              const isNoisy = context.row.original.isNoisy;
-
-              // Return null if presetNoisy is not true
-              if (!presetNoisy && !isNoisy) {
-                return null;
-              } else if (presetNoisy) {
-                // Decide which icon to display based on the status
-                if (status === "firing") {
-                  return (
-                    <Icon icon={MdOutlineNotificationsActive} color="red" />
-                  );
-                } else {
-                  return <Icon icon={MdOutlineNotificationsOff} color="red" />;
-                }
-              }
-              // else, noisy alert in non noisy preset
-              else {
-                if (status === "firing") {
-                  return (
-                    <Icon icon={MdOutlineNotificationsActive} color="red" />
-                  );
-                } else {
-                  return null;
-                }
-              }
-            },
-            meta: {
-              tdClassName: "p-0",
-              thClassName: "p-0",
-            },
-            enableSorting: false,
-          }),
-        ]
-        : []),
       columnHelper.accessor("status", {
         id: "status",
-        header: () => <></>, // Empty header like source column
+        header: "Status",
         enableGrouping: true,
         getGroupingValue: (row) => row.status,
-        size: 36,
-        minSize: 36,
-        maxSize: 36,
+        size: 160,
+        minSize: 160,
+        maxSize: 160,
         enableResizing: false,
         cell: (context) => (
-          <div className="flex items-center justify-center w-full h-full">
-            <Icon
-              icon={getStatusIcon(context.getValue(), context.row.original.isNoisy)}
+          <div className="flex items-center w-full h-full px-1.5">
+            <AlertStatusPill
+              status={context.getValue()}
+              noisy={isAlertRingingNow(context.row.original, presetNoisy)}
               size="sm"
-              color={getStatusColor(context.getValue())}
-              className="!p-0 !h-[20px] !w-[20px]"
-              tooltip={context.getValue()}
             />
           </div>
         ),
         meta: {
-          tdClassName: "!p-0 !min-w-[36px] !max-w-[36px] !w-[36px] !box-border flex-none", // Same styling as source
-          thClassName: "!p-0 !min-w-[36px] !max-w-[36px] !w-[36px] !box-border flex-none",
+          tdClassName: "!p-0 !min-w-[160px] !max-w-[160px] !w-[160px] !box-border flex-none",
+          thClassName: "!py-0 !pr-0 !pl-1.5 !min-w-[160px] !max-w-[160px] !w-[160px] !box-border flex-none",
         },
       }),
       // Source column with exact 40px width ( see alert-table-headers )
@@ -760,7 +718,6 @@ export const useAlertTableCols = (
   }, [
     isCheckboxDisplayed,
     isMenuDisplayed,
-    noisyAlertsEnabled,
     presetNoisy,
     presetName,
     rowStyle,

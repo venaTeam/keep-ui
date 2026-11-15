@@ -31,7 +31,6 @@ import {
   DynamicFacet,
   FacetFilters,
 } from "@/app/(keep)/alerts/[id]/ui/alert-table-facet-types";
-import { useConfig } from "@/utils/hooks/useConfig";
 import {
   DEFAULT_COLS,
   DEFAULT_COLS_VISIBILITY,
@@ -109,8 +108,6 @@ export function AlertTable({
   setChangeStatusAlert,
 }: Props) {
   const a11yContainerRef = useRef<HTMLDivElement>(null);
-  const { data: configData } = useConfig();
-  const noisyAlertsEnabled = configData?.NOISY_ALERTS_ENABLED;
   const { data: session } = useHydratedSession();
   const userEmail = session?.user?.email;
   const userPrefix = userEmail ? `${userEmail}-` : "";
@@ -176,9 +173,7 @@ export function AlertTable({
     Record<string, ListFormatOption>
   >(`column-list-formats-${userPrefix}${presetName}`, {});
 
-  const [sorting, setSorting] = useState<SortingState>(
-    noisyAlertsEnabled ? [{ id: "noise", desc: true }] : []
-  );
+  const [sorting, setSorting] = useState<SortingState>([]);
 
   const [tabs, setTabs] = useState([
     { name: "All", filter: (alert: AlertDto) => true },
@@ -273,9 +268,7 @@ export function AlertTable({
     });
   }, [alerts, facetFilters, selectedTab, tabs]);
 
-  const leftPinnedColumns = noisyAlertsEnabled
-    ? ["severity", "checkbox", "status", "source", "name", "noise"]
-    : ["severity", "checkbox", "status", "source", "name"];
+  const leftPinnedColumns = ["severity", "checkbox", "status", "source", "name"];
 
   const table = useReactTable({
     getRowId: (row) => row.fingerprint,
