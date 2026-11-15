@@ -73,7 +73,7 @@ Legend:
 
 - **Shared rendering:** severity badge, status pill, Noisy segment and the "rings now" predicate are defined once and imported by both surfaces. No copy of the markup in either table.
 - **Backward compatibility:** no API, schema or config change. Saved column order, visibility and sizing in localStorage remain valid (same column ids). Fixed-width meta classes override any stale stored size for `severity`/`status`.
-- **Scope containment:** `SeverityBorderIcon`, `TableSeverityCell`, `getStatusIcon` and `getStatusColor` keep their current behavior, because the incident list, incidents table, Incident Table widget and alert facets also use them.
+- **Scope containment:** `SeverityBorderIcon`, `TableSeverityCell`, `getStatusIcon` and `getStatusColor` keep their current behavior, because the incident list, incidents table, Incident Table widget and alert facets also use them. The one deliberate shared change is the pinning z-index fix (see "Pinned columns during horizontal scroll"). It must not damage the incidents list, incident alerts or deduplication tables.
 - **Accessibility:** badge and pill text meets 4.5:1 contrast on its background (800-shade text on 100-shade tints, gray-800 on white). Noisy is distinguished by word and shape, not by red. Icons are `aria-hidden`.
 - **Dark mode:** keep-ui dark mode is a global `invert() hue-rotate() contrast()` filter on `html.workaround-dark`. Components use light Tailwind colors only, with no `dark:` variants, and must stay legible under that filter.
 - **Performance:** purely presentational. No new requests: `presetNoisy` comes from data the tables already have. Cost per row is a few spans.
@@ -197,13 +197,56 @@ Trade-offs:
 - A: saved user layouts keep working, and there are no duplicate columns. The pinned left block gets wider.
 - B: users' saved column orders don't contain the new ids, so the new columns land in unpredictable places. It also leaves two status columns, or needs a localStorage migration.
 
-**Recommendation:** Option A. Leave the flag-gated default `noise` sort in `alert-table.tsx` and `alert-table-server-side.tsx` untouched (see Out of scope). Remove `"noise"` from both `leftPinnedColumns` arrays.
+**Recommendation:** Option A. Leave the flag-gated default `noise` sort in `alert-table-server-side.tsx` untouched (see Out of scope). It is a server sort field and does not need the column. In the in-browser `alert-table.tsx` the initial sort becomes `[]`, because there the `noise` sort was already a no-op (`enableSorting: false`) and would now make TanStack look up a missing column. Remove `"noise"` from both `leftPinnedColumns` arrays.
 
 ### Dashboard widget
 
 Only one viable approach. `PresetAlertTablePanel` passes `presetNoisy={!!preset?.is_noisy}` (the live preset it already holds) to `WidgetAlertsTable`. There, `columnsMeta.severity` and `columnsMeta.status` render `AlertSeverityBadge size="xs"` and `AlertStatusPill size="xs"` with `renderHeader` returning "Severity" / "Status" (still honouring `columnRenameMapping` if present). The `getStatusIcon(alert.status, alert.isNoisy)` call goes away.
 
 **Recommendation:** as described. The alternatives (reading the widget's stored preset snapshot, or calling `usePresets` inside the table) are rejected. The snapshot goes stale when a preset is un-flagged, and the parent already has the live value.
+
+### Pinned columns during horizontal scroll (added after the demo review, 2026-11-15)
+
+**Found in the live demo:** when the presets table scrolls sideways, the scrolling cells (Name, Environment, …) paint over the pinned Severity / Status / Source cells and hide the Noisy word.
+
+**Cause (already on dev):** `getCommonPinningStylesAndClassNames` in `src/shared/ui/utils/table-utils.ts` computes a `zIndex` per pinned column but never puts it in the returned style. Pinned cells are `position: sticky` with `z-index: auto`, scrolling cells are `position: relative` with `z-index: auto`, so later DOM siblings win. On dev the pinned block was about 130px, so the overlap was small; this change widens it to about 340px, which makes it obvious.
+
+**Option A: Apply the computed z-index to left-pinned cells only**
+One line in the helper: `zIndex: isPinned === "left" ? zIndex : undefined`.
+
+Trade-offs:
+- Pros:
+  - It fixes the overlap everywhere left pinning is used.
+  - Right-pinned columns come last in the DOM and already paint over scrolled cells, so they need nothing. Leaving them without a z-index means a non-portaled tooltip inside a right-pinned menu cell is not newly confined.
+- Cons: the helper is shared, so five tables pick up the change.
+- Complexity / risk / cost / time: one line plus a unit test. No table in the repo has a sticky header row, so vertical scrolling is unaffected.
+
+**Option B: Apply the z-index to left- and right-pinned cells**
+Trade-offs:
+- Pros: matches what the helper's original code computed.
+- Cons: it newly confines the Tremor button tooltips (`[&>[role='tooltip']]:z-50`) in the right-pinned `alertMenu` cells of the incident alerts table, and the next row's pinned cell can cover them. It also buys nothing, because right-pinned cells already paint last.
+- Complexity / risk / cost / time: the same one line, with more risk.
+
+**Option C: A per-table fix in the alerts table only**
+Trade-offs:
+- Pros: no other table changes.
+- Cons: it duplicates pinning logic, and the incident alerts table, which pins five left columns including Name, keeps the same bug.
+- Complexity / risk / cost / time: more code than A.
+
+**Recommendation:** Option A, chosen by the user after the demo, with explicit verification of the other consumers:
+
+| Table | Left-pinned | Right-pinned | Effect |
+|---|---|---|---|
+| Presets page `alert-table-server-side.tsx` | severity, checkbox, status, source | none | the overlap is fixed |
+| In-browser `alert-table.tsx` (alert history modal) | the same + name | none | the overlap is fixed |
+| Incident alerts `incident-alerts.tsx` (+ skeleton) | severity, checkbox, status, source, name | alertMenu | left is fixed; right is unchanged |
+| Incidents list `incidents-table.tsx` / `incident-table-component.tsx` | severity, selected | actions | left gets a z-index; right is unchanged |
+| Deduplication `DeduplicationTable.tsx` | none | actions | unchanged (no left pins) |
+
+Popovers inside left-pinned cells were checked:
+- The header menus and row menus use the shared `DropdownMenu`, which renders through `FloatingPortal`, so the z-index cannot trap them.
+- `AlertName` uses only a native `title`.
+- The left-pinned headers of severity, checkbox, status and source have no menu.
 
 ### Testing
 
@@ -229,6 +272,7 @@ Gates: `npx jest` on the touched tests, `npm run typecheck`, and `npm run lint` 
   - Shared icon and severity primitives stay unchanged, so incident surfaces are unaffected.
   - The widget reads the live preset's `is_noisy`.
   - No legend, because the words make it unnecessary.
+  - Added after the demo: the shared pinning helper now applies its z-index to left-pinned cells. This fixes scrolled columns covering pinned ones, a bug already on dev that the wider pinned block exposed. Right-pinned cells are unchanged.
 - **Out of scope / follow-ups:**
   - Incident list, incidents table, Incident Table widget and facets adopting the same components.
   - Whether to retire `NOISY_ALERTS_ENABLED`, which after this change only drives the default `noise` sort and nothing visible. That sort sends `sortBy: "noise"` to the gateway, which most likely matches no real field; worth checking separately.
