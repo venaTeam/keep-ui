@@ -104,6 +104,26 @@ export function normalizeColumnOrder(
   return Array.from(normalized);
 }
 
+/**
+ * Applies a reordering of the visible columns to the full column order.
+ *
+ * The slots the visible ids occupy in `fullOrder` are refilled with
+ * `visibleOrder` in sequence, so hidden ids keep their positions and the
+ * visible ids read in `visibleOrder`. Ids left over once those slots are
+ * filled are appended.
+ */
+export function mergeVisibleColumnOrder(
+  fullOrder: readonly string[],
+  visibleOrder: readonly string[]
+): string[] {
+  const visible = new Set(visibleOrder);
+  const remaining = [...visibleOrder];
+  const merged = fullOrder.map((id) =>
+    visible.has(id) ? (remaining.shift() as string) : id
+  );
+  return [...merged, ...remaining];
+}
+
 /** Builds a table visibility state with an explicit flag for every id in `allIds`. */
 export function toVisibilityState(
   visibleIds: readonly string[],

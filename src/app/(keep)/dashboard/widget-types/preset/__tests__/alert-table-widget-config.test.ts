@@ -7,6 +7,7 @@ import {
   applyWidgetColumnChange,
   getVisibleColumnIds,
   isEmptyGroupValue,
+  mergeVisibleColumnOrder,
   normalizeColumnOrder,
   resetWidgetColumns,
   resolveWidgetColumnId,
@@ -114,6 +115,26 @@ describe("normalizeColumnOrder", () => {
     ));
   it("returns allIds order for an empty order", () =>
     expect(normalizeColumnOrder([], ["b", "a"])).toEqual(["b", "a"]));
+});
+
+describe("mergeVisibleColumnOrder", () => {
+  it("puts the visible ids in their new order and keeps hidden ids in place", () =>
+    expect(
+      mergeVisibleColumnOrder(
+        ["severity", "name", "environment", "description", "service"],
+        ["severity", "description", "name"]
+      )
+    ).toEqual(["severity", "description", "environment", "name", "service"]));
+  it("returns the full order unchanged when the visible order is unchanged", () =>
+    expect(
+      mergeVisibleColumnOrder(["a", "hidden", "b"], ["a", "b"])
+    ).toEqual(["a", "hidden", "b"]));
+  it("keeps the visible sequence when it names an id the full order lacks", () =>
+    expect(mergeVisibleColumnOrder(["a", "hidden"], ["new", "a"])).toEqual([
+      "new",
+      "hidden",
+      "a",
+    ]));
 });
 
 describe("toVisibilityState", () => {

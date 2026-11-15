@@ -24,7 +24,11 @@ import { AlertsTableBody } from "@/widgets/alerts-table/ui/alerts-table-body";
 import { getColumnLabel } from "@/widgets/alerts-table/lib/alert-column-options";
 import { useGroupExpansion } from "@/utils/hooks/useGroupExpansion";
 import { WidgetData } from "../../types";
-import { NARROW_WIDGET_PX, WIDGET_PINNED_LEFT } from "./alert-table-widget-config";
+import {
+  NARROW_WIDGET_PX,
+  WIDGET_PINNED_LEFT,
+  mergeVisibleColumnOrder,
+} from "./alert-table-widget-config";
 import { withEmptyGroupPosition } from "./empty-group-row-model";
 import { useWidgetAlertColumns } from "./use-widget-alert-columns";
 import {
@@ -159,6 +163,21 @@ function WidgetAlertsTableContent({
     getGroupedRowModel: groupedRowModel,
   });
 
+  const {
+    columnOrder: fullColumnOrder,
+    columnVisibility,
+    setColumnOrder,
+  } = state;
+  const visibleColumnOrder = useMemo(
+    () => fullColumnOrder.filter((id) => columnVisibility[id]),
+    [fullColumnOrder, columnVisibility]
+  );
+  const setVisibleColumnOrder = useCallback(
+    (order: string[]) =>
+      setColumnOrder(mergeVisibleColumnOrder(fullColumnOrder, order)),
+    [fullColumnOrder, setColumnOrder]
+  );
+
   const renames = state.columnRenameMapping;
   const labelOf = useCallback(
     (columnId: string) => getColumnLabel(columnId, renames),
@@ -231,8 +250,8 @@ function WidgetAlertsTableContent({
             setColumnTimeFormats={noop}
             columnListFormats={NO_FORMATS}
             setColumnListFormats={noop}
-            columnOrder={state.columnOrder}
-            setColumnOrder={state.setColumnOrder}
+            columnOrder={visibleColumnOrder}
+            setColumnOrder={setVisibleColumnOrder}
             columnVisibility={state.columnVisibility}
             setColumnVisibility={state.setColumnVisibility}
             columnRenameMapping={renames}

@@ -15,6 +15,24 @@ import { useAlertTableCols } from "@/widgets/alerts-table/lib/alert-table-utils"
 import { useConfig } from "@/utils/hooks/useConfig";
 
 const mockUsePresetColumnState = jest.fn();
+const mockDndContextProps: {
+  onDragEnd?: (event: {
+    active: { id: string };
+    over: { id: string } | null;
+  }) => Promise<void> | void;
+} = {};
+
+jest.mock("@dnd-kit/core", () => {
+  const actual = jest.requireActual("@dnd-kit/core");
+  const { createElement } = jest.requireActual("react");
+  return {
+    ...actual,
+    DndContext: (props: Record<string, unknown>) => {
+      mockDndContextProps.onDragEnd = props.onDragEnd as never;
+      return createElement(actual.DndContext, props);
+    },
+  };
+});
 
 jest.mock("@/entities/presets/model", () => ({
   ...jest.requireActual("@/entities/presets/model"),
@@ -421,6 +439,83 @@ describe("WidgetAlertsTable", () => {
         alertTable: expect.objectContaining({ groupBy: "description" }),
       })
     );
+  });
+
+  it("Move left on description puts it before name, skipping hidden columns", async () => {
+    const onChange = jest.fn();
+    const alerts = [alertWith(), alertWith()];
+    const { rerender } = renderWidget({}, alerts, {
+      isEditMode: true,
+      onChange,
+    });
+
+    const cell = screen.getByTestId("header-cell-description");
+    const trigger = within(cell).getByTestId("dropdown-menu-button");
+    fireEvent.mouseDown(trigger);
+    fireEvent.click(trigger);
+    await screen.findByTestId("dropdown-menu-list");
+    fireEvent.click(screen.getByText("Move column left"));
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    const next: WidgetData = onChange.mock.calls[0][0];
+    const order = next.alertTable!.columnOrder!;
+    expect(order.indexOf("description")).toBeLessThan(order.indexOf("name"));
+
+    rerender(widget(next, alerts, { isEditMode: true, onChange }));
+    expect(headerIds()).toEqual([
+      "severity",
+      "status",
+      "source",
+      "description",
+      "name",
+      "lastReceived",
+    ]);
+  });
+
+  it("a header drag writes the full order with only the visible columns moved", async () => {
+    const onChange = jest.fn();
+    let fullOrderBefore: string[] = [];
+    let visibilityBefore: Record<string, boolean> = {};
+    render(
+      <WidgetAlertsTable
+        item={baseItem}
+        presetName="atw"
+        alerts={[alertWith(), alertWith()]}
+        isEditMode
+        onChange={onChange}
+        renderToolbar={({ state }) => {
+          fullOrderBefore = state.columnOrder;
+          visibilityBefore = state.columnVisibility;
+          return null;
+        }}
+      />
+    );
+    expect(fullOrderBefore).toContain("environment");
+    expect(visibilityBefore.environment).toBe(false);
+
+    await act(async () => {
+      await mockDndContextProps.onDragEnd!({
+        active: { id: "lastReceived" },
+        over: { id: "name" },
+      });
+    });
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    const order: string[] = onChange.mock.calls[0][0].alertTable.columnOrder;
+    expect([...order].sort()).toEqual([...fullOrderBefore].sort());
+    expect(order.filter((id) => visibilityBefore[id])).toEqual([
+      "severity",
+      "source",
+      "status",
+      "lastReceived",
+      "name",
+      "description",
+    ]);
+    fullOrderBefore.forEach((id, index) => {
+      if (!visibilityBefore[id]) {
+        expect(order[index]).toBe(id);
+      }
+    });
   });
 
   it("shows the grouping chip with a clear button only in edit mode", () => {
