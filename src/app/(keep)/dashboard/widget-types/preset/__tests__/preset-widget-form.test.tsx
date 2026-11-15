@@ -13,7 +13,13 @@ import { PresetPanelType, WidgetData } from "../../../types";
 
 jest.mock("../columns-selection", () => ({
   __esModule: true,
-  default: () => null,
+  default: () => <div data-cy="dashboard-widget-form-columns-multiselect" />,
+}));
+
+jest.mock("@/features/filter/hooks", () => ({
+  useFacetPotentialFields: () => ({
+    data: ["labels.team", "service", "checkbox"],
+  }),
 }));
 
 const presets = [{ id: "p1", name: "feed" }] as unknown as Preset[];
@@ -353,5 +359,260 @@ describe("PresetWidgetForm layout with the left-out alerts strip", () => {
       })
     );
     expectOnlyMinH(lastValue(onChange), 4);
+  });
+});
+
+describe("PresetWidgetForm row grouping", () => {
+  const HINT = "Grouping works best with 20 or more alerts";
+
+  const tableWidget = (overrides: Partial<WidgetData> = {}) =>
+    savedWidget({ presetPanelType: PresetPanelType.ALERT_TABLE, ...overrides });
+
+  const groupRowsBy = () =>
+    document.querySelector(
+      '[data-cy="dashboard-widget-form-group-rows-by"]'
+    ) as HTMLElement | null;
+
+  const rowsWithNoValue = () =>
+    document.querySelector(
+      '[data-cy="dashboard-widget-form-rows-with-no-value"]'
+    ) as HTMLElement | null;
+
+  const openGroupRowsBy = async () => {
+    fireEvent.click(
+      within(groupRowsBy() as HTMLElement).getByRole("button", {
+        name: "Show Group rows by options",
+      })
+    );
+    return screen.findByRole("listbox");
+  };
+
+  const chooseGroupBy = async (name: string) => {
+    const listbox = await openGroupRowsBy();
+    fireEvent.mouseDown(within(listbox).getByRole("option", { name }));
+  };
+
+  const follows = (first: Element, second: Element) =>
+    !!(
+      first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING
+    );
+
+  it("emits alertTable.groupBy when a group is chosen, keeping other alertTable keys", async () => {
+    const onChange = await renderForm(
+      tableWidget({ alertTable: { columnOrder: ["name"] } })
+    );
+
+    await chooseGroupBy("Incident");
+
+    await waitFor(() =>
+      expect(lastValue(onChange).alertTable).toEqual({
+        columnOrder: ["name"],
+        groupBy: "incident",
+        emptyGroupPosition: "top",
+      })
+    );
+  });
+
+  it("removes the grouping keys when None is chosen and keeps the rest", async () => {
+    const onChange = await renderForm(
+      tableWidget({
+        alertTable: {
+          columnOrder: ["name"],
+          groupBy: "service",
+          emptyGroupPosition: "bottom",
+        },
+      })
+    );
+
+    await chooseGroupBy("None");
+
+    await waitFor(() =>
+      expect(lastValue(onChange).alertTable).toEqual({ columnOrder: ["name"] })
+    );
+    expect(lastValue(onChange).alertTable).not.toHaveProperty("groupBy");
+    expect(lastValue(onChange).alertTable).not.toHaveProperty(
+      "emptyGroupPosition"
+    );
+  });
+
+  it("emits alertTable undefined when None leaves nothing else", async () => {
+    const widget = tableWidget({
+      alertTable: { groupBy: "service", emptyGroupPosition: "top" },
+    });
+    const onChange = await renderForm(widget);
+
+    await chooseGroupBy("None");
+
+    await waitFor(() => expect(lastValue(onChange).alertTable).toBeUndefined());
+    const emitted = lastValue(onChange);
+    expect(Object.keys(emitted)).toContain("alertTable");
+    expect({ ...widget, ...emitted }.alertTable).toBeUndefined();
+  });
+
+  it("adds no alertTable to an ungrouped table widget", async () => {
+    const onChange = await renderForm(tableWidget());
+
+    expect(Object.keys(lastValue(onChange))).toContain("alertTable");
+    expect(lastValue(onChange).alertTable).toBeUndefined();
+  });
+
+  it("loads the saved grouping when editing", async () => {
+    const saved = {
+      columnSizing: { name: 200 },
+      groupBy: "service",
+      emptyGroupPosition: "bottom" as const,
+    };
+    const onChange = await renderForm(tableWidget({ alertTable: saved }));
+
+    expect(
+      within(groupRowsBy() as HTMLElement).getByRole("combobox", {
+        name: "Group rows by",
+      })
+    ).toHaveValue("Service");
+    expect(screen.getByRole("radio", { name: "Bottom" })).toHaveAttribute(
+      "aria-checked",
+      "true"
+    );
+    expect(lastValue(onChange).alertTable).toEqual(saved);
+  });
+
+  it("shows 'Rows with no value' only when rows are grouped, and emits the chosen position", async () => {
+    const onChange = await renderForm(tableWidget());
+
+    expect(rowsWithNoValue()).toBeNull();
+    expect(screen.queryByText("Rows with no value")).not.toBeInTheDocument();
+
+    await chooseGroupBy("Service");
+
+    expect(await screen.findByText("Rows with no value")).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Top" })).toHaveAttribute(
+      "aria-checked",
+      "true"
+    );
+
+    fireEvent.click(screen.getByRole("radio", { name: "Bottom" }));
+
+    await waitFor(() =>
+      expect(lastValue(onChange).alertTable).toEqual({
+        groupBy: "service",
+        emptyGroupPosition: "bottom",
+      })
+    );
+  });
+
+  it("places Group rows by after the Columns picker and Rows with no value after it", async () => {
+    await renderForm(tableWidget({ alertTable: { groupBy: "incident" } }));
+
+    const columns = document.querySelector(
+      '[data-cy="dashboard-widget-form-columns-multiselect"]'
+    ) as HTMLElement;
+    const count = document.querySelector(
+      '[data-cy="dashboard-widget-form-count-by"]'
+    ) as HTMLElement;
+    expect(follows(count, columns)).toBe(true);
+    expect(follows(columns, groupRowsBy() as HTMLElement)).toBe(true);
+    expect(
+      follows(groupRowsBy() as HTMLElement, rowsWithNoValue() as HTMLElement)
+    ).toBe(true);
+    expect(screen.getByText("Group rows by")).toBeInTheDocument();
+  });
+
+  it("offers the alert facet fields under 'Any other field…'", async () => {
+    await renderForm(tableWidget());
+
+    const listbox = await openGroupRowsBy();
+
+    const others = within(listbox).getByRole("group", {
+      name: "Any other field…",
+    });
+    expect(
+      within(others)
+        .getAllByRole("option")
+        .map((option) => option.textContent)
+    ).toEqual(["labels.team"]);
+  });
+
+  it("shows the hint when grouped with fewer than 10 alerts", async () => {
+    await renderForm(tableWidget());
+
+    expect(screen.queryByText(HINT)).not.toBeInTheDocument();
+
+    await chooseGroupBy("Incident");
+
+    expect(await screen.findByText(HINT)).toBeInTheDocument();
+  });
+
+  it("shows the hint only while the alert count is under 10", async () => {
+    await renderForm(
+      tableWidget({
+        preset: {
+          id: "p1",
+          name: "feed",
+          countOfLastAlerts: 25,
+        } as unknown as Preset,
+        alertTable: { groupBy: "incident" },
+      })
+    );
+
+    expect(screen.queryByText(HINT)).not.toBeInTheDocument();
+
+    const countInput = document.querySelector(
+      'input[data-cy="dashboard-widget-form-count-of-last-alerts-input"]'
+    ) as HTMLInputElement;
+    fireEvent.change(countInput, { target: { value: "9" } });
+    expect(await screen.findByText(HINT)).toBeInTheDocument();
+
+    fireEvent.change(countInput, { target: { value: "10" } });
+    await waitFor(() =>
+      expect(screen.queryByText(HINT)).not.toBeInTheDocument()
+    );
+  });
+
+  it("leaves the Count setting alone when rows are grouped", async () => {
+    const countBy: CountBy = { field: "incident", incidentStatus: "active" };
+    const onChange = await renderForm(tableWidget({ countBy }));
+
+    await chooseGroupBy("Service");
+
+    await waitFor(() =>
+      expect(lastValue(onChange).alertTable).toEqual({
+        groupBy: "service",
+        emptyGroupPosition: "top",
+      })
+    );
+    expect(lastValue(onChange).countBy).toEqual(countBy);
+    expect(screen.getByRole("radio", { name: "Incidents" })).toHaveAttribute(
+      "aria-checked",
+      "true"
+    );
+  });
+
+  it("Alert Count Panel payload has no alertTable and shows no grouping controls", async () => {
+    const onChange = await renderForm(
+      savedWidget({
+        alertTable: { columnOrder: ["name"], groupBy: "service" },
+      })
+    );
+
+    expect(lastValue(onChange)).not.toHaveProperty("alertTable");
+    expect(groupRowsBy()).toBeNull();
+    expect(rowsWithNoValue()).toBeNull();
+    expect(screen.queryByText("Group rows by")).not.toBeInTheDocument();
+  });
+
+  it("stops emitting alertTable and hides the controls when switching to Alert Count Panel", async () => {
+    const onChange = await renderForm(
+      tableWidget({ alertTable: { groupBy: "service" } })
+    );
+    expect(groupRowsBy()).not.toBeNull();
+
+    await choosePanelType("Alert Count Panel");
+
+    await waitFor(() =>
+      expect(lastValue(onChange)).not.toHaveProperty("alertTable")
+    );
+    expect(groupRowsBy()).toBeNull();
+    expect(rowsWithNoValue()).toBeNull();
+    expect(screen.queryByText(HINT)).not.toBeInTheDocument();
   });
 });
