@@ -29,6 +29,11 @@ import {
 import ColumnsSelection from "./columns-selection";
 import { CountByControl } from "./count-by-control";
 import { GroupBySelect } from "./group-by-select";
+import {
+  WIDGET_STATIC_COLUMN_IDS,
+  WIDGET_UNGROUPABLE_COLUMN_IDS,
+  resolveWidgetColumnId,
+} from "./alert-table-widget-config";
 import { CountBy, isShowingMissing } from "@/entities/presets/model/count-by";
 import { useFacetPotentialFields } from "@/features/filter/hooks";
 import { getAlertColumnOptions } from "@/widgets/alerts-table/lib/alert-column-options";
@@ -44,6 +49,9 @@ const getGroupedCounterRows = (countBy: CountBy) =>
 const GROUPING_HINT = "Grouping works best with 20 or more alerts";
 const GROUPING_HINT_BELOW_COUNT = 10;
 const DEFAULT_EMPTY_GROUP_POSITION: EmptyGroupPosition = "top";
+const STATIC_COLUMN_IDS: ReadonlySet<string> = new Set(
+  WIDGET_STATIC_COLUMN_IDS
+);
 const EMPTY_GROUP_POSITIONS: ReadonlyArray<{
   value: EmptyGroupPosition;
   label: string;
@@ -79,7 +87,11 @@ function GroupRowsByControl({
 }) {
   const { data } = useFacetPotentialFields("alerts");
   const fieldOptions = useMemo(
-    () => getAlertColumnOptions([], data ?? []),
+    () =>
+      getAlertColumnOptions(
+        [],
+        (data ?? []).map((id) => resolveWidgetColumnId(id, STATIC_COLUMN_IDS))
+      ).filter((id) => !WIDGET_UNGROUPABLE_COLUMN_IDS.includes(id)),
     [data]
   );
 

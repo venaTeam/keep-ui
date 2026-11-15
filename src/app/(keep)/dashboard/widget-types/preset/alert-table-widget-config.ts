@@ -39,6 +39,12 @@ export const WIDGET_STATIC_COLUMN_IDS = [
   "extraPayload",
 ] as const;
 
+/** Fixed display columns with no value to group rows by. */
+export const WIDGET_UNGROUPABLE_COLUMN_IDS: readonly string[] = [
+  "severity",
+  "extraPayload",
+];
+
 /** A partial update to a widget's column state. */
 export type WidgetColumnChange = {
   columnOrder?: string[];

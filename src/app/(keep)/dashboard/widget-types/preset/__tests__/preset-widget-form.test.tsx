@@ -18,7 +18,15 @@ jest.mock("../columns-selection", () => ({
 
 jest.mock("@/features/filter/hooks", () => ({
   useFacetPotentialFields: () => ({
-    data: ["labels.team", "service", "checkbox"],
+    data: [
+      "labels.team",
+      "service",
+      "checkbox",
+      "severity",
+      "extraPayload",
+      "last_received",
+      "description",
+    ],
   }),
 }));
 
@@ -529,7 +537,42 @@ describe("PresetWidgetForm row grouping", () => {
       within(others)
         .getAllByRole("option")
         .map((option) => option.textContent)
-    ).toEqual(["labels.team"]);
+    ).toEqual(["description", "labels.team", "lastReceived"]);
+  });
+
+  it("leaves the ungroupable severity and extraPayload columns out", async () => {
+    await renderForm(tableWidget());
+
+    const listbox = await openGroupRowsBy();
+
+    expect(
+      within(listbox).queryByRole("option", { name: "severity" })
+    ).toBeNull();
+    expect(
+      within(listbox).queryByRole("option", { name: "extraPayload" })
+    ).toBeNull();
+    expect(
+      within(listbox).getByRole("option", { name: "description" })
+    ).toBeInTheDocument();
+  });
+
+  it("offers and stores a facet id under the table's column id", async () => {
+    const onChange = await renderForm(tableWidget());
+
+    const listbox = await openGroupRowsBy();
+    expect(
+      within(listbox).queryByRole("option", { name: "last_received" })
+    ).toBeNull();
+    fireEvent.mouseDown(
+      within(listbox).getByRole("option", { name: "lastReceived" })
+    );
+
+    await waitFor(() =>
+      expect(lastValue(onChange).alertTable).toEqual({
+        groupBy: "lastReceived",
+        emptyGroupPosition: "top",
+      })
+    );
   });
 
   it("shows the hint when grouped with fewer than 10 alerts", async () => {
