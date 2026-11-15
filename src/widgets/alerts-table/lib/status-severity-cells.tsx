@@ -1,6 +1,6 @@
 import clsx from "clsx";
 import { BellAlertIcon } from "@heroicons/react/24/outline";
-import { severityMapping } from "@/entities/alerts/model";
+import { severityMapping } from "@/entities/alerts/model/types";
 import { getStatusColor, getStatusIcon } from "@/shared/lib/status-utils";
 import { capitalize } from "@/utils/helpers";
 
