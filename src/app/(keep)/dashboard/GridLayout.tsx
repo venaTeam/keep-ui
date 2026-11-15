@@ -19,6 +19,13 @@ const COLS = { lg: 24, md: 24, sm: 1, xs: 1, xxs: 1 };
 
 const STACKED_COLS = 1;
 
+/**
+ * Panels float up into free space, so a drag pushes other panels only as far
+ * as needed and they return once the dragged panel moves away (the same
+ * behaviour as Grafana and Metabase dashboards).
+ */
+export const GRID_COMPACT_TYPE = "vertical" as const;
+
 const EDITABLE_BREAKPOINTS = ["lg", "md"];
 
 const isEditableBreakpoint = (breakpoint: string) => EDITABLE_BREAKPOINTS.includes(breakpoint);
@@ -109,7 +116,7 @@ const GridLayout: React.FC<GridLayoutProps> = ({
         useCSSTransforms={true}
         isDraggable={isEditable}
         isResizable={isEditable}
-        compactType={null}
+        compactType={GRID_COMPACT_TYPE}
         draggableHandle=".grid-item__widget"
         transformScale={1}
       >
