@@ -271,6 +271,7 @@ const PresetAlertTablePanel: React.FC<PresetAlertTablePanelProps> = ({
           presetName={preset?.name as string}
           alerts={isLoading ? undefined : alerts}
           columns={(item as any)?.presetColumns}
+          presetNoisy={!!preset?.is_noisy}
           background={
             isLoading || (countBy && isGroupLoading)
               ? undefined

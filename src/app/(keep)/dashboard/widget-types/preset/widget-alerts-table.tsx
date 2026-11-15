@@ -2,13 +2,15 @@ import React, { useEffect, useMemo } from "react";
 import { WidgetData, WidgetType } from "../../types";
 import { usePresetAlertsCount } from "@/features/presets/custom-preset-links";
 import { useDashboardPreset } from "@/utils/hooks/useDashboardPresets";
-import { Button, Icon } from "@tremor/react";
+import { Button } from "@tremor/react";
 import { FireIcon } from "@heroicons/react/24/outline";
 import { DynamicImageProviderIcon } from "@/components/ui";
-import { getStatusColor, getStatusIcon } from "@/shared/lib/status-utils";
 import { getColumnValue } from "./get-column-value";
-import { SeverityBorderIcon, UISeverity } from "@/shared/ui";
-import { severityMapping } from "@/entities/alerts/model";
+import {
+  AlertSeverityBadge,
+  AlertStatusPill,
+  isAlertRingingNow,
+} from "@/widgets/alerts-table/lib/status-severity-cells";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
@@ -27,6 +29,7 @@ interface WidgetAlertsTableProps {
   alerts?: any[];
   columns?: string[];
   background?: string;
+  presetNoisy?: boolean;
 }
 
 const WidgetAlertsTable: React.FC<WidgetAlertsTableProps> = ({
@@ -34,6 +37,7 @@ const WidgetAlertsTable: React.FC<WidgetAlertsTableProps> = ({
   alerts,
   columns,
   background,
+  presetNoisy = false,
 }) => {
   const columnsGapClass = "pr-3";
   const borderClass = "border-b";
@@ -52,25 +56,17 @@ const WidgetAlertsTable: React.FC<WidgetAlertsTableProps> = ({
     () => ({
       severity: {
         gridColumnTemplate: "min-content",
-        renderHeader: () => <div className="min-w-1"></div>,
         renderValue: (alert: any) => (
-          <SeverityBorderIcon
-            severity={
-              (severityMapping[Number(alert.severity)] ||
-                alert.severity) as UISeverity
-            }
-          />
+          <AlertSeverityBadge severity={alert.severity} size="xs" />
         ),
       },
       status: {
         gridColumnTemplate: "min-content",
-        renderHeader: () => <div className="min-w-4"></div>,
         renderValue: (alert: any) => (
-          <Icon
-            icon={getStatusIcon(alert.status, alert.isNoisy)}
-            size="sm"
-            color={getStatusColor(alert.status)}
-            className="!p-0"
+          <AlertStatusPill
+            status={alert.status}
+            noisy={isAlertRingingNow(alert, presetNoisy)}
+            size="xs"
           />
         ),
       },
@@ -110,7 +106,7 @@ const WidgetAlertsTable: React.FC<WidgetAlertsTableProps> = ({
         renderValue: (alert: any) => <TimeAgo date={alert.lastReceived} />,
       },
     }),
-    [columnRenameMapping]
+    [columnRenameMapping, presetNoisy]
   );
 
   const orderedColumns = useMemo(() => {
