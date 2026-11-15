@@ -61,7 +61,8 @@ const EXCLUDED_COLUMN_IDS: ReadonlySet<string> = new Set([
   "noise",
 ]);
 
-const SHORTLIST_LABELS: ReadonlyMap<string, string> = new Map(
+/** Label of each `GROUP_BY_SHORTLIST` field, keyed by field id. */
+export const GROUP_BY_SHORTLIST_LABELS: ReadonlyMap<string, string> = new Map(
   GROUP_BY_SHORTLIST.map((option) => [option.value, option.label])
 );
 
@@ -95,5 +96,5 @@ export function getColumnLabel(
   if (typeof renamed === "string" && renamed !== "") {
     return renamed;
   }
-  return SHORTLIST_LABELS.get(columnId) ?? startCase(columnId);
+  return GROUP_BY_SHORTLIST_LABELS.get(columnId) ?? startCase(columnId);
 }

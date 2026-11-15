@@ -7,7 +7,10 @@ import {
   ComboboxOptions,
 } from "@headlessui/react";
 import { RiArrowDownSLine } from "react-icons/ri";
-import { GROUP_BY_SHORTLIST } from "@/widgets/alerts-table/lib/alert-column-options";
+import {
+  GROUP_BY_SHORTLIST,
+  GROUP_BY_SHORTLIST_LABELS,
+} from "@/widgets/alerts-table/lib/alert-column-options";
 
 interface GroupBySelectProps {
   value: string | null;
@@ -23,15 +26,13 @@ const TITLE = "Group rows by";
 const OTHER_FIELDS_LABEL = "Any other field…";
 const DEFAULT_DATA_CY = "dashboard-widget-form-group-rows-by";
 
-const SHORTLIST_LABELS: ReadonlyMap<string, string> = new Map(
-  GROUP_BY_SHORTLIST.map((option) => [option.value, option.label])
-);
-
 const OPTION_CLASS =
   "flex justify-start items-center cursor-default text-tremor-default p-2.5 text-tremor-content-emphasis data-[focus]:bg-tremor-background-muted data-[focus]:text-tremor-content-strong data-[selected]:bg-tremor-background-muted data-[selected]:text-tremor-content-strong";
 
 const getOptionLabel = (option: string) =>
-  option === NONE ? NONE_LABEL : (SHORTLIST_LABELS.get(option) ?? option);
+  option === NONE
+    ? NONE_LABEL
+    : (GROUP_BY_SHORTLIST_LABELS.get(option) ?? option);
 
 const matches = (text: string, query: string) =>
   text.toLowerCase().includes(query.toLowerCase());
@@ -66,7 +67,9 @@ export function GroupBySelect({
       fields.add(value);
     }
     return Array.from(fields)
-      .filter((field) => field !== NONE && !SHORTLIST_LABELS.has(field))
+      .filter(
+        (field) => field !== NONE && !GROUP_BY_SHORTLIST_LABELS.has(field)
+      )
       .sort((first, second) => first.localeCompare(second));
   }, [fieldOptions, value]);
 
@@ -104,6 +107,7 @@ export function GroupBySelect({
             autoComplete="off"
             displayValue={getOptionLabel}
             onChange={(event) => setQuery(event.target.value)}
+            onFocus={(event) => event.currentTarget.select()}
             className="w-full truncate rounded-tremor-default border border-tremor-border bg-tremor-background py-2 pl-3 pr-10 text-left text-tremor-default text-tremor-content-emphasis shadow-tremor-input outline-none transition duration-100 placeholder:text-tremor-content hover:bg-tremor-background-muted focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted"
           />
           <ComboboxButton
@@ -115,7 +119,7 @@ export function GroupBySelect({
         </div>
         <ComboboxOptions
           anchor="bottom start"
-          className="z-10 w-[var(--input-width)] max-h-[228px] divide-y divide-tremor-border overflow-y-auto rounded-tremor-default border border-tremor-border bg-tremor-background text-tremor-default shadow-tremor-dropdown outline-none [--anchor-gap:4px]"
+          className="z-[60] w-[var(--input-width)] max-h-[228px] divide-y divide-tremor-border overflow-y-auto rounded-tremor-default border border-tremor-border bg-tremor-background text-tremor-default shadow-tremor-dropdown outline-none [--anchor-gap:4px]"
         >
           {showNone && <Option value={NONE} label={NONE_LABEL} />}
           {shortlist.map((option) => (
@@ -126,7 +130,12 @@ export function GroupBySelect({
             />
           ))}
           {hasTopOptions && others.length > 0 && (
-            <div role="separator" className="h-1 bg-tremor-background-muted" />
+            <div
+              role="presentation"
+              aria-hidden="true"
+              className="h-1 bg-tremor-background-muted"
+              data-cy="group-by-select-divider"
+            />
           )}
           {others.length > 0 && (
             <div

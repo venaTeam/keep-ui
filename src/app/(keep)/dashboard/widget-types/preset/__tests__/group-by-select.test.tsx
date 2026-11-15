@@ -1,5 +1,6 @@
 import React from "react";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { GROUP_BY_SHORTLIST_LABELS } from "@/widgets/alerts-table/lib/alert-column-options";
 import { GroupBySelect } from "../group-by-select";
 
 const FIELDS = ["labels.region", "labels.team", "name", "service", "status"];
@@ -63,7 +64,12 @@ describe("GroupBySelect", () => {
 
     const listbox = await open();
 
-    expect(within(listbox).getByRole("separator")).toBeInTheDocument();
+    expect(within(listbox).queryByRole("separator")).toBeNull();
+    const divider = listbox.querySelector(
+      '[data-cy="group-by-select-divider"]'
+    );
+    expect(divider).toHaveAttribute("role", "presentation");
+    expect(divider).toHaveAttribute("aria-hidden", "true");
     const others = within(listbox).getByRole("group", {
       name: "Any other field…",
     });
@@ -82,6 +88,35 @@ describe("GroupBySelect", () => {
 
     choose(await open(), "None");
     expect(onChange).toHaveBeenLastCalledWith(null);
+  });
+
+  it("ArrowDown and Enter pick an option from the keyboard", async () => {
+    const { onChange } = setup();
+
+    act(() => input().focus());
+    await screen.findByRole("listbox");
+    fireEvent.keyDown(input(), { key: "ArrowDown" });
+    fireEvent.keyDown(input(), { key: "Enter" });
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith("incident");
+  });
+
+  it("selects the shown value on focus so typing replaces it", async () => {
+    setup({ value: "service" });
+
+    act(() => input().focus());
+    await screen.findByRole("listbox");
+
+    const field = input() as HTMLInputElement;
+    expect(field.selectionStart).toBe(0);
+    expect(field.selectionEnd).toBe("Service".length);
+  });
+
+  it("takes its labels from the shared shortlist", () => {
+    setup({ value: "site" });
+
+    expect(input()).toHaveValue(GROUP_BY_SHORTLIST_LABELS.get("site"));
   });
 
   it("searching shows matching non-shortlist fields", async () => {

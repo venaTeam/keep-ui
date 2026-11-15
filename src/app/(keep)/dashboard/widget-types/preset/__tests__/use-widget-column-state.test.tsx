@@ -398,6 +398,34 @@ describe("useWidgetColumnState", () => {
       expect(onChange.mock.calls[0][0].alertTable.groupBy).toBeNull();
     });
 
+    it("clearing the grouping of a widget with no saved grouping emits nothing", () => {
+      const onChange = jest.fn();
+      const { result } = renderHook(() =>
+        useWidgetColumnState({
+          item: baseItem,
+          allColumnIds: ["name", "service"],
+          onChange,
+        })
+      );
+      act(() => result.current.setGrouping([]));
+      expect(onChange).not.toHaveBeenCalled();
+      expect(result.current.isCustomized).toBe(false);
+    });
+
+    it("choosing the grouping the widget already has emits nothing", () => {
+      const onChange = jest.fn();
+      const item = { ...baseItem, alertTable: { groupBy: "service" } };
+      const { result } = renderHook(() =>
+        useWidgetColumnState({
+          item,
+          allColumnIds: ["name", "service"],
+          onChange,
+        })
+      );
+      act(() => result.current.setGrouping(["service"]));
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
     it("resolves a grouping updater against the current grouping", () => {
       const onChange = jest.fn();
       const item = { ...baseItem, alertTable: { groupBy: "service" } };

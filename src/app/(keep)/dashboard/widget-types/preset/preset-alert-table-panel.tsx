@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Preset } from "@/entities/presets/model/types";
 import {
   usePresetAlertCount,
@@ -63,6 +63,7 @@ const PresetAlertTablePanel: React.FC<PresetAlertTablePanelProps> = ({
 }) => {
   const router = useRouter();
   const isEditMode = useDashboardEditMode();
+  const [settingsSlot, setSettingsSlot] = useState<HTMLDivElement | null>(null);
   const countOfLastAlerts = getCountOfLastAlerts(item);
   const {
     alerts,
@@ -258,7 +259,8 @@ const PresetAlertTablePanel: React.FC<PresetAlertTablePanelProps> = ({
           {renderMissingLine()}
           {renderAlertsCountText()}
         </div>
-        <div className="flex items-center">
+        <div className="flex items-center gap-1.5">
+          {isEditMode && <div ref={setSettingsSlot} className="contents" />}
           <Button
             color="orange"
             variant="secondary"
@@ -279,6 +281,7 @@ const PresetAlertTablePanel: React.FC<PresetAlertTablePanelProps> = ({
           presetNoisy={!!preset?.is_noisy}
           isEditMode={isEditMode}
           onChange={isEditMode ? onSave : undefined}
+          settingsSlot={settingsSlot}
           alerts={isLoading ? undefined : alerts}
           background={
             isLoading || (countBy && isGroupLoading)

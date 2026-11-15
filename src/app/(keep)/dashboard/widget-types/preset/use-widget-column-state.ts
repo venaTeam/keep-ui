@@ -64,9 +64,11 @@ function resolveUpdater<T>(updater: Updater<T>, current: T): T {
  * Nothing is read from the viewer's browser, so every viewer sees the same table.
  *
  * Setters pass the whole next widget to `onChange` and build on the latest widget
- * they emitted, so several calls in one tick compose. Without `onChange` the
- * setters do nothing and `canEdit` is false. Pass a memoized `allColumnIds` to
- * keep the setters stable between renders.
+ * they emitted, so several calls in one tick compose. A grouping equal to the
+ * saved one emits nothing, so clearing an ungrouped widget does not mark it
+ * customized. Without `onChange` the setters do nothing and `canEdit` is
+ * false. Pass a memoized `allColumnIds` to keep the setters stable between
+ * renders.
  */
 export function useWidgetColumnState({
   item,
@@ -152,7 +154,11 @@ export function useWidgetColumnState({
         updater,
         getGrouping(latestItem.current, allColumnIds)
       );
-      emit({ groupBy: next[0] ?? null });
+      const groupBy = next[0] ?? null;
+      if (groupBy === (latestItem.current.alertTable?.groupBy ?? null)) {
+        return;
+      }
+      emit({ groupBy });
     },
     [emit, allColumnIds]
   );

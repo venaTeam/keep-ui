@@ -40,6 +40,11 @@ jest.mock("@/entities/presets/model", () => ({
     mockUsePresetColumnState(...args),
 }));
 
+jest.mock("@/features/filter/hooks", () => ({
+  ...jest.requireActual("@/features/filter/hooks"),
+  useFacetPotentialFields: () => ({ data: ["labels.region"] }),
+}));
+
 jest.mock("@/utils/hooks/useProviders", () => ({
   useProviders: () => ({ data: undefined }),
 }));
@@ -474,24 +479,25 @@ describe("WidgetAlertsTable", () => {
 
   it("a header drag writes the full order with only the visible columns moved", async () => {
     const onChange = jest.fn();
-    let fullOrderBefore: string[] = [];
-    let visibilityBefore: Record<string, boolean> = {};
+    const savedOrder = [
+      "severity",
+      "source",
+      "status",
+      "name",
+      "environment",
+      "description",
+      "lastReceived",
+    ];
     render(
       <WidgetAlertsTable
-        item={baseItem}
+        item={{ ...baseItem, alertTable: { columnOrder: savedOrder } }}
         presetName="atw"
         alerts={[alertWith(), alertWith()]}
         isEditMode
         onChange={onChange}
-        renderToolbar={({ state }) => {
-          fullOrderBefore = state.columnOrder;
-          visibilityBefore = state.columnVisibility;
-          return null;
-        }}
       />
     );
-    expect(fullOrderBefore).toContain("environment");
-    expect(visibilityBefore.environment).toBe(false);
+    expect(headerIds()).not.toContain("environment");
 
     await act(async () => {
       await mockDndContextProps.onDragEnd!({
@@ -502,20 +508,17 @@ describe("WidgetAlertsTable", () => {
 
     expect(onChange).toHaveBeenCalledTimes(1);
     const order: string[] = onChange.mock.calls[0][0].alertTable.columnOrder;
-    expect([...order].sort()).toEqual([...fullOrderBefore].sort());
-    expect(order.filter((id) => visibilityBefore[id])).toEqual([
+    expect(order.slice(0, savedOrder.length)).toEqual([
       "severity",
       "source",
       "status",
       "lastReceived",
+      "environment",
       "name",
       "description",
     ]);
-    fullOrderBefore.forEach((id, index) => {
-      if (!visibilityBefore[id]) {
-        expect(order[index]).toBe(id);
-      }
-    });
+    expect(order).toContain("incident");
+    expect(new Set(order).size).toBe(order.length);
   });
 
   it("shows the grouping chip with a clear button only in edit mode", () => {
@@ -747,28 +750,105 @@ describe("WidgetAlertsTable", () => {
     expect(bodyRows()).toHaveLength(0);
   });
 
-  it("passes the widget state and column ids to renderToolbar", () => {
-    const renderToolbar = jest.fn(() => <span>toolbar</span>);
-    render(
-      <WidgetAlertsTable
-        item={{ ...baseItem, presetColumns: ["name"] }}
-        presetName="atw"
-        alerts={[alertWith({ service: "checkout" })]}
-        isEditMode
-        onChange={jest.fn()}
-        renderToolbar={renderToolbar}
-      />
-    );
+  describe("⚙ table settings", () => {
+    let slot: HTMLDivElement;
 
-    expect(screen.getByText("toolbar")).toBeInTheDocument();
-    const [{ state, columnIds }] = renderToolbar.mock.calls.at(-1) as unknown as [
-      { state: { visibleColumns: string[]; canEdit: boolean }; columnIds: string[] },
-    ];
-    expect(state.visibleColumns).toEqual(["name"]);
-    expect(state.canEdit).toBe(true);
-    expect(columnIds).toEqual(expect.arrayContaining(["name", "service", "incident"]));
-    expect(columnIds).not.toContain("checkbox");
-    expect(columnIds).not.toContain("alertMenu");
+    beforeEach(() => {
+      slot = document.createElement("div");
+      document.body.appendChild(slot);
+    });
+
+    afterEach(() => slot.remove());
+
+    const settingsButton = () =>
+      document.querySelector('[data-cy="dashboard-widget-table-settings-btn"]');
+
+    const renderWithSlot = (
+      item: Partial<WidgetData>,
+      options: WidgetOptions,
+      alerts: AlertDto[] = [alertWith({ service: "checkout" })]
+    ) =>
+      render(
+        <WidgetAlertsTable
+          item={{ ...baseItem, ...item }}
+          presetName="atw"
+          alerts={alerts}
+          isEditMode={options.isEditMode ?? false}
+          onChange={options.onChange}
+          settingsSlot={slot}
+        />
+      );
+
+    it("renders the ⚙ button into the settings slot only when editing", () => {
+      const { unmount } = renderWithSlot({}, { isEditMode: false });
+      expect(settingsButton()).toBeNull();
+      unmount();
+
+      const view = renderWithSlot({}, { isEditMode: true });
+      expect(settingsButton()).toBeNull();
+      view.unmount();
+
+      const { container } = renderWithSlot(
+        {},
+        { isEditMode: true, onChange: jest.fn() }
+      );
+      expect(slot).toContainElement(settingsButton() as HTMLElement);
+      expect(container).not.toContainElement(settingsButton() as HTMLElement);
+    });
+
+    it("stays available on a narrow widget", () => {
+      observeWidth(300);
+      renderWithSlot({}, { isEditMode: true, onChange: jest.fn() });
+
+      expect(screen.queryByTestId("drag-handle-name")).toBeNull();
+      expect(slot).toContainElement(settingsButton() as HTMLElement);
+    });
+
+    it("lists the widget's generated columns and writes through the widget store", () => {
+      const onChange = jest.fn();
+      renderWithSlot(
+        { presetColumns: ["name", "description"] },
+        { isEditMode: true, onChange }
+      );
+
+      fireEvent.click(settingsButton() as HTMLElement);
+      expect(
+        screen.getByRole("checkbox", { name: "Service" })
+      ).not.toBeChecked();
+      expect(
+        screen.queryByRole("checkbox", { name: "Checkbox" })
+      ).toBeNull();
+      fireEvent.click(screen.getByRole("checkbox", { name: "Description" }));
+
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange.mock.calls[0][0].presetColumns).toEqual(["name"]);
+    });
+
+    it("Reset to defaults emits one change that drops the widget's settings", () => {
+      const onChange = jest.fn();
+      renderWithSlot(
+        {
+          presetColumns: ["name"],
+          alertTable: { groupBy: "service", columnRenameMapping: { name: "T" } },
+        },
+        { isEditMode: true, onChange }
+      );
+
+      fireEvent.click(settingsButton() as HTMLElement);
+      fireEvent.click(screen.getByRole("button", { name: "Reset to defaults" }));
+
+      expect(onChange).toHaveBeenCalledTimes(1);
+      const next: WidgetData = onChange.mock.calls[0][0];
+      expect(next.presetColumns).toBeUndefined();
+      expect(next.alertTable).toBeUndefined();
+      expect(next.name).toBe("Feed");
+    });
+  });
+
+  it("contains the pinned cells' stacking inside the table", () => {
+    renderWidget();
+
+    expect(widgetRoot()).toHaveClass("isolate");
   });
 
   it("never reads the preset's per-user column state", () => {

@@ -424,6 +424,20 @@ describe("PresetAlertTablePanel in dashboard edit mode", () => {
     );
   });
 
+  it("in edit mode gives the table a settings slot right before Go to preset", () => {
+    renderInMode(true, { onSave: jest.fn() });
+
+    const slot = mockLastTableProps?.settingsSlot as HTMLElement;
+    expect(slot).toBeInstanceOf(HTMLElement);
+    expect(slot.nextElementSibling).toBe(goToPreset());
+  });
+
+  it("gives the table no settings slot in view mode", () => {
+    renderInMode(false);
+
+    expect(mockLastTableProps?.settingsSlot ?? null).toBeNull();
+  });
+
   it("gives the table the widget, the preset id and whether the preset is noisy", () => {
     const item = buildItem();
     render(

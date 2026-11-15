@@ -1,6 +1,5 @@
 import React, {
   CSSProperties,
-  ReactNode,
   RefObject,
   useCallback,
   useEffect,
@@ -8,6 +7,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import {
   ColumnDef,
   ColumnPinningState,
@@ -31,16 +31,8 @@ import {
 } from "./alert-table-widget-config";
 import { withEmptyGroupPosition } from "./empty-group-row-model";
 import { useWidgetAlertColumns } from "./use-widget-alert-columns";
-import {
-  WidgetColumnState,
-  useWidgetColumnState,
-} from "./use-widget-column-state";
-
-/** What `renderToolbar` receives: the widget's column state and every column id it can show. */
-export interface WidgetAlertsTableToolbarContext {
-  state: WidgetColumnState;
-  columnIds: string[];
-}
+import { useWidgetColumnState } from "./use-widget-column-state";
+import { WidgetTableSettings } from "./widget-table-settings";
 
 interface WidgetAlertsTableProps {
   item: WidgetData;
@@ -51,7 +43,7 @@ interface WidgetAlertsTableProps {
   background?: string;
   isEditMode: boolean;
   onChange?: (item: WidgetData) => void;
-  renderToolbar?: (context: WidgetAlertsTableToolbarContext) => ReactNode;
+  settingsSlot?: HTMLElement | null;
 }
 
 const NO_ALERTS: AlertDto[] = [];
@@ -120,7 +112,7 @@ function WidgetAlertsTableContent({
   background,
   isEditMode,
   onChange,
-  renderToolbar,
+  settingsSlot,
 }: WidgetAlertsTableProps) {
   const widgetKey = `dashboard-widget-${item.i}`;
   const rootRef = useRef<HTMLDivElement>(null);
@@ -208,49 +200,51 @@ function WidgetAlertsTableContent({
     [renames]
   );
 
+  const ungroupableColumnIds = useMemo(
+    () =>
+      columns
+        .filter((column) => !isGroupable(column))
+        .map((column) => column.id as string),
+    [columns]
+  );
+
   const groupedBy = grouping[0];
-  const toolbar = renderToolbar?.({ state, columnIds: allColumnIds });
   const opaqueBackground = background
     ? `linear-gradient(${background}, ${background}), #fff`
     : "#fff";
 
   return (
     <div ref={rootRef} className="flex flex-col gap-1">
-      {(groupedBy || toolbar) && (
+      {groupedBy && (
         <div
           className="flex items-center gap-2 text-xs"
           data-cy="dashboard-widget-alerts-table-toolbar"
         >
-          {groupedBy && (
-            <>
-              <span
-                className="inline-flex items-center gap-1 rounded-full border border-orange-300 bg-orange-50 px-2 py-0.5 text-orange-800"
-                data-cy="dashboard-widget-alerts-table-grouping"
-              >
-                Rows grouped by {labelOf(groupedBy)}
-                {isEditMode && state.canEdit && (
-                  <button
-                    type="button"
-                    aria-label="Clear grouping"
-                    className="text-orange-700 hover:text-orange-900"
-                    onClick={() => state.setGrouping([])}
-                  >
-                    <XMarkIcon className="h-3 w-3" />
-                  </button>
-                )}
-              </span>
+          <span
+            className="inline-flex items-center gap-1 rounded-full border border-orange-300 bg-orange-50 px-2 py-0.5 text-orange-800"
+            data-cy="dashboard-widget-alerts-table-grouping"
+          >
+            Rows grouped by {labelOf(groupedBy)}
+            {isEditMode && state.canEdit && (
               <button
                 type="button"
-                className="text-orange-700 hover:underline"
-                onClick={groupExpansion.toggleAll}
+                aria-label="Clear grouping"
+                className="text-orange-700 hover:text-orange-900"
+                onClick={() => state.setGrouping([])}
               >
-                {groupExpansion.areAllGroupsExpanded()
-                  ? "Collapse all"
-                  : "Expand all"}
+                <XMarkIcon className="h-3 w-3" />
               </button>
-            </>
-          )}
-          {toolbar && <div className="ml-auto">{toolbar}</div>}
+            )}
+          </span>
+          <button
+            type="button"
+            className="text-orange-700 hover:underline"
+            onClick={groupExpansion.toggleAll}
+          >
+            {groupExpansion.areAllGroupsExpanded()
+              ? "Collapse all"
+              : "Expand all"}
+          </button>
         </div>
       )}
       <div
@@ -261,7 +255,7 @@ function WidgetAlertsTableContent({
             "--widget-opaque-bg": opaqueBackground,
           } as CSSProperties
         }
-        className={`max-w-full overflow-x-auto border rounded-md text-xs ${OPAQUE_CELL_CLASSES} ${COMPACT_GROUP_HEADER_CLASSES}`}
+        className={`isolate max-w-full overflow-x-auto border rounded-md text-xs ${OPAQUE_CELL_CLASSES} ${COMPACT_GROUP_HEADER_CLASSES}`}
         data-cy="dashboard-widget-alerts-table"
       >
         <Table className="[&>table]:table-fixed [&>table]:w-full [&>table]:text-xs">
@@ -302,6 +296,17 @@ function WidgetAlertsTableContent({
         </Table>
         <div ref={a11yContainerRef} className="sr-only" />
       </div>
+      {isEditMode &&
+        state.canEdit &&
+        settingsSlot &&
+        createPortal(
+          <WidgetTableSettings
+            state={state}
+            columnIds={allColumnIds}
+            ungroupableColumnIds={ungroupableColumnIds}
+          />,
+          settingsSlot
+        )}
     </div>
   );
 }
@@ -313,7 +318,8 @@ function WidgetAlertsTableContent({
  *
  * Header controls show only in edit mode with `onChange`, and not on a narrow
  * widget. Rows are plain, not clickable and always at the default density.
- * `renderToolbar` renders next to the grouping chip with the same column state.
+ * In edit mode with `onChange`, the ⚙ Table settings button is rendered into
+ * `settingsSlot` (an element the caller places in its header), at every width.
  *
  * In edit mode no link inside the widget navigates. A capture listener on
  * `window` cancels the click before the dashboard's leave guard (a capture
