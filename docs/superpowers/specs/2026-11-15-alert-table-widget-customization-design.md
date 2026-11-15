@@ -398,6 +398,15 @@ Measure the widget's width (a container query or `ResizeObserver`). Below the bu
 5. **Several changes at once.** `handleSaveEdit` replaces the whole widget. Multi-key changes (Reset, hide-and-reorder) go out in one `onSave` call, and the store's setters always build on the latest emitted widget, so two changes in one tick both survive.
 6. **Tests.** `GridItem.test.tsx` currently asserts that an Alert Table is inert in edit mode. That assertion flips with this change.
 
+## Coexistence with the Count feature (user requirement, 2026-11-15)
+
+The Alert Table and Alert Count widgets already have **Count** (`countBy`: Alerts / Incidents / Other field, the "+N alerts not in an incident" line, and blink). This feature must not collide with it.
+
+- **Separate settings:** the two settings are independent. Row grouping lives in `alertTable.groupBy`, and `countBy` is never read or written.
+- **Modal labels:** the new control reads **"Group rows by"**, with **"Rows with no value"** (Top/Bottom) beneath it. Both show only for Alert Table, after Columns. The Count control is unchanged: same place, labels, test ids and tests. The chip above the table reads "Rows grouped by <label>".
+- **Shared field list:** the Group rows by shortlist reuses the Count control's field ids and labels (`COUNT_BY_ALERT_FIELD_OPTIONS`): Incident, Alert name, Service, Host, Application, Site, Assignee, then Source and Status.
+- **"Shown" counts:** in the widget, group headers count what is shown ("<n> shown", "No incident · <n> shown"). They can't be confused with the Count line's whole-preset numbers.
+
 ## What's left to the builder
 
 - The narrow-widget threshold, and how width is measured.
