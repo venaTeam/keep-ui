@@ -40,7 +40,8 @@ const alert = (
 
 const alerts = [
   alert("ring", "critical", "firing"),
-  alert("ring-numeric", 5, "firing"),
+  alert("numeric", 5, "firing"),
+  alert("upper-case", "CRITICAL", "FIRING"),
   alert("resolved", "critical", "resolved"),
   alert("high", "high", "firing"),
   { ...alert("deleted", "critical", "firing"), deleted: true } as AlertDto,
@@ -124,10 +125,10 @@ afterEach(() => {
 });
 
 describe("AlertsTableBody ringing rows", () => {
-  it("rings critical firing rows of a noisy preset, word or numeric severity", async () => {
+  it("rings the critical firing row of a noisy preset", async () => {
     const { container } = await renderHarness({ presetNoisy: true });
 
-    for (const fingerprint of ["ring", "ring-numeric"]) {
+    for (const fingerprint of ["ring"]) {
       const row = rowOf(container, fingerprint);
       expect(row).toHaveAttribute("data-ringing", "true");
       expect(row).toHaveClass(BLINK, STEADY);
@@ -142,7 +143,7 @@ describe("AlertsTableBody ringing rows", () => {
   it("leaves every other row as it was", async () => {
     const { container } = await renderHarness({ presetNoisy: true });
 
-    for (const fingerprint of ["resolved", "high"]) {
+    for (const fingerprint of ["resolved", "high", "numeric", "upper-case"]) {
       const row = rowOf(container, fingerprint);
       expect(row).not.toHaveAttribute("data-ringing");
       expect(row).not.toHaveClass(BLINK);
@@ -199,10 +200,7 @@ describe("AlertsTableBody ringing rows", () => {
     ).not.toBeNull();
     expect(rowOf(container, "ring")).toHaveAttribute("data-ringing", "true");
     expect(rowOf(container, "ring")).toHaveClass(BLINK);
-    expect(rowOf(container, "ring-numeric")).toHaveAttribute(
-      "data-ringing",
-      "true"
-    );
+    expect(rowOf(container, "numeric")).not.toHaveAttribute("data-ringing");
     expect(within(rowOf(container, "ring")).getByText(RINGING_REASON)).toBeInTheDocument();
     expect(rowOf(container, "high")).not.toHaveAttribute("data-ringing");
     expect(
@@ -230,7 +228,6 @@ describe("AlertsTableBody ringing rows", () => {
     const { container } = await renderHarness({ presetNoisy: true });
 
     expect(synced).toContain(rowOf(container, "ring"));
-    expect(synced).toContain(rowOf(container, "ring-numeric"));
     expect(synced).not.toContain(rowOf(container, "high"));
   });
 });

@@ -27,28 +27,29 @@ describe("isAlertRinging", () => {
     ["the severity is high", { ...critical, severity: "high" }, true],
     ["the severity is missing", { status: "firing" }, true],
     ["the status is resolved", { ...critical, status: "resolved" }, true],
-    ["the status is acknowledged", { ...critical, status: "acknowledged" }, true],
+    [
+      "the status is acknowledged",
+      { ...critical, status: "acknowledged" },
+      true,
+    ],
     ["the status is missing", { severity: "critical" }, true],
-    ["the numeric severity is high", { ...critical, severity: 4 }, true],
     ["the alert is deleted", { ...critical, deleted: true }, true],
   ])("stays quiet when %s", (_name, alert, presetNoisy) => {
     expect(isAlertRinging(alert, presetNoisy)).toBe(false);
   });
 
-  it.each<[string, unknown]>([
-    ["the numeric value", 5],
-    ["the numeric value as a string", "5"],
-    ["the word in upper case", "CRITICAL"],
-  ])("counts %s as critical", (_name, severity) => {
-    expect(isAlertRinging({ ...critical, severity }, true)).toBe(true);
+  it.each<[string, { severity?: unknown; status?: unknown }]>([
+    ["a numeric critical severity", { ...critical, severity: 5 }],
+    ["a numeric critical severity as a string", { ...critical, severity: "5" }],
+    ["the severity in upper case", { ...critical, severity: "CRITICAL" }],
+    ["the severity in title case", { ...critical, severity: "Critical" }],
+    ["the status in upper case", { ...critical, status: "FIRING" }],
+  ])("matches NOISE_BASE_CEL exactly, so stays quiet on %s", (_name, alert) => {
+    expect(isAlertRinging(alert, true)).toBe(false);
   });
 
   it("rings an alert that is explicitly not deleted", () => {
     expect(isAlertRinging({ ...critical, deleted: false }, true)).toBe(true);
-  });
-
-  it("accepts the status in any case", () => {
-    expect(isAlertRinging({ ...critical, status: "FIRING" }, true)).toBe(true);
   });
 
   it("stays quiet without an alert", () => {
@@ -82,9 +83,7 @@ describe("getRingingProps", () => {
         "motion-reduce:text-[color:var(--blink-soft-text)]",
       ])
     );
-    expect(
-      classes.filter((name) => !name.startsWith("motion-"))
-    ).toEqual([]);
+    expect(classes.filter((name) => !name.startsWith("motion-"))).toEqual([]);
   });
 
   it("lets a ringing row's cells paint the row's pulse", () => {

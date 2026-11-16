@@ -1,9 +1,5 @@
 import React, { type CSSProperties } from "react";
-import {
-  Severity,
-  Status,
-  severityMapping,
-} from "@/entities/alerts/model/types";
+import { Severity, Status } from "@/entities/alerts/model/types";
 import {
   DEFAULT_BLINK_COLOR,
   getRowBlinkStyle,
@@ -33,16 +29,15 @@ type RingingProps = {
   "data-ringing"?: "true";
 };
 
-const isWord = (value: unknown, word: string) =>
-  typeof value === "string" && value.toLowerCase() === word;
-
 /**
  * Whether an alert's row rings: the table's preset is noisy and the alert is
  * one that makes the preset's alarm sound, i.e. it matches `NOISE_BASE_CEL`
  * in `features/presets/custom-preset-links/ui/PresetsNoise.tsx`
  * (`status == 'firing' && deleted == false && severity == 'critical'`).
- * Keep the two in step. Critical is the word in any case or the numeric
- * severity `severityMapping` maps to it; only `deleted === true` counts as
+ * Keep the two in step. The match is exact and case-sensitive, like the
+ * alarm's: the gateway's `POST /alerts/query` sends severity and status as
+ * the lowercase words of its enums, never numbers, and the alarm compares
+ * the stored lowercase values with `=`. Only `deleted === true` counts as
  * deleted.
  */
 export function isAlertRinging(
@@ -52,12 +47,11 @@ export function isAlertRinging(
     | undefined,
   presetNoisy?: boolean
 ): boolean {
-  if (!presetNoisy || !alert || alert.deleted === true) {
-    return false;
-  }
-  const severity = severityMapping[Number(alert.severity)] ?? alert.severity;
   return (
-    isWord(severity, Severity.Critical) && isWord(alert.status, Status.Firing)
+    !!presetNoisy &&
+    alert?.severity === Severity.Critical &&
+    alert.status === Status.Firing &&
+    alert.deleted !== true
   );
 }
 

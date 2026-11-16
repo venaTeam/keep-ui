@@ -43,7 +43,6 @@ describe("WidgetAlertsTable ringing rows", () => {
   const columns = ["status", "name", "description"];
   const alerts = [
     { name: "ring", severity: "critical", status: "firing" },
-    { name: "ring-numeric", severity: 5, status: "firing" },
     { name: "quiet-resolved", severity: "critical", status: "resolved" },
     { name: "quiet-high", severity: "high", status: "firing" },
     {
@@ -52,6 +51,8 @@ describe("WidgetAlertsTable ringing rows", () => {
       status: "firing",
       deleted: true,
     },
+    { name: "quiet-numeric", severity: 5, status: "firing" },
+    { name: "quiet-upper-case", severity: "CRITICAL", status: "FIRING" },
   ];
 
   const renderTable = (presetNoisy?: boolean) =>
@@ -78,7 +79,7 @@ describe("WidgetAlertsTable ringing rows", () => {
   it("gives every cell of a critical firing row the pulse in a noisy preset", () => {
     const { container } = renderTable(true);
 
-    for (const rowIndex of [0, 1]) {
+    for (const rowIndex of [0]) {
       const cells = cellsOfRow(container, rowIndex);
       expect(cells).toHaveLength(columns.length);
       cells.forEach((cell) => {
@@ -88,7 +89,7 @@ describe("WidgetAlertsTable ringing rows", () => {
       });
       expect(cells[0]).toHaveTextContent(RINGING_REASON);
     }
-    expect(screen.getAllByText(RINGING_REASON)).toHaveLength(2);
+    expect(screen.getAllByText(RINGING_REASON)).toHaveLength(1);
     screen
       .getAllByText(RINGING_REASON)
       .forEach((reason) => expect(reason).toHaveClass("sr-only"));
@@ -97,7 +98,7 @@ describe("WidgetAlertsTable ringing rows", () => {
   it("leaves the other rows as they were", () => {
     const { container } = renderTable(true);
 
-    for (const rowIndex of [2, 3]) {
+    for (const rowIndex of [1, 2, 4, 5]) {
       cellsOfRow(container, rowIndex).forEach((cell) => {
         expect(cell).not.toHaveClass(BLINK);
         expect(cell).not.toHaveAttribute("data-ringing");
@@ -109,11 +110,11 @@ describe("WidgetAlertsTable ringing rows", () => {
   it("does not ring a deleted critical firing alert", () => {
     const { container } = renderTable(true);
 
-    cellsOfRow(container, 4).forEach((cell) => {
+    cellsOfRow(container, 3).forEach((cell) => {
       expect(cell).not.toHaveClass(BLINK);
       expect(cell).not.toHaveAttribute("data-ringing");
     });
-    expect(screen.getAllByText(RINGING_REASON)).toHaveLength(2);
+    expect(screen.getAllByText(RINGING_REASON)).toHaveLength(1);
   });
 
   it.each([false, undefined])(
@@ -149,12 +150,9 @@ describe("WidgetAlertsTable ringing rows", () => {
     const { container } = renderTable(true);
 
     expect(synced).toEqual(
-      expect.arrayContaining([
-        ...cellsOfRow(container, 0),
-        ...cellsOfRow(container, 1),
-      ])
+      expect.arrayContaining(cellsOfRow(container, 0))
     );
-    cellsOfRow(container, 3).forEach((cell) =>
+    cellsOfRow(container, 2).forEach((cell) =>
       expect(synced).not.toContain(cell)
     );
   });
