@@ -433,4 +433,32 @@ describe("AlertsTableBody shared edges between ringing rows", () => {
       DROP_TOP
     );
   });
+
+  it("lets a quiet collapsed group header break the run, so the next ringing header keeps its top edge", async () => {
+    const groups = [
+      alert("api-ring", "critical", "firing", "api"),
+      alert("db-quiet", "high", "firing", "db"),
+      alert("web-ring", "critical", "firing", "web"),
+    ];
+    const { container } = await renderHarness({
+      data: groups,
+      presetNoisy: true,
+      grouping: ["service"],
+    });
+
+    for (const service of ["db", "web"]) {
+      await act(async () => {
+        fireEvent.click(groupHeaderOf(container, service));
+      });
+    }
+
+    const db = groupHeaderOf(container, "db");
+    const web = groupHeaderOf(container, "web");
+    expect(rowOf(container, "api-ring").nextElementSibling).toBe(db);
+    expect(db.nextElementSibling).toBe(web);
+    expect(db).not.toHaveAttribute("data-ringing");
+    expect(web).toHaveAttribute("data-ringing", "true");
+    expect(joined(web)).toBe(false);
+    expect(joined(db)).toBe(false);
+  });
 });
