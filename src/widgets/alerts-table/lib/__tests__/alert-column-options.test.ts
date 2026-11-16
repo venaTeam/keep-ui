@@ -4,6 +4,7 @@ import {
   GROUP_BY_SHORTLIST,
   getAlertColumnOptions,
   getColumnLabel,
+  matchesSearch,
 } from "../alert-column-options";
 
 describe("getAlertColumnOptions", () => {
@@ -121,4 +122,16 @@ describe("COMMON_ENRICHMENT_FIELDS", () => {
       "on_call_engineer",
       "alert_enrichment",
     ]));
+});
+
+describe("matchesSearch", () => {
+  it("matches a case-insensitive substring", () => {
+    expect(matchesSearch("labels.Team", "team")).toBe(true);
+    expect(matchesSearch("Service", "SERV")).toBe(true);
+  });
+
+  it("matches everything for an empty query and nothing it does not contain", () => {
+    expect(matchesSearch("service", "")).toBe(true);
+    expect(matchesSearch("service", "host")).toBe(false);
+  });
 });

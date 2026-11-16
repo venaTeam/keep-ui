@@ -3,7 +3,6 @@ import React, {
   ReactNode,
   RefObject,
   forwardRef,
-  useId,
   useMemo,
   useRef,
   useState,
@@ -50,13 +49,14 @@ import {
   COMMON_ENRICHMENT_FIELDS,
   getAlertColumnOptions,
   getColumnLabel,
+  matchesSearch,
 } from "@/widgets/alerts-table/lib/alert-column-options";
 import {
-  EmptyGroupPosition,
   WIDGET_PINNED_LEFT,
   mergeVisibleColumnOrder,
   resolveFieldIds,
 } from "./alert-table-widget-config";
+import { EmptyGroupPositionControl } from "./empty-group-position-control";
 import { GroupBySelect } from "./group-by-select";
 import type { WidgetColumnState } from "./use-widget-column-state";
 
@@ -84,10 +84,6 @@ interface WidgetTableSettingsProps {
 
 const NO_FIELDS: string[] = [];
 const anyColumn = () => true;
-const EMPTY_GROUP_POSITIONS: { value: EmptyGroupPosition; label: string }[] = [
-  { value: "top", label: "Top" },
-  { value: "bottom", label: "Bottom" },
-];
 const SECTION_TITLE_CLASS =
   "mb-1 mt-3 text-[10px] font-semibold uppercase tracking-wide text-gray-500";
 const ICON_BUTTON_CLASS =
@@ -96,9 +92,6 @@ const TEXT_BUTTON_CLASS =
   "rounded px-1 py-0.5 text-orange-600 hover:bg-orange-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-300";
 
 const isPinned = (id: string) => WIDGET_PINNED_LEFT.includes(id);
-
-const matches = (text: string, query: string) =>
-  text.toLowerCase().includes(query.toLowerCase());
 
 function useFieldOptions(columnIds: string[]): string[] {
   const { data } = useFacetPotentialFields("alerts");
@@ -549,7 +542,7 @@ function AddColumnSearch({
   const search = query.trim();
   const results = search
     ? fieldOptions.filter(
-        (id) => !state.columnVisibility[id] && matches(id, search)
+        (id) => !state.columnVisibility[id] && matchesSearch(id, search)
       )
     : [];
 
@@ -597,34 +590,6 @@ function AddColumnSearch({
   );
 }
 
-function EmptyGroupPositionSetting({ state }: { state: WidgetColumnState }) {
-  const name = useId();
-
-  return (
-    <fieldset>
-      <legend className={SECTION_TITLE_CLASS}>Rows with no value</legend>
-      <div className="flex gap-3">
-        {EMPTY_GROUP_POSITIONS.map((option) => (
-          <label
-            key={option.value}
-            className="flex cursor-pointer items-center gap-1"
-          >
-            <input
-              type="radio"
-              name={name}
-              value={option.value}
-              checked={state.emptyGroupPosition === option.value}
-              onChange={() => state.setEmptyGroupPosition(option.value)}
-              className="border-gray-300 text-orange-500 accent-orange-500 focus:ring-orange-300"
-            />
-            {option.label}
-          </label>
-        ))}
-      </div>
-    </fieldset>
-  );
-}
-
 function SettingsContent({
   state,
   columnIds,
@@ -661,7 +626,13 @@ function SettingsContent({
         isGroupable={isGroupable}
         data-cy="dashboard-widget-table-settings-group-by"
       />
-      {groupBy && <EmptyGroupPositionSetting state={state} />}
+      {groupBy && (
+        <EmptyGroupPositionControl
+          value={state.emptyGroupPosition}
+          onChange={state.setEmptyGroupPosition}
+          titleClassName={SECTION_TITLE_CLASS}
+        />
+      )}
       <div className="mt-3 flex items-center gap-2 border-t border-gray-200 pt-2">
         {state.isCustomized && (
           <span className="text-gray-500">Customized for this widget</span>

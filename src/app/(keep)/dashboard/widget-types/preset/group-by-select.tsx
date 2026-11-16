@@ -10,6 +10,7 @@ import { RiArrowDownSLine } from "react-icons/ri";
 import {
   GROUP_BY_SHORTLIST,
   GROUP_BY_SHORTLIST_LABELS,
+  matchesSearch,
 } from "@/widgets/alerts-table/lib/alert-column-options";
 
 interface GroupBySelectProps {
@@ -34,9 +35,6 @@ const getOptionLabel = (option: string) =>
   option === NONE
     ? NONE_LABEL
     : (GROUP_BY_SHORTLIST_LABELS.get(option) ?? option);
-
-const matches = (text: string, query: string) =>
-  text.toLowerCase().includes(query.toLowerCase());
 
 const anyField = () => true;
 
@@ -85,13 +83,13 @@ export function GroupBySelect({
   }, [fieldOptions, isGroupable, value]);
 
   const search = query.trim();
-  const showNone = matches(NONE_LABEL, search);
+  const showNone = matchesSearch(NONE_LABEL, search);
   const shortlist = GROUP_BY_SHORTLIST.filter(
     (option) =>
       (isGroupable(option.value) || option.value === value) &&
-      (matches(option.label, search) || matches(option.value, search))
+      (matchesSearch(option.label, search) || matchesSearch(option.value, search))
   );
-  const others = otherFields.filter((field) => matches(field, search));
+  const others = otherFields.filter((field) => matchesSearch(field, search));
   const hasTopOptions = showNone || shortlist.length > 0;
 
   const handleChange = (next: string | null) => {

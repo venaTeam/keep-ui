@@ -445,7 +445,9 @@ describe("WidgetTableSettings", () => {
 
     const grouped = renderSettings({ grouping: ["service"] });
     openSettings();
-    expect(screen.getByText("Rows with no value")).toBeInTheDocument();
+    expect(
+      screen.getByRole("radiogroup", { name: "Rows with no value" })
+    ).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "Top" })).toBeChecked();
 
     fireEvent.click(screen.getByRole("radio", { name: "Bottom" }));

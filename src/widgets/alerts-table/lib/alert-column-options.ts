@@ -66,6 +66,11 @@ export const GROUP_BY_SHORTLIST_LABELS: ReadonlyMap<string, string> = new Map(
   GROUP_BY_SHORTLIST.map((option) => [option.value, option.label])
 );
 
+/** Tells whether `text` contains `query`, ignoring case. */
+export function matchesSearch(text: string, query: string): boolean {
+  return text.toLowerCase().includes(query.toLowerCase());
+}
+
 /**
  * Column ids a user can add, show or group by: the table's columns plus the
  * extra fields, de-duplicated, without the checkbox, menu and noise columns,
