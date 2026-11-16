@@ -135,28 +135,6 @@ function getColumnWidths(
   };
 }
 
-function useLinkNavigationBlocked(
-  ref: RefObject<HTMLElement | null>,
-  blocked: boolean
-) {
-  useEffect(() => {
-    if (!blocked) {
-      return;
-    }
-    const blockLink = (event: MouseEvent) => {
-      const anchor =
-        event.target instanceof Element
-          ? event.target.closest("a[href]")
-          : null;
-      if (anchor && ref.current?.contains(anchor)) {
-        event.preventDefault();
-      }
-    };
-    window.addEventListener("click", blockLink, true);
-    return () => window.removeEventListener("click", blockLink, true);
-  }, [ref, blocked]);
-}
-
 function WidgetAlertsTableContent({
   item,
   alerts,
@@ -166,14 +144,12 @@ function WidgetAlertsTableContent({
   settingsSlot,
 }: WidgetAlertsTableProps) {
   const widgetKey = `dashboard-widget-${item.i}`;
-  const rootRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const a11yContainerRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLTableElement>(null);
   const containerWidth = useElementWidth(wrapperRef);
   const borderWidth = useCollapsedBorderWidth(tableRef);
   const isNarrow = containerWidth !== null && containerWidth < NARROW_WIDGET_PX;
-  useLinkNavigationBlocked(rootRef, isEditMode);
 
   const { columns, allColumnIds } = useWidgetAlertColumns({
     item,
@@ -300,7 +276,7 @@ function WidgetAlertsTableContent({
     : "#fff";
 
   return (
-    <div ref={rootRef} className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1">
       {groupedBy && (
         <div
           className="flex items-center gap-2 text-xs"
@@ -388,6 +364,7 @@ function WidgetAlertsTableContent({
             showIncidentDetails
             linksDisabled={isEditMode}
             getColumnLabel={labelOf}
+            inert={isEditMode}
           />
         </Table>
         <div ref={a11yContainerRef} className="sr-only" />
@@ -428,9 +405,11 @@ function WidgetAlertsTableContent({
  * collapsed outer borders add (an incident group's colored edge) is measured
  * and left free, so a table that fits never scrolls.
  *
- * In edit mode no link inside the widget navigates. A capture listener on
- * `window` cancels the click before the dashboard's leave guard (a capture
- * listener on `document`) sees it, so it never asks to discard unsaved changes.
+ * In edit mode the table body is `inert`: none of its links, rows or group
+ * headers can be clicked or focused, so nothing in it navigates or reaches the
+ * dashboard's leave guard as a link click. The headers, the grouping chip,
+ * Expand all / Collapse all and the ⚙ panel (in `settingsSlot`) sit outside it
+ * and keep working; a single group can't be toggled while editing.
  */
 export default function WidgetAlertsTable(props: WidgetAlertsTableProps) {
   return (

@@ -34,6 +34,7 @@ interface Props {
   showIncidentDetails?: boolean;
   linksDisabled?: boolean;
   getColumnLabel?: (columnId: string) => string;
+  inert?: boolean;
 }
 
 export function AlertsTableBody({
@@ -50,6 +51,7 @@ export function AlertsTableBody({
   showIncidentDetails = false,
   linksDisabled = false,
   getColumnLabel,
+  inert,
 }: Props) {
   const [rowStyle] = useAlertRowStyle();
   const { isRowExpanded } = useExpandedRows(presetName);
@@ -128,7 +130,7 @@ export function AlertsTableBody({
 
   if (showSkeleton) {
     return (
-      <TableBody data-cy="alerts-table-body">
+      <TableBody data-cy="alerts-table-body" inert={inert}>
         {Array.from({ length: pageSize || 20 }).map((_, index) => (
           <TableRow
             key={index}
@@ -331,11 +333,11 @@ export function AlertsTableBody({
   });
 
   if (!selectable) {
-    return <TableBody data-cy="alerts-table-body">{rows}</TableBody>;
+    return <TableBody data-cy="alerts-table-body" inert={inert}>{rows}</TableBody>;
   }
 
   return (
-    <TableBody data-cy="alerts-table-body">
+    <TableBody data-cy="alerts-table-body" inert={inert}>
       {/* @ts-ignore */}
       <SelectableGroup
         ref={selectableGroupRef}

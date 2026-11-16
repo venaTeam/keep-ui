@@ -259,6 +259,8 @@ Trade-offs:
 
 **Recommendation:** Option A.
 
+**As built (review of `9216a4f7`):** `GridItem` no longer makes the Alert Table widget inert. The widget makes its own table body (`tbody`) `inert` in edit mode instead, so no link, row or group header in it can be clicked or focused, now or in a future cell. The headers, the grouping chip with Expand all / Collapse all, and the ⚙ panel (portalled into the panel header) sit outside the body and keep working. A single group can't be expanded or collapsed while editing.
+
 Other things the builder must check:
 
 - `handleSaveEdit` also calls `closeModal()` and `applyEditedItemToLayout`. Confirm that a config-only change leaves the widget's layout alone and doesn't flicker the modal.

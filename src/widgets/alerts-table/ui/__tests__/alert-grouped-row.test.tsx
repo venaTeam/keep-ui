@@ -579,6 +579,23 @@ describe("AlertsTableBody", () => {
     rows.forEach((row) => expect(row.querySelectorAll("td")).toHaveLength(1));
   });
 
+  it("inert makes the table body inert, rows and skeleton alike", () => {
+    const { container, rerender } = render(<BodyHarness />);
+    const body = () =>
+      container.querySelector('[data-cy="alerts-table-body"]') as HTMLElement;
+    expect(body()).not.toHaveAttribute("inert");
+
+    rerender(<BodyHarness inert />);
+    expect(body().tagName).toBe("TBODY");
+    expect(body()).toHaveAttribute("inert");
+
+    rerender(<BodyHarness inert selectable={false} />);
+    expect(body()).toHaveAttribute("inert");
+
+    rerender(<BodyHarness inert showSkeleton pageSize={1} />);
+    expect(body()).toHaveAttribute("inert");
+  });
+
   it("calls onRowClick when given", () => {
     const onRowClick = jest.fn();
     const { container } = render(<BodyHarness onRowClick={onRowClick} />);

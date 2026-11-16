@@ -905,22 +905,7 @@ describe("WidgetAlertsTable", () => {
     expect(within(groupHeader("Checkout degraded")).queryByRole("link")).toBeNull();
   });
 
-  describe("links inside the table", () => {
-    const seenByLeaveGuard: boolean[] = [];
-    const recordLikeLeaveGuard = (event: MouseEvent) => {
-      seenByLeaveGuard.push(event.defaultPrevented);
-      event.preventDefault();
-    };
-
-    beforeEach(() => {
-      seenByLeaveGuard.length = 0;
-      document.addEventListener("click", recordLikeLeaveGuard, true);
-    });
-
-    afterEach(() => {
-      document.removeEventListener("click", recordLikeLeaveGuard, true);
-    });
-
+  describe("links and rows in edit mode", () => {
     const alerts = () => [
       alertWith({
         incident: "i1",
@@ -933,53 +918,58 @@ describe("WidgetAlertsTable", () => {
     const item = { presetColumns: ["name", "incident", "runbook"] };
     const linkIn = (columnId: string) =>
       within(cellsOf(columnId)[0] as HTMLElement).getByRole("link");
+    const tableBody = () =>
+      widgetRoot().querySelector("tbody") as HTMLTableSectionElement;
+    const isInsideInert = (element: Element) => !!element.closest("[inert]");
 
-    it("a link in a cell navigates in view mode", () => {
+    it("in view mode the table body is not inert and its links are live", () => {
       renderWidget(item, alerts());
 
-      fireEvent.click(linkIn("incident"));
-      fireEvent.click(linkIn("runbook"));
-
-      expect(seenByLeaveGuard).toEqual([false, false]);
+      expect(tableBody()).not.toHaveAttribute("inert");
+      expect(isInsideInert(linkIn("incident"))).toBe(false);
+      expect(isInsideInert(linkIn("runbook"))).toBe(false);
     });
 
-    it("no link in a cell navigates in edit mode, before the leave guard sees the click", () => {
-      renderWidget(item, alerts(), { isEditMode: true, onChange: jest.fn() });
-
-      expect(linkIn("incident")).toHaveAttribute("href", "/incidents/i1");
-      fireEvent.click(linkIn("incident"));
-      fireEvent.click(linkIn("runbook"));
-
-      expect(seenByLeaveGuard).toEqual([true, true]);
-    });
-
-    it("links stop navigating on entering edit mode and navigate again after it", () => {
-      const data = alerts();
-      const { rerender } = renderWidget(item, data);
-      rerender(widget(item, data, { isEditMode: true, onChange: jest.fn() }));
-      fireEvent.click(linkIn("incident"));
-      rerender(widget(item, data));
-      fireEvent.click(linkIn("incident"));
-
-      expect(seenByLeaveGuard).toEqual([true, false]);
-    });
-
-    it("leaves links outside the widget and buttons inside it alone in edit mode", () => {
+    it("in edit mode every link and row sits inside the inert table body", () => {
       renderWidget(
         { ...item, alertTable: { groupBy: "incident" } },
         alerts(),
         { isEditMode: true, onChange: jest.fn() }
       );
-      const outside = document.createElement("a");
-      outside.href = "/alerts/feed";
-      document.body.appendChild(outside);
 
-      fireEvent.click(outside);
-      fireEvent.click(screen.getByRole("button", { name: "Collapse all" }));
+      expect(tableBody()).toHaveAttribute("inert");
+      [linkIn("incident"), linkIn("runbook"), ...bodyRows(), ...groupHeaders()].forEach(
+        (element) => expect(isInsideInert(element)).toBe(true)
+      );
+    });
 
-      expect(seenByLeaveGuard).toEqual([false, false]);
+    it("in edit mode the headers, the grouping chip and Expand all stay usable", () => {
+      renderWidget(
+        { ...item, alertTable: { groupBy: "incident" } },
+        alerts(),
+        { isEditMode: true, onChange: jest.fn() }
+      );
+
+      expect(isInsideInert(widgetRoot().querySelector("thead")!)).toBe(false);
+      expect(isInsideInert(screen.getByTestId("drag-handle-name"))).toBe(false);
+      expect(
+        isInsideInert(screen.getByRole("button", { name: "Clear grouping" }))
+      ).toBe(false);
+      const collapseAll = screen.getByRole("button", { name: "Collapse all" });
+      expect(isInsideInert(collapseAll)).toBe(false);
+
+      fireEvent.click(collapseAll);
       expect(bodyRows()).toHaveLength(0);
-      outside.remove();
+    });
+
+    it("the body turns inert on entering edit mode and live again after it", () => {
+      const data = alerts();
+      const { rerender } = renderWidget(item, data);
+      rerender(widget(item, data, { isEditMode: true, onChange: jest.fn() }));
+      expect(tableBody()).toHaveAttribute("inert");
+
+      rerender(widget(item, data));
+      expect(tableBody()).not.toHaveAttribute("inert");
     });
   });
 
