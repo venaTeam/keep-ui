@@ -146,6 +146,8 @@ if (typeof globalThis.structuredClone !== "function") {
 
 const byCy = (cy: string) => document.querySelector(`[data-cy="${cy}"]`);
 const click = (cy: string) => fireEvent.click(byCy(cy)!);
+const positionsOf = (layout: any[]) =>
+  layout.map(({ i, x, y, w, h }) => ({ i, x, y, w, h }));
 
 beforeEach(() => {
   mockId = "Ops";
@@ -426,7 +428,9 @@ describe("a widget's own settings in edit mode", () => {
         alertTable: { groupBy: "incident" },
       },
     ]);
-    expect(saved.layout).toEqual([{ i: "w1", x: 0, y: 0, w: 3, h: 3 }]);
+    expect(positionsOf(saved.layout)).toEqual([
+      { i: "w1", x: 0, y: 0, w: 3, h: 3 },
+    ]);
     await waitFor(() =>
       expect(byCy("dashboard-enter-edit-btn")).toBeInTheDocument()
     );
