@@ -75,11 +75,22 @@ describe("SelectionStrip", () => {
       />
     );
     fireEvent.click(screen.getByRole("button", { name: "Link 3 to incident" }));
-    expect(onOpen).toHaveBeenCalledWith("link-incident", [
-      noInc1,
-      noInc2,
-      noInc3,
-    ]);
+    expect(onOpen).toHaveBeenCalledWith(
+      "link-incident",
+      [noInc1, noInc2, noInc3],
+      null
+    );
+  });
+
+  it("hands over the button a mouse pressed", () => {
+    render(
+      <SelectionStrip alerts={[a, b]} onOpen={onOpen} onClear={onClear} />
+    );
+    const button = screen.getByRole("button", { name: "Dismiss" });
+
+    fireEvent.click(button, { detail: 1 });
+
+    expect(onOpen).toHaveBeenCalledWith("dismiss", [a, b], button);
   });
 
   it("hides an action no ticked alert qualifies for", () => {

@@ -25,3 +25,10 @@ export interface OpenQuickAction {
   actionId: string;
   alerts: AlertDto[];
 }
+
+/** Opens a quick action's dialog for the given alerts; `opener` is the button a pointer pressed, or null for a keyboard press. */
+export type OpenQuickActionHandler = (
+  actionId: string,
+  alerts: AlertDto[],
+  opener: HTMLElement | null
+) => void;

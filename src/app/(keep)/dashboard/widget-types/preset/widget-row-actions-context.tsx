@@ -1,5 +1,5 @@
 import { createContext } from "react";
-import type { AlertDto } from "@/entities/alerts/model/types";
+import type { OpenQuickActionHandler } from "@/features/alerts/alert-quick-actions";
 
 /** What the Alert Table widget's checkbox and row-actions cells read from the table. */
 export interface WidgetRowActions {
@@ -11,8 +11,8 @@ export interface WidgetRowActions {
   openFingerprint: string | null;
   /** Ticks or unticks a row; with `shiftKey` while anything is ticked, the range from the last picked row. */
   onPick: (rowId: string, shiftKey: boolean) => void;
-  /** Opens a quick action's dialog for the given alerts. */
-  onOpenAction: (actionId: string, alerts: AlertDto[]) => void;
+  /** Opens a quick action's dialog for the given alerts, with the button a pointer pressed (null for a keyboard press). */
+  onOpenAction: OpenQuickActionHandler;
 }
 
 /** Provided around the widget's table while its selection chrome is on; null otherwise. */

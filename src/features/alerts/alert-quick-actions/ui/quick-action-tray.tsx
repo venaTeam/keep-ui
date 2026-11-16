@@ -2,12 +2,14 @@ import { MouseEvent } from "react";
 import clsx from "clsx";
 import { AlertDto } from "@/entities/alerts/model/types";
 import { ALERT_QUICK_ACTIONS } from "../model/actions";
+import { getPointerOpener } from "../model/pointer-opener";
+import { OpenQuickActionHandler } from "../model/types";
 import { QUICK_TRAY_CLASS } from "./class-names";
 
 interface QuickActionTrayProps {
   alert: AlertDto;
   compact?: boolean;
-  onOpen: (actionId: string, alerts: AlertDto[]) => void;
+  onOpen: OpenQuickActionHandler;
 }
 
 /** A widget row's floating tray of the quick actions that apply to its alert; `compact` shows icons only. */
@@ -39,7 +41,7 @@ export function QuickActionTray({
               )}
               onClick={(event: MouseEvent<HTMLButtonElement>) => {
                 event.stopPropagation();
-                onOpen(action.id, [alert]);
+                onOpen(action.id, [alert], getPointerOpener(event));
               }}
             >
               <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />

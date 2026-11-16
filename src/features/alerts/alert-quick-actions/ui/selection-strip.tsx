@@ -1,11 +1,13 @@
 import clsx from "clsx";
 import { AlertDto } from "@/entities/alerts/model/types";
 import { ALERT_QUICK_ACTIONS } from "../model/actions";
+import { getPointerOpener } from "../model/pointer-opener";
 import { getEligibleAlerts, getStripLabel } from "../model/selection";
+import { OpenQuickActionHandler } from "../model/types";
 
 interface SelectionStripProps {
   alerts: AlertDto[];
-  onOpen: (actionId: string, alerts: AlertDto[]) => void;
+  onOpen: OpenQuickActionHandler;
   onClear: () => void;
 }
 
@@ -39,7 +41,9 @@ export function SelectionStrip({
             type="button"
             data-cy={`widget-selection-action-${action.id}`}
             className={STRIP_BUTTON_CLASSES}
-            onClick={() => onOpen(action.id, eligible)}
+            onClick={(event) =>
+              onOpen(action.id, eligible, getPointerOpener(event))
+            }
           >
             <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             {getStripLabel(action, eligible.length, alerts.length)}

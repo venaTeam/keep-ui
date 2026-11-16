@@ -798,10 +798,68 @@ describe("PresetAlertTablePanel quick actions", () => {
   it("marks the single alert whose dialog is open", () => {
     renderWithAlerts([a1]);
 
-    act(() => tableSelection().onOpenAction("dismiss", [a1]));
+    act(() => tableSelection().onOpenAction("dismiss", [a1], null));
 
     expect(tableSelection().openFingerprint).toBe(a1.fingerprint);
     expect(mockHostProps!.open).toEqual({ actionId: "dismiss", alerts: [a1] });
+  });
+
+  describe("focus handed back to the button that opened a dialog", () => {
+    let trayButton: HTMLButtonElement;
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+      trayButton = document.createElement("button");
+      document.body.append(trayButton);
+    });
+
+    afterEach(() => {
+      trayButton.remove();
+      jest.useRealTimers();
+    });
+
+    const closeAndHandFocusBack = (end: "onClose" | "onSuccess") => {
+      act(() => mockHostProps![end]());
+      trayButton.focus();
+      act(() => jest.runOnlyPendingTimers());
+    };
+
+    it.each(["onClose", "onSuccess"] as const)(
+      "is dropped when a mouse opened it and the dialog calls %s",
+      (end) => {
+        renderWithAlerts([a1]);
+        act(() => tableSelection().onOpenAction("dismiss", [a1], trayButton));
+
+        closeAndHandFocusBack(end);
+
+        expect(document.activeElement).toBe(document.body);
+      }
+    );
+
+    it("is kept when the keyboard opened it", () => {
+      renderWithAlerts([a1]);
+      act(() => tableSelection().onOpenAction("dismiss", [a1], null));
+
+      closeAndHandFocusBack("onClose");
+
+      expect(document.activeElement).toBe(trayButton);
+    });
+
+    it("is dropped from a strip button a mouse pressed", () => {
+      renderWithAlerts([a1, a2]);
+      tick({ [a1.fingerprint]: true, [a2.fingerprint]: true });
+      const stripButton = document.querySelector(
+        '[data-cy="widget-selection-action-dismiss"]'
+      ) as HTMLButtonElement;
+      fireEvent.click(stripButton, { detail: 1 });
+
+      act(() => mockHostProps!.onClose());
+      stripButton.focus();
+      act(() => jest.runOnlyPendingTimers());
+
+      expect(document.activeElement).toBe(document.body);
+      expect(screen.getByText("2 selected")).toBeInTheDocument();
+    });
   });
 
   it("marks no row while a dialog holds several alerts", () => {

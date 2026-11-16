@@ -85,8 +85,23 @@ describe("QuickActionTray", () => {
     fireEvent.click(
       screen.getByRole("button", { name: `Dismiss: ${firingNoIncident.name}` })
     );
-    expect(onOpen).toHaveBeenCalledWith("dismiss", [firingNoIncident]);
+    expect(onOpen).toHaveBeenCalledWith("dismiss", [firingNoIncident], null);
     expect(rowClick).not.toHaveBeenCalled();
+  });
+
+  it("hands over the button a mouse pressed, and null for a keyboard press", () => {
+    render(<QuickActionTray alert={firingNoIncident} onOpen={onOpen} />);
+    const button = screen.getByRole("button", {
+      name: `Dismiss: ${firingNoIncident.name}`,
+    });
+
+    fireEvent.click(button, { detail: 1 });
+    fireEvent.click(button, { detail: 0 });
+
+    expect(onOpen.mock.calls).toEqual([
+      ["dismiss", [firingNoIncident], button],
+      ["dismiss", [firingNoIncident], null],
+    ]);
   });
 
   it("shows icons only when compact, keeping accessible names", () => {
