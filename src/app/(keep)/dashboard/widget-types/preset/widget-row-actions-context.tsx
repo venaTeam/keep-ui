@@ -5,7 +5,7 @@ import type { AlertDto } from "@/entities/alerts/model/types";
 export interface WidgetRowActions {
   /** True while any row is ticked; the row trays hide. */
   isSelecting: boolean;
-  /** True on a narrow widget; the trays show icons only. */
+  /** True on a widget under `QUICK_TRAY_COMPACT_PX`; the trays show icons only. */
   compact: boolean;
   /** Fingerprint of the alert whose single-row dialog is open, if any. */
   openFingerprint: string | null;

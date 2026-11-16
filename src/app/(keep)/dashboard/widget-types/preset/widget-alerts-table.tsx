@@ -36,6 +36,7 @@ import { useGroupExpansion } from "@/utils/hooks/useGroupExpansion";
 import { WidgetData } from "../../types";
 import {
   NARROW_WIDGET_PX,
+  QUICK_TRAY_COMPACT_PX,
   WIDGET_PINNED_LEFT,
   mergeVisibleColumnOrder,
 } from "./alert-table-widget-config";
@@ -209,6 +210,8 @@ function WidgetAlertsTableContent({
   const containerWidth = useElementWidth(wrapperRef);
   const borderWidth = useCollapsedBorderWidth(tableRef);
   const isNarrow = containerWidth !== null && containerWidth < NARROW_WIDGET_PX;
+  const isTrayCompact =
+    containerWidth !== null && containerWidth < QUICK_TRAY_COMPACT_PX;
 
   const { columns, allColumnIds } = useWidgetAlertColumns({
     item,
@@ -426,13 +429,13 @@ function WidgetAlertsTableContent({
       chromeSelection
         ? {
             isSelecting,
-            compact: isNarrow,
+            compact: isTrayCompact,
             openFingerprint: chromeSelection.openFingerprint,
             onPick,
             onOpenAction: chromeSelection.onOpenAction,
           }
         : null,
-    [chromeSelection, isSelecting, isNarrow, onPick]
+    [chromeSelection, isSelecting, isTrayCompact, onPick]
   );
 
   const setVisibleColumnOrder = useCallback(

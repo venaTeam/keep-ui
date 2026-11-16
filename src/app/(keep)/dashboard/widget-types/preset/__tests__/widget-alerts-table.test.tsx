@@ -1560,6 +1560,39 @@ describe("WidgetAlertsTable", () => {
       expect(widgetRoot()).not.toHaveAttribute("data-selecting");
     });
 
+    const trayButtons = (alert: AlertDto) =>
+      Array.from(
+        rowFor(alert).querySelectorAll<HTMLButtonElement>(
+          '[data-cy^="widget-quick-action-"]'
+        )
+      );
+
+    it("shows icon-only tray buttons on a widget under 640px", () => {
+      observeWidth(600);
+      renderHarness({ alerts: [a1] });
+
+      expect(trayButtons(a1)).toHaveLength(3);
+      expect(trayButtons(a1).map((button) => button.textContent)).toEqual([
+        "",
+        "",
+        "",
+      ]);
+      expect(
+        screen.getByRole("button", { name: `Change Status: ${a1.name}` })
+      ).toHaveAttribute("title", "Change Status");
+    });
+
+    it("shows labelled tray buttons on a wide widget", () => {
+      observeWidth(900);
+      renderHarness({ alerts: [a1] });
+
+      expect(trayButtons(a1).map((button) => button.textContent)).toEqual([
+        "Change Status",
+        "Link to incident",
+        "Dismiss",
+      ]);
+    });
+
     it("pins the gutter left and the tray column right", () => {
       renderHarness({ alerts: [a1] });
 
