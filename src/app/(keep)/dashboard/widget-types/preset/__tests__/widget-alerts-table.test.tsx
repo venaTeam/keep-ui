@@ -1558,6 +1558,10 @@ describe("WidgetAlertsTable", () => {
 
       expect(checkboxFor(a1)).toBeInTheDocument();
       expect(checkboxFor(a1)).toHaveClass("quick-reveal", "quick-pick");
+      expect(checkboxFor(a1)).toHaveAttribute("data-cy", "widget-row-checkbox");
+      expect(
+        screen.getByRole("checkbox", { name: "Select all shown alerts" })
+      ).toHaveAttribute("data-cy", "widget-select-all");
       expect(
         screen.getByRole("button", { name: `Change Status: ${a1.name}` })
       ).toBeInTheDocument();
@@ -1750,6 +1754,18 @@ describe("WidgetAlertsTable", () => {
       fireEvent.click(groupCheckbox);
 
       expect(lastSelection()).toEqual({ [inInc1.fingerprint]: true });
+    });
+
+    it("ticks the rest of a partially ticked group from its header checkbox", () => {
+      renderHarness({
+        alerts: [noInc1, noInc2, inInc1],
+        groupBy: "incident",
+        initial: { [noInc1.fingerprint]: true },
+      });
+
+      fireEvent.click(within(groupHeader("No incident")).getByRole("checkbox"));
+
+      expect(selectedIds()).toEqual(fingerprints(noInc1, noInc2));
     });
 
     it("shows the group checkbox as some-selected when part of the group is ticked", () => {

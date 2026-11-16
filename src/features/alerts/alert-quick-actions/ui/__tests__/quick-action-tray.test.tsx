@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { AlertDto, Status } from "@/entities/alerts/model/types";
 import { QuickActionTray } from "../quick-action-tray";
+import { QUICK_TRAY_CLASS } from "../class-names";
 
 jest.mock("../action-dialogs", () => ({
   ChangeStatusDialog: () => null,
@@ -33,6 +34,13 @@ const onOpen = jest.fn();
 beforeEach(() => jest.clearAllMocks());
 
 describe("QuickActionTray", () => {
+  it("marks its root with the tray class the reveal styles target", () => {
+    const { container } = render(
+      <QuickActionTray alert={firingNoIncident} onOpen={onOpen} />
+    );
+    expect(container.firstElementChild).toHaveClass(QUICK_TRAY_CLASS);
+  });
+
   it("shows all three for a firing alert with no incident", () => {
     render(<QuickActionTray alert={firingNoIncident} onOpen={onOpen} />);
     expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual([

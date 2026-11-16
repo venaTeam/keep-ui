@@ -32,6 +32,7 @@ function RowCheckbox({ row }: { row: Row<AlertDto> }) {
         type="checkbox"
         className={clsx(QUICK_REVEAL_CLASS, QUICK_PICK_CLASS, "cursor-pointer")}
         aria-label={`Select ${row.original.name}`}
+        data-cy="widget-row-checkbox"
         checked={row.getIsSelected()}
         onChange={(event: ChangeEvent<HTMLInputElement>) =>
           actions.onPick(
@@ -81,6 +82,7 @@ export const QUICK_ACTION_COLUMNS: {
       <TableIndeterminateCheckbox
         className={QUICK_REVEAL_CLASS}
         aria-label="Select all shown alerts"
+        data-cy="widget-select-all"
         checked={table.getIsAllRowsSelected()}
         indeterminate={table.getIsSomeRowsSelected()}
         onChange={table.getToggleAllRowsSelectedHandler()}

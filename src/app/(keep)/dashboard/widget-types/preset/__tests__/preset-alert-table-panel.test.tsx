@@ -31,7 +31,7 @@ const mockRefresh = jest.fn();
 let mockLastTableBackground: string | undefined;
 let mockLastTableProps: Record<string, unknown> | undefined;
 let mockTablePropsByWidget: Record<string, Record<string, unknown>> = {};
-let mockHostProps: HostProps;
+let mockHostProps: HostProps | undefined;
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush }),
@@ -112,7 +112,7 @@ const groupState = (state: {
 
 const incidents = { field: "incident", incidentStatus: "active" } as const;
 
-/** Headless UI, loaded through the real selection strip, polyfills `getAnimations` with a console warning; the blink tests get a quiet stub instead. */
+/** Headless UI, loaded through `@tremor/react`, polyfills `getAnimations` with a console warning; the blink tests get a quiet stub instead. */
 function stubGetAnimations() {
   Object.defineProperty(Element.prototype, "getAnimations", {
     configurable: true,
@@ -130,6 +130,7 @@ beforeEach(() => {
   mockTablePropsByWidget = {};
   mockPush.mockReset();
   mockRefresh.mockReset();
+  mockHostProps = undefined;
   mockUsePresetAlertsCount.mockReturnValue({
     alerts: [],
     totalCount: 120,
@@ -711,28 +712,28 @@ describe("PresetAlertTablePanel quick actions", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Link 1 to incident" }));
 
-    expect(mockHostProps.open).toEqual({
+    expect(mockHostProps!.open).toEqual({
       actionId: "link-incident",
       alerts: [noInc],
     });
-    expect(mockHostProps.presetName).toBe("feed");
+    expect(mockHostProps!.presetName).toBe("feed");
   });
 
   it("keeps the selection when the dialog is cancelled", () => {
     openFromStrip("dismiss");
 
-    act(() => mockHostProps.onClose());
+    act(() => mockHostProps!.onClose());
 
-    expect(mockHostProps.open).toBeNull();
+    expect(mockHostProps!.open).toBeNull();
     expect(screen.getByText("2 selected")).toBeInTheDocument();
   });
 
   it("clears the selection and refreshes on success", () => {
     openFromStrip("dismiss");
 
-    act(() => mockHostProps.onSuccess());
+    act(() => mockHostProps!.onSuccess());
 
-    expect(mockHostProps.open).toBeNull();
+    expect(mockHostProps!.open).toBeNull();
     expect(screen.queryByText(/selected/)).toBeNull();
     expect(mockRefresh).toHaveBeenCalledTimes(1);
   });
@@ -744,11 +745,11 @@ describe("PresetAlertTablePanel quick actions", () => {
     "ends closed and cleared when a dialog calls %s",
     (_name, calls) => {
       openFromStrip("change-status");
-      const host = mockHostProps;
+      const host = mockHostProps!;
 
       act(() => calls.forEach((call) => host[call]()));
 
-      expect(mockHostProps.open).toBeNull();
+      expect(mockHostProps!.open).toBeNull();
       expect(screen.queryByText(/selected/)).toBeNull();
       expect(screen.getByText("Alerts count:")).toBeInTheDocument();
       expect(mockRefresh).toHaveBeenCalledTimes(1);
@@ -774,11 +775,11 @@ describe("PresetAlertTablePanel quick actions", () => {
 
   it("clears selection and closes the dialog on entering edit mode", () => {
     const { rerender } = openFromStrip("dismiss");
-    expect(mockHostProps.open).not.toBeNull();
+    expect(mockHostProps!.open).not.toBeNull();
 
     rerender(panel(true));
 
-    expect(mockHostProps.open).toBeNull();
+    expect(mockHostProps!.open).toBeNull();
     expect(mockLastTableProps!.selection).toBeUndefined();
     expect(screen.queryByText(/selected/)).toBeNull();
 
@@ -794,13 +795,13 @@ describe("PresetAlertTablePanel quick actions", () => {
     act(() => tableSelection().onOpenAction("dismiss", [a1]));
 
     expect(tableSelection().openFingerprint).toBe(a1.fingerprint);
-    expect(mockHostProps.open).toEqual({ actionId: "dismiss", alerts: [a1] });
+    expect(mockHostProps!.open).toEqual({ actionId: "dismiss", alerts: [a1] });
   });
 
   it("marks no row while a dialog holds several alerts", () => {
     openFromStrip("dismiss");
 
-    expect(mockHostProps.open!.alerts).toHaveLength(2);
+    expect(mockHostProps!.open!.alerts).toHaveLength(2);
     expect(tableSelection().openFingerprint).toBeNull();
   });
 
@@ -809,10 +810,10 @@ describe("PresetAlertTablePanel quick actions", () => {
 
     rerenderWithAlerts(rerender, [a2]);
 
-    expect(mockHostProps.open!.alerts).toEqual([a1, a2]);
+    expect(mockHostProps!.open!.alerts).toEqual([a1, a2]);
     expect(screen.getByText("1 selected")).toBeInTheDocument();
 
-    act(() => mockHostProps.onSuccess());
+    act(() => mockHostProps!.onSuccess());
 
     expect(screen.queryByText(/selected/)).toBeNull();
   });
@@ -860,7 +861,7 @@ describe("PresetAlertTablePanel quick actions", () => {
 
     expect(screen.getByText("1 selected")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
-    expect(mockHostProps.open!.alerts).toHaveLength(1);
+    expect(mockHostProps!.open!.alerts).toHaveLength(1);
   });
 
   it("recomputes eligibility from refreshed alerts", () => {
