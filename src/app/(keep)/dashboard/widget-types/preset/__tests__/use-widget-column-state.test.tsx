@@ -377,6 +377,28 @@ describe("useWidgetColumnState", () => {
       expect(result.current.grouping).toEqual(["service"]);
     });
 
+    it("resolves a saved snake_case groupBy to the table's camelCase column", () => {
+      const item = { ...baseItem, alertTable: { groupBy: "firing_counter" } };
+      const { result } = renderHook(() =>
+        useWidgetColumnState({ item, allColumnIds: ["name", "firingCounter"] })
+      );
+      expect(result.current.grouping).toEqual(["firingCounter"]);
+    });
+
+    it("choosing the column a saved snake_case groupBy resolves to emits nothing", () => {
+      const onChange = jest.fn();
+      const item = { ...baseItem, alertTable: { groupBy: "firing_counter" } };
+      const { result } = renderHook(() =>
+        useWidgetColumnState({
+          item,
+          allColumnIds: ["name", "firingCounter"],
+          onChange,
+        })
+      );
+      act(() => result.current.setGrouping(["firingCounter"]));
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
     it("ignores a groupBy whose column no longer exists", () => {
       const item = { ...baseItem, alertTable: { groupBy: "service" } };
       const { result } = renderHook(() =>

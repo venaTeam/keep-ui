@@ -392,6 +392,19 @@ describe("WidgetAlertsTable", () => {
     expect(texts).toContain("checkout 1 shown");
   });
 
+  it("a saved snake_case groupBy groups by the alerts' camelCase field", () => {
+    renderWidget({ alertTable: { groupBy: "firing_counter" } }, [
+      alertWith({ firingCounter: 3 }),
+      alertWith({ firingCounter: 3 }),
+      alertWith({ firingCounter: 5 }),
+    ]);
+
+    expect(groupHeaderTexts()).toEqual(["3 2 shown", "5 1 shown"]);
+    expect(
+      screen.getByText("Rows grouped by Firing Counter")
+    ).toBeInTheDocument();
+  });
+
   it("a display-only group-by column renders ungrouped", () => {
     renderWidget({ alertTable: { groupBy: "severity" } });
 
@@ -1057,6 +1070,22 @@ describe("WidgetAlertsTable", () => {
 
       expect(onChange).toHaveBeenCalledTimes(1);
       expect(onChange.mock.calls[0][0].presetColumns).toEqual(["name"]);
+    });
+
+    it("a saved snake_case groupBy adds no empty column beside the real one", () => {
+      renderWithSlot(
+        { alertTable: { groupBy: "firing_counter" } },
+        { isEditMode: true, onChange: jest.fn() },
+        [alertWith({ firingCounter: 3 })]
+      );
+
+      fireEvent.click(settingsButton() as HTMLElement);
+      const columnIds = Array.from(
+        document.querySelectorAll("[data-table-settings-column]")
+      ).map((row) => row.getAttribute("data-table-settings-column"));
+
+      expect(columnIds).toContain("firingCounter");
+      expect(columnIds).not.toContain("firing_counter");
     });
 
     it("offers a list field as one column, never one column per item", () => {

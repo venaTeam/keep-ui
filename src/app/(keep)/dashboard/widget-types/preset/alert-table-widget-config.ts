@@ -54,6 +54,18 @@ export const WIDGET_UNGROUPABLE_COLUMN_IDS: readonly string[] = [
   "extraPayload",
 ];
 
+/**
+ * Returns the column a widget's saved `groupBy` names, resolved against
+ * `knownIds` like a visible column, or undefined when it is not grouped.
+ */
+export function getGroupByColumnId(
+  item: WidgetData,
+  knownIds: ReadonlySet<string>
+): string | undefined {
+  const groupBy = item.alertTable?.groupBy;
+  return groupBy ? resolveWidgetColumnId(groupBy, knownIds) : undefined;
+}
+
 /** A partial update to a widget's column state. */
 export type WidgetColumnChange = {
   columnOrder?: string[];
@@ -97,6 +109,21 @@ export function resolveWidgetColumnId(
   }
   const camelCaseId = camelCase(id);
   return knownIds.has(camelCaseId) ? camelCaseId : id;
+}
+
+/**
+ * Maps field ids from the facet list (and other extra fields) to the column
+ * ids the widget uses, each through `resolveWidgetColumnId` against
+ * `getKnownColumnIds(columnIds)`. The ⚙ panel passes the widget's columns;
+ * the widget form, which has no loaded alerts, passes none, and the widget
+ * resolves what is left when it reads the saved setting.
+ */
+export function resolveFieldIds(
+  fields: readonly string[],
+  columnIds: Iterable<string> = []
+): string[] {
+  const knownIds = getKnownColumnIds(columnIds);
+  return fields.map((id) => resolveWidgetColumnId(id, knownIds));
 }
 
 /**

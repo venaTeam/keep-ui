@@ -10,6 +10,7 @@ import {
   WIDGET_EXCLUDED_COLUMNS,
   WIDGET_PINNED_LEFT,
   WIDGET_STATIC_COLUMN_IDS,
+  getGroupByColumnId,
   getKnownColumnIds,
   getVisibleColumnIds,
 } from "./alert-table-widget-config";
@@ -47,7 +48,7 @@ function atMinimumSize(column: ColumnDef<AlertDto>): ColumnDef<AlertDto> {
  * column, the group-by field and `incident`, so a configured column nobody
  * has still renders (empty). A saved snake_case id resolves to its camelCase
  * form when that is a fixed column, a known alert key or a field of the
- * loaded alerts. The checkbox, menu and noise columns are left out. Empty
+ * loaded alerts; the group-by field resolves the same way. The checkbox, menu and noise columns are left out. Empty
  * grouping values share one group, and every
  * column except the icon columns is headed by its widget label, so no stored
  * presets-page name can show through. Those columns also start at their
@@ -73,7 +74,7 @@ export function useWidgetAlertColumns({
     () => getKnownColumnIds([...alertKeys, ...fieldKeys]),
     [alertKeys, fieldKeys]
   );
-  const groupBy = item.alertTable?.groupBy;
+  const groupBy = getGroupByColumnId(item, knownIds);
   const additionalColsToGenerate = useStableIds(
     Array.from(
       new Set([

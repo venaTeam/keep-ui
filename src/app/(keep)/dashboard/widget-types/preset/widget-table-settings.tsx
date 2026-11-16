@@ -55,7 +55,7 @@ import {
   EmptyGroupPosition,
   WIDGET_PINNED_LEFT,
   mergeVisibleColumnOrder,
-  resolveWidgetColumnId,
+  resolveFieldIds,
 } from "./alert-table-widget-config";
 import { GroupBySelect } from "./group-by-select";
 import type { WidgetColumnState } from "./use-widget-column-state";
@@ -102,14 +102,17 @@ const matches = (text: string, query: string) =>
 
 function useFieldOptions(columnIds: string[]): string[] {
   const { data } = useFacetPotentialFields("alerts");
-  return useMemo(() => {
-    const known = new Set(columnIds);
-    const extraFields = [...(data ?? NO_FIELDS), ...COMMON_ENRICHMENT_FIELDS];
-    return getAlertColumnOptions(
-      columnIds,
-      extraFields.map((id) => resolveWidgetColumnId(id, known))
-    );
-  }, [columnIds, data]);
+  return useMemo(
+    () =>
+      getAlertColumnOptions(
+        columnIds,
+        resolveFieldIds(
+          [...(data ?? NO_FIELDS), ...COMMON_ENRICHMENT_FIELDS],
+          columnIds
+        )
+      ),
+    [columnIds, data]
+  );
 }
 
 function RenameInput({
