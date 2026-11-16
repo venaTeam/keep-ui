@@ -276,6 +276,7 @@ const PresetAlertTablePanel: React.FC<PresetAlertTablePanelProps> = ({
       {countOfLastAlerts > 0 && (
         <WidgetAlertsTable
           item={item}
+          presetNoisy={!!preset?.is_noisy}
           isEditMode={isEditMode}
           onChange={isEditMode ? onSave : undefined}
           settingsSlot={settingsSlot}
@@ -285,7 +286,6 @@ const PresetAlertTablePanel: React.FC<PresetAlertTablePanelProps> = ({
               ? undefined
               : hexToRgb(getColor(), 0.1)
           }
-          presetNoisy={!!preset?.is_noisy}
         />
       )}
     </>
