@@ -18,13 +18,7 @@ import {
   applyRowAppearance,
 } from "@/widgets/alerts-table/lib/row-appearance";
 import { TableIndeterminateCheckbox } from "@/shared/ui";
-import { useSyncedAnimation } from "@/shared/lib/hooks/useSyncedAnimation";
-import {
-  RINGING_CELL_CLASS_NAME,
-  RingingReason,
-  getRingingProps,
-  isAlertRinging,
-} from "@/widgets/alerts-table/lib/alert-ringing";
+import { useRingingRows } from "@/widgets/alerts-table/lib/alert-ringing";
 
 interface GroupedRowProps {
   row: Row<AlertDto>;
@@ -113,7 +107,7 @@ export const GroupedRow = ({
   presetNoisy = false,
 }: GroupedRowProps) => {
   const groupKey = row.id;
-  const syncBlink = useSyncedAnimation(presetNoisy);
+  const ringingRow = useRingingRows(presetNoisy);
 
   // Initialize the group when component mounts
   useEffect(() => {
@@ -151,6 +145,11 @@ export const GroupedRow = ({
         .join(", ");
     }
 
+    const headerRinging = ringingRow(
+      isExpanded ? [] : row.subRows.map((subRow) => subRow.original)
+    );
+    const headerRingingCell = headerRinging.cellProps(0, 1);
+
     return (
       <>
         {/* Group Header Row */}
@@ -163,15 +162,19 @@ export const GroupedRow = ({
           onClick={() => onToggleExpanded?.(groupKey)}
           data-cy="alerts-group-header"
           data-cy-id={groupKey}
+          {...headerRinging.rowProps}
         >
           {/* Render a single cell that spans the entire width */}
           <TableCell
+            ref={headerRingingCell.ref}
             colSpan={row.getVisibleCells().length}
-            className={
+            className={clsx(
               isPlainEmptyIncidentGroup
                 ? "group-header-cell bg-white border-l-[3px] border-l-gray-400 group-hover:bg-gray-50"
-                : "group-header-cell bg-orange-100 group-hover:bg-orange-200"
-            }
+                : "group-header-cell bg-orange-100 group-hover:bg-orange-200",
+              headerRingingCell.className
+            )}
+            style={headerRingingCell.style}
           >
             <div className="flex items-center gap-2">
               <div className="flex items-center">
@@ -225,6 +228,7 @@ export const GroupedRow = ({
                 )}
               </div>
             </div>
+            {headerRinging.reason}
           </TableCell>
         </TableRow>
 
@@ -233,37 +237,32 @@ export const GroupedRow = ({
           row.subRows.map((subRow) => {
             const isLastViewed =
               subRow.original.fingerprint === lastViewedAlert;
-            const ringing = isAlertRinging(subRow.original, presetNoisy);
-            const ringingProps = getRingingProps(ringing);
+            const ringing = ringingRow(subRow.original);
 
             return (
               <TableRow
                 key={subRow.id}
-                ref={ringing ? syncBlink : undefined}
-                className={clsx(
-                  applyRowAppearance(
-                    getRowClassName(subRow, theme, lastViewedAlert, rowStyle),
-                    rowAppearance
-                  ),
-                  ringingProps.className
+                className={applyRowAppearance(
+                  getRowClassName(subRow, theme, lastViewedAlert, rowStyle),
+                  rowAppearance
                 )}
-                style={ringingProps.style}
                 onClick={(e) => onRowClick?.(e, subRow.original)}
                 data-cy="alerts-row"
                 data-cy-id={subRow.original.fingerprint}
-                data-ringing={ringingProps["data-ringing"]}
+                {...ringing.rowProps}
               >
-                {subRow.getVisibleCells().map((cell, cellIndex) => {
+                {subRow.getVisibleCells().map((cell, cellIndex, cells) => {
                   const { style, className } =
-                    getCommonPinningStylesAndClassNames(
-                      cell.column,
-                      table.getState().columnPinning.left?.length,
-                      table.getState().columnPinning.right?.length
-                    );
+                    getCommonPinningStylesAndClassNames(cell.column);
+                  const ringingCell = ringing.cellProps(
+                    cellIndex,
+                    cells.length
+                  );
 
                   return (
                     <TableCell
                       key={cell.id}
+                      ref={ringingCell.ref}
                       data-column-id={cell.column.id}
                       className={clsx(
                         applyRowAppearance(
@@ -275,16 +274,16 @@ export const GroupedRow = ({
                           ),
                           rowAppearance
                         ),
-                        ringing && RINGING_CELL_CLASS_NAME
+                        ringingCell.className
                       )}
-                      style={style}
+                      style={{ ...style, ...ringingCell.style }}
                       data-cy={`alerts-cell-${cell.column.id}`}
                     >
-                      {ringing && cellIndex === 0 && <RingingReason />}
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext()
                       )}
+                      {cellIndex === 0 && ringing.reason}
                     </TableCell>
                   );
                 })}
@@ -297,49 +296,34 @@ export const GroupedRow = ({
 
   // Regular non-grouped row
   const isLastViewed = row.original.fingerprint === lastViewedAlert;
-  const ringing = isAlertRinging(row.original, presetNoisy);
-  const ringingProps = getRingingProps(ringing);
 
   return (
     <TableRow
       id={`alert-row-${row.original.fingerprint}`}
       key={row.id}
-      ref={ringing ? syncBlink : undefined}
-      className={clsx(
-        applyRowAppearance(
-          getRowClassName(row, theme, lastViewedAlert, rowStyle),
-          rowAppearance
-        ),
-        ringingProps.className
+      className={applyRowAppearance(
+        getRowClassName(row, theme, lastViewedAlert, rowStyle),
+        rowAppearance
       )}
-      style={ringingProps.style}
       onClick={(e) => onRowClick?.(e, row.original)}
       data-cy="alerts-row"
       data-cy-id={row.original.fingerprint}
-      data-ringing={ringingProps["data-ringing"]}
     >
-      {row.getVisibleCells().map((cell, cellIndex) => {
-        const { style, className } = getCommonPinningStylesAndClassNames(
-          cell.column,
-          table.getState().columnPinning.left?.length,
-          table.getState().columnPinning.right?.length
-        );
+      {row.getVisibleCells().map((cell) => {
+        const { style, className } =
+          getCommonPinningStylesAndClassNames(cell.column);
 
         return (
           <TableCell
             key={cell.id}
             data-column-id={cell.column.id}
-            className={clsx(
-              applyRowAppearance(
-                getCellClassName(cell, className, rowStyle, isLastViewed),
-                rowAppearance
-              ),
-              ringing && RINGING_CELL_CLASS_NAME
+            className={applyRowAppearance(
+              getCellClassName(cell, className, rowStyle, isLastViewed),
+              rowAppearance
             )}
             style={style}
             data-cy={`alerts-cell-${cell.column.id}`}
           >
-            {ringing && cellIndex === 0 && <RingingReason />}
             {flexRender(cell.column.columnDef.cell, cell.getContext())}
           </TableCell>
         );

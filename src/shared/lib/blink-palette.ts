@@ -8,8 +8,7 @@ type Rgb = [number, number, number];
 const WHITE: Rgb = [255, 255, 255];
 const BLACK: Rgb = [0, 0, 0];
 const SOFT_TINT = 0.15;
-const ROW_STRONG_TINT = 0.25;
-const ROW_SOFT_TINT = 0.1;
+const ROW_TINT = 0.1;
 const READABLE_CONTRAST = 4.5;
 
 const toRgb = (hex: string): Rgb => [
@@ -85,25 +84,19 @@ export function getBlinkStyle(color: string): CSSProperties {
 }
 
 /**
- * Custom properties that run the same `missing-blink` keyframes on a table row
- * in `color`, as a tint rather than a solid fill: the background pulses
- * between a 25% and a 10% tint of the color, so the marks in the row's cells
- * stay visible, and the row's text is one dark shade of the color that reads
- * at 4.5:1 or more on both. Borders follow the background. Only custom
- * properties are set; the animation, or the steady light tint under reduced
- * motion, comes from classes.
+ * Custom properties for a ringing table row in `color`, painted by an overlay
+ * behind each cell's content whose opacity pulses (`ringingPulse`, in step
+ * with `missing-blink`). `--blink-row-tint` is the color at 10% alpha over the
+ * cell's own background, light enough that the row's red-500 marks keep 3:1
+ * and its text 4.5:1 at every phase; `--blink-row-edge` is the solid color of
+ * the overlay's edge, which carries the strong signal. Only custom properties
+ * are set; the overlay, its pulse and the steady state under reduced motion
+ * come from classes.
  */
 export function getRowBlinkStyle(color: string): CSSProperties {
-  const base = toRgb(color);
-  const strong = toHex(mix(base, WHITE, ROW_STRONG_TINT));
-  const soft = toHex(mix(base, WHITE, ROW_SOFT_TINT));
-  const text = toHex(readableShade(base, toRgb(strong)));
+  const [r, g, b] = toRgb(color);
   return {
-    "--blink-strong": strong,
-    "--blink-strong-text": text,
-    "--blink-strong-border": strong,
-    "--blink-soft": soft,
-    "--blink-soft-text": text,
-    "--blink-soft-border": soft,
+    "--blink-row-tint": `rgb(${r} ${g} ${b} / ${ROW_TINT})`,
+    "--blink-row-edge": color,
   } as CSSProperties;
 }

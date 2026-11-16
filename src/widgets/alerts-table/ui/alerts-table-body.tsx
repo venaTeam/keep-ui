@@ -15,13 +15,7 @@ import {
 } from "@/widgets/alerts-table/lib/row-appearance";
 import { useExpandedRows } from "@/utils/hooks/useExpandedRows";
 import { useGroupExpansion } from "@/utils/hooks/useGroupExpansion";
-import { useSyncedAnimation } from "@/shared/lib/hooks/useSyncedAnimation";
-import {
-  RINGING_CELL_CLASS_NAME,
-  RingingReason,
-  getRingingProps,
-  isAlertRinging,
-} from "@/widgets/alerts-table/lib/alert-ringing";
+import { useRingingRows } from "@/widgets/alerts-table/lib/alert-ringing";
 import clsx from "clsx";
 import "react-loading-skeleton/dist/skeleton.css";
 import { SelectableGroup } from "react-selectable-fast";
@@ -63,7 +57,7 @@ export function AlertsTableBody({
   inert,
 }: Props) {
   const [rowStyle] = useAlertRowStyle();
-  const syncBlink = useSyncedAnimation(presetNoisy);
+  const ringingRow = useRingingRows(presetNoisy);
   const { isRowExpanded } = useExpandedRows(presetName);
 
   // Use provided groupExpansionState or create a local one
@@ -221,28 +215,23 @@ export function AlertsTableBody({
 
     const isLastViewed = row.original.fingerprint === lastViewedAlert;
     const expanded = isRowExpanded(row.original.fingerprint);
-    const ringing = isAlertRinging(row.original, presetNoisy);
-    const ringingProps = getRingingProps(ringing);
+    const ringing = ringingRow(row.original);
 
-    const rowClassName = clsx(
-      applyRowAppearance(
-        clsx(
-          "group/row",
-          // Using tailwind classes for expanded rows instead of a custom class
-          expanded ? "!h-auto min-h-12" : null,
-          getRowClassName(row, theme, lastViewedAlert, rowStyle, expanded)
-        ),
-        rowAppearance
+    const rowClassName = applyRowAppearance(
+      clsx(
+        "group/row",
+        // Using tailwind classes for expanded rows instead of a custom class
+        expanded ? "!h-auto min-h-12" : null,
+        getRowClassName(row, theme, lastViewedAlert, rowStyle, expanded)
       ),
-      ringingProps.className
+      rowAppearance
     );
 
-    const cells = row.getVisibleCells().map((cell, cellIndex) => {
+    const cells = row.getVisibleCells().map((cell, cellIndex, visibleCells) => {
       const { style, className } = getCommonPinningStylesAndClassNames(
-        cell.column,
-        table.getState().columnPinning.left?.length,
-        table.getState().columnPinning.right?.length
+        cell.column
       );
+      const ringingCell = ringing.cellProps(cellIndex, visibleCells.length);
 
       const isNameCell = cell.column.id === "name";
       const isDescriptionCell = cell.column.id === "description";
@@ -252,6 +241,7 @@ export function AlertsTableBody({
       return (
         <TableCell
           key={cell.id}
+          ref={ringingCell.ref}
           data-column-id={cell.column.id}
           data-cy={`alerts-cell-${cell.column.id}`}
           className={clsx(
@@ -281,10 +271,11 @@ export function AlertsTableBody({
               ),
               rowAppearance
             ),
-            ringing && RINGING_CELL_CLASS_NAME
+            ringingCell.className
           )}
           style={{
             ...style,
+            ...ringingCell.style,
             // For source cells, enforce fixed width always
             ...(isSourceCell
               ? {
@@ -317,8 +308,8 @@ export function AlertsTableBody({
               : {}),
           }}
         >
-          {ringing && cellIndex === 0 && <RingingReason />}
           {flexRender(cell.column.columnDef.cell, cell.getContext())}
+          {cellIndex === 0 && ringing.reason}
         </TableCell>
       );
     });
@@ -327,13 +318,11 @@ export function AlertsTableBody({
       return (
         <TableRow
           key={renderingKey}
-          ref={ringing ? syncBlink : undefined}
           className={rowClassName}
-          style={ringingProps.style}
           onClick={(e) => handleRowClick(e, row.original)}
           data-cy="alerts-row"
           data-cy-id={row.original.fingerprint}
-          data-ringing={ringingProps["data-ringing"]}
+          {...ringing.rowProps}
         >
           {cells}
         </TableRow>
@@ -344,14 +333,12 @@ export function AlertsTableBody({
       <SelectableRow
         key={renderingKey}
         className={rowClassName}
-        style={ringingProps.style}
-        rowRef={ringing ? syncBlink : undefined}
         onClick={(e) => handleRowClick(e, row.original)}
         isSelected={row.getIsSelected()}
         data-row-id={row.id}
         data-cy="alerts-row"
         data-cy-id={row.original.fingerprint}
-        data-ringing={ringingProps["data-ringing"]}
+        {...ringing.rowProps}
       >
         {cells}
       </SelectableRow>
