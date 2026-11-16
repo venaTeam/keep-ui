@@ -34,6 +34,8 @@ interface GroupedRowProps {
   getColumnLabel?: (columnId: string) => string;
   rowAppearance?: RowAppearance;
   selectable?: boolean;
+  /** Extra class names for the group header's selection checkbox. */
+  checkboxClassName?: string;
 }
 
 interface IncidentGroupDetailsProps {
@@ -102,6 +104,7 @@ export const GroupedRow = ({
   getColumnLabel,
   rowAppearance = "default",
   selectable = true,
+  checkboxClassName,
 }: GroupedRowProps) => {
   const groupKey = row.id;
 
@@ -179,6 +182,7 @@ export const GroupedRow = ({
                   indeterminate={row.getIsSomeSelected()}
                   onChange={row.getToggleSelectedHandler()}
                   onClick={(e) => e.stopPropagation()}
+                  className={checkboxClassName}
                 />
               )}
               <div className="flex items-center gap-2 flex-grow">

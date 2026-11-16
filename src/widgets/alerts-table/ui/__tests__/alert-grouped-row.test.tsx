@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import { GroupedRow } from "@/widgets/alerts-table/ui/alert-grouped-row";
 import { AlertsTableBody } from "@/widgets/alerts-table/ui/alerts-table-body";
 import {
@@ -469,6 +469,21 @@ describe("GroupedRow", () => {
         checkboxCell
       );
       expect(screen.queryByRole("checkbox")).toBeNull();
+    });
+
+    it("puts checkboxClassName on the group checkbox", () => {
+      const { container } = renderGroupedBy(
+        "service",
+        [{ service: "checkout" } as any],
+        { selectable: true, checkboxClassName: "quick-reveal" },
+        [{ column: { id: "checkbox" } }]
+      );
+      const groupHeader = container.querySelector(
+        '[data-cy="alerts-group-header"]'
+      ) as HTMLElement;
+      expect(within(groupHeader).getByRole("checkbox")).toHaveClass(
+        "quick-reveal"
+      );
     });
   });
 });

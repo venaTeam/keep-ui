@@ -30,7 +30,18 @@ interface Props {
   presetName: string;
   groupExpansionState?: ReturnType<typeof useGroupExpansion>;
   rowAppearance?: RowAppearance;
+  /**
+   * Shows the selection checkbox on group header rows when the table has a
+   * `checkbox` column. Defaults to true.
+   */
   selectable?: boolean;
+  /**
+   * Wraps rows in the mouse drag-to-select group. Defaults to the value of
+   * `selectable`, so the presets page keeps drag-select.
+   */
+  dragSelectable?: boolean;
+  /** Extra class names for the group header rows' selection checkbox. */
+  groupCheckboxClassName?: string;
   showIncidentDetails?: boolean;
   linksDisabled?: boolean;
   getColumnLabel?: (columnId: string) => string;
@@ -48,11 +59,14 @@ export function AlertsTableBody({
   groupExpansionState,
   rowAppearance = "default",
   selectable = true,
+  dragSelectable,
+  groupCheckboxClassName,
   showIncidentDetails = false,
   linksDisabled = false,
   getColumnLabel,
   inert,
 }: Props) {
+  const dragSelect = dragSelectable ?? selectable;
   const [rowStyle] = useAlertRowStyle();
   const { isRowExpanded } = useExpandedRows(presetName);
 
@@ -204,6 +218,7 @@ export function AlertsTableBody({
           getColumnLabel={getColumnLabel}
           rowAppearance={rowAppearance}
           selectable={selectable}
+          checkboxClassName={groupCheckboxClassName}
         />
       );
     }
@@ -303,7 +318,7 @@ export function AlertsTableBody({
       );
     });
 
-    if (!selectable) {
+    if (!dragSelect) {
       return (
         <TableRow
           key={renderingKey}
@@ -332,7 +347,7 @@ export function AlertsTableBody({
     );
   });
 
-  if (!selectable) {
+  if (!dragSelect) {
     return (
       <TableBody data-cy="alerts-table-body" inert={inert}>
         {rows}
