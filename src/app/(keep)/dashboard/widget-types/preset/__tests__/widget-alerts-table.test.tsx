@@ -16,6 +16,7 @@ import {
 import { AlertDto, Severity, Status } from "@/entities/alerts/model/types";
 import { useAlertTableCols } from "@/widgets/alerts-table/lib/alert-table-utils";
 import { useConfig } from "@/utils/hooks/useConfig";
+import { RINGING_REASON } from "@/widgets/alerts-table/lib/alert-ringing";
 
 const mockUsePresetColumnState = jest.fn();
 const mockGetAutofitColumnWidth = jest.fn();
@@ -1217,5 +1218,143 @@ describe("WidgetAlertsTable", () => {
 
     expect(headerIds()).toEqual(["description", "name"]);
     expect(bodyRows()).toHaveLength(2);
+  });
+});
+
+describe("WidgetAlertsTable ringing rows", () => {
+  const BLINK = "motion-safe:animate-missing-blink";
+  const STEADY = "motion-reduce:bg-[color:var(--blink-soft)]";
+
+  const ringingAlerts = () => [
+    alertWith({ severity: Severity.Critical, service: "checkout" }),
+    alertWith({ severity: 5, service: "checkout" }),
+    alertWith({ severity: Severity.Critical, status: Status.Resolved }),
+    alertWith({ severity: Severity.High, service: "checkout" }),
+  ];
+
+  const renderRinging = (
+    presetNoisy: boolean | undefined,
+    overrides: Partial<WidgetData> = {},
+    alerts: AlertDto[] = ringingAlerts()
+  ) => {
+    render(
+      <WidgetAlertsTable
+        item={{
+          ...baseItem,
+          presetColumns: ["severity", "status", "source", "name"],
+          ...overrides,
+        }}
+        alerts={alerts}
+        background="rgb(16, 185, 129, 0.1)"
+        presetNoisy={presetNoisy}
+        isEditMode={false}
+      />
+    );
+    return alerts;
+  };
+
+  const rowOf = (alert: AlertDto) =>
+    document.querySelector(
+      `[data-cy="alerts-row"][data-cy-id="${alert.fingerprint}"]`
+    ) as HTMLElement;
+
+  it("keeps the blink on the widget's plain rows, in every cell", () => {
+    const [critical, numericCritical] = renderRinging(true);
+
+    for (const alert of [critical, numericCritical]) {
+      const row = rowOf(alert);
+      expect(row).toHaveAttribute("data-ringing", "true");
+      expect(row).toHaveClass(BLINK, STEADY);
+      expect(row).not.toHaveClass("cursor-pointer");
+      expect(row.style.getPropertyValue("--blink-strong")).not.toBe("");
+      expect(within(row).getByText(RINGING_REASON)).toHaveClass("sr-only");
+      const cells = row.querySelectorAll("td");
+      expect(cells).toHaveLength(4);
+      cells.forEach((cell) => expect(cell).toHaveClass("!bg-inherit"));
+    }
+  });
+
+  it("leaves resolved and non-critical rows as they were", () => {
+    const [, , resolved, high] = renderRinging(true);
+
+    for (const alert of [resolved, high]) {
+      const row = rowOf(alert);
+      expect(row).not.toHaveAttribute("data-ringing");
+      expect(row).not.toHaveClass(BLINK);
+      expect(row.getAttribute("style")).toBeNull();
+      expect(within(row).queryByText(RINGING_REASON)).toBeNull();
+      row
+        .querySelectorAll("td")
+        .forEach((cell) => expect(cell).not.toHaveClass("!bg-inherit"));
+    }
+  });
+
+  it.each([false, undefined])(
+    "rings nothing when the preset's noisy flag is %s",
+    (presetNoisy) => {
+      renderRinging(presetNoisy);
+
+      expect(document.querySelector("[data-ringing]")).toBeNull();
+      expect(
+        document.querySelector(".motion-safe\\:animate-missing-blink")
+      ).toBeNull();
+      expect(screen.queryByText(RINGING_REASON)).toBeNull();
+    }
+  );
+
+  it("rings the child rows of a grouped widget, not the group headers", () => {
+    const [critical, numericCritical, , high] = renderRinging(true, {
+      alertTable: { groupBy: "service" },
+    });
+
+    expect(groupHeaders().length).toBeGreaterThan(0);
+    groupHeaders().forEach((header) =>
+      expect(header).not.toHaveAttribute("data-ringing")
+    );
+    expect(rowOf(critical)).toHaveAttribute("data-ringing", "true");
+    expect(rowOf(numericCritical)).toHaveClass(BLINK);
+    expect(rowOf(high)).not.toHaveAttribute("data-ringing");
+  });
+
+  it("lets a ringing row's pinned cells pulse with the row instead of the opaque tint", () => {
+    const [critical, , , high] = renderRinging(true);
+
+    expect(widgetRoot()).toHaveClass(
+      "[&_td.sticky]:[background:var(--widget-opaque-bg)]",
+      "[&_tr[data-ringing]_td.sticky]:[background:inherit]"
+    );
+    const pinned = within(rowOf(critical)).getAllByRole("cell").slice(0, 3);
+    pinned.forEach((cell) => expect(cell).toHaveClass("sticky", "!bg-inherit"));
+    expect(
+      rowOf(high).querySelector('[data-cy="alerts-cell-severity"]')
+    ).not.toHaveClass("!bg-inherit");
+  });
+
+  it("starts every ringing row's pulse at the page's time zero", () => {
+    const synced: Element[] = [];
+    Object.defineProperty(HTMLElement.prototype, "getAnimations", {
+      configurable: true,
+      value: function (this: HTMLElement) {
+        const element = this;
+        return [
+          {
+            set startTime(value: number) {
+              if (value === 0) {
+                synced.push(element);
+              }
+            },
+          },
+        ];
+      },
+    });
+    try {
+      const [critical, numericCritical, , high] = renderRinging(true);
+
+      expect(synced).toContain(rowOf(critical));
+      expect(synced).toContain(rowOf(numericCritical));
+      expect(synced).not.toContain(rowOf(high));
+    } finally {
+      delete (HTMLElement.prototype as Partial<HTMLElement>).getAnimations;
+    }
   });
 });
