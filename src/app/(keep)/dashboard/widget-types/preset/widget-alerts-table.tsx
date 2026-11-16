@@ -61,7 +61,7 @@ const NO_THEME: Record<string, string> = {};
 const NO_FORMATS = {};
 const SKELETON_ROWS = 5;
 const OPAQUE_CELL_CLASSES =
-  "[&_th]:[background:var(--widget-opaque-bg)] [&_td.sticky]:[background:var(--widget-opaque-bg)] [&_tr[data-ringing]_td.sticky]:[background:inherit] [&_th.sticky]:z-40 [&_td.sticky]:z-10";
+  "[&_th]:[background:var(--widget-opaque-bg)] [&_td.sticky]:[background:var(--widget-opaque-bg)] [&_th.sticky]:z-40 [&_td.sticky]:z-10";
 const COMPACT_GROUP_HEADER_CLASSES = "[&_td.group-header-cell]:py-1";
 const BORDER_TOLERANCE_PX = 0.01;
 
@@ -398,8 +398,9 @@ function WidgetAlertsTableContent({
  * Expand all / Collapse all reads the groups shown now, so a regrouping or a
  * refresh that drops a collapsed group does not leave it stale.
  * In a noisy preset (`presetNoisy`), critical firing rows ring as on the
- * presets page; a ringing row's pinned cells take the row's pulsing
- * background instead of the widget's opaque tint.
+ * presets page: a pulsing overlay outlined in red behind every cell, pinned
+ * cells included over their opaque tint, and a collapsed group's header rings
+ * while one of its alerts would. The rows keep ringing in edit mode.
  * In edit mode with `onChange`, the ⚙ Table settings button is rendered into
  * `settingsSlot` (an element the caller places in its header), at every width;
  * its column widths are the rendered ones and its Auto-fit measures this table.
