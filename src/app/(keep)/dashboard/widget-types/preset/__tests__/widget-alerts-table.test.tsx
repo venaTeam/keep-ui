@@ -1414,7 +1414,19 @@ describe("WidgetAlertsTable", () => {
   it("stacks pinned header cells above the resize edges and drop indicator of scrolled columns", () => {
     renderWidget();
 
-    expect(widgetRoot()).toHaveClass("[&_th.sticky]:z-40");
+    const pinnedHeader = screen
+      .getByTestId("header-cell-severity")
+      .closest("th") as HTMLElement;
+    expect(pinnedHeader).toHaveClass("sticky");
+    expect(pinnedHeader.style.zIndex).toBe("1");
+    expect(widgetRoot()).toHaveClass("[&_th.sticky]:!z-40");
+  });
+
+  it("gives every pinned cell, header and body, the same z-index so DOM order decides among them", () => {
+    renderWidget();
+
+    expect(widgetRoot()).toHaveClass("[&_th.sticky]:!z-40", "[&_td.sticky]:!z-40");
+    expect(cellsOf("severity")[0]).toHaveClass("sticky");
   });
 
   it("never reads the preset's per-user column state", () => {
