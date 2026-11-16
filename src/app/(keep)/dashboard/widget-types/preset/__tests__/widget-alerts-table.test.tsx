@@ -27,6 +27,17 @@ describe("WidgetAlertsTable", () => {
 });
 
 describe("WidgetAlertsTable ringing rows", () => {
+  beforeEach(() => {
+    Object.defineProperty(HTMLElement.prototype, "getAnimations", {
+      configurable: true,
+      value: () => [],
+    });
+  });
+
+  afterEach(() => {
+    delete (HTMLElement.prototype as Partial<HTMLElement>).getAnimations;
+  });
+
   const BLINK = "motion-safe:animate-missing-blink";
   const STEADY = "motion-reduce:bg-[color:var(--blink-soft)]";
   const columns = ["status", "name", "description"];
@@ -135,20 +146,16 @@ describe("WidgetAlertsTable ringing rows", () => {
         ];
       },
     });
-    try {
-      const { container } = renderTable(true);
+    const { container } = renderTable(true);
 
-      expect(synced).toEqual(
-        expect.arrayContaining([
-          ...cellsOfRow(container, 0),
-          ...cellsOfRow(container, 1),
-        ])
-      );
-      cellsOfRow(container, 3).forEach((cell) =>
-        expect(synced).not.toContain(cell)
-      );
-    } finally {
-      delete (HTMLElement.prototype as Partial<HTMLElement>).getAnimations;
-    }
+    expect(synced).toEqual(
+      expect.arrayContaining([
+        ...cellsOfRow(container, 0),
+        ...cellsOfRow(container, 1),
+      ])
+    );
+    cellsOfRow(container, 3).forEach((cell) =>
+      expect(synced).not.toContain(cell)
+    );
   });
 });

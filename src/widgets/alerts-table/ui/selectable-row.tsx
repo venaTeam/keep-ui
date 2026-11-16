@@ -44,8 +44,8 @@ const Row = ({
             ref={ref}
             className={clsx(
                 className,
-                isSelecting && "!bg-blue-100/50",
-                isSelected && "!bg-blue-200/50"
+                isSelecting && !dataRinging && "!bg-blue-100/50",
+                isSelected && !dataRinging && "!bg-blue-200/50"
             )}
             style={style}
             onClick={onClick}

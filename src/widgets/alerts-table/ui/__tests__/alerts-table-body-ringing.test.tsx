@@ -1,9 +1,11 @@
 import React from "react";
-import { render, within } from "@testing-library/react";
+import { format } from "util";
+import { act, render, within } from "@testing-library/react";
 import { Table } from "@tremor/react";
 import {
   ColumnDef,
   GroupingState,
+  RowSelectionState,
   getCoreRowModel,
   getExpandedRowModel,
   getGroupedRowModel,
@@ -15,6 +17,11 @@ import { RINGING_REASON } from "@/widgets/alerts-table/lib/alert-ringing";
 
 const BLINK = "motion-safe:animate-missing-blink";
 const STEADY = "motion-reduce:bg-[color:var(--blink-soft)]";
+const SELECTED = "!bg-blue-200/50";
+const KNOWN_NESTING = [
+  "In HTML, <tr> cannot be a child of <div>.",
+  "In HTML, <div> cannot be a child of <tbody>.",
+];
 
 const alert = (
   fingerprint: string,
@@ -45,18 +52,26 @@ const columns: ColumnDef<AlertDto>[] = [
   { id: "service", accessorKey: "service", cell: (c) => String(c.getValue()) },
 ];
 
-function Harness({
-  presetNoisy,
-  grouping = [],
-}: {
+type HarnessProps = {
   presetNoisy?: boolean;
   grouping?: GroupingState;
-}) {
+  rowSelection?: RowSelectionState;
+};
+
+const NO_GROUPING: GroupingState = [];
+const NO_SELECTION: RowSelectionState = {};
+
+function Harness({
+  presetNoisy,
+  grouping = NO_GROUPING,
+  rowSelection = NO_SELECTION,
+}: HarnessProps) {
   const table = useReactTable({
     data: alerts,
     columns,
     getRowId: (row) => row.fingerprint,
-    state: { grouping },
+    enableRowSelection: true,
+    state: { grouping, rowSelection },
     getCoreRowModel: getCoreRowModel(),
     getGroupedRowModel: getGroupedRowModel(),
     getExpandedRowModel: getExpandedRowModel(),
@@ -76,14 +91,41 @@ function Harness({
   );
 }
 
+const renderHarness = async (props: HarnessProps = {}) => {
+  let result: ReturnType<typeof render> | undefined;
+  await act(async () => {
+    result = render(<Harness {...props} />);
+  });
+  return result!;
+};
+
 const rowOf = (container: HTMLElement, fingerprint: string) =>
   container.querySelector(
     `[data-cy="alerts-row"][data-cy-id="${fingerprint}"]`
   ) as HTMLElement;
 
+beforeEach(() => {
+  Object.defineProperty(HTMLElement.prototype, "getAnimations", {
+    configurable: true,
+    value: () => [],
+  });
+  const printError = console.error;
+  jest.spyOn(console, "error").mockImplementation((...args) => {
+    const message = format(...args);
+    if (!KNOWN_NESTING.some((known) => message.startsWith(known))) {
+      printError(...args);
+    }
+  });
+});
+
+afterEach(() => {
+  delete (HTMLElement.prototype as Partial<HTMLElement>).getAnimations;
+  jest.restoreAllMocks();
+});
+
 describe("AlertsTableBody ringing rows", () => {
-  it("rings critical firing rows of a noisy preset, word or numeric severity", () => {
-    const { container } = render(<Harness presetNoisy />);
+  it("rings critical firing rows of a noisy preset, word or numeric severity", async () => {
+    const { container } = await renderHarness({ presetNoisy: true });
 
     for (const fingerprint of ["ring", "ring-numeric"]) {
       const row = rowOf(container, fingerprint);
@@ -97,8 +139,8 @@ describe("AlertsTableBody ringing rows", () => {
     }
   });
 
-  it("leaves every other row as it was", () => {
-    const { container } = render(<Harness presetNoisy />);
+  it("leaves every other row as it was", async () => {
+    const { container } = await renderHarness({ presetNoisy: true });
 
     for (const fingerprint of ["resolved", "high"]) {
       const row = rowOf(container, fingerprint);
@@ -112,8 +154,8 @@ describe("AlertsTableBody ringing rows", () => {
     }
   });
 
-  it("does not ring a deleted critical firing alert", () => {
-    const { container } = render(<Harness presetNoisy />);
+  it("does not ring a deleted critical firing alert", async () => {
+    const { container } = await renderHarness({ presetNoisy: true });
     const row = rowOf(container, "deleted");
 
     expect(row).not.toHaveAttribute("data-ringing");
@@ -123,8 +165,8 @@ describe("AlertsTableBody ringing rows", () => {
 
   it.each([false, undefined])(
     "rings nothing when the preset's noisy flag is %s",
-    (presetNoisy) => {
-      const { container } = render(<Harness presetNoisy={presetNoisy} />);
+    async (presetNoisy) => {
+      const { container } = await renderHarness({ presetNoisy });
 
       expect(container.querySelector("[data-ringing]")).toBeNull();
       expect(container.querySelector(".motion-safe\\:animate-missing-blink")).toBeNull();
@@ -133,10 +175,24 @@ describe("AlertsTableBody ringing rows", () => {
     }
   );
 
-  it("rings grouped child rows too", () => {
-    const { container } = render(
-      <Harness presetNoisy grouping={["service"]} />
-    );
+  it("keeps the pulse on a selected ringing row instead of the selection tint", async () => {
+    const { container } = await renderHarness({
+      presetNoisy: true,
+      rowSelection: { ring: true, high: true },
+    });
+    const ringing = rowOf(container, "ring");
+
+    expect(ringing).toHaveAttribute("data-ringing", "true");
+    expect(ringing).toHaveClass(BLINK, STEADY);
+    expect(ringing).not.toHaveClass(SELECTED);
+    expect(rowOf(container, "high")).toHaveClass(SELECTED);
+  });
+
+  it("rings grouped child rows too", async () => {
+    const { container } = await renderHarness({
+      presetNoisy: true,
+      grouping: ["service"],
+    });
 
     expect(
       container.querySelector('[data-cy="alerts-group-header"]')
@@ -154,7 +210,7 @@ describe("AlertsTableBody ringing rows", () => {
     ).not.toHaveAttribute("data-ringing");
   });
 
-  it("starts each ringing row's pulse at the page's time zero", () => {
+  it("starts each ringing row's pulse at the page's time zero", async () => {
     const synced: Element[] = [];
     Object.defineProperty(HTMLElement.prototype, "getAnimations", {
       configurable: true,
@@ -171,14 +227,10 @@ describe("AlertsTableBody ringing rows", () => {
         ];
       },
     });
-    try {
-      const { container } = render(<Harness presetNoisy />);
+    const { container } = await renderHarness({ presetNoisy: true });
 
-      expect(synced).toContain(rowOf(container, "ring"));
-      expect(synced).toContain(rowOf(container, "ring-numeric"));
-      expect(synced).not.toContain(rowOf(container, "high"));
-    } finally {
-      delete (HTMLElement.prototype as Partial<HTMLElement>).getAnimations;
-    }
+    expect(synced).toContain(rowOf(container, "ring"));
+    expect(synced).toContain(rowOf(container, "ring-numeric"));
+    expect(synced).not.toContain(rowOf(container, "high"));
   });
 });
