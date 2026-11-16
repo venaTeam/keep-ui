@@ -489,6 +489,93 @@ describe("WidgetAlertsTable", () => {
       expect(widthOf("name")).toBe("240px");
       expect(widthOf("description")).toBe("100px");
     });
+
+    describe("at the widget's measured width", () => {
+      const PINNED = ["severity", "status", "source"];
+      const px = (value: string) => Number.parseFloat(value);
+      const tableElement = () =>
+        widgetRoot().querySelector("table") as HTMLTableElement;
+      const renderedWidths = () =>
+        Object.fromEntries(headerIds().map((id) => [id, px(widthOf(id))]));
+      const sumOf = (widths: Record<string, number>) =>
+        Object.values(widths).reduce((sum, width) => sum + width, 0);
+      const declaredWidths = (overrides: Partial<WidgetData> = {}) => {
+        const { unmount } = renderWidget(overrides);
+        const widths = renderedWidths();
+        unmount();
+        return widths;
+      };
+
+      it("keeps the pinned columns at their declared width and gives description the rest", () => {
+        const declared = declaredWidths();
+        const total = sumOf(declared);
+
+        observeWidth(total + 500);
+        renderWidget();
+
+        const rendered = renderedWidths();
+        PINNED.forEach((id) => expect(rendered[id]).toBe(declared[id]));
+        expect(rendered.name).toBe(declared.name);
+        expect(rendered.lastReceived).toBe(declared.lastReceived);
+        expect(rendered.description).toBe(declared.description + 500);
+        expect(tableElement().style.width).toBe(`${total + 500}px`);
+      });
+
+      it("squeezes nothing below its minimum and overflows when the columns do not fit", () => {
+        const declared = declaredWidths();
+
+        observeWidth(250);
+        renderWidget();
+
+        const rendered = renderedWidths();
+        expect(rendered).toEqual(declared);
+        expect(rendered.name).toBeGreaterThanOrEqual(100);
+        expect(rendered.description).toBeGreaterThanOrEqual(100);
+        expect(tableElement().style.width).toBe(`${sumOf(declared)}px`);
+        expect(widgetRoot()).toHaveClass("overflow-x-auto");
+      });
+
+      it("keeps a saved width on name exact while description flexes", () => {
+        const item = { alertTable: { columnSizing: { name: 240 } } };
+        const declared = declaredWidths(item);
+
+        observeWidth(1200);
+        renderWidget(item);
+
+        const rendered = renderedWidths();
+        expect(rendered.name).toBe(240);
+        PINNED.forEach((id) => expect(rendered[id]).toBe(declared[id]));
+        expect(rendered.description).toBe(
+          declared.description + 1200 - sumOf(declared)
+        );
+        expect(tableElement().style.width).toBe("1200px");
+      });
+
+      it("lets description fill a very wide widget past its maximum", () => {
+        const declared = declaredWidths();
+
+        observeWidth(3000);
+        renderWidget();
+
+        const rendered = renderedWidths();
+        expect(rendered.description).toBe(
+          declared.description + 3000 - sumOf(declared)
+        );
+        expect(sumOf(rendered)).toBe(3000);
+      });
+
+      it("gives the spare width to name when description is hidden", () => {
+        const item = { presetColumns: ["severity", "status", "name"] };
+        const declared = declaredWidths(item);
+
+        observeWidth(800);
+        renderWidget(item);
+
+        const rendered = renderedWidths();
+        expect(rendered.status).toBe(declared.status);
+        expect(rendered.name).toBe(declared.name + 800 - sumOf(declared));
+      });
+    });
   });
 
   it("Group by in the header menu writes the widget's groupBy", async () => {

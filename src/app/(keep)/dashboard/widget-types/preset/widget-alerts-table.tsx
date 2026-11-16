@@ -32,6 +32,10 @@ import {
 import { withEmptyGroupPosition } from "./empty-group-row-model";
 import { useWidgetAlertColumns } from "./use-widget-alert-columns";
 import { useWidgetColumnState } from "./use-widget-column-state";
+import {
+  getWidgetColumnLayout,
+  withUnclampedColumn,
+} from "./widget-column-layout";
 import { WidgetTableSettings } from "./widget-table-settings";
 
 interface WidgetAlertsTableProps {
@@ -64,8 +68,8 @@ function isGroupable(column: ColumnDef<AlertDto>): boolean {
   );
 }
 
-function useIsNarrow(ref: RefObject<HTMLElement | null>): boolean {
-  const [isNarrow, setIsNarrow] = useState(false);
+function useElementWidth(ref: RefObject<HTMLElement | null>): number | null {
+  const [width, setWidth] = useState<number | null>(null);
 
   useEffect(() => {
     const element = ref.current;
@@ -73,16 +77,16 @@ function useIsNarrow(ref: RefObject<HTMLElement | null>): boolean {
       return;
     }
     const observer = new ResizeObserver((entries) => {
-      const width = entries[0]?.contentRect.width;
-      if (width !== undefined) {
-        setIsNarrow(width < NARROW_WIDGET_PX);
+      const measured = entries[0]?.contentRect.width;
+      if (measured !== undefined) {
+        setWidth(Math.floor(measured));
       }
     });
     observer.observe(element);
     return () => observer.disconnect();
   }, [ref]);
 
-  return isNarrow;
+  return width;
 }
 
 function useLinkNavigationBlocked(
@@ -120,7 +124,8 @@ function WidgetAlertsTableContent({
   const rootRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const a11yContainerRef = useRef<HTMLDivElement>(null);
-  const isNarrow = useIsNarrow(wrapperRef);
+  const containerWidth = useElementWidth(wrapperRef);
+  const isNarrow = containerWidth !== null && containerWidth < NARROW_WIDGET_PX;
   useLinkNavigationBlocked(rootRef, isEditMode);
 
   const { columns, allColumnIds } = useWidgetAlertColumns({
@@ -158,14 +163,39 @@ function WidgetAlertsTableContent({
     []
   );
 
+  const {
+    columnOrder: fullColumnOrder,
+    columnVisibility,
+    columnSizing: savedSizing,
+    setColumnOrder,
+  } = state;
+  const visibleColumnOrder = useMemo(
+    () => fullColumnOrder.filter((id) => columnVisibility[id]),
+    [fullColumnOrder, columnVisibility]
+  );
+  const layout = useMemo(
+    () =>
+      getWidgetColumnLayout({
+        columns,
+        visibleOrder: visibleColumnOrder,
+        savedSizing,
+        containerWidth,
+      }),
+    [columns, visibleColumnOrder, savedSizing, containerWidth]
+  );
+  const layoutColumns = useMemo(
+    () => withUnclampedColumn(columns, layout.unclampedColumnId),
+    [columns, layout.unclampedColumnId]
+  );
+
   const table = useReactTable({
     data: alerts ?? NO_ALERTS,
-    columns,
+    columns: layoutColumns,
     getRowId: (row) => row.fingerprint,
     state: {
       columnOrder: state.columnOrder,
       columnVisibility: state.columnVisibility,
-      columnSizing: state.columnSizing,
+      columnSizing: layout.columnSizing,
       grouping,
       columnPinning,
     },
@@ -181,15 +211,6 @@ function WidgetAlertsTableContent({
     getGroupedRowModel: groupedRowModel,
   });
 
-  const {
-    columnOrder: fullColumnOrder,
-    columnVisibility,
-    setColumnOrder,
-  } = state;
-  const visibleColumnOrder = useMemo(
-    () => fullColumnOrder.filter((id) => columnVisibility[id]),
-    [fullColumnOrder, columnVisibility]
-  );
   const setVisibleColumnOrder = useCallback(
     (order: string[]) =>
       setColumnOrder(mergeVisibleColumnOrder(fullColumnOrder, order)),
@@ -260,9 +281,16 @@ function WidgetAlertsTableContent({
         className={`isolate max-w-full overflow-x-auto border rounded-md text-xs ${OPAQUE_CELL_CLASSES} ${COMPACT_GROUP_HEADER_CLASSES}`}
         data-cy="dashboard-widget-alerts-table"
       >
-        <Table className="[&>table]:table-fixed [&>table]:w-full [&>table]:text-xs">
+        <Table
+          style={
+            layout.tableWidth === undefined
+              ? undefined
+              : { width: layout.tableWidth }
+          }
+          className="[&>table]:table-fixed [&>table]:w-full [&>table]:text-xs"
+        >
           <AlertsTableHeaders
-            columns={columns}
+            columns={layoutColumns}
             table={table}
             presetName={widgetKey}
             a11yContainerRef={a11yContainerRef}
@@ -323,6 +351,11 @@ function WidgetAlertsTableContent({
  * widget. Rows are plain, not clickable and always at the default density.
  * In edit mode with `onChange`, the ⚙ Table settings button is rendered into
  * `settingsSlot` (an element the caller places in its header), at every width.
+ *
+ * Once the widget's width is measured, the table is laid out by
+ * `getWidgetColumnLayout`: every column renders at exactly its own width, the
+ * flexible text column takes any spare width so the table fills the widget,
+ * and columns that do not fit scroll sideways.
  *
  * In edit mode no link inside the widget navigates. A capture listener on
  * `window` cancels the click before the dashboard's leave guard (a capture
