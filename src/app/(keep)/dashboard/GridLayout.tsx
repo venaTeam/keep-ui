@@ -3,6 +3,7 @@ import { Responsive, WidthProvider, Layout, Layouts } from "react-grid-layout";
 import GridItemContainer from "./GridItemContainer";
 import { useDashboardEditMode } from "./DashboardEditModeContext";
 import { LayoutItem, WidgetData } from "./types";
+import { GRID_COLS, GRID_COMPACT_TYPE } from "./widget-layout";
 import "react-grid-layout/css/styles.css";
 import { MetricsWidget } from "@/utils/hooks/useDashboardMetricWidgets";
 import { Preset } from "@/entities/presets/model/types";
@@ -15,7 +16,7 @@ const ResponsiveGridLayout = WidthProvider(Responsive);
 
 const BREAKPOINTS = { lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 };
 
-const COLS = { lg: 24, md: 24, sm: 1, xs: 1, xxs: 1 };
+const COLS = { lg: GRID_COLS, md: GRID_COLS, sm: 1, xs: 1, xxs: 1 };
 
 const STACKED_COLS = 1;
 
@@ -109,7 +110,7 @@ const GridLayout: React.FC<GridLayoutProps> = ({
         useCSSTransforms={true}
         isDraggable={isEditable}
         isResizable={isEditable}
-        compactType={null}
+        compactType={GRID_COMPACT_TYPE}
         draggableHandle=".grid-item__widget"
         transformScale={1}
       >
