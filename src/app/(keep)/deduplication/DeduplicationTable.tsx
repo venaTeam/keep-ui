@@ -362,11 +362,7 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
               >
                 {headerGroup.headers.map((header) => {
                   const { style, className } =
-                    getCommonPinningStylesAndClassNames(
-                      header.column,
-                      table.getState().columnPinning.left?.length,
-                      table.getState().columnPinning.right?.length
-                    );
+                    getCommonPinningStylesAndClassNames(header.column);
 
                   return (
                     <TableHeaderCell
@@ -417,11 +413,7 @@ export const DeduplicationTable: React.FC<DeduplicationTableProps> = ({
               >
                 {row.getVisibleCells().map((cell) => {
                   const { style, className } =
-                    getCommonPinningStylesAndClassNames(
-                      cell.column,
-                      table.getState().columnPinning.left?.length,
-                      table.getState().columnPinning.right?.length
-                    );
+                    getCommonPinningStylesAndClassNames(cell.column);
                   return (
                     <TableCell
                       key={cell.id}
