@@ -6,6 +6,7 @@ import {
   Select,
   SelectItem,
   Subtitle,
+  Text,
   TextInput,
   Switch,
 } from "@tremor/react";
@@ -17,10 +18,25 @@ import {
   useWatch,
   useFieldArray,
 } from "react-hook-form";
-import { LayoutItem, Threshold, PresetPanelType } from "../../types";
+import { omit } from "lodash";
+import {
+  AlertTableWidgetConfig,
+  EmptyGroupPosition,
+  LayoutItem,
+  Threshold,
+  PresetPanelType,
+} from "../../types";
 import ColumnsSelection from "./columns-selection";
 import { CountByControl } from "./count-by-control";
+import { EmptyGroupPositionControl } from "./empty-group-position-control";
+import { GroupBySelect } from "./group-by-select";
+import {
+  WIDGET_UNGROUPABLE_COLUMN_IDS,
+  resolveFieldIds,
+} from "./alert-table-widget-config";
 import { CountBy, isShowingMissing } from "@/entities/presets/model/count-by";
+import { useFacetPotentialFields } from "@/features/filter/hooks";
+import { getAlertColumnOptions } from "@/widgets/alerts-table/lib/alert-column-options";
 
 const GROUPED_COUNTER_ROWS = 4;
 const GROUPED_COUNTER_ROWS_WITH_MISSING = 5;
@@ -29,6 +45,58 @@ const getGroupedCounterRows = (countBy: CountBy) =>
   isShowingMissing(countBy)
     ? GROUPED_COUNTER_ROWS_WITH_MISSING
     : GROUPED_COUNTER_ROWS;
+
+const GROUPING_HINT = "Grouping works best with 20 or more alerts";
+const GROUPING_HINT_BELOW_COUNT = 20;
+const DEFAULT_EMPTY_GROUP_POSITION: EmptyGroupPosition = "top";
+const isGroupableField = (field: string) =>
+  !WIDGET_UNGROUPABLE_COLUMN_IDS.includes(field);
+
+const getAlertTableConfig = (
+  saved: AlertTableWidgetConfig | undefined,
+  groupBy: string | null,
+  emptyGroupPosition: EmptyGroupPosition
+): AlertTableWidgetConfig | undefined => {
+  const config: AlertTableWidgetConfig = omit(saved ?? {}, [
+    "groupBy",
+    "emptyGroupPosition",
+  ]);
+  if (groupBy) {
+    config.groupBy = groupBy;
+    config.emptyGroupPosition = emptyGroupPosition;
+  }
+  return Object.keys(config).length > 0 ? config : undefined;
+};
+
+function GroupRowsByControl({
+  value,
+  onChange,
+  showHint,
+}: {
+  value: string | null;
+  onChange: (value: string | null) => void;
+  showHint: boolean;
+}) {
+  const { data } = useFacetPotentialFields("alerts");
+  const fieldOptions = useMemo(
+    () =>
+      getAlertColumnOptions([], resolveFieldIds(data ?? [])),
+    [data]
+  );
+
+  return (
+    <div className="mb-4 mt-2">
+      <Subtitle>Group rows by</Subtitle>
+      <GroupBySelect
+        value={value}
+        onChange={onChange}
+        fieldOptions={fieldOptions}
+        isGroupable={isGroupableField}
+      />
+      {showHint && <Text className="mt-1 text-xs">{GROUPING_HINT}</Text>}
+    </div>
+  );
+}
 
 interface PresetForm {
   selectedPreset: string;
@@ -75,6 +143,14 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
   const [countBy, setCountBy] = useState<CountBy | undefined>(
     editingItem?.countBy
   );
+  const [groupBy, setGroupBy] = useState<string | null>(
+    editingItem?.alertTable?.groupBy ?? null
+  );
+  const [emptyGroupPosition, setEmptyGroupPosition] =
+    useState<EmptyGroupPosition>(
+      editingItem?.alertTable?.emptyGroupPosition ??
+        DEFAULT_EMPTY_GROUP_POSITION
+    );
 
   const { fields, append, remove, move, replace } = useFieldArray({
     control,
@@ -96,8 +172,20 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
       showFiringOnly: formValues.showFiringOnly ?? false,
       customLink: formValues.customLink || "",
       countBy,
+      alertTable: getAlertTableConfig(
+        editingItem?.alertTable,
+        groupBy,
+        emptyGroupPosition
+      ),
     };
-  }, [formValues, presetColumns, countBy]);
+  }, [
+    formValues,
+    presetColumns,
+    countBy,
+    groupBy,
+    emptyGroupPosition,
+    editingItem?.alertTable,
+  ]);
 
   function getLayoutValues(): LayoutItem {
     const isAlertTable = normalizedFormValues.presetPanelType === PresetPanelType.ALERT_TABLE;
@@ -159,6 +247,9 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
         showFiringOnly: normalizedFormValues.showFiringOnly,
         customLink: normalizedFormValues.customLink,
         countBy: normalizedFormValues.countBy,
+        ...(normalizedFormValues.presetPanelType === PresetPanelType.ALERT_TABLE
+          ? { alertTable: normalizedFormValues.alertTable }
+          : {}),
       },
       isValid
     );
@@ -312,6 +403,24 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
         selectedColumns={presetColumns}
         onChange={(selectedColumns) => setPresetColumns(selectedColumns)}
       ></ColumnsSelection>
+          <GroupRowsByControl
+            value={groupBy}
+            onChange={setGroupBy}
+            showHint={
+              !!groupBy &&
+              normalizedFormValues.countOfLastAlerts < GROUPING_HINT_BELOW_COUNT
+            }
+          />
+          {groupBy && (
+            <EmptyGroupPositionControl
+              value={emptyGroupPosition}
+              onChange={setEmptyGroupPosition}
+              titleAs={Subtitle}
+              className="mb-4 mt-2"
+              optionsClassName="mt-1 flex gap-4 text-sm text-gray-700"
+              data-cy="dashboard-widget-form-rows-with-no-value"
+            />
+          )}
         </>
       )}
       <div className="mb-4">

@@ -3,11 +3,11 @@ import { AlertTableServerSide } from "@/widgets/alerts-table/ui/alert-table-serv
 import { useAlertTableCols } from "@/widgets/alerts-table/lib/alert-table-utils";
 import {
   AlertDto,
-  AlertKnownKeys,
   AlertsQuery,
   getTabsFromPreset,
 } from "@/entities/alerts/model";
 import { Preset } from "@/entities/presets/model/types";
+import { getAdditionalColsToGenerate } from "@/widgets/alerts-table/lib/additional-cols";
 import { AlertsTableDataQuery } from "@/widgets/alerts-table/ui/useAlertsTableData";
 
 interface Props {
@@ -56,28 +56,7 @@ export default function AlertTableTabPanelServerSide({
 }: Props) {
   // Compute a stable key representing the set of additional column names.
   // This changes only when the actual set of extra keys changes, not when alert data updates.
-  const additionalColsKey = [
-    ...new Set(
-      alerts?.flatMap((alert) => {
-        const keys = Object.keys(alert).filter(
-          (key) => !AlertKnownKeys.includes(key)
-        );
-        return keys.flatMap((key) => {
-          if (
-            typeof alert[key as keyof AlertDto] === "object" &&
-            alert[key as keyof AlertDto] !== null
-          ) {
-            return Object.keys(alert[key as keyof AlertDto] as object).map(
-              (subKey) => `${key}.${subKey}`
-            );
-          }
-          return key;
-        });
-      }) || []
-    ),
-  ]
-    .sort()
-    .join(",");
+  const additionalColsKey = getAdditionalColsToGenerate(alerts ?? []).join(",");
 
   const additionalColsToGenerate = useMemo(
     () => (additionalColsKey ? additionalColsKey.split(",") : []),
