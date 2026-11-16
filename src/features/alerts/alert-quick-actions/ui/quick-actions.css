@@ -5,7 +5,7 @@
 }
 
 .quick-actions-table tr:hover .quick-reveal,
-.quick-actions-table tr:focus-within .quick-reveal,
+.quick-actions-table tr:has(:focus-visible) .quick-reveal,
 .quick-actions-table .quick-reveal:focus-visible,
 .quick-actions-table[data-selecting] .quick-reveal {
   opacity: 1;
@@ -17,7 +17,7 @@
 }
 
 .quick-actions-table tr:hover .quick-tray,
-.quick-actions-table tr:focus-within .quick-tray {
+.quick-actions-table tr:has(:focus-visible) .quick-tray {
   opacity: 1;
   pointer-events: auto;
 }
