@@ -16,6 +16,25 @@ export function pruneSelection(
   );
 }
 
+/** A new selection with the ids ticked or unticked; an unticked id is removed, so the result never holds `false`. */
+export function setIdsTicked(
+  selection: RowSelectionState,
+  ids: readonly string[],
+  tick: boolean
+): RowSelectionState {
+  const next: RowSelectionState = Object.fromEntries(
+    Object.entries(selection).filter(([, ticked]) => ticked)
+  );
+  ids.forEach((id) => {
+    if (tick) {
+      next[id] = true;
+    } else {
+      delete next[id];
+    }
+  });
+  return next;
+}
+
 /** Ids from the anchor to the target inclusive, in display order; just the target when either is not shown. */
 export function getRangeIds(
   orderedIds: readonly string[],

@@ -9,7 +9,7 @@ export interface WidgetRowActions {
   compact: boolean;
   /** Fingerprint of the alert whose single-row dialog is open, if any. */
   openFingerprint: string | null;
-  /** Ticks or unticks a row; with `shiftKey`, the range from the last picked row. */
+  /** Ticks or unticks a row; with `shiftKey` while anything is ticked, the range from the last picked row. */
   onPick: (rowId: string, shiftKey: boolean) => void;
   /** Opens a quick action's dialog for the given alerts. */
   onOpenAction: (actionId: string, alerts: AlertDto[]) => void;

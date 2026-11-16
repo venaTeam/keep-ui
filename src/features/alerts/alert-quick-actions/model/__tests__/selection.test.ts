@@ -4,6 +4,7 @@ import {
   getRangeIds,
   getStripLabel,
   pruneSelection,
+  setIdsTicked,
 } from "../selection";
 import { WidgetAlertAction } from "../types";
 
@@ -27,6 +28,26 @@ describe("pruneSelection", () => {
     expect(pruneSelection({ a: true, b: true }, ["b"])).toEqual({ b: true }));
   it("drops everything for an empty list", () =>
     expect(pruneSelection({ a: true }, [])).toEqual({}));
+});
+describe("setIdsTicked", () => {
+  it("ticks the ids on a new object, keeping the rest", () => {
+    const s = { a: true };
+    const next = setIdsTicked(s, ["b", "c"], true);
+    expect(next).toEqual({ a: true, b: true, c: true });
+    expect(next).not.toBe(s);
+    expect(s).toEqual({ a: true });
+  });
+  it("removes unticked ids instead of storing false", () => {
+    const s = { a: true, b: true, c: true };
+    const next = setIdsTicked(s, ["a", "b"], false);
+    expect(next).toEqual({ c: true });
+    expect(Object.values(next)).not.toContain(false);
+    expect(s).toEqual({ a: true, b: true, c: true });
+  });
+  it("drops false values it is given", () =>
+    expect(setIdsTicked({ a: true, b: false }, ["c"], true)).toEqual({ a: true, c: true }));
+  it("leaves an empty object when the last id is unticked", () =>
+    expect(setIdsTicked({ a: true }, ["a"], false)).toEqual({}));
 });
 describe("getRangeIds", () => {
   const order = ["a", "b", "c", "d"];

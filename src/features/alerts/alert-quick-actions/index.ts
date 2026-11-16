@@ -9,7 +9,8 @@ export {
   QUICK_TRAY_CLASS,
 } from "./ui/class-names";
 export { useRefreshAlertQueries } from "./model/use-refresh-alert-queries";
-export { getRangeIds, pruneSelection } from "./model/selection";
+export { getRangeIds, pruneSelection, setIdsTicked } from "./model/selection";
+export { GROUP_ROW_SELECTION } from "./model/group-row-selection";
 export { ALERT_QUICK_ACTIONS } from "./model/actions";
 export type {
   OpenQuickAction,

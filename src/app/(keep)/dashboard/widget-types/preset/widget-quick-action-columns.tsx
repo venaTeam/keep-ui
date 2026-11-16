@@ -1,6 +1,6 @@
 import { ChangeEvent, useContext } from "react";
 import clsx from "clsx";
-import type { ColumnDef, Row, TableFeature } from "@tanstack/react-table";
+import type { ColumnDef, Row } from "@tanstack/react-table";
 import type { AlertDto } from "@/entities/alerts/model/types";
 import { TableIndeterminateCheckbox } from "@/shared/ui";
 import {
@@ -19,42 +19,6 @@ export const ROW_ACTIONS_COLUMN_ID = "alertMenu";
 
 /** Width of the checkbox gutter, in pixels. */
 export const CHECKBOX_COLUMN_PX = 28;
-
-/**
- * A table feature that makes a group row's selection handler tick or untick
- * every selectable row under it, the group row itself never entering the
- * selection. The widget makes group rows unselectable, and TanStack's own
- * handler does nothing for a row that cannot be selected, so without it the
- * shared group header checkbox would do nothing.
- */
-export const GROUP_ROW_SELECTION: TableFeature<AlertDto> = {
-  createRow: (row, table) => {
-    const getOwnHandler = row.getToggleSelectedHandler;
-    row.getToggleSelectedHandler = () => {
-      if (!row.getIsGrouped()) {
-        return getOwnHandler();
-      }
-      return (event: unknown) => {
-        const tick = (event as ChangeEvent<HTMLInputElement>).target.checked;
-        const ids = row
-          .getLeafRows()
-          .filter((leaf) => leaf.getCanSelect())
-          .map((leaf) => leaf.id);
-        table.setRowSelection((old) => {
-          const next = { ...old };
-          ids.forEach((id) => {
-            if (tick) {
-              next[id] = true;
-            } else {
-              delete next[id];
-            }
-          });
-          return next;
-        });
-      };
-    };
-  },
-};
 
 /** A row's selection checkbox, plus a marker while that row's dialog is open. */
 function RowCheckbox({ row }: { row: Row<AlertDto> }) {

@@ -1482,27 +1482,32 @@ describe("WidgetAlertsTable", () => {
       const [rowSelection, setRowSelection] =
         React.useState<RowSelectionState>(initial);
       return (
-        <WidgetAlertsTable
-          item={{
-            ...baseItem,
-            ...(groupBy
-              ? { alertTable: { groupBy, emptyGroupPosition: "top" } }
-              : {}),
-          }}
-          alerts={alerts}
-          isEditMode={isEditMode}
-          onChange={onChange}
-          settingsSlot={settingsSlot}
-          selection={{
-            rowSelection,
-            onRowSelectionChange: (next) => {
-              onRowSelectionChange(next);
-              setRowSelection(next);
-            },
-            onOpenAction,
-            openFingerprint,
-          }}
-        />
+        <>
+          <button type="button" onClick={() => setRowSelection({})}>
+            Clear selection
+          </button>
+          <WidgetAlertsTable
+            item={{
+              ...baseItem,
+              ...(groupBy
+                ? { alertTable: { groupBy, emptyGroupPosition: "top" } }
+                : {}),
+            }}
+            alerts={alerts}
+            isEditMode={isEditMode}
+            onChange={onChange}
+            settingsSlot={settingsSlot}
+            selection={{
+              rowSelection,
+              onRowSelectionChange: (next) => {
+                onRowSelectionChange(next);
+                setRowSelection(next);
+              },
+              onOpenAction,
+              openFingerprint,
+            }}
+          />
+        </>
       );
     }
 
@@ -1686,6 +1691,17 @@ describe("WidgetAlertsTable", () => {
 
       fireEvent.click(checkboxFor(a1));
       fireEvent.click(checkboxFor(a2), { shiftKey: true });
+
+      expect(lastSelection()).toEqual({ [a3.fingerprint]: true });
+    });
+
+    it("shift-click after Clear ticks only the clicked row", () => {
+      renderHarness({ alerts: [a1, a2, a3] });
+
+      fireEvent.click(checkboxFor(a1));
+      fireEvent.click(screen.getByRole("button", { name: "Clear selection" }));
+      expect(checkboxFor(a1)).not.toBeChecked();
+      fireEvent.click(checkboxFor(a3), { shiftKey: true });
 
       expect(lastSelection()).toEqual({ [a3.fingerprint]: true });
     });

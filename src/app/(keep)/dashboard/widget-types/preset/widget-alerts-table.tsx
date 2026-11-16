@@ -24,9 +24,11 @@ import { XMarkIcon } from "@heroicons/react/20/solid";
 import clsx from "clsx";
 import type { AlertDto } from "@/entities/alerts/model/types";
 import {
+  GROUP_ROW_SELECTION,
   QUICK_ACTIONS_TABLE_CLASS,
   QUICK_REVEAL_CLASS,
   getRangeIds,
+  setIdsTicked,
 } from "@/features/alerts/alert-quick-actions";
 import { RowStyleOverrideProvider } from "@/entities/alerts/model/useAlertRowStyle";
 import AlertsTableHeaders from "@/widgets/alerts-table/ui/alert-table-headers";
@@ -59,7 +61,6 @@ import {
 import {
   CHECKBOX_COLUMN_ID,
   CHECKBOX_COLUMN_PX,
-  GROUP_ROW_SELECTION,
   QUICK_ACTION_COLUMNS,
   ROW_ACTIONS_COLUMN_ID,
 } from "./widget-quick-action-columns";
@@ -100,12 +101,6 @@ function noop() {}
 
 function isAlertRow(row: Row<AlertDto>): boolean {
   return !row.getIsGrouped();
-}
-
-function withoutUnticked(selection: RowSelectionState): RowSelectionState {
-  return Object.fromEntries(
-    Object.entries(selection).filter(([, ticked]) => ticked)
-  );
 }
 
 /** Ids of the alert rows in display order, leaving out the rows of collapsed groups. */
@@ -358,7 +353,7 @@ function WidgetAlertsTableContent({
         return;
       }
       chromeSelection.onRowSelectionChange(
-        withoutUnticked(functionalUpdate(updater, chromeSelection.rowSelection))
+        functionalUpdate(updater, chromeSelection.rowSelection)
       );
     },
     [chromeSelection]
@@ -403,21 +398,16 @@ function WidgetAlertsTableContent({
       const current = chromeSelection.rowSelection;
       const order = getShownRowIds(table.getRowModel().rows, isGroupExpanded);
       const last = lastPickRef.current;
+      const hasAnchor =
+        last !== null &&
+        Object.keys(current).length > 0 &&
+        order.includes(last);
       const ids =
-        shiftKey && last !== null && order.includes(last)
-          ? getRangeIds(order, last, rowId)
-          : [rowId];
-      const tick = !current[rowId];
-      const next = { ...current };
-      ids.forEach((id) => {
-        if (tick) {
-          next[id] = true;
-        } else {
-          delete next[id];
-        }
-      });
+        shiftKey && hasAnchor ? getRangeIds(order, last, rowId) : [rowId];
       lastPickRef.current = rowId;
-      chromeSelection.onRowSelectionChange(withoutUnticked(next));
+      chromeSelection.onRowSelectionChange(
+        setIdsTicked(current, ids, !current[rowId])
+      );
     },
     [chromeSelection, table, isGroupExpanded]
   );
@@ -606,9 +596,10 @@ function WidgetAlertsTableContent({
  * tray floats over the row's last cells and hides while anything is ticked.
  * Ticks live in the caller's `selection.rowSelection`, keyed by fingerprint and
  * never holding a group row; shift-click ticks the range in display order,
- * skipping the rows of collapsed groups. The gutter's width comes out of the
- * layout, so the table still fills the widget exactly. In edit mode there is
- * no chrome, so none of it is saved or listed in the ⚙ panel.
+ * skipping the rows of collapsed groups, and with nothing ticked it acts as a
+ * plain click, so a Clear leaves no anchor behind. The gutter's width comes
+ * out of the layout, so the table still fills the widget exactly. In edit mode
+ * there is no chrome, so none of it is saved or listed in the ⚙ panel.
  *
  * In edit mode the table body is `inert`: none of its links, rows or group
  * headers can be clicked or focused, so nothing in it navigates or reaches the
