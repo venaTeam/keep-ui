@@ -156,11 +156,11 @@ export const GroupedRow = ({
                       style={{ ...style, ...ringingCell.style }}
                       data-cy={`alerts-cell-${cell.column.id}`}
                     >
-                      {cellIndex === 0 && ringing.reason}
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext()
                       )}
+                      {cellIndex === 0 && ringing.reason}
                     </TableCell>
                   );
                 })}

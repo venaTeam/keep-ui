@@ -19,7 +19,7 @@ const RINGING_CELL_CLASS_NAME = clsx(
 
 const RINGING_STYLE = getRowBlinkStyle(DEFAULT_BLINK_COLOR);
 
-const REASON = <span className="sr-only">{RINGING_REASON}</span>;
+const REASON = <span className="sr-only select-none">{RINGING_REASON}</span>;
 
 type RingingAlert = {
   severity?: unknown;
@@ -39,7 +39,11 @@ export type RingingRow = {
   rowProps: { "data-ringing"?: "true" };
   /** For the cell at `index` of the row's `count` cells. */
   cellProps: (index: number, count: number) => RingingCellProps;
-  /** The visually hidden reason for the row's first cell; null when quiet. */
+  /**
+   * The visually hidden, unselectable reason, to render after the content of
+   * the row's first cell so it is neither the element column autofit measures
+   * nor part of copied text; null when quiet.
+   */
   reason: ReactNode;
 };
 

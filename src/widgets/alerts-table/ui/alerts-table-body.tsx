@@ -291,8 +291,8 @@ export function AlertsTableBody({
                         : {}),
                     }}
                   >
-                    {cellIndex === 0 && ringing.reason}
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    {cellIndex === 0 && ringing.reason}
                   </TableCell>
                 );
               })}

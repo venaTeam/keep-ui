@@ -98,6 +98,9 @@ describe("WidgetAlertsTable ringing rows", () => {
       expect(cells[0]).toHaveClass("before:border-l-2");
       expect(cells[cells.length - 1]).toHaveClass("before:border-r-2");
       expect(cells[0]).toHaveTextContent(RINGING_REASON);
+      expect(cells[0].firstElementChild).not.toHaveTextContent(RINGING_REASON);
+      expect(cells[0].lastElementChild).toHaveTextContent(RINGING_REASON);
+      expect(cells[0].lastElementChild).toHaveClass("select-none");
     }
     expect(screen.getAllByText(RINGING_REASON)).toHaveLength(1);
     screen

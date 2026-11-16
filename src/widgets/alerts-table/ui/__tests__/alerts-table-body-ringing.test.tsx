@@ -58,7 +58,11 @@ const alerts = [
 ];
 
 const columns: ColumnDef<AlertDto>[] = [
-  { id: "severity", accessorKey: "severity", cell: () => null },
+  {
+    id: "severity",
+    accessorKey: "severity",
+    cell: () => <div data-testid="severity-mark" />,
+  },
   { id: "name", accessorKey: "name", cell: (c) => String(c.getValue()) },
   { id: "service", accessorKey: "service", cell: (c) => String(c.getValue()) },
 ];
@@ -174,6 +178,20 @@ describe("AlertsTableBody ringing rows", () => {
     }
   });
 
+  it("keeps the reason out of what autofit measures and out of copied text", async () => {
+    const { container } = await renderHarness({ presetNoisy: true });
+    const firstCell = cellsOf(rowOf(container, "ring"))[0];
+    const reason = within(firstCell).getByText(RINGING_REASON);
+
+    expect(firstCell.firstElementChild).toHaveAttribute(
+      "data-testid",
+      "severity-mark"
+    );
+    expect(firstCell.firstElementChild).not.toHaveTextContent(RINGING_REASON);
+    expect(firstCell.lastElementChild).toBe(reason);
+    expect(reason).toHaveClass("sr-only", "select-none");
+  });
+
   it("does not ring a deleted critical firing alert", async () => {
     const { container } = await renderHarness({ presetNoisy: true });
     const row = rowOf(container, "deleted");
@@ -236,7 +254,7 @@ describe("AlertsTableBody ringing rows", () => {
     ).not.toBeNull();
     expect(row).toHaveAttribute("data-ringing", "true");
     cellsOf(row).forEach((cell) => expect(cell).toHaveClass(...OVERLAY));
-    expect(within(row).getByText(RINGING_REASON)).toBeInTheDocument();
+    expect(cellsOf(row)[0].lastElementChild).toHaveTextContent(RINGING_REASON);
     expect(rowOf(container, "high")).not.toHaveAttribute("data-ringing");
     expect(rowOf(container, "numeric")).not.toHaveAttribute("data-ringing");
   });

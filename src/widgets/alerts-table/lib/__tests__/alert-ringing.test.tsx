@@ -150,6 +150,6 @@ describe("useRingingRows", () => {
     const { getByText } = render(<>{ringingRowOf(true)(critical).reason}</>);
 
     expect(RINGING_REASON).toBe("Ringing: critical, firing, noisy preset");
-    expect(getByText(RINGING_REASON)).toHaveClass("sr-only");
+    expect(getByText(RINGING_REASON)).toHaveClass("sr-only", "select-none");
   });
 });

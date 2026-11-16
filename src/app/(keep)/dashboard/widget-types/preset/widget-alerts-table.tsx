@@ -188,8 +188,8 @@ const WidgetAlertsTable: React.FC<WidgetAlertsTableProps> = ({
               ref={ringingCell.ref}
               {...ringing.rowProps}
             >
-              {index === 0 && ringing.reason}
               {columnValue}
+              {index === 0 && ringing.reason}
             </div>
           );
         });
