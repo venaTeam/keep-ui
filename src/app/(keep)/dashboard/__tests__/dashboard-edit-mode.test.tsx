@@ -2,6 +2,7 @@ import React from "react";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import DashboardPage from "../[id]/dashboard";
 import { useDashboardEditMode } from "../DashboardEditModeContext";
+import { GRID_COLS, GRID_COMPACT_TYPE } from "../widget-layout";
 
 const mockPost = jest.fn();
 const mockMutate = jest.fn();
@@ -58,7 +59,7 @@ jest.mock("../GridLayout", () => ({
     return (
       <div data-testid="grid" data-edit-mode={String(isEditMode)}>
         {layout.map((l: any) => (
-          <span key={l.i} data-testid={`pos-${l.i}`}>
+          <span key={l.i} data-testid={`pos-${l.i}`} data-y={l.y}>
             {l.x}
           </span>
         ))}
@@ -69,6 +70,17 @@ jest.mock("../GridLayout", () => ({
         >
           move-panels
         </button>
+        <button
+          onClick={() =>
+            onLayoutChange(
+              jest
+                .requireActual("react-grid-layout")
+                .utils.compact(layout, GRID_COMPACT_TYPE, GRID_COLS)
+            )
+          }
+        >
+          report-shown-layout
+        </button>
       </div>
     );
   },
@@ -76,7 +88,11 @@ jest.mock("../GridLayout", () => ({
 
 jest.mock("../WidgetModal", () => ({
   __esModule: true,
-  default: () => <div data-testid="widget-modal" />,
+  default: ({ onAddWidget }: any) => (
+    <div data-testid="widget-modal">
+      <button onClick={() => onAddWidget({ name: "New panel" })}>add-widget</button>
+    </div>
+  ),
 }));
 
 jest.mock("../dashboard-appearance/DashboardSettingsPanel", () => ({
@@ -190,6 +206,45 @@ describe("dashboard edit mode", () => {
 
     expect(byCy("dashboard-leave-modal")).toBeNull();
     expect(byCy("dashboard-enter-edit-btn")).toBeInTheDocument();
+  });
+
+  it("cancel does not ask when the grid only reports the positions it already shows", () => {
+    mockDashboards = [
+      {
+        ...savedDashboard(),
+        dashboard_config: {
+          layout: [
+            { i: "w1", x: 0, y: 0, w: 3, h: 3 },
+            { i: "w2", x: 0, y: 10, w: 3, h: 3 },
+          ],
+          widget_data: [
+            { i: "w1", x: 0, y: 0, w: 3, h: 3, name: "Panel" },
+            { i: "w2", x: 0, y: 10, w: 3, h: 3, name: "Below a gap" },
+          ],
+        },
+      },
+    ];
+    render(<DashboardPage />);
+    click("dashboard-enter-edit-btn");
+
+    fireEvent.click(screen.getByText("report-shown-layout"));
+    click("dashboard-cancel-edit-btn");
+
+    expect(byCy("dashboard-leave-modal")).toBeNull();
+    expect(byCy("dashboard-enter-edit-btn")).toBeInTheDocument();
+  });
+
+  it("adds a new widget below the existing panels", () => {
+    render(<DashboardPage />);
+    click("dashboard-enter-edit-btn");
+    click("dashboard-add-widget-btn");
+
+    fireEvent.click(screen.getByText("add-widget"));
+
+    expect(document.querySelector('[data-testid^="pos-w-"]')).toHaveAttribute(
+      "data-y",
+      "3"
+    );
   });
 
   it("save persists the changes and returns to view mode", async () => {
