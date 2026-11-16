@@ -69,6 +69,11 @@ export const GroupedRow = ({
       }
     }
 
+    const headerRinging = ringingRow(
+      isExpanded ? [] : row.subRows.map((subRow) => subRow.original)
+    );
+    const headerRingingCell = headerRinging.cellProps(0, 1);
+
     return (
       <>
         {/* Group Header Row */}
@@ -77,11 +82,17 @@ export const GroupedRow = ({
           onClick={() => onToggleExpanded?.(groupKey)}
           data-cy="alerts-group-header"
           data-cy-id={groupKey}
+          {...headerRinging.rowProps}
         >
           {/* Render a single cell that spans the entire width */}
           <TableCell
+            ref={headerRingingCell.ref}
             colSpan={row.getVisibleCells().length}
-            className="group-header-cell bg-orange-100 group-hover:bg-orange-200"
+            className={clsx(
+              "group-header-cell bg-orange-100 group-hover:bg-orange-200",
+              headerRingingCell.className
+            )}
+            style={headerRingingCell.style}
           >
             <div className="flex items-center gap-2">
               <div className="flex items-center">
@@ -108,6 +119,7 @@ export const GroupedRow = ({
                 </span>
               </div>
             </div>
+            {headerRinging.reason}
           </TableCell>
         </TableRow>
 

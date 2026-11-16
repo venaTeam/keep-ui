@@ -1,6 +1,6 @@
 import React from "react";
 import { format } from "util";
-import { act, render, within } from "@testing-library/react";
+import { act, fireEvent, render, within } from "@testing-library/react";
 import { Table } from "@tremor/react";
 import {
   ColumnDef,
@@ -55,6 +55,7 @@ const alerts = [
   alert("resolved", "critical", "resolved"),
   alert("high", "high", "firing"),
   { ...alert("deleted", "critical", "firing"), deleted: true } as AlertDto,
+  alert("db-high", "high", "firing", "db"),
 ];
 
 const columns: ColumnDef<AlertDto>[] = [
@@ -119,6 +120,11 @@ const renderHarness = async (props: HarnessProps = {}) => {
 const rowOf = (container: HTMLElement, fingerprint: string) =>
   container.querySelector(
     `[data-cy="alerts-row"][data-cy-id="${fingerprint}"]`
+  ) as HTMLElement;
+
+const groupHeaderOf = (container: HTMLElement, service: string) =>
+  container.querySelector(
+    `[data-cy="alerts-group-header"][data-cy-id="service:${service}"]`
   ) as HTMLElement;
 
 const cellsOf = (row: HTMLElement) =>
@@ -257,6 +263,59 @@ describe("AlertsTableBody ringing rows", () => {
     expect(cellsOf(row)[0].lastElementChild).toHaveTextContent(RINGING_REASON);
     expect(rowOf(container, "high")).not.toHaveAttribute("data-ringing");
     expect(rowOf(container, "numeric")).not.toHaveAttribute("data-ringing");
+  });
+
+  it("rings a collapsed group's header when one of its alerts rings, and hands the ring back to the alert when expanded", async () => {
+    const { container } = await renderHarness({
+      presetNoisy: true,
+      grouping: ["service"],
+    });
+    const header = () => groupHeaderOf(container, "api");
+
+    expect(header()).not.toHaveAttribute("data-ringing");
+    expect(header().querySelector("td")).not.toHaveClass(PULSE);
+    expect(within(header()).queryByText(RINGING_REASON)).toBeNull();
+    expect(rowOf(container, "ring")).toHaveAttribute("data-ringing", "true");
+
+    await act(async () => {
+      fireEvent.click(header());
+    });
+
+    const headerCell = header().querySelector("td") as HTMLElement;
+    expect(rowOf(container, "ring")).toBeNull();
+    expect(header()).toHaveAttribute("data-ringing", "true");
+    expect(headerCell).toHaveClass(
+      ...OVERLAY,
+      "before:border-l-2",
+      "before:border-r-2"
+    );
+    expect(headerCell.style.getPropertyValue("--blink-row-tint")).not.toBe("");
+    expect(headerCell.lastElementChild).toHaveTextContent(RINGING_REASON);
+    expect(headerCell.lastElementChild).toHaveClass("sr-only", "select-none");
+
+    await act(async () => {
+      fireEvent.click(header());
+    });
+
+    expect(header()).not.toHaveAttribute("data-ringing");
+    expect(rowOf(container, "ring")).toHaveAttribute("data-ringing", "true");
+  });
+
+  it("leaves a collapsed group quiet when none of its alerts rings", async () => {
+    const { container } = await renderHarness({
+      presetNoisy: true,
+      grouping: ["service"],
+    });
+
+    await act(async () => {
+      fireEvent.click(groupHeaderOf(container, "db"));
+    });
+
+    const header = groupHeaderOf(container, "db");
+    expect(rowOf(container, "db-high")).toBeNull();
+    expect(header).not.toHaveAttribute("data-ringing");
+    expect(header.querySelector("td")).not.toHaveClass(PULSE);
+    expect(header.querySelector("td")?.getAttribute("style")).toBeNull();
   });
 
   it("starts the pulse of every ringing cell at the page's time zero", async () => {

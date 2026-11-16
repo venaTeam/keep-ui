@@ -29,6 +29,7 @@ Supersedes the visual part of "Alert Table readability" (PR #108, branch `feat/a
 
    Every other row is unchanged. The rule needs a single helper with unit tests.
 3. **Surfaces.** Both the presets page table and the dashboard Alert Table widget. On the presets page that includes the rows inside groups, when grouped.
+   - A collapsed group whose alerts include one that would ring rings its header row instead (same pulse, synced, with `data-ringing` and the reason), since the alarm's count ignores grouping. Expanded, the header is normal and the ringing alerts' own rows ring (review of PR #111).
 4. **Blink style.** Revised after the review of PR #111 (2026-11-16).
    - The Count feature's red (`DEFAULT_BLINK_COLOR`, from `blink-palette.ts`) on the Count blink's timing: its own `ringingPulse` keyframes have the same offsets and duration as `missing-blink`, so the two stay in phase.
    - Kept in phase with other blinks on the page, reusing the `useSyncedAnimation` approach.
@@ -55,7 +56,7 @@ Supersedes the visual part of "Alert Table readability" (PR #108, branch `feat/a
 ## Tests
 
 - **Rule helper:** critical+firing+not deleted+noisy is true. False when any one fails (including a deleted critical firing alert in a noisy preset). A numeric critical severity, or the words in another case, stay quiet.
-- **Presets page body:** a ringing row carries the attribute and its cells the overlay; a non-ringing row (including a deleted critical firing one) and a non-noisy preset carry neither; grouped child rows ring too; a ringing row keeps the last-viewed, hover and selection classes.
+- **Presets page body:** a ringing row carries the attribute and its cells the overlay; a non-ringing row (including a deleted critical firing one) and a non-noisy preset carry neither; grouped child rows ring too; a collapsed group with a ringing alert rings its header and hands the ring back to the alert when expanded; a ringing row keeps the last-viewed, hover and selection classes.
 - **Widget:** every cell of a ringing row carries the class; other rows (including a deleted critical firing one) don't; a non-noisy preset gives none.
 - **Reduced motion:** the pulse uses a `motion-safe:` variant (a class assertion is enough).
 - **Contrast:** red-500 marks keep 3:1 and row text 4.5:1 on the ringing row's background at every keyframe of `ringingPulse`, on white and on the last-viewed orange.
