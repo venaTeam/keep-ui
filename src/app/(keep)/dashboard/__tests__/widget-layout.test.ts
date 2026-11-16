@@ -1,5 +1,46 @@
-import { applyEditedItemToLayout } from "../widget-layout";
+import { applyEditedItemToLayout, compactLayout } from "../widget-layout";
 import { LayoutItem, WidgetData } from "../types";
+
+const panel = (i: string, x: number, y: number, w: number, h: number): LayoutItem => ({
+  i,
+  x,
+  y,
+  w,
+  h,
+  static: false,
+});
+
+const positions = (layout: LayoutItem[]) =>
+  Object.fromEntries(layout.map(({ i, x, y }) => [i, [x, y]]));
+
+describe("compactLayout", () => {
+  it("pulls a panel that overflows the grid back inside, as the grid shows it", () => {
+    const result = compactLayout([panel("a", 20, 0, 8, 3), panel("b", 16, 3, 4, 3)], ["a", "b"]);
+
+    expect(positions(result)).toEqual({ a: [16, 0], b: [16, 3] });
+  });
+
+  it("stacks panels saved at the same spot in widget order", () => {
+    const result = compactLayout([panel("a", 0, 0, 6, 3), panel("b", 0, 0, 6, 3)], ["b", "a"]);
+
+    expect(positions(result)).toEqual({ b: [0, 0], a: [0, 3] });
+  });
+
+  it("keeps only panels that have a widget and adds widgets missing from the layout", () => {
+    const result = compactLayout([panel("a", 0, 0, 6, 5), panel("ghost", 0, 5, 6, 5)], ["a", "c"]);
+
+    expect(positions(result)).toEqual({ a: [0, 0], c: [0, 5] });
+  });
+
+  it("does not change the saved layout it is given", () => {
+    const saved = [panel("a", 0, 0, 6, 4), panel("b", 0, 0, 6, 4), panel("c", 0, 4, 6, 4)];
+    const before = JSON.parse(JSON.stringify(saved));
+
+    compactLayout(saved, ["a", "b", "c"]);
+
+    expect(saved).toEqual(before);
+  });
+});
 
 const entry = (overrides: Partial<LayoutItem> = {}): LayoutItem => ({
   i: "w1",

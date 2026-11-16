@@ -126,8 +126,16 @@ const DashboardPage = () => {
     }
 
     const config = dashboard.dashboard_config ?? {};
-    setLayout(compactLayout(Array.isArray(config.layout) ? config.layout : []));
-    setWidgetData(Array.isArray(config.widget_data) ? config.widget_data : []);
+    const savedWidgets: WidgetData[] = Array.isArray(config.widget_data)
+      ? config.widget_data
+      : [];
+    setLayout(
+      compactLayout(
+        Array.isArray(config.layout) ? config.layout : [],
+        savedWidgets.map((widget) => widget.i)
+      )
+    );
+    setWidgetData(savedWidgets);
     setDashboardName(dashboard.dashboard_name);
     setAppearance(clampAppearance(config.appearance));
   }, [id, dashboards, isLoading]);

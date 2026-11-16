@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import "react-grid-layout";
 
 /**
@@ -6,10 +7,12 @@ import "react-grid-layout";
  */
 declare module "react-grid-layout" {
   namespace utils {
-    function compact(
-      layout: Layout[],
+    function synchronizeLayoutWithChildren(
+      initialLayout: Layout[],
+      children: ReactNode,
+      cols: number,
       compactType: "vertical" | "horizontal" | null,
-      cols: number
+      allowOverlap?: boolean
     ): Layout[];
   }
 }

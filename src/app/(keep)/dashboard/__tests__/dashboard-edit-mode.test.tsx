@@ -85,7 +85,13 @@ jest.mock("../GridLayout", () => ({
             onLayoutChange(
               jest
                 .requireActual("react-grid-layout")
-                .utils.compact(layout, GRID_COMPACT_TYPE, GRID_COLS)
+                .utils.synchronizeLayoutWithChildren(
+                  layout,
+                  data.map((d: any) => <div key={d.i} />),
+                  GRID_COLS,
+                  GRID_COMPACT_TYPE,
+                  false
+                )
             )
           }
         >
@@ -254,6 +260,31 @@ describe("dashboard edit mode", () => {
 
     expect(byCy("dashboard-leave-modal")).toBeNull();
     expect(byCy("dashboard-enter-edit-btn")).toBeInTheDocument();
+  });
+
+  it("cancel does not ask when a saved panel sits partly outside the grid", () => {
+    mockDashboards = [
+      {
+        ...savedDashboard(),
+        dashboard_config: {
+          layout: [
+            { i: "a", x: 20, y: 0, w: 8, h: 3 },
+            { i: "b", x: 16, y: 3, w: 4, h: 3 },
+          ],
+          widget_data: [
+            { i: "a", x: 20, y: 0, w: 8, h: 3, name: "Wide" },
+            { i: "b", x: 16, y: 3, w: 4, h: 3, name: "Below" },
+          ],
+        },
+      },
+    ];
+    render(<DashboardPage />);
+    click("dashboard-enter-edit-btn");
+
+    fireEvent.click(screen.getByText("report-shown-layout"));
+    click("dashboard-cancel-edit-btn");
+
+    expect(byCy("dashboard-leave-modal")).toBeNull();
   });
 
   it("adds a new widget below the existing panels", () => {

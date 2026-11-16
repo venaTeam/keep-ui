@@ -1,3 +1,4 @@
+import { createElement } from "react";
 import { utils } from "react-grid-layout";
 import { LayoutItem, WidgetData } from "./types";
 
@@ -12,13 +13,26 @@ export const GRID_COLS = 24;
 export const GRID_COMPACT_TYPE = "vertical" as const;
 
 /**
- * The layout the way the grid shows it, with panels settled up into free
- * space. Keeping the page's layout equal to what is on screen means the grid
+ * The layout the way the grid shows it. Runs the grid's own settling
+ * (react-grid-layout's `synchronizeLayoutWithChildren`) over one keyed element
+ * per widget, which is what the grid itself receives:
+ * - panels are taken in widget order;
+ * - panels without a widget are dropped;
+ * - widgets without a panel get one at the bottom;
+ * - panels are pulled inside the columns and settled up into free space.
+ *
+ * Keeping the page's layout equal to what is on screen means the grid
  * reporting the same positions (it does after a breakpoint change) is not
- * mistaken for an unsaved edit.
+ * mistaken for an unsaved edit. The given layout is not modified.
  */
-export const compactLayout = (layout: LayoutItem[]): LayoutItem[] =>
-  utils.compact(layout, GRID_COMPACT_TYPE, GRID_COLS) as LayoutItem[];
+export const compactLayout = (layout: LayoutItem[], widgetIds: string[]): LayoutItem[] =>
+  utils.synchronizeLayoutWithChildren(
+    layout,
+    widgetIds.map((id) => createElement("div", { key: id })),
+    GRID_COLS,
+    GRID_COMPACT_TYPE,
+    false
+  ) as LayoutItem[];
 
 /** The first row below every panel, where a newly added widget goes. */
 export const layoutBottom = (layout: Pick<LayoutItem, "y" | "h">[]): number =>
