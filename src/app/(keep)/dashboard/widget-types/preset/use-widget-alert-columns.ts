@@ -4,6 +4,7 @@ import type { AlertDto } from "@/entities/alerts/model/types";
 import { useAlertTableCols } from "@/widgets/alerts-table/lib/alert-table-utils";
 import { getAdditionalColsToGenerate } from "@/widgets/alerts-table/lib/additional-cols";
 import { getColumnLabel } from "@/widgets/alerts-table/lib/alert-column-options";
+import { getNestedValue } from "@/shared/lib/object-utils";
 import type { WidgetData } from "../../types";
 import {
   WIDGET_COLUMN_MIN_SIZE,
@@ -30,6 +31,15 @@ function getFieldKeys(alerts: AlertDto[]): string[] {
   return Array.from(new Set(alerts.flatMap(Object.keys))).sort();
 }
 
+function getObjectValuedIds(alerts: AlertDto[], ids: string[]): string[] {
+  return ids.filter((id) =>
+    alerts.some((alert) => {
+      const value = getNestedValue(alert, id);
+      return typeof value === "object" && value !== null;
+    })
+  );
+}
+
 function isShownInWidget(column: ColumnDef<AlertDto>): boolean {
   return !WIDGET_EXCLUDED_COLUMNS.includes(column.id as string);
 }
@@ -49,13 +59,16 @@ function atMinimumSize(column: ColumnDef<AlertDto>): ColumnDef<AlertDto> {
  * has still renders (empty). A saved snake_case id resolves to its camelCase
  * form when that is a fixed column, a known alert key or a field of the
  * loaded alerts; the group-by field resolves the same way. The checkbox, menu
- * and noise columns are left out. Empty grouping values share one group, and
- * every column except the icon columns is headed by its widget label, so no
- * stored presets-page name can show through. Those columns also start at
- * their minimum width (`WIDGET_COLUMN_MIN_SIZE` for name and description), so
- * a full-width table spreads the spare room over them; a width saved on the
- * widget wins. `presetName` scopes the browser keys the shared column hook
- * reads, so pass a widget-scoped name.
+ * and noise columns are left out. Empty grouping values share one group. A
+ * generated column whose loaded values include a list or an object (such as
+ * `enriched_fields`) cannot group rows, since its shared grouping value puts
+ * every such alert in one "object" group. Every column except the icon
+ * columns is headed by its widget label, so no stored presets-page name can
+ * show through. Those columns also start at their minimum width
+ * (`WIDGET_COLUMN_MIN_SIZE` for name and description), so a full-width table
+ * spreads the spare room over them; a width saved on the widget wins.
+ * `presetName` scopes the browser keys the shared column hook reads, so pass
+ * a widget-scoped name.
  */
 export function useWidgetAlertColumns({
   item,
@@ -88,6 +101,10 @@ export function useWidgetAlertColumns({
     )
   );
 
+  const objectValuedIds = useStableIds(
+    getObjectValuedIds(alerts ?? NO_ALERTS, additionalColsToGenerate)
+  );
+
   const tableColumns = useAlertTableCols({
     additionalColsToGenerate,
     isCheckboxDisplayed: false,
@@ -105,9 +122,12 @@ export function useWidgetAlertColumns({
             : {
                 ...atMinimumSize(column),
                 header: getColumnLabel(column.id as string, renames),
+                ...(objectValuedIds.includes(column.id as string)
+                  ? { enableGrouping: false }
+                  : {}),
               }
       ),
-    [tableColumns, renames]
+    [tableColumns, renames, objectValuedIds]
   );
   const allColumnIds = useMemo(
     () =>

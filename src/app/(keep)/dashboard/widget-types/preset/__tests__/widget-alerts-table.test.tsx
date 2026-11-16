@@ -426,6 +426,41 @@ describe("WidgetAlertsTable", () => {
     ).toBeInTheDocument();
   });
 
+  it("a saved groupBy on a list field renders ungrouped", () => {
+    renderWidget({ alertTable: { groupBy: "enriched_fields" } }, [
+      alertWith({ enriched_fields: ["a"] }),
+      alertWith({ enriched_fields: ["b"] }),
+    ]);
+
+    expect(groupHeaders()).toHaveLength(0);
+    expect(bodyRows()).toHaveLength(2);
+    expect(screen.queryByText(/Rows grouped by/)).toBeNull();
+  });
+
+  it("the header cannot group a field whose loaded values are lists or objects", () => {
+    const { result } = renderHook(() => {
+      const { columns } = useWidgetAlertColumns({
+        item: { ...baseItem, presetColumns: ["name", "enriched_fields", "region"] },
+        alerts: [
+          alertWith({ enriched_fields: ["a"], region: "eu" }),
+          alertWith({ enriched_fields: [], region: "us" }),
+        ],
+        presetName: "list-guard",
+      });
+      return useReactTable({
+        data: [],
+        columns,
+        enableGrouping: true,
+        getCoreRowModel: getCoreRowModel(),
+      });
+    });
+
+    const listColumn = result.current.getColumn("enriched_fields")!;
+    expect(listColumn.getCanGroup()).toBe(false);
+    expect(isGroupableColumn(listColumn.columnDef)).toBe(false);
+    expect(result.current.getColumn("region")!.getCanGroup()).toBe(true);
+  });
+
   it("a display-only group-by column renders ungrouped", () => {
     renderWidget({ alertTable: { groupBy: "severity" } });
 
@@ -1151,6 +1186,25 @@ describe("WidgetAlertsTable", () => {
 
       expect(columnIds).toContain("firingCounter");
       expect(columnIds).not.toContain("firing_counter");
+    });
+
+    it("does not offer a list field in Group rows by", async () => {
+      renderWithSlot({}, { isEditMode: true, onChange: jest.fn() }, [
+        alertWith({ enriched_fields: ["a"], region: "eu" }),
+      ]);
+
+      fireEvent.click(settingsButton() as HTMLElement);
+      fireEvent.click(
+        screen.getByRole("button", { name: "Show Group rows by options" })
+      );
+      const listbox = await screen.findByRole("listbox");
+
+      expect(
+        within(listbox).queryByRole("option", { name: "enriched_fields" })
+      ).toBeNull();
+      expect(
+        within(listbox).getByRole("option", { name: "region" })
+      ).toBeInTheDocument();
     });
 
     it("offers a list field as one column, never one column per item", () => {
