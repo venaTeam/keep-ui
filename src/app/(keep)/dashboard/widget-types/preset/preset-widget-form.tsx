@@ -10,7 +10,7 @@ import {
   TextInput,
   Switch,
 } from "@tremor/react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import {
   Controller,
   get,
@@ -115,37 +115,37 @@ function RowsWithNoValueControl({
   value: EmptyGroupPosition;
   onChange: (value: EmptyGroupPosition) => void;
 }) {
+  const name = useId();
+  const titleId = useId();
+
   return (
     <div
       className="mb-4 mt-2"
       data-cy="dashboard-widget-form-rows-with-no-value"
     >
-      <Subtitle>Rows with no value</Subtitle>
+      <Subtitle id={titleId}>Rows with no value</Subtitle>
       <div
         role="radiogroup"
-        aria-label="Rows with no value"
-        className="mt-1 flex overflow-hidden rounded-md border border-gray-300 text-sm"
+        aria-labelledby={titleId}
+        className="mt-1 flex gap-4 text-sm text-gray-700"
       >
-        {EMPTY_GROUP_POSITIONS.map((option) => {
-          const selected = option.value === value;
-          return (
-            <button
-              key={option.value}
-              type="button"
-              role="radio"
-              aria-checked={selected}
-              onClick={() => onChange(option.value)}
+        {EMPTY_GROUP_POSITIONS.map((option) => (
+          <label
+            key={option.value}
+            className="flex cursor-pointer items-center gap-1.5"
+          >
+            <input
+              type="radio"
+              name={name}
+              value={option.value}
+              checked={option.value === value}
+              onChange={() => onChange(option.value)}
               data-cy={`dashboard-widget-form-rows-with-no-value-${option.value}`}
-              className={`flex-1 border-r border-gray-200 py-1.5 last:border-r-0 ${
-                selected
-                  ? "bg-orange-50 font-semibold text-orange-700 ring-1 ring-inset ring-orange-500"
-                  : "bg-white text-gray-700 hover:bg-gray-50"
-              }`}
-            >
-              {option.label}
-            </button>
-          );
-        })}
+              className="border-gray-300 text-orange-500 accent-orange-500 focus:ring-orange-300"
+            />
+            {option.label}
+          </label>
+        ))}
       </div>
     </div>
   );

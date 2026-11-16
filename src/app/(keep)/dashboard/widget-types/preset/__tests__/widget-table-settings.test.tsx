@@ -101,6 +101,14 @@ describe("WidgetTableSettings", () => {
     expect(within(opened).getByText("Group rows by")).toBeInTheDocument();
   });
 
+  it("the popover is a dialog named 'Table settings'", () => {
+    renderSettings();
+
+    const opened = openSettings();
+
+    expect(screen.getByRole("dialog", { name: "Table settings" })).toBe(opened);
+  });
+
   it("renders the popover in a portal above the page", () => {
     const { container } = renderSettings();
 
@@ -300,6 +308,44 @@ describe("WidgetTableSettings", () => {
         "lastReceived",
         "assignee",
       ]);
+    });
+
+    it("announces the reorder with the columns' labels, not their ids", async () => {
+      renderSettings({ columnRenameMapping: { description: "Details" } });
+      openSettings();
+      const announced: string[] = [];
+      const observer = new MutationObserver(() => {
+        const text = document.querySelector('[id^="DndLiveRegion"]')
+          ?.textContent;
+        if (text && announced[announced.length - 1] !== text) {
+          announced.push(text);
+        }
+      });
+      observer.observe(document.body, {
+        subtree: true,
+        childList: true,
+        characterData: true,
+      });
+
+      const handle = screen.getByRole("button", { name: "Reorder Details" });
+      act(() => handle.focus());
+      fireEvent.keyDown(handle, { code: "Space", key: " " });
+      await flush();
+      fireEvent.keyDown(document, { code: "ArrowDown", key: "ArrowDown" });
+      await flush();
+      fireEvent.keyDown(document, { code: "Space", key: " " });
+      await flush();
+      observer.disconnect();
+
+      expect(announced).toEqual(
+        expect.arrayContaining([
+          "Column Details was moved over Alert name.",
+          "Column Details was dropped over Alert name.",
+        ])
+      );
+      announced.forEach((text) =>
+        expect(text).not.toMatch(/description|draggable/i)
+      );
     });
   });
 

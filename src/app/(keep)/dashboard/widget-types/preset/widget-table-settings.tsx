@@ -17,6 +17,7 @@ import {
   useFloating,
 } from "@floating-ui/react";
 import {
+  Announcements,
   DndContext,
   DragEndEvent,
   KeyboardSensor,
@@ -268,7 +269,7 @@ function ColumnList({ state }: { state: WidgetColumnState }) {
     })
   );
 
-  const { columnOrder, columnVisibility } = state;
+  const { columnOrder, columnVisibility, columnRenameMapping } = state;
   const pinned = WIDGET_PINNED_LEFT.filter((id) => columnVisibility[id]);
   const movable = columnOrder.filter(
     (id) => columnVisibility[id] && !isPinned(id)
@@ -296,6 +297,24 @@ function ColumnList({ state }: { state: WidgetColumnState }) {
     onRenamingChange: setRenaming,
   });
 
+  const announcements = useMemo<Announcements>(() => {
+    const labelOf = (id: string | number) =>
+      getColumnLabel(String(id), columnRenameMapping);
+    return {
+      onDragStart: ({ active }) => `Picked up column ${labelOf(active.id)}.`,
+      onDragOver: ({ active, over }) =>
+        over
+          ? `Column ${labelOf(active.id)} was moved over ${labelOf(over.id)}.`
+          : `Column ${labelOf(active.id)} is no longer over a column.`,
+      onDragEnd: ({ active, over }) =>
+        over
+          ? `Column ${labelOf(active.id)} was dropped over ${labelOf(over.id)}.`
+          : `Column ${labelOf(active.id)} was dropped.`,
+      onDragCancel: ({ active }) =>
+        `Reordering was cancelled. Column ${labelOf(active.id)} was dropped.`,
+    };
+  }, [columnRenameMapping]);
+
   return (
     <div className="max-h-56 overflow-y-auto pr-1">
       <DndContext
@@ -303,6 +322,7 @@ function ColumnList({ state }: { state: WidgetColumnState }) {
         collisionDetection={closestCenter}
         modifiers={[restrictToVerticalAxis]}
         onDragEnd={handleDragEnd}
+        accessibility={{ announcements }}
       >
         <SortableContext items={movable} strategy={verticalListSortingStrategy}>
           <ul aria-label="Columns">
@@ -477,8 +497,9 @@ function SettingsContent({
  * defaults. Every change goes straight to `state`.
  *
  * `columnIds` are the columns the widget can show; `ungroupableColumnIds` are
- * left out of the grouping options. The popover renders in a portal so the
- * dashboard grid cannot clip or cover it.
+ * left out of the grouping options. The popover is a dialog named "Table
+ * settings", rendered in a portal so the dashboard grid cannot clip or cover
+ * it. Reorder announcements read the columns' labels, not their ids.
  */
 export function WidgetTableSettings({
   state,
@@ -505,6 +526,8 @@ export function WidgetTableSettings({
       </PopoverButton>
       <PopoverPanel
         portal
+        role="dialog"
+        aria-label="Table settings"
         ref={refs.setFloating}
         style={floatingStyles}
         className="z-50 max-h-[85vh] w-72 overflow-y-auto rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-xs text-gray-900 shadow-xl"

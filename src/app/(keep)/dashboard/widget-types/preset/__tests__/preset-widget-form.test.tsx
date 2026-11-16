@@ -477,10 +477,7 @@ describe("PresetWidgetForm row grouping", () => {
         name: "Group rows by",
       })
     ).toHaveValue("Service");
-    expect(screen.getByRole("radio", { name: "Bottom" })).toHaveAttribute(
-      "aria-checked",
-      "true"
-    );
+    expect(screen.getByRole("radio", { name: "Bottom" })).toBeChecked();
     expect(lastValue(onChange).alertTable).toEqual(saved);
   });
 
@@ -493,10 +490,7 @@ describe("PresetWidgetForm row grouping", () => {
     await chooseGroupBy("Service");
 
     expect(await screen.findByText("Rows with no value")).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: "Top" })).toHaveAttribute(
-      "aria-checked",
-      "true"
-    );
+    expect(screen.getByRole("radio", { name: "Top" })).toBeChecked();
 
     fireEvent.click(screen.getByRole("radio", { name: "Bottom" }));
 
@@ -506,6 +500,22 @@ describe("PresetWidgetForm row grouping", () => {
         emptyGroupPosition: "bottom",
       })
     );
+  });
+
+  it("'Rows with no value' is a named group of native radio inputs", async () => {
+    await renderForm(tableWidget({ alertTable: { groupBy: "incident" } }));
+
+    const group = screen.getByRole("radiogroup", { name: "Rows with no value" });
+    const radios = within(group).getAllByRole("radio");
+    expect(radios.map((radio) => radio.tagName)).toEqual(["INPUT", "INPUT"]);
+    radios.forEach((radio) => expect(radio).toHaveAttribute("type", "radio"));
+    expect(new Set(radios.map((radio) => radio.getAttribute("name"))).size).toBe(
+      1
+    );
+    expect(radios.map((radio) => radio.getAttribute("data-cy"))).toEqual([
+      "dashboard-widget-form-rows-with-no-value-top",
+      "dashboard-widget-form-rows-with-no-value-bottom",
+    ]);
   });
 
   it("places Group rows by after the Columns picker and Rows with no value after it", async () => {
