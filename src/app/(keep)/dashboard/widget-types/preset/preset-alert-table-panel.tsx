@@ -1,5 +1,8 @@
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { RowSelectionState } from "@tanstack/react-table";
+import { uniqBy } from "lodash";
 import { Preset } from "@/entities/presets/model/types";
+import { AlertDto } from "@/entities/alerts/model/types";
 import {
   usePresetAlertCount,
   usePresetAlertsCount,
@@ -16,7 +19,16 @@ import { Button } from "@tremor/react";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { useRouter } from "next/navigation";
-import WidgetAlertsTable from "./widget-alerts-table";
+import {
+  OpenQuickAction,
+  QuickActionDialogHost,
+  SelectionStrip,
+  pruneSelection,
+  useRefreshAlertQueries,
+} from "@/features/alerts/alert-quick-actions";
+import WidgetAlertsTable, {
+  type WidgetSelectionProps,
+} from "./widget-alerts-table";
 import { useSyncedAnimation } from "./use-synced-animation";
 import { getBlinkColor, getBlinkStyle } from "./blink-palette";
 import { WidgetData, WidgetType } from "../../types";
@@ -35,6 +47,7 @@ const getCountOfLastAlerts = (item: WidgetData) =>
     ?.countOfLastAlerts ?? 0);
 
 const ERROR_COLOR = "#9ca3af";
+const NO_SELECTION: RowSelectionState = {};
 
 const hexToRgb = (hex: string, alpha: number = 1) => {
   hex = hex.replace(/^#/, "");
@@ -99,6 +112,81 @@ const PresetAlertTablePanel: React.FC<PresetAlertTablePanelProps> = ({
     missingCount !== undefined &&
     missingCount > 0;
   const syncBlink = useSyncedAnimation(blinksMissing);
+  const refresh = useRefreshAlertQueries();
+  const [rowSelection, setRowSelection] =
+    useState<RowSelectionState>(NO_SELECTION);
+  const [openAction, setOpenAction] = useState<OpenQuickAction | null>(null);
+  const shownAlerts = isLoading ? undefined : alerts;
+  const selectedAlerts = useMemo(
+    () =>
+      uniqBy(
+        (shownAlerts ?? []).filter((alert) => rowSelection[alert.fingerprint]),
+        "fingerprint"
+      ),
+    [shownAlerts, rowSelection]
+  );
+  const isSelecting = selectedAlerts.length > 0;
+  const isDialogOpen = openAction !== null;
+  const openFingerprint =
+    openAction?.alerts.length === 1 ? openAction.alerts[0].fingerprint : null;
+  const hasPreset = !!preset;
+
+  useEffect(() => {
+    if (!shownAlerts) {
+      return;
+    }
+    const fingerprints = shownAlerts.map((alert) => alert.fingerprint);
+    setRowSelection((prev) => pruneSelection(prev, fingerprints));
+  }, [shownAlerts]);
+
+  useEffect(() => {
+    if (isEditMode) {
+      setRowSelection(NO_SELECTION);
+      setOpenAction(null);
+    }
+  }, [isEditMode]);
+
+  useEffect(() => {
+    if (!isSelecting || isDialogOpen) {
+      return;
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setRowSelection(NO_SELECTION);
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [isSelecting, isDialogOpen]);
+
+  const clearSelection = useCallback(() => setRowSelection(NO_SELECTION), []);
+
+  const openQuickAction = useCallback(
+    (actionId: string, actionAlerts: AlertDto[]) =>
+      setOpenAction({ actionId, alerts: actionAlerts }),
+    []
+  );
+
+  const handleClose = useCallback(() => setOpenAction(null), []);
+
+  const handleSuccess = useCallback(() => {
+    setOpenAction(null);
+    setRowSelection(NO_SELECTION);
+    refresh();
+  }, [refresh]);
+
+  const selection = useMemo<WidgetSelectionProps | undefined>(
+    () =>
+      !isEditMode && hasPreset
+        ? {
+            rowSelection,
+            onRowSelectionChange: setRowSelection,
+            onOpenAction: openQuickAction,
+            openFingerprint,
+          }
+        : undefined,
+    [isEditMode, hasPreset, rowSelection, openQuickAction, openFingerprint]
+  );
 
   function handleGoToPresetClick() {
     const presetUrl = `/alerts/${preset?.name.toLowerCase()}`;
@@ -257,20 +345,30 @@ const PresetAlertTablePanel: React.FC<PresetAlertTablePanelProps> = ({
         <div className="flex-1 min-w-0 overflow-hidden whitespace-nowrap">
           {renderGroupCountLine()}
           {renderMissingLine()}
-          {renderAlertsCountText()}
+          {isSelecting ? (
+            <SelectionStrip
+              alerts={selectedAlerts}
+              onOpen={openQuickAction}
+              onClear={clearSelection}
+            />
+          ) : (
+            renderAlertsCountText()
+          )}
         </div>
         <div className="flex items-center gap-1.5">
           {isEditMode && <div ref={setSettingsSlot} className="contents" />}
-          <Button
-            color="orange"
-            variant="secondary"
-            size="xs"
-            onClick={handleGoToPresetClick}
-            disabled={isEditMode}
-            data-cy="dashboard-widget-preset-go-to-btn"
-          >
-            Go to preset
-          </Button>
+          {!isSelecting && (
+            <Button
+              color="orange"
+              variant="secondary"
+              size="xs"
+              onClick={handleGoToPresetClick}
+              disabled={isEditMode}
+              data-cy="dashboard-widget-preset-go-to-btn"
+            >
+              Go to preset
+            </Button>
+          )}
         </div>
       </div>
       {countOfLastAlerts > 0 && (
@@ -279,14 +377,21 @@ const PresetAlertTablePanel: React.FC<PresetAlertTablePanelProps> = ({
           isEditMode={isEditMode}
           onChange={isEditMode ? onSave : undefined}
           settingsSlot={settingsSlot}
-          alerts={isLoading ? undefined : alerts}
+          alerts={shownAlerts}
           background={
             isLoading || (countBy && isGroupLoading)
               ? undefined
               : hexToRgb(getColor(), 0.1)
           }
+          selection={selection}
         />
       )}
+      <QuickActionDialogHost
+        open={openAction}
+        presetName={preset?.name ?? ""}
+        onClose={handleClose}
+        onSuccess={handleSuccess}
+      />
     </>
   );
 };

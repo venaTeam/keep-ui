@@ -1,16 +1,37 @@
 import React from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  RenderResult,
+  screen,
+  within,
+} from "@testing-library/react";
+import { RowSelectionState } from "@tanstack/react-table";
 import PresetAlertTablePanel from "../preset-alert-table-panel";
+import type { WidgetSelectionProps } from "../widget-alerts-table";
 import { DashboardEditModeProvider } from "../../../DashboardEditModeContext";
 import { Preset } from "@/entities/presets/model/types";
 import { CountBy } from "@/entities/presets/model/count-by";
+import { AlertDto, Status } from "@/entities/alerts/model/types";
+import type { OpenQuickAction } from "@/features/alerts/alert-quick-actions";
 import { PresetPanelType, WidgetData, WidgetType } from "../../../types";
+
+interface HostProps {
+  open: OpenQuickAction | null;
+  presetName: string;
+  onClose: () => void;
+  onSuccess: () => void;
+}
 
 const mockUsePresetAlertsCount = jest.fn();
 const mockUsePresetAlertCount = jest.fn();
 const mockPush = jest.fn();
+const mockRefresh = jest.fn();
 let mockLastTableBackground: string | undefined;
 let mockLastTableProps: Record<string, unknown> | undefined;
+let mockTablePropsByWidget: Record<string, Record<string, unknown>> = {};
+let mockHostProps: HostProps;
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush }),
@@ -24,11 +45,27 @@ jest.mock("@/features/presets/custom-preset-links", () => ({
 
 jest.mock("../widget-alerts-table", () => ({
   __esModule: true,
-  default: (props: { background?: string }) => {
+  default: (props: { background?: string; item: WidgetData }) => {
     mockLastTableBackground = props.background;
     mockLastTableProps = props;
+    mockTablePropsByWidget[props.item.i] = props;
     return <div data-testid="alerts-table" />;
   },
+}));
+
+jest.mock("@/features/alerts/alert-quick-actions", () => ({
+  ...jest.requireActual("@/features/alerts/alert-quick-actions"),
+  QuickActionDialogHost: (props: HostProps) => {
+    mockHostProps = props;
+    return null;
+  },
+  useRefreshAlertQueries: () => mockRefresh,
+}));
+
+jest.mock("@/features/alerts/alert-quick-actions/ui/action-dialogs", () => ({
+  ChangeStatusDialog: () => null,
+  LinkIncidentDialog: () => null,
+  DismissDialog: () => null,
 }));
 
 const thresholds = [
@@ -75,12 +112,24 @@ const groupState = (state: {
 
 const incidents = { field: "incident", incidentStatus: "active" } as const;
 
+/** Headless UI, loaded through the real selection strip, polyfills `getAnimations` with a console warning; the blink tests get a quiet stub instead. */
+function stubGetAnimations() {
+  Object.defineProperty(Element.prototype, "getAnimations", {
+    configurable: true,
+    value: () => [],
+  });
+}
+
+beforeAll(stubGetAnimations);
+
 beforeEach(() => {
   mockUsePresetAlertsCount.mockReset();
   mockUsePresetAlertCount.mockReset();
   mockLastTableBackground = undefined;
   mockLastTableProps = undefined;
+  mockTablePropsByWidget = {};
   mockPush.mockReset();
+  mockRefresh.mockReset();
   mockUsePresetAlertsCount.mockReturnValue({
     alerts: [],
     totalCount: 120,
@@ -432,6 +481,19 @@ describe("PresetAlertTablePanel in dashboard edit mode", () => {
     expect(slot.nextElementSibling).toBe(goToPreset());
   });
 
+  it("passes selection props in view mode only", () => {
+    renderInMode(false);
+    expect(mockLastTableProps!.selection).toEqual(
+      expect.objectContaining({ rowSelection: {} })
+    );
+
+    renderInMode(true, { onSave: jest.fn() });
+    expect(mockLastTableProps!.selection).toBeUndefined();
+
+    render(<PresetAlertTablePanel item={buildItem()} filterCel="" />);
+    expect(mockLastTableProps!.selection).toBeUndefined();
+  });
+
   it("gives the table no settings slot in view mode", () => {
     renderInMode(false);
 
@@ -491,5 +553,307 @@ describe("PresetAlertTablePanel in dashboard edit mode", () => {
       document.querySelector(".motion-safe\\:animate-missing-blink")
     ).toHaveTextContent("+ 4 alerts not in an incident");
     expect(screen.getByText("showing 5 out of 120")).toBeInTheDocument();
+  });
+});
+
+describe("PresetAlertTablePanel quick actions", () => {
+  const alert = (fingerprint: string, fields: Partial<AlertDto> = {}) =>
+    ({
+      id: fingerprint,
+      fingerprint,
+      name: `alert-${fingerprint}`,
+      status: Status.Firing,
+      lastReceived: "2026-11-16T10:00:00Z",
+      source: ["prometheus"],
+      ...fields,
+    }) as unknown as AlertDto;
+
+  const withIncident = (base: AlertDto) =>
+    ({
+      ...base,
+      incident_dto: [{ id: "i1", is_candidate: false, status: "firing" }],
+    }) as unknown as AlertDto;
+
+  const a1 = alert("a1");
+  const a2 = alert("a2");
+  const noInc = alert("no-inc");
+  const inInc = withIncident(alert("in-inc"));
+  const noInc1 = alert("n1");
+  const noInc2 = alert("n2");
+  const item = buildItem();
+  const preset = { id: "p1", name: "feed" } as unknown as Preset;
+
+  const showAlerts = (alerts: AlertDto[], isLoading = false) =>
+    mockUsePresetAlertsCount.mockReturnValue({
+      alerts,
+      totalCount: alerts.length,
+      isLoading,
+    });
+
+  const panel = (isEditMode = false) => (
+    <DashboardEditModeProvider value={isEditMode}>
+      <PresetAlertTablePanel
+        item={item}
+        preset={preset}
+        filterCel=""
+        onSave={jest.fn()}
+      />
+    </DashboardEditModeProvider>
+  );
+
+  const renderWithAlerts = (alerts: AlertDto[]) => {
+    showAlerts(alerts);
+    return render(panel());
+  };
+
+  const rerenderWithAlerts = (
+    rerender: RenderResult["rerender"],
+    alerts: AlertDto[],
+    isLoading = false
+  ) => {
+    showAlerts(alerts, isLoading);
+    rerender(panel());
+  };
+
+  const tableSelection = () =>
+    mockLastTableProps!.selection as WidgetSelectionProps;
+
+  const tick = (next: RowSelectionState) => {
+    act(() => {
+      tableSelection().onRowSelectionChange(next);
+    });
+  };
+
+  const openFromStrip = (actionId: string) => {
+    const result = renderWithAlerts([a1, a2]);
+    tick({ [a1.fingerprint]: true, [a2.fingerprint]: true });
+    fireEvent.click(
+      document.querySelector(
+        `[data-cy="widget-selection-action-${actionId}"]`
+      ) as HTMLElement
+    );
+    return result;
+  };
+
+  it("swaps the count line for the strip while anything is ticked", () => {
+    renderWithAlerts([a1, a2]);
+    tick({ [a1.fingerprint]: true });
+
+    expect(
+      document.querySelector('[data-cy="widget-selection-strip"]')
+    ).not.toBeNull();
+    expect(screen.queryByText(/Alerts count:/)).toBeNull();
+    expect(
+      document.querySelector('[data-cy="dashboard-widget-preset-go-to-btn"]')
+    ).toBeNull();
+  });
+
+  it("brings the count line and Go to preset back on Clear", () => {
+    renderWithAlerts([a1, a2]);
+    tick({ [a1.fingerprint]: true });
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear" }));
+
+    expect(
+      document.querySelector('[data-cy="widget-selection-strip"]')
+    ).toBeNull();
+    expect(screen.getByText("Alerts count:")).toBeInTheDocument();
+    expect(
+      document.querySelector('[data-cy="dashboard-widget-preset-go-to-btn"]')
+    ).not.toBeNull();
+    expect(tableSelection().rowSelection).toEqual({});
+  });
+
+  it("drops ticked alerts that a refresh removes", () => {
+    const { rerender } = renderWithAlerts([a1, a2]);
+    tick({ [a1.fingerprint]: true, [a2.fingerprint]: true });
+
+    rerenderWithAlerts(rerender, [a2]);
+
+    expect(screen.getByText("1 selected")).toBeInTheDocument();
+    expect(tableSelection().rowSelection).toEqual({ [a2.fingerprint]: true });
+  });
+
+  it("keeps the selection through a loading state", () => {
+    const { rerender } = renderWithAlerts([a1, a2]);
+    tick({ [a1.fingerprint]: true });
+
+    rerenderWithAlerts(rerender, [], true);
+    expect(tableSelection().rowSelection).toEqual({ [a1.fingerprint]: true });
+
+    rerenderWithAlerts(rerender, [a1, a2]);
+    expect(screen.getByText("1 selected")).toBeInTheDocument();
+  });
+
+  it("opens the dialog with the strip's eligible alerts", () => {
+    renderWithAlerts([noInc, inInc]);
+    tick({ [noInc.fingerprint]: true, [inInc.fingerprint]: true });
+
+    fireEvent.click(screen.getByRole("button", { name: "Link 1 to incident" }));
+
+    expect(mockHostProps.open).toEqual({
+      actionId: "link-incident",
+      alerts: [noInc],
+    });
+    expect(mockHostProps.presetName).toBe("feed");
+  });
+
+  it("keeps the selection when the dialog is cancelled", () => {
+    openFromStrip("dismiss");
+
+    act(() => mockHostProps.onClose());
+
+    expect(mockHostProps.open).toBeNull();
+    expect(screen.getByText("2 selected")).toBeInTheDocument();
+  });
+
+  it("clears the selection and refreshes on success", () => {
+    openFromStrip("dismiss");
+
+    act(() => mockHostProps.onSuccess());
+
+    expect(mockHostProps.open).toBeNull();
+    expect(screen.queryByText(/selected/)).toBeNull();
+    expect(mockRefresh).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ["close then success", ["onClose", "onSuccess"]],
+    ["success then close", ["onSuccess", "onClose"]],
+  ] as const)(
+    "ends closed and cleared when a dialog calls %s",
+    (_name, calls) => {
+      openFromStrip("change-status");
+      const host = mockHostProps;
+
+      act(() => calls.forEach((call) => host[call]()));
+
+      expect(mockHostProps.open).toBeNull();
+      expect(screen.queryByText(/selected/)).toBeNull();
+      expect(screen.getByText("Alerts count:")).toBeInTheDocument();
+      expect(mockRefresh).toHaveBeenCalledTimes(1);
+    }
+  );
+
+  it("clears the selection on Esc", () => {
+    renderWithAlerts([a1]);
+    tick({ [a1.fingerprint]: true });
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    expect(screen.queryByText(/selected/)).toBeNull();
+  });
+
+  it("ignores Esc while a dialog is open", () => {
+    openFromStrip("change-status");
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    expect(screen.getByText("2 selected")).toBeInTheDocument();
+  });
+
+  it("clears selection and closes the dialog on entering edit mode", () => {
+    const { rerender } = openFromStrip("dismiss");
+    expect(mockHostProps.open).not.toBeNull();
+
+    rerender(panel(true));
+
+    expect(mockHostProps.open).toBeNull();
+    expect(mockLastTableProps!.selection).toBeUndefined();
+    expect(screen.queryByText(/selected/)).toBeNull();
+
+    rerender(panel(false));
+
+    expect(tableSelection().rowSelection).toEqual({});
+    expect(screen.getByText("Alerts count:")).toBeInTheDocument();
+  });
+
+  it("marks the single alert whose dialog is open", () => {
+    renderWithAlerts([a1]);
+
+    act(() => tableSelection().onOpenAction("dismiss", [a1]));
+
+    expect(tableSelection().openFingerprint).toBe(a1.fingerprint);
+    expect(mockHostProps.open).toEqual({ actionId: "dismiss", alerts: [a1] });
+  });
+
+  it("marks no row while a dialog holds several alerts", () => {
+    openFromStrip("dismiss");
+
+    expect(mockHostProps.open!.alerts).toHaveLength(2);
+    expect(tableSelection().openFingerprint).toBeNull();
+  });
+
+  it("keeps the dialog's alerts when a refresh drops one", () => {
+    const { rerender } = openFromStrip("dismiss");
+
+    rerenderWithAlerts(rerender, [a2]);
+
+    expect(mockHostProps.open!.alerts).toEqual([a1, a2]);
+    expect(screen.getByText("1 selected")).toBeInTheDocument();
+
+    act(() => mockHostProps.onSuccess());
+
+    expect(screen.queryByText(/selected/)).toBeNull();
+  });
+
+  it("keeps selections separate per widget", () => {
+    showAlerts([a1, a2]);
+    render(
+      <>
+        <div data-testid="widget-w1">
+          <PresetAlertTablePanel
+            item={buildItem({ i: "w1" })}
+            preset={preset}
+            filterCel=""
+          />
+        </div>
+        <div data-testid="widget-w2">
+          <PresetAlertTablePanel
+            item={buildItem({ i: "w2" })}
+            preset={preset}
+            filterCel=""
+          />
+        </div>
+      </>
+    );
+
+    act(() => {
+      (
+        mockTablePropsByWidget.w1.selection as WidgetSelectionProps
+      ).onRowSelectionChange({ [a1.fingerprint]: true });
+    });
+
+    const first = within(screen.getByTestId("widget-w1"));
+    const second = within(screen.getByTestId("widget-w2"));
+    expect(first.getByText("1 selected")).toBeInTheDocument();
+    expect(second.getByText("Alerts count:")).toBeInTheDocument();
+    expect(second.queryByText(/selected/)).toBeNull();
+    expect(
+      (mockTablePropsByWidget.w2.selection as WidgetSelectionProps).rowSelection
+    ).toEqual({});
+  });
+
+  it("counts a duplicated fingerprint once", () => {
+    renderWithAlerts([a1, { ...a1 }]);
+    tick({ [a1.fingerprint]: true });
+
+    expect(screen.getByText("1 selected")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+    expect(mockHostProps.open!.alerts).toHaveLength(1);
+  });
+
+  it("recomputes eligibility from refreshed alerts", () => {
+    const { rerender } = renderWithAlerts([noInc1, noInc2]);
+    tick({ [noInc1.fingerprint]: true, [noInc2.fingerprint]: true });
+    expect(
+      screen.getByRole("button", { name: "Link to incident" })
+    ).toBeInTheDocument();
+
+    rerenderWithAlerts(rerender, [withIncident(noInc1), noInc2]);
+
+    expect(
+      screen.getByRole("button", { name: "Link 1 to incident" })
+    ).toBeInTheDocument();
   });
 });
