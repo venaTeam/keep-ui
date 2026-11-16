@@ -15,7 +15,11 @@ import {
 } from "../alert-table-widget-config";
 import { AlertDto, Severity, Status } from "@/entities/alerts/model/types";
 import { useAlertTableCols } from "@/widgets/alerts-table/lib/alert-table-utils";
-import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import {
+  RowSelectionState,
+  getCoreRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
 import { isGroupableColumn } from "../empty-group-row-model";
 import { useWidgetAlertColumns } from "../use-widget-alert-columns";
 import { useConfig } from "@/utils/hooks/useConfig";
@@ -76,6 +80,12 @@ jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: jest.fn() }),
   useSearchParams: () => new URLSearchParams(),
   usePathname: () => "/dashboard/atw",
+}));
+
+jest.mock("@/features/alerts/alert-quick-actions/ui/action-dialogs", () => ({
+  ChangeStatusDialog: () => null,
+  LinkIncidentDialog: () => null,
+  DismissDialog: () => null,
 }));
 
 const baseItem: WidgetData = {
@@ -1435,5 +1445,343 @@ describe("WidgetAlertsTable", () => {
 
     expect(headerIds()).toEqual(["description", "name"]);
     expect(bodyRows()).toHaveLength(2);
+  });
+
+  describe("quick actions", () => {
+    const onOpenAction = jest.fn();
+    const onRowSelectionChange = jest.fn();
+
+    const a1 = alertWith();
+    const a2 = alertWith();
+    const a3 = alertWith();
+    const noInc1 = unlinkedAlert();
+    const noInc2 = unlinkedAlert();
+    const inInc1 = linkedAlert("i1", "Checkout degraded");
+    const inInc2 = linkedAlert("i1", "Checkout degraded");
+    const otherInc1 = linkedAlert("i2", "Payments down");
+
+    type HarnessOptions = {
+      alerts?: AlertDto[];
+      groupBy?: string;
+      isEditMode?: boolean;
+      onChange?: (item: WidgetData) => void;
+      settingsSlot?: HTMLElement;
+      initial?: RowSelectionState;
+      openFingerprint?: string | null;
+    };
+
+    function Harness({
+      alerts = [a1],
+      groupBy,
+      isEditMode = false,
+      onChange,
+      settingsSlot,
+      initial = {},
+      openFingerprint = null,
+    }: HarnessOptions) {
+      const [rowSelection, setRowSelection] =
+        React.useState<RowSelectionState>(initial);
+      return (
+        <WidgetAlertsTable
+          item={{
+            ...baseItem,
+            ...(groupBy
+              ? { alertTable: { groupBy, emptyGroupPosition: "top" } }
+              : {}),
+          }}
+          alerts={alerts}
+          isEditMode={isEditMode}
+          onChange={onChange}
+          settingsSlot={settingsSlot}
+          selection={{
+            rowSelection,
+            onRowSelectionChange: (next) => {
+              onRowSelectionChange(next);
+              setRowSelection(next);
+            },
+            onOpenAction,
+            openFingerprint,
+          }}
+        />
+      );
+    }
+
+    const renderHarness = (options: HarnessOptions = {}) =>
+      render(<Harness {...options} />);
+
+    const lastSelection = (): RowSelectionState =>
+      onRowSelectionChange.mock.calls.at(-1)?.[0];
+
+    const checkboxFor = (alert: AlertDto) =>
+      screen.getByRole("checkbox", { name: `Select ${alert.name}` });
+
+    const rowFor = (alert: AlertDto) =>
+      document.querySelector(
+        `[data-cy="alerts-row"][data-cy-id="${alert.fingerprint}"]`
+      ) as HTMLElement;
+
+    const fingerprints = (...alerts: AlertDto[]) =>
+      alerts.map((alert) => alert.fingerprint).sort();
+
+    const selectedIds = () => Object.keys(lastSelection()).sort();
+
+    beforeEach(() => {
+      onOpenAction.mockReset();
+      onRowSelectionChange.mockReset();
+    });
+
+    it("adds no gutter, tray or row selection without selection props", () => {
+      render(
+        <WidgetAlertsTable item={baseItem} alerts={[a1]} isEditMode={false} />
+      );
+
+      expect(screen.queryByRole("checkbox")).toBeNull();
+      expect(document.querySelector('[data-column-id="alertMenu"]')).toBeNull();
+      expect(widgetRoot()).not.toHaveClass("quick-actions-table");
+    });
+
+    it("adds nothing actionable in edit mode even with selection props", () => {
+      renderHarness({ isEditMode: true });
+
+      expect(screen.queryByRole("checkbox")).toBeNull();
+      expect(screen.queryByRole("button", { name: /^Dismiss:/ })).toBeNull();
+      expect(widgetRoot()).not.toHaveClass("quick-actions-table");
+    });
+
+    it("renders a row checkbox and the row's tray", () => {
+      renderHarness({ alerts: [a1] });
+
+      expect(checkboxFor(a1)).toBeInTheDocument();
+      expect(checkboxFor(a1)).toHaveClass("quick-reveal", "quick-pick");
+      expect(
+        screen.getByRole("button", { name: `Change Status: ${a1.name}` })
+      ).toBeInTheDocument();
+      expect(widgetRoot()).toHaveClass("quick-actions-table");
+      expect(widgetRoot()).not.toHaveAttribute("data-selecting");
+    });
+
+    it("pins the gutter left and the tray column right", () => {
+      renderHarness({ alerts: [a1] });
+
+      expect(headerIds()[0]).toBe("checkbox");
+      expect(headerIds().at(-1)).toBe("alertMenu");
+      expect(cellsOf("checkbox")[0]).toHaveClass("sticky");
+      expect(cellsOf("alertMenu")[0]).toHaveClass("sticky", "overflow-visible");
+    });
+
+    it("opens an action for one row from its tray", () => {
+      renderHarness({ alerts: [a1] });
+
+      fireEvent.click(
+        screen.getByRole("button", { name: `Dismiss: ${a1.name}` })
+      );
+
+      expect(onOpenAction).toHaveBeenCalledWith("dismiss", [a1]);
+    });
+
+    it("ticks a row by fingerprint and hides every tray while selecting", () => {
+      renderHarness({ alerts: [a1, a2] });
+
+      fireEvent.click(checkboxFor(a1));
+
+      expect(lastSelection()).toEqual({ [a1.fingerprint]: true });
+      expect(checkboxFor(a1)).toBeChecked();
+      expect(
+        screen.queryByRole("button", { name: /^Change Status:/ })
+      ).toBeNull();
+      expect(widgetRoot()).toHaveAttribute("data-selecting");
+    });
+
+    it("unticking the last row leaves an empty selection with no false values", () => {
+      renderHarness({ alerts: [a1, a2] });
+
+      fireEvent.click(checkboxFor(a1));
+      fireEvent.click(checkboxFor(a1));
+
+      expect(lastSelection()).toEqual({});
+      expect(widgetRoot()).not.toHaveAttribute("data-selecting");
+      expect(
+        screen.getByRole("button", { name: `Change Status: ${a1.name}` })
+      ).toBeInTheDocument();
+    });
+
+    it("selects all shown rows from the header", () => {
+      renderHarness({ alerts: [a1, a2, a3] });
+
+      fireEvent.click(
+        screen.getByRole("checkbox", { name: "Select all shown alerts" })
+      );
+
+      expect(selectedIds()).toEqual(fingerprints(a1, a2, a3));
+      expect(
+        Object.values(lastSelection()).every((value) => value === true)
+      ).toBe(true);
+    });
+
+    it("selects only alert rows from the header when grouped", () => {
+      renderHarness({ alerts: [noInc1, inInc1], groupBy: "incident" });
+
+      fireEvent.click(
+        screen.getByRole("checkbox", { name: "Select all shown alerts" })
+      );
+
+      expect(selectedIds()).toEqual(fingerprints(noInc1, inInc1));
+    });
+
+    it("shift-click ticks the range in display order across groups", () => {
+      renderHarness({
+        alerts: [noInc1, noInc2, inInc1, inInc2],
+        groupBy: "incident",
+      });
+      expect(groupHeaderTexts()[0]).toMatch(/^No incident/);
+
+      fireEvent.click(checkboxFor(noInc1));
+      fireEvent.click(checkboxFor(inInc1), { shiftKey: true });
+
+      expect(selectedIds()).toEqual(fingerprints(noInc1, noInc2, inInc1));
+    });
+
+    it("shift-click unticks the range when the clicked row is ticked", () => {
+      renderHarness({
+        alerts: [a1, a2, a3],
+        initial: {
+          [a1.fingerprint]: true,
+          [a2.fingerprint]: true,
+          [a3.fingerprint]: true,
+        },
+      });
+
+      fireEvent.click(checkboxFor(a1));
+      fireEvent.click(checkboxFor(a2), { shiftKey: true });
+
+      expect(lastSelection()).toEqual({ [a3.fingerprint]: true });
+    });
+
+    it("shift-click skips rows of a collapsed group", () => {
+      renderHarness({
+        alerts: [noInc1, inInc1, inInc2, otherInc1],
+        groupBy: "incident",
+      });
+      expect(groupHeaderTexts()[1]).toContain("Checkout degraded");
+
+      fireEvent.click(groupHeader("Checkout degraded"));
+      fireEvent.click(checkboxFor(noInc1));
+      fireEvent.click(checkboxFor(otherInc1), { shiftKey: true });
+
+      expect(selectedIds()).toEqual(fingerprints(noInc1, otherInc1));
+    });
+
+    it("ticks every row of a group from its header checkbox, also when collapsed", () => {
+      renderHarness({ alerts: [noInc1, noInc2, inInc1], groupBy: "incident" });
+      const header = groupHeader("No incident");
+
+      fireEvent.click(header);
+      expect(rowFor(noInc1)).toBeNull();
+      fireEvent.click(within(header).getByRole("checkbox"));
+
+      expect(selectedIds()).toEqual(fingerprints(noInc1, noInc2));
+    });
+
+    it("unticks every row of a fully ticked group from its header checkbox", () => {
+      renderHarness({
+        alerts: [noInc1, noInc2, inInc1],
+        groupBy: "incident",
+        initial: {
+          [noInc1.fingerprint]: true,
+          [noInc2.fingerprint]: true,
+          [inInc1.fingerprint]: true,
+        },
+      });
+      const groupCheckbox = within(groupHeader("No incident")).getByRole(
+        "checkbox"
+      );
+      expect(groupCheckbox).toBeChecked();
+      expect(groupCheckbox).toHaveClass("quick-reveal");
+
+      fireEvent.click(groupCheckbox);
+
+      expect(lastSelection()).toEqual({ [inInc1.fingerprint]: true });
+    });
+
+    it("shows the group checkbox as some-selected when part of the group is ticked", () => {
+      renderHarness({
+        alerts: [noInc1, noInc2],
+        groupBy: "incident",
+        initial: { [noInc1.fingerprint]: true },
+      });
+
+      expect(
+        (
+          within(groupHeader("No incident")).getByRole(
+            "checkbox"
+          ) as HTMLInputElement
+        ).indeterminate
+      ).toBe(true);
+    });
+
+    it("marks the row whose dialog is open", () => {
+      renderHarness({ alerts: [a1, a2], openFingerprint: a1.fingerprint });
+
+      expect(rowFor(a1).querySelector("[data-quick-open]")).not.toBeNull();
+      expect(rowFor(a2).querySelector("[data-quick-open]")).toBeNull();
+    });
+
+    it("does not save chrome columns or show them in the ⚙ panel", () => {
+      const slot = document.createElement("div");
+      document.body.appendChild(slot);
+      const onChange = jest.fn();
+      try {
+        renderHarness({
+          alerts: [alertWith({ service: "checkout" })],
+          isEditMode: true,
+          onChange,
+          settingsSlot: slot,
+        });
+
+        expect(headerIds()).not.toContain("checkbox");
+        expect(headerIds()).not.toContain("alertMenu");
+        fireEvent.click(
+          slot.querySelector(
+            '[data-cy="dashboard-widget-table-settings-btn"]'
+          ) as HTMLElement
+        );
+        const columnIds = Array.from(
+          document.querySelectorAll("[data-table-settings-column]")
+        ).map((row) => row.getAttribute("data-table-settings-column"));
+        expect(columnIds).toContain("description");
+        expect(columnIds).not.toContain("checkbox");
+        expect(columnIds).not.toContain("alertMenu");
+
+        fireEvent.click(screen.getByRole("checkbox", { name: "Description" }));
+
+        expect(onChange).toHaveBeenCalledTimes(1);
+        const saved = JSON.stringify(onChange.mock.calls[0][0]);
+        expect(saved).not.toContain('"checkbox"');
+        expect(saved).not.toContain('"alertMenu"');
+      } finally {
+        slot.remove();
+      }
+    });
+
+    it("keeps the table exactly as wide as the widget with the gutter", () => {
+      const widthOf = (columnId: string) =>
+        Number.parseFloat(
+          (
+            screen
+              .getByTestId(`header-cell-${columnId}`)
+              .closest("th") as HTMLElement
+          ).style.width
+        );
+
+      observeWidth(1200);
+      renderHarness({ alerts: [a1] });
+
+      expect(
+        (widgetRoot().querySelector("table") as HTMLTableElement).style.width
+      ).toBe("1200px");
+      expect(widthOf("checkbox")).toBe(28);
+      expect(widthOf("alertMenu")).toBe(0);
+      expect(headerIds().reduce((sum, id) => sum + widthOf(id), 0)).toBe(1200);
+    });
   });
 });
