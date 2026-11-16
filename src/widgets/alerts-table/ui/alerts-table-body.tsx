@@ -11,6 +11,13 @@ import {
 } from "@/widgets/alerts-table/lib/alert-table-utils";
 import { useExpandedRows } from "@/utils/hooks/useExpandedRows";
 import { useGroupExpansion } from "@/utils/hooks/useGroupExpansion";
+import { useSyncedAnimation } from "@/shared/lib/hooks/useSyncedAnimation";
+import {
+  RINGING_CELL_CLASS_NAME,
+  RingingReason,
+  getRingingProps,
+  isAlertRinging,
+} from "@/widgets/alerts-table/lib/alert-ringing";
 import clsx from "clsx";
 import "react-loading-skeleton/dist/skeleton.css";
 import { SelectableGroup } from "react-selectable-fast";
@@ -25,6 +32,7 @@ interface Props {
   lastViewedAlert: string | null;
   presetName: string;
   groupExpansionState?: ReturnType<typeof useGroupExpansion>;
+  presetNoisy?: boolean;
 }
 
 export function AlertsTableBody({
@@ -36,8 +44,10 @@ export function AlertsTableBody({
   presetName,
   pageSize,
   groupExpansionState,
+  presetNoisy = false,
 }: Props) {
   const [rowStyle] = useAlertRowStyle();
+  const syncBlink = useSyncedAnimation(presetNoisy);
   const { isRowExpanded } = useExpandedRows(presetName);
 
   // Use provided groupExpansionState or create a local one
@@ -187,12 +197,15 @@ export function AlertsTableBody({
                 isExpanded={isGroupExpanded(row.id)}
                 onToggleExpanded={toggleGroup}
                 onGroupInitialized={initializeGroup}
+                presetNoisy={presetNoisy}
               />
             );
           }
 
           const isLastViewed = row.original.fingerprint === lastViewedAlert;
           const expanded = isRowExpanded(row.original.fingerprint);
+          const ringing = isAlertRinging(row.original, presetNoisy);
+          const ringingProps = getRingingProps(ringing);
 
           return (
             <SelectableRow
@@ -201,15 +214,19 @@ export function AlertsTableBody({
                 "group/row",
                 // Using tailwind classes for expanded rows instead of a custom class
                 expanded ? "!h-auto min-h-12" : null,
-                getRowClassName(row, theme, lastViewedAlert, rowStyle, expanded)
+                getRowClassName(row, theme, lastViewedAlert, rowStyle, expanded),
+                ringingProps.className
               )}
+              style={ringingProps.style}
+              rowRef={ringing ? syncBlink : undefined}
               onClick={(e) => handleRowClick(e, row.original)}
               isSelected={row.getIsSelected()}
               data-row-id={row.id}
               data-cy="alerts-row"
               data-cy-id={row.original.fingerprint}
+              data-ringing={ringingProps["data-ringing"]}
             >
-              {row.getVisibleCells().map((cell) => {
+              {row.getVisibleCells().map((cell, cellIndex) => {
                 const { style, className } = getCommonPinningStylesAndClassNames(
                   cell.column,
                   table.getState().columnPinning.left?.length,
@@ -247,7 +264,8 @@ export function AlertsTableBody({
                       // Description cell specific classes when expanded
                       expanded && isDescriptionCell
                         ? "!whitespace-pre-wrap !break-words w-auto"
-                        : null
+                        : null,
+                      ringing && RINGING_CELL_CLASS_NAME
                     )}
                     style={{
                       ...style,
@@ -283,6 +301,7 @@ export function AlertsTableBody({
                         : {}),
                     }}
                   >
+                    {ringing && cellIndex === 0 && <RingingReason />}
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 );

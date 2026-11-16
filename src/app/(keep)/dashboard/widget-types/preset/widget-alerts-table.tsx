@@ -21,12 +21,19 @@ import { DEFAULT_COLS } from "@/widgets/alerts-table/lib/alert-table-utils";
 import { ColumnOrderState } from "@tanstack/table-core";
 import { startCase } from "lodash";
 import { defaultColumns } from "./constants";
+import { useSyncedAnimation } from "@/shared/lib/hooks/useSyncedAnimation";
+import {
+  RingingReason,
+  getRingingProps,
+  isAlertRinging,
+} from "@/widgets/alerts-table/lib/alert-ringing";
 
 interface WidgetAlertsTableProps {
   presetName: string;
   alerts?: any[];
   columns?: string[];
   background?: string;
+  presetNoisy?: boolean;
 }
 
 const WidgetAlertsTable: React.FC<WidgetAlertsTableProps> = ({
@@ -34,7 +41,9 @@ const WidgetAlertsTable: React.FC<WidgetAlertsTableProps> = ({
   alerts,
   columns,
   background,
+  presetNoisy = false,
 }) => {
+  const syncBlink = useSyncedAnimation(presetNoisy);
   const columnsGapClass = "pr-3";
   const borderClass = "border-b";
 
@@ -156,6 +165,8 @@ const WidgetAlertsTable: React.FC<WidgetAlertsTableProps> = ({
 
     return alertsToRender
       ?.map((alert, alertIndex) => {
+        const ringing = isAlertRinging(alert, presetNoisy);
+        const ringingProps = getRingingProps(ringing);
         return orderedColumns?.map((column, index) => {
           const columnMeta = columnsMeta[column];
           let columnValue;
@@ -177,8 +188,12 @@ const WidgetAlertsTable: React.FC<WidgetAlertsTableProps> = ({
             <div
               key={`${column}-${alertIndex}`}
               title={alert?.[column]}
-              className={`min-h-7 text-xs flex min-w-0 items-center overflow-hidden whitespace-nowrap select-text ${_borderClass} ${_columnsGapClass}`}
+              className={`min-h-7 text-xs flex min-w-0 items-center overflow-hidden whitespace-nowrap select-text ${_borderClass} ${_columnsGapClass}${ringing ? ` ${ringingProps.className}` : ""}`}
+              style={ringingProps.style}
+              ref={ringing ? syncBlink : undefined}
+              data-ringing={ringingProps["data-ringing"]}
             >
+              {ringing && index === 0 && <RingingReason />}
               {columnValue}
             </div>
           );
