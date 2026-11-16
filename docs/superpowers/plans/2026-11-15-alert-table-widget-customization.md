@@ -2,6 +2,14 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **As built (2026-11-16).** Some details below were superseded during execution. The spec and the execution ledger are authoritative:
+> - Uncustomized widgets fall back to the shared default order with no renames (R6). The widget never reads `usePresetColumnState`.
+> - `alert-table-utils.tsx` is not edited (R10). Task 4b became a `RowStyleOverrideProvider` context, plus a widget-scoped `presetName`.
+> - `renderToolbar` was replaced by a slot plus portal that puts the ⚙ right before "Go to preset" (R12).
+> - `NARROW_WIDGET_PX` is 320, not 420 (R13).
+> - `get-column-value.ts` was removed. Its camelCase rule lives in `resolveWidgetColumnId`.
+> - Labels coexist with Count (R11): "Group rows by", "Rows with no value", "Rows grouped by".
+
 **Goal:** Let dashboard editors reorder, resize, show/hide, rename and group (including by incident) the columns of the dashboard Alert Table widget, saved per widget with the dashboard.
 
 **Architecture:**

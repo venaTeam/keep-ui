@@ -93,7 +93,7 @@ A client asked to see dashboard alerts grouped by incident, so operators can tel
 **Compact sizes**
 
 19. If the columns don't fit, the table scrolls sideways instead of squeezing columns below their minimum width.
-20. In edit mode on a narrow widget (builder picks the threshold, roughly 420px), header controls are hidden and the ⚙ panel is the way to change columns. The grouping chip stays visible at every size.
+20. In edit mode on a narrow widget (builder's threshold: 320px of table width, `NARROW_WIDGET_PX`), header controls are hidden and the ⚙ panel is the way to change columns. The grouping chip stays visible at every size.
 
 ### Non-functional requirements
 
@@ -383,7 +383,7 @@ Measure the widget's width (a container query or `ResizeObserver`). Below the bu
 
 ## Builder-check resolutions (2026-11-15, my calls)
 
-1. **Legacy snake_case column ids** (`last_received`, saved via the facet-list picker) are mapped on read to the matching table column (`lastReceived`). This uses the rule from `get-column-value.ts`: exact id first, then camelCase for undotted ids, only when that column exists. Order, renames and `groupBy` store the mapped ids from then on.
+1. **Legacy snake_case column ids** (`last_received`, saved via the facet-list picker) are mapped on read to the matching table column (`lastReceived`). This uses the old widget's `getColumnValue` rule (that file is now removed): exact id first, then camelCase for undotted ids, only when that column exists. Order, renames and `groupBy` store the mapped ids from then on.
 2. **Fallback is the shared default for every preset** (implementation ruling, 2026-11-15).
    - The demo build found that the "server-side" preset column config (`UserPresetColumnConfig`, `GET/PUT /preset/{id}/column-config`) is **per user**: unique on tenant, preset and user email.
    - Its table is created by no migration in keep-migrations (`origin/dev` or `origin/main`). On a schema built only from those migrations the endpoint returns 500, and the presets page silently falls back to per-user browser storage.
@@ -391,7 +391,7 @@ Measure the widget's width (a container query or `ResizeObserver`). Below the bu
    - So every source of "the preset's column order" is per viewer. An uncustomized widget falls back to the default order and names for all presets, which keeps the decision that every viewer sees the same table.
    - The ticket's "fall back to the preset's column order" can't be met in a way all viewers share. Editors set the order on the widget instead.
 3. **Viewer preferences don't reach the widget.**
-   - `useAlertTableCols` gets one optional argument, `ignoreStoredPreferences` (default false). It makes the hook use the default row style, no stored renames and no stored time or list formats.
+   - As built (Ruling R10): `alert-table-utils.tsx` is not edited. The widget passes a widget-scoped `presetName` (`dashboard-widget-<i>`), so the preset's stored renames, formats and expanded rows are never read, and wraps its table in `RowStyleOverrideProvider` (from `useAlertRowStyle`), so every reader of the row-style preference sees "default".
    - The widget passes it and supplies its own header labels. Its time columns render as "time ago", as today.
    - This is the only change to `alert-table-utils.tsx`, and it is additive.
 4. **One "No <column>" group.** TanStack keys groups by the value's string form, so `null`, `undefined` and `""` would make three groups. The widget wraps its columns' grouping values so every empty value becomes one key. The presets page keeps its grouping and only gets the label fix.
