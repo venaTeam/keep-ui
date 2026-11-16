@@ -102,15 +102,35 @@ describe("GroupBySelect", () => {
     expect(onChange).toHaveBeenCalledWith("incident");
   });
 
-  it("selects the shown value on focus so typing replaces it", async () => {
-    setup({ value: "service" });
-
-    act(() => input().focus());
-    await screen.findByRole("listbox");
-
+  it("typing after a click on the box searches instead of adding to 'None'", async () => {
+    setup();
     const field = input() as HTMLInputElement;
-    expect(field.selectionStart).toBe(0);
-    expect(field.selectionEnd).toBe("Service".length);
+
+    act(() => field.focus());
+    fireEvent.mouseDown(field);
+    fireEvent.mouseUp(field);
+    fireEvent.click(field);
+    await screen.findByRole("listbox");
+    fireEvent.change(field, { target: { value: `${field.value}serv` } });
+
+    expect(field).toHaveValue("serv");
+    expect(optionTexts(await screen.findByRole("listbox"))).toEqual([
+      "Service",
+    ]);
+  });
+
+  it("shows only the search text while open and the chosen label once closed", async () => {
+    setup({ value: "service" });
+    const field = input() as HTMLInputElement;
+    expect(field).toHaveValue("Service");
+
+    act(() => field.focus());
+    await screen.findByRole("listbox");
+    expect(field).toHaveValue("");
+
+    fireEvent.keyDown(field, { key: "Escape" });
+    expect(screen.queryByRole("listbox")).toBeNull();
+    expect(field).toHaveValue("Service");
   });
 
   it("takes its labels from the shared shortlist", () => {
