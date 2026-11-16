@@ -37,6 +37,9 @@ const getOptionLabel = (option: string) =>
 const matches = (text: string, query: string) =>
   text.toLowerCase().includes(query.toLowerCase());
 
+const isTextInput = (event: React.KeyboardEvent) =>
+  event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey;
+
 const Option = ({ value, label }: { value: string; label: string }) => (
   <ComboboxOption value={value} className={OPTION_CLASS}>
     <span className="whitespace-nowrap truncate">{label}</span>
@@ -47,7 +50,8 @@ const Option = ({ value, label }: { value: string; label: string }) => (
  * Picks the field a widget's rows are grouped by. It lists None, the shared
  * shortlist, a divider, then every other field under "Any other field…"; typing
  * filters all of them. While the list is open the box shows only the search
- * text, so typing never adds to the current label. `onChange` receives null
+ * text, and typing or pasting into the closed box replaces the shown label,
+ * so a search never starts with the current label. `onChange` receives null
  * for None. A saved field that is no longer among `fieldOptions` stays listed
  * so it remains visible.
  * The root's `data-cy` is the passed `data-cy`, else the passed `data-testid`
@@ -113,6 +117,16 @@ export function GroupBySelect({
                   open ? query : getOptionLabel(option)
                 }
                 onChange={(event) => setQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (!open && isTextInput(event)) {
+                    event.currentTarget.value = "";
+                  }
+                }}
+                onPaste={(event) => {
+                  if (!open) {
+                    event.currentTarget.value = "";
+                  }
+                }}
                 className="w-full truncate rounded-tremor-default border border-tremor-border bg-tremor-background py-2 pl-3 pr-10 text-left text-tremor-default text-tremor-content-emphasis shadow-tremor-input outline-none transition duration-100 placeholder:text-tremor-content hover:bg-tremor-background-muted focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted"
               />
               <ComboboxButton

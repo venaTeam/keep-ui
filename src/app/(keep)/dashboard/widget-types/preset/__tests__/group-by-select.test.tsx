@@ -119,6 +119,52 @@ describe("GroupBySelect", () => {
     ]);
   });
 
+  it("typing into the focused box after choosing an option searches instead of adding to the label", async () => {
+    const { onChange } = setup();
+    const field = input() as HTMLInputElement;
+
+    choose(await open(), "Service");
+    expect(onChange).toHaveBeenLastCalledWith("service");
+    expect(screen.queryByRole("listbox")).toBeNull();
+    expect(field).toHaveValue("None");
+
+    act(() => field.focus());
+    fireEvent.keyDown(field, { key: "Escape" });
+    expect(screen.queryByRole("listbox")).toBeNull();
+    fireEvent.keyDown(field, { key: "h" });
+    fireEvent.change(field, { target: { value: `${field.value}host` } });
+
+    expect(field).toHaveValue("host");
+    expect(optionTexts(await screen.findByRole("listbox"))).toEqual(["Host"]);
+  });
+
+  it("pasting into the closed box replaces the shown label", async () => {
+    setup({ value: "service" });
+    const field = input() as HTMLInputElement;
+    act(() => field.focus());
+    fireEvent.keyDown(field, { key: "Escape" });
+    expect(field).toHaveValue("Service");
+
+    fireEvent.paste(field);
+    fireEvent.change(field, { target: { value: `${field.value}labels.te` } });
+
+    expect(optionTexts(await screen.findByRole("listbox"))).toEqual([
+      "labels.team",
+    ]);
+  });
+
+  it("keeps the label when a non-text key is pressed in the closed box", () => {
+    setup({ value: "service" });
+    const field = input() as HTMLInputElement;
+    act(() => field.focus());
+    fireEvent.keyDown(field, { key: "Escape" });
+
+    fireEvent.keyDown(field, { key: "Shift" });
+    fireEvent.keyDown(field, { key: "c", metaKey: true });
+
+    expect(field).toHaveValue("Service");
+  });
+
   it("shows only the search text while open and the chosen label once closed", async () => {
     setup({ value: "service" });
     const field = input() as HTMLInputElement;
