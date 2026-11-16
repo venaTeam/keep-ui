@@ -22,6 +22,7 @@ import { ColumnOrderState } from "@tanstack/table-core";
 import { startCase } from "lodash";
 import { defaultColumns } from "./constants";
 import { useRingingRows } from "@/widgets/alerts-table/lib/alert-ringing";
+import clsx from "clsx";
 
 interface WidgetAlertsTableProps {
   presetName: string;
@@ -178,12 +179,19 @@ const WidgetAlertsTable: React.FC<WidgetAlertsTableProps> = ({
           const _borderClass =
             alertIndex < alertsToRender.length - 1 ? borderClass : "";
           const ringingCell = ringing.cellProps(index, orderedColumns.length);
+          const ringingClass =
+            ringingCell.className &&
+            clsx(
+              ringingCell.className,
+              index === 0 && "-ml-2 pl-2",
+              index === orderedColumns.length - 1 && "-mr-2 pr-2"
+            );
 
           return (
             <div
               key={`${column}-${alertIndex}`}
               title={alert?.[column]}
-              className={`min-h-7 text-xs flex min-w-0 items-center overflow-hidden whitespace-nowrap select-text ${_borderClass} ${_columnsGapClass}${ringingCell.className ? ` ${ringingCell.className}` : ""}`}
+              className={`min-h-7 text-xs flex min-w-0 items-center overflow-hidden whitespace-nowrap select-text ${_borderClass} ${_columnsGapClass}${ringingClass ? ` ${ringingClass}` : ""}`}
               style={ringingCell.style}
               ref={ringingCell.ref}
               {...ringing.rowProps}

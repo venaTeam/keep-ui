@@ -50,6 +50,7 @@ Supersedes the visual part of "Alert Table readability" (PR #108, branch `feat/a
   - `AlertTableServerSide` receives `presetNoisy` from `alert-table-tab-panel-server-side.tsx`, which already has the preset, and passes it down.
 - **Dashboard widget:** on dev it is a hand-built CSS grid, so a "row" is a run of grid cells.
   - Give every cell of a ringing row the hook's cell props; the pulse must read as one row.
+  - The grid keeps its `px-2`. A ringing row's first and last cells take `-ml-2 pl-2` / `-mr-2 pr-2`, so the pulse reaches both edges of the widget while the column tracks, and every quiet row, stay exactly as on dev (review of PR #111).
   - Pass `presetNoisy={!!preset?.is_noisy}` from `preset-alert-table-panel.tsx`.
 - **Shared hook:** if `useSyncedAnimation` or the blink palette are needed outside `src/app/(keep)/dashboard/...`, move them to `src/shared/lib/` and keep re-exports at the old paths, so the Count feature's imports and tests are untouched.
 
@@ -57,7 +58,7 @@ Supersedes the visual part of "Alert Table readability" (PR #108, branch `feat/a
 
 - **Rule helper:** critical+firing+not deleted+noisy is true. False when any one fails (including a deleted critical firing alert in a noisy preset). A numeric critical severity, or the words in another case, stay quiet.
 - **Presets page body:** a ringing row carries the attribute and its cells the overlay; a non-ringing row (including a deleted critical firing one) and a non-noisy preset carry neither; grouped child rows ring too; a collapsed group with a ringing alert rings its header and hands the ring back to the alert when expanded; a ringing row keeps the last-viewed, hover and selection classes.
-- **Widget:** every cell of a ringing row carries the class; other rows (including a deleted critical firing one) don't; a non-noisy preset gives none.
+- **Widget:** every cell of a ringing row carries the overlay and its edge cells stretch over the grid's side padding; other rows (including a deleted critical firing one) don't; a non-noisy preset gives none.
 - **Reduced motion:** the pulse uses a `motion-safe:` variant (a class assertion is enough).
 - **Contrast:** red-500 marks keep 3:1 and row text 4.5:1 on the ringing row's background at every keyframe of `ringingPulse`, on white and on the last-viewed orange.
 - **Pinned-column fix:** carried over from readability; its existing tests come along.

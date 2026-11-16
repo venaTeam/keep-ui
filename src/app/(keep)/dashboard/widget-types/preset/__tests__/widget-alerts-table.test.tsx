@@ -108,6 +108,23 @@ describe("WidgetAlertsTable ringing rows", () => {
       .forEach((reason) => expect(reason).toHaveClass("sr-only"));
   });
 
+  it("stretches a ringing row's first and last cells over the grid's side padding, so the pulse reaches both edges", () => {
+    const { container } = renderTable(true);
+    const grid = container.querySelector(
+      '[data-cy="dashboard-widget-alerts-table"] > div'
+    ) as HTMLElement;
+    const ringing = cellsOfRow(container, 0);
+    const quiet = cellsOfRow(container, 1);
+
+    expect(grid).toHaveClass("px-2");
+    expect(ringing[0]).toHaveClass("-ml-2", "pl-2");
+    expect(ringing[ringing.length - 1]).toHaveClass("-mr-2", "pr-2");
+    expect(ringing[1]).not.toHaveClass("-ml-2", "-mr-2");
+    [quiet[0], quiet[quiet.length - 1]].forEach((cell) =>
+      expect(cell.className).not.toMatch(/-m[lr]-2|\bp[lr]-2\b/)
+    );
+  });
+
   it("leaves the other rows as they were", () => {
     const { container } = renderTable(true);
 
