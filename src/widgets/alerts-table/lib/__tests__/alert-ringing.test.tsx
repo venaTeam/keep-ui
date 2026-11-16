@@ -114,6 +114,22 @@ describe("useRingingRows", () => {
     ).toEqual([]);
   });
 
+  it("draws one edge between adjacent ringing rows, on the upper row", () => {
+    const row = ringingRowOf(true)(critical);
+    const classes = (belowRingingRow?: boolean) =>
+      row.cellProps(1, 3, belowRingingRow).className!.split(" ");
+
+    expect(classes()).toEqual(
+      expect.arrayContaining([
+        "before:border-y-2",
+        "[tr[data-ringing]+tr[data-ringing]>&]:before:border-t-0",
+      ])
+    );
+    expect(classes()).not.toContain("before:border-t-0");
+    expect(classes(false)).not.toContain("before:border-t-0");
+    expect(classes(true)).toContain("before:border-t-0");
+  });
+
   it("closes the overlay's red edge at the first and the last cell", () => {
     const row = ringingRowOf(true)(critical);
     const edges = (index: number) =>

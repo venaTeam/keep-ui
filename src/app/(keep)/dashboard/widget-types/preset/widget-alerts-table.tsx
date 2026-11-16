@@ -21,7 +21,10 @@ import { DEFAULT_COLS } from "@/widgets/alerts-table/lib/alert-table-utils";
 import { ColumnOrderState } from "@tanstack/table-core";
 import { startCase } from "lodash";
 import { defaultColumns } from "./constants";
-import { useRingingRows } from "@/widgets/alerts-table/lib/alert-ringing";
+import {
+  isAlertRinging,
+  useRingingRows,
+} from "@/widgets/alerts-table/lib/alert-ringing";
 import clsx from "clsx";
 
 interface WidgetAlertsTableProps {
@@ -162,6 +165,9 @@ const WidgetAlertsTable: React.FC<WidgetAlertsTableProps> = ({
     return alertsToRender
       ?.map((alert, alertIndex) => {
         const ringing = ringingRow(alert);
+        const belowRingingRow =
+          alertIndex > 0 &&
+          isAlertRinging(alertsToRender[alertIndex - 1], presetNoisy);
         return orderedColumns?.map((column, index) => {
           const columnMeta = columnsMeta[column];
           let columnValue;
@@ -178,7 +184,11 @@ const WidgetAlertsTable: React.FC<WidgetAlertsTableProps> = ({
             index < orderedColumns.length - 1 ? columnsGapClass : "";
           const _borderClass =
             alertIndex < alertsToRender.length - 1 ? borderClass : "";
-          const ringingCell = ringing.cellProps(index, orderedColumns.length);
+          const ringingCell = ringing.cellProps(
+            index,
+            orderedColumns.length,
+            belowRingingRow
+          );
           const ringingClass =
             ringingCell.className &&
             clsx(

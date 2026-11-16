@@ -125,6 +125,35 @@ describe("WidgetAlertsTable ringing rows", () => {
     );
   });
 
+  it("leaves one edge between adjacent ringing rows: the lower row's cells drop their top edge", () => {
+    const run = [
+      { name: "ring-a", severity: "critical", status: "firing" },
+      { name: "ring-b", severity: "critical", status: "firing" },
+      { name: "quiet", severity: "high", status: "firing" },
+      { name: "ring-c", severity: "critical", status: "firing" },
+    ];
+    const { container } = render(
+      <WidgetAlertsTable
+        presetName="noisy"
+        alerts={run}
+        columns={columns}
+        presetNoisy
+      />
+    );
+    const dropsTop = (rowIndex: number) =>
+      cellsOfRow(container, rowIndex).map((cell) =>
+        cell.classList.contains("before:border-t-0")
+      );
+
+    cellsOfRow(container, 1).forEach((cell) =>
+      expect(cell).toHaveClass("before:border-y-2")
+    );
+    expect(dropsTop(0)).toEqual([false, false, false]);
+    expect(dropsTop(1)).toEqual([true, true, true]);
+    expect(dropsTop(2)).toEqual([false, false, false]);
+    expect(dropsTop(3)).toEqual([false, false, false]);
+  });
+
   it("leaves the other rows as they were", () => {
     const { container } = renderTable(true);
 
