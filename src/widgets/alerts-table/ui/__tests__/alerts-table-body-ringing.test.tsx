@@ -69,6 +69,7 @@ const columns: ColumnDef<AlertDto>[] = [
 ];
 
 type HarnessProps = {
+  data?: AlertDto[];
   presetNoisy?: boolean;
   grouping?: GroupingState;
   rowSelection?: RowSelectionState;
@@ -79,13 +80,14 @@ const NO_GROUPING: GroupingState = [];
 const NO_SELECTION: RowSelectionState = {};
 
 function Harness({
+  data = alerts,
   presetNoisy,
   grouping = NO_GROUPING,
   rowSelection = NO_SELECTION,
   lastViewedAlert = null,
 }: HarnessProps) {
   const table = useReactTable({
-    data: alerts,
+    data,
     columns,
     getRowId: (row) => row.fingerprint,
     enableRowSelection: true,
@@ -354,6 +356,81 @@ describe("AlertsTableBody ringing rows", () => {
     );
     cellsOf(rowOf(container, "high")).forEach((cell) =>
       expect(synced).not.toContain(cell)
+    );
+  });
+});
+
+describe("AlertsTableBody shared edges between ringing rows", () => {
+  const JOINED = "tr[data-ringing] + tr[data-ringing] > td";
+  const DROP_TOP = "[tr[data-ringing]+tr[data-ringing]>&]:before:border-t-0";
+  const run = [
+    alert("ring-a", "critical", "firing"),
+    alert("ring-b", "critical", "firing"),
+    alert("quiet", "high", "firing"),
+    alert("ring-c", "critical", "firing"),
+    alert("db-ring", "critical", "firing", "db"),
+    alert("db-quiet", "high", "firing", "db"),
+  ];
+  const joined = (row: HTMLElement) =>
+    cellsOf(row).every((cell) => cell.matches(JOINED));
+
+  it("leaves one edge between adjacent ringing rows: the lower row drops its top edge", async () => {
+    const { container } = await renderHarness({ data: run, presetNoisy: true });
+    const [a, b, c] = ["ring-a", "ring-b", "ring-c"].map((fp) =>
+      rowOf(container, fp)
+    );
+
+    expect(a.nextElementSibling).toBe(b);
+    [a, b, c].forEach((row) =>
+      cellsOf(row).forEach((cell) =>
+        expect(cell).toHaveClass("before:border-y-2", DROP_TOP)
+      )
+    );
+    expect(joined(b)).toBe(true);
+    expect(joined(a)).toBe(false);
+    expect(joined(c)).toBe(false);
+    expect(joined(rowOf(container, "db-ring"))).toBe(true);
+  });
+
+  it("joins grouped rows within a run and lets a quiet expanded group header break it", async () => {
+    const { container } = await renderHarness({
+      data: run,
+      presetNoisy: true,
+      grouping: ["service"],
+    });
+
+    expect(joined(rowOf(container, "ring-b"))).toBe(true);
+    expect(joined(rowOf(container, "ring-a"))).toBe(false);
+    expect(groupHeaderOf(container, "db")).not.toHaveAttribute("data-ringing");
+    expect(joined(rowOf(container, "db-ring"))).toBe(false);
+  });
+
+  it("joins a ringing collapsed group header to the ringing row or header above it", async () => {
+    const { container } = await renderHarness({
+      data: run,
+      presetNoisy: true,
+      grouping: ["service"],
+    });
+
+    await act(async () => {
+      fireEvent.click(groupHeaderOf(container, "db"));
+    });
+    expect(groupHeaderOf(container, "db")).toHaveAttribute(
+      "data-ringing",
+      "true"
+    );
+    expect(rowOf(container, "ring-c").nextElementSibling).toBe(
+      groupHeaderOf(container, "db")
+    );
+    expect(joined(groupHeaderOf(container, "db"))).toBe(true);
+
+    await act(async () => {
+      fireEvent.click(groupHeaderOf(container, "api"));
+    });
+    expect(joined(groupHeaderOf(container, "api"))).toBe(false);
+    expect(joined(groupHeaderOf(container, "db"))).toBe(true);
+    expect(groupHeaderOf(container, "db").querySelector("td")).toHaveClass(
+      DROP_TOP
     );
   });
 });

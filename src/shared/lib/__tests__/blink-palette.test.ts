@@ -12,18 +12,18 @@ const ORANGE_50 = "#fff7ed";
 const ORANGE_100 = "#ffedd5";
 const ROW_TEXT = ["#333333", "#4b5563"];
 
-const over = (color: string, alpha: number, base: string) =>
-  composite(`rgb(${channels(color).join(" ")} / ${alpha})`, base, 1);
+const SELECTED = "#cfe4fe";
+const DRAG_SELECTING = "#e4effe";
 
-const SELECTED = over("#bfdbfe", 0.5, over("#bfdbfe", 0.5, WHITE));
-const DRAG_SELECTING = over("#dbeafe", 0.5, over("#dbeafe", 0.5, WHITE));
+const TINTED_ROWS: Array<[string, string]> = [
+  ["default", WHITE],
+  ["last-viewed", ORANGE_50],
+];
 
-const ROW_STATES: Array<[string, string, boolean]> = [
-  ["default", WHITE, true],
-  ["last viewed", ORANGE_50, true],
-  ["hovered", ORANGE_100, false],
-  ["selected", SELECTED, false],
-  ["drag-selecting", DRAG_SELECTING, false],
+const UNTINTED_ROWS: Array<[string, string]> = [
+  ["hovered", ORANGE_100],
+  ["selected", SELECTED],
+  ["drag-selecting", DRAG_SELECTING],
 ];
 
 const rowVars = (color: string) =>
@@ -57,15 +57,11 @@ function composite(tint: string, base: string, opacity: number) {
 
 const tint = () => rowVars(DEFAULT_BLINK_COLOR)["--blink-row-tint"];
 
-const shownBackgrounds = (base: string, tintShown: boolean) =>
-  pulseOpacities().map((opacity) =>
-    tintShown ? composite(tint(), base, opacity) : base
-  );
+const tintedBackgrounds = (base: string) =>
+  pulseOpacities().map((opacity) => composite(tint(), base, opacity));
 
 const ringingBackgrounds = () =>
-  ROW_STATES.filter(([, , tintShown]) => tintShown).flatMap(([, base]) =>
-    shownBackgrounds(base, true)
-  );
+  TINTED_ROWS.flatMap(([, base]) => tintedBackgrounds(base));
 
 describe("getRowBlinkStyle", () => {
   it("tints a ringing row at 10% of the color and edges it in the solid color", () => {
@@ -84,21 +80,17 @@ describe("getRowBlinkStyle", () => {
     );
   });
 
-  it.each(ROW_STATES)(
-    "on a %s ringing row, shows red-500 marks at 3:1 or more wherever the tint shows, and the plain background as on dev where it is off",
-    (_state, base, tintShown) => {
-      shownBackgrounds(base, tintShown).forEach((background) => {
-        if (tintShown) {
-          expect(contrastRatio(RED_500, background)).toBeGreaterThanOrEqual(3);
-        } else {
-          expect(background).toBe(base);
-        }
-      });
+  it.each(TINTED_ROWS)(
+    "keeps red-500 marks at 3:1 or more on a %s ringing row at every keyframe",
+    (_state, base) => {
+      tintedBackgrounds(base).forEach((background) =>
+        expect(contrastRatio(RED_500, background)).toBeGreaterThanOrEqual(3)
+      );
     }
   );
 
-  it.each(ROW_STATES.filter(([, , tintShown]) => !tintShown))(
-    "turns the tint off on a %s row because it would take red-500 marks under 3:1",
+  it.each(UNTINTED_ROWS)(
+    "would take red-500 marks under 3:1 at the strong phase on a %s row, which is why the tint is off there",
     (_state, base) => {
       expect(contrastRatio(RED_500, composite(tint(), base, 1))).toBeLessThan(
         3
