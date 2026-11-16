@@ -45,25 +45,42 @@ describe("setIdsTicked", () => {
     expect(s).toEqual({ a: true, b: true, c: true });
   });
   it("drops false values it is given", () =>
-    expect(setIdsTicked({ a: true, b: false }, ["c"], true)).toEqual({ a: true, c: true }));
+    expect(setIdsTicked({ a: true, b: false }, ["c"], true)).toEqual({
+      a: true,
+      c: true,
+    }));
   it("leaves an empty object when the last id is unticked", () =>
     expect(setIdsTicked({ a: true }, ["a"], false)).toEqual({}));
 });
 describe("getRangeIds", () => {
   const order = ["a", "b", "c", "d"];
-  it("is inclusive forwards", () => expect(getRangeIds(order, "b", "d")).toEqual(["b", "c", "d"]));
-  it("is inclusive backwards, in display order", () => expect(getRangeIds(order, "d", "b")).toEqual(["b", "c", "d"]));
-  it("is just the target when the anchor is gone", () => expect(getRangeIds(order, "x", "c")).toEqual(["c"]));
+  it("is inclusive forwards", () =>
+    expect(getRangeIds(order, "b", "d")).toEqual(["b", "c", "d"]));
+  it("is inclusive backwards, in display order", () =>
+    expect(getRangeIds(order, "d", "b")).toEqual(["b", "c", "d"]));
+  it("is just the target when the anchor is gone", () =>
+    expect(getRangeIds(order, "x", "c")).toEqual(["c"]));
 });
 describe("getStripLabel", () => {
-  const link = { label: "Link to incident", partialLabel: (n: number) => `Link ${n} to incident` } as WidgetAlertAction;
-  it("uses the plain label when every ticked alert goes in", () => expect(getStripLabel(link, 4, 4)).toBe("Link to incident"));
-  it("counts when some are left out", () => expect(getStripLabel(link, 3, 4)).toBe("Link 3 to incident"));
+  const link = {
+    label: "Link to incident",
+    partialLabel: (n: number) => `Link ${n} to incident`,
+  } as WidgetAlertAction;
+  it("uses the plain label when every ticked alert goes in", () =>
+    expect(getStripLabel(link, 4, 4)).toBe("Link to incident"));
+  it("counts when some are left out", () =>
+    expect(getStripLabel(link, 3, 4)).toBe("Link 3 to incident"));
 });
 describe("getEligibleAlerts", () => {
   it("keeps only alerts the action applies to, in order", () => {
-    const action = { appliesTo: (a: AlertDto) => a.status === "firing" } as WidgetAlertAction;
-    const [x, y, z] = [alert({ fingerprint: "x", status: "firing" }), alert({ fingerprint: "y", status: "resolved" }), alert({ fingerprint: "z", status: "firing" })];
+    const action = {
+      appliesTo: (a: AlertDto) => a.status === "firing",
+    } as WidgetAlertAction;
+    const [x, y, z] = [
+      alert({ fingerprint: "x", status: "firing" }),
+      alert({ fingerprint: "y", status: "resolved" }),
+      alert({ fingerprint: "z", status: "firing" }),
+    ];
     expect(getEligibleAlerts(action, [x, y, z])).toEqual([x, z]);
   });
 });
