@@ -8,7 +8,6 @@ import type {
 import { defaultColumns } from "./constants";
 
 export type { AlertTableWidgetConfig, EmptyGroupPosition };
-export { isEmptyGroupValue } from "@/widgets/alerts-table/lib/group-values";
 
 /** Row-chrome columns the widget never shows, even when a saved config lists them. */
 export const WIDGET_EXCLUDED_COLUMNS: readonly string[] = [

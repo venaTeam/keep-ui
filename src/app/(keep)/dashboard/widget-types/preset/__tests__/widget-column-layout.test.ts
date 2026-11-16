@@ -117,7 +117,6 @@ describe("getWidgetColumnLayout", () => {
     const result = layout(DEFAULT_TOTAL + 500);
 
     expect(result.tableWidth).toBe(DEFAULT_TOTAL + 500);
-    expect(result.flexColumnId).toBe("description");
     expect(result.columnSizing).toEqual({ description: 600 });
   });
 
@@ -125,7 +124,6 @@ describe("getWidgetColumnLayout", () => {
     const result = layout(250);
 
     expect(result.tableWidth).toBe(DEFAULT_TOTAL);
-    expect(result.flexColumnId).toBeUndefined();
     expect(result.columnSizing).toEqual({});
   });
 
@@ -133,7 +131,7 @@ describe("getWidgetColumnLayout", () => {
     const result = layout(DEFAULT_TOTAL);
 
     expect(result.tableWidth).toBe(DEFAULT_TOTAL);
-    expect(result.flexColumnId).toBeUndefined();
+    expect(result.columnSizing).toEqual({});
   });
 
   it("keeps a saved width on name exact while description flexes", () => {
@@ -149,7 +147,6 @@ describe("getWidgetColumnLayout", () => {
   it("gives the spare width to name when description has a saved width", () => {
     const result = layout(1000, { description: 300 });
 
-    expect(result.flexColumnId).toBe("name");
     expect(result.columnSizing).toEqual({
       description: 300,
       name: 100 + 1000 - (DEFAULT_TOTAL + 200),
@@ -167,7 +164,6 @@ describe("getWidgetColumnLayout", () => {
     const result = layout(600, {}, ["severity", "status", "source"]);
 
     expect(result.tableWidth).toBe(82);
-    expect(result.flexColumnId).toBeUndefined();
     expect(result.columnSizing).toEqual({});
   });
 

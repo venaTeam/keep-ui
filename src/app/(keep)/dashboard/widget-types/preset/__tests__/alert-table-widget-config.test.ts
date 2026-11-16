@@ -6,7 +6,6 @@ import {
   WIDGET_STATIC_COLUMN_IDS,
   applyWidgetColumnChange,
   getVisibleColumnIds,
-  isEmptyGroupValue,
   mergeVisibleColumnOrder,
   normalizeColumnOrder,
   resetWidgetColumns,
@@ -267,14 +266,4 @@ describe("applyWidgetColumnChange / resetWidgetColumns", () => {
     expect(item.presetColumns).toEqual(["name"]);
     expect(item.alertTable).toEqual({ columnSizing: { name: 200 } });
   });
-});
-
-describe("isEmptyGroupValue", () => {
-  it.each([undefined, null, "", "undefined", "null", []])(
-    "treats %p as empty",
-    (v) => expect(isEmptyGroupValue(v)).toBe(true)
-  );
-  it.each(["firing", 0, false, ["prometheus"]])("treats %p as a value", (v) =>
-    expect(isEmptyGroupValue(v)).toBe(false)
-  );
 });
