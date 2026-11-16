@@ -61,6 +61,7 @@ const SKELETON_ROWS = 5;
 const OPAQUE_CELL_CLASSES =
   "[&_th]:[background:var(--widget-opaque-bg)] [&_td.sticky]:[background:var(--widget-opaque-bg)] [&_th.sticky]:z-40 [&_td.sticky]:z-10";
 const COMPACT_GROUP_HEADER_CLASSES = "[&_td.group-header-cell]:py-1";
+const BORDER_TOLERANCE_PX = 0.01;
 
 function noop() {}
 
@@ -93,6 +94,35 @@ function useElementWidth(ref: RefObject<HTMLElement | null>): number | null {
   }, [ref]);
 
   return width;
+}
+
+function useCollapsedBorderWidth(
+  tableRef: RefObject<HTMLTableElement | null>
+): number {
+  const [borderWidth, setBorderWidth] = useState(0);
+
+  useEffect(() => {
+    const table = tableRef.current;
+    if (!table || typeof ResizeObserver === "undefined") {
+      return;
+    }
+    const observer = new ResizeObserver(() => {
+      const cells = Array.from(table.tHead?.rows[0]?.cells ?? []);
+      if (cells.length === 0) {
+        return;
+      }
+      const cellsWidth = cells.reduce(
+        (sum, cell) => sum + cell.getBoundingClientRect().width,
+        0
+      );
+      const overhang = table.getBoundingClientRect().width - cellsWidth;
+      setBorderWidth(Math.max(0, Math.ceil(overhang - BORDER_TOLERANCE_PX)));
+    });
+    observer.observe(table);
+    return () => observer.disconnect();
+  }, [tableRef]);
+
+  return borderWidth;
 }
 
 function getColumnWidths(
@@ -151,6 +181,7 @@ function WidgetAlertsTableContent({
   const a11yContainerRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLTableElement>(null);
   const containerWidth = useElementWidth(wrapperRef);
+  const borderWidth = useCollapsedBorderWidth(tableRef);
   const isNarrow = containerWidth !== null && containerWidth < NARROW_WIDGET_PX;
   useLinkNavigationBlocked(rootRef, isEditMode);
 
@@ -205,9 +236,10 @@ function WidgetAlertsTableContent({
         columns,
         visibleOrder: visibleColumnOrder,
         savedSizing,
-        containerWidth,
+        containerWidth:
+          containerWidth === null ? null : containerWidth - borderWidth,
       }),
-    [columns, visibleColumnOrder, savedSizing, containerWidth]
+    [columns, visibleColumnOrder, savedSizing, containerWidth, borderWidth]
   );
   const layoutColumns = useMemo(
     () => withUnclampedColumn(columns, layout.unclampedColumnId),
@@ -391,7 +423,9 @@ function WidgetAlertsTableContent({
  * Once the widget's width is measured, the table is laid out by
  * `getWidgetColumnLayout`: every column renders at exactly its own width, the
  * flexible text column takes any spare width so the table fills the widget,
- * and columns that do not fit scroll sideways.
+ * and columns that do not fit scroll sideways. The width the table's
+ * collapsed outer borders add (an incident group's colored edge) is measured
+ * and left free, so a table that fits never scrolls.
  *
  * In edit mode no link inside the widget navigates. A capture listener on
  * `window` cancels the click before the dashboard's leave guard (a capture

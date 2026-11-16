@@ -181,7 +181,8 @@ const observeWidth = (width: number) => {
     }
     observe(target: Element) {
       if (
-        target.getAttribute("data-cy") !== "dashboard-widget-alerts-table"
+        target.getAttribute("data-cy") !== "dashboard-widget-alerts-table" &&
+        target.tagName !== "TABLE"
       ) {
         return;
       }
@@ -597,6 +598,36 @@ describe("WidgetAlertsTable", () => {
         const rendered = renderedWidths();
         expect(rendered.status).toBe(declared.status);
         expect(rendered.name).toBe(declared.name + 800 - sumOf(declared));
+      });
+
+      it("leaves room for a collapsed outer border so a table that fits never scrolls", () => {
+        const declared = declaredWidths();
+        const width = sumOf(declared) + 500;
+        const widthOfBox = (element: Element) =>
+          px((element as HTMLElement).style.width) || 0;
+        const rects = jest
+          .spyOn(Element.prototype, "getBoundingClientRect")
+          .mockImplementation(function (this: Element) {
+            if (this.tagName !== "TABLE") {
+              return { width: widthOfBox(this) } as DOMRect;
+            }
+            const cells = Array.from(this.querySelectorAll("thead th"));
+            return {
+              width: cells.reduce((sum, cell) => sum + widthOfBox(cell), 1.5),
+            } as DOMRect;
+          });
+
+        try {
+          observeWidth(width);
+          renderWidget();
+
+          const rendered = renderedWidths();
+          PINNED.forEach((id) => expect(rendered[id]).toBe(declared[id]));
+          expect(rendered.description).toBe(declared.description + 500 - 2);
+          expect(tableElement().style.width).toBe(`${width - 2}px`);
+        } finally {
+          rects.mockRestore();
+        }
       });
     });
   });
