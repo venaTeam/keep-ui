@@ -118,6 +118,25 @@ describe("DuplicateDashboardModal", () => {
     );
   });
 
+  it("marks the name input invalid and describes it with the clash alert", async () => {
+    await renderModal();
+
+    typeName("ops");
+
+    const alert = screen.getByRole("alert");
+    expect(alert).toBe(byCy("dashboard-duplicate-name-error"));
+    expect(alert).toHaveTextContent(NAME_TAKEN);
+    expect(nameInput()).toHaveAttribute("aria-invalid", "true");
+    expect(nameInput()).toHaveAttribute("aria-describedby", alert.id);
+    expect(nameInput()).toHaveAccessibleDescription(NAME_TAKEN);
+
+    typeName("Fresh name");
+
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(nameInput()).not.toHaveAttribute("aria-invalid");
+    expect(nameInput()).not.toHaveAttribute("aria-describedby");
+  });
+
   it("disables submit for a blank name", async () => {
     await renderModal();
 
@@ -307,6 +326,104 @@ describe("DuplicateDashboardModal", () => {
     expect(onClose).toHaveBeenCalled();
     expect(mockPost).not.toHaveBeenCalled();
   });
+
+  it("does not navigate when the dialog was cancelled before the copy finished", async () => {
+    let resolvePost: (value: unknown) => void = () => {};
+    mockPost.mockReturnValue(
+      new Promise((resolve) => {
+        resolvePost = resolve;
+      })
+    );
+    const { onClose } = await renderModal();
+
+    pressEnter();
+    fireEvent.click(byCy("dashboard-duplicate-cancel-btn")!);
+    expect(onClose).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolvePost(created("NOC Overview (copy)"));
+    });
+
+    await waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith("Dashboard duplicated")
+    );
+    expect(mockPush).not.toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not navigate when the source changed before the copy finished", async () => {
+    let resolvePost: (value: unknown) => void = () => {};
+    mockPost.mockReturnValue(
+      new Promise((resolve) => {
+        resolvePost = resolve;
+      })
+    );
+    const { rerender, onClose } = await renderModal();
+
+    pressEnter();
+    const ops = { id: "d3", dashboard_name: "Ops", dashboard_config: {} };
+    rerender(
+      <DuplicateDashboardModal
+        source={ops}
+        existingNames={existingNames}
+        onClose={onClose}
+      />
+    );
+    await waitFor(() => expect(nameInput()).toHaveValue("Ops (copy)"));
+
+    await act(async () => {
+      resolvePost(created("NOC Overview (copy)"));
+    });
+
+    expect(toast.success).toHaveBeenCalledWith("Dashboard duplicated");
+    expect(mockPush).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(submitButton()).toBeEnabled();
+  });
+
+  it.each([409, 404])(
+    "ignores a late error after cancel (%i)",
+    async (status) => {
+      let rejectPost: (error: unknown) => void = () => {};
+      mockPost.mockReturnValue(
+        new Promise((_, reject) => {
+          rejectPost = reject;
+        })
+      );
+      const { rerender, onClose } = await renderModal();
+
+      pressEnter();
+      fireEvent.click(byCy("dashboard-duplicate-cancel-btn")!);
+      const ops = { id: "d3", dashboard_name: "Ops", dashboard_config: {} };
+      rerender(
+        <DuplicateDashboardModal
+          source={null}
+          existingNames={existingNames}
+          onClose={onClose}
+        />
+      );
+      rerender(
+        <DuplicateDashboardModal
+          source={ops}
+          existingNames={existingNames}
+          onClose={onClose}
+        />
+      );
+      await waitForOpenDialog();
+
+      await act(async () => {
+        rejectPost(new KeepApiError("x", "u", "", {}, status));
+      });
+
+      expect(nameInput()).toHaveValue("Ops (copy)");
+      expect(byCy("dashboard-duplicate-name-error")).toBeNull();
+      expect(submitButton()).toBeEnabled();
+      expect(mockMutate).not.toHaveBeenCalled();
+      expect(showErrorToast).not.toHaveBeenCalled();
+      expect(mockPush).not.toHaveBeenCalled();
+      expect(onClose).toHaveBeenCalledTimes(1);
+    }
+  );
 
   it("renders nothing while there is no source", () => {
     render(

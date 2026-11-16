@@ -1,4 +1,4 @@
-import { FormEvent, useId, useState } from "react";
+import { FormEvent, useEffect, useId, useRef, useState } from "react";
 import { Button, TextInput } from "@tremor/react";
 import { InformationCircleIcon } from "@heroicons/react/24/outline";
 import { usePathname, useRouter } from "next/navigation";
@@ -26,7 +26,9 @@ interface DuplicateDashboardModalProps {
 /**
  * Asks for the copy's name and duplicates `source` on the server, then opens
  * the copy. The dialog is open while `source` is set; the last source stays
- * shown while it closes.
+ * shown while it closes. A result that arrives after the dialog was dismissed
+ * or switched to another source only toasts a success; it never closes,
+ * navigates or touches the dialog's state.
  */
 export function DuplicateDashboardModal({
   source,
@@ -40,6 +42,17 @@ export function DuplicateDashboardModal({
     (state) => state.blockers.length > 0
   );
   const inputId = useId();
+  const errorId = `${inputId}-error`;
+  const activeRequest = useRef<object | null>(null);
+
+  useEffect(() => {
+    activeRequest.current = null;
+  }, [source]);
+
+  const dismiss = () => {
+    activeRequest.current = null;
+    onClose();
+  };
 
   const [prevSource, setPrevSource] = useState<Dashboard | null>(null);
   const [sourceName, setSourceName] = useState("");
@@ -69,12 +82,18 @@ export function DuplicateDashboardModal({
     if (!source || !canSubmit) {
       return;
     }
+    const request = {};
+    activeRequest.current = request;
     setPending(true);
     setServerError(null);
     let created: Dashboard;
     try {
       created = await duplicateDashboard(source.id, name);
     } catch (error) {
+      if (activeRequest.current !== request) {
+        return;
+      }
+      activeRequest.current = null;
       setPending(false);
       const status =
         error instanceof KeepApiError ? error.statusCode : undefined;
@@ -88,8 +107,12 @@ export function DuplicateDashboardModal({
       }
       return;
     }
-    onClose();
     toast.success("Dashboard duplicated");
+    if (activeRequest.current !== request) {
+      return;
+    }
+    activeRequest.current = null;
+    onClose();
     confirmNavigation(() =>
       router.push(`/dashboard/${encodeURIComponent(created.dashboard_name)}`)
     );
@@ -98,7 +121,7 @@ export function DuplicateDashboardModal({
   return (
     <Modal
       isOpen={source !== null}
-      onClose={onClose}
+      onClose={dismiss}
       title="Duplicate dashboard"
       className="w-[480px]"
       data-cy="dashboard-duplicate-modal"
@@ -123,11 +146,15 @@ export function DuplicateDashboardModal({
               setServerError(null);
             }}
             error={!!nameError}
+            aria-invalid={nameError ? true : undefined}
+            aria-describedby={nameError ? errorId : undefined}
             data-autofocus
             data-cy="dashboard-duplicate-name-input"
           />
           {nameError && (
             <p
+              id={errorId}
+              role="alert"
               className="text-sm text-red-500"
               data-cy="dashboard-duplicate-name-error"
             >
@@ -161,7 +188,7 @@ export function DuplicateDashboardModal({
             variant="secondary"
             size="sm"
             color="orange"
-            onClick={onClose}
+            onClick={dismiss}
             data-cy="dashboard-duplicate-cancel-btn"
           >
             Cancel
