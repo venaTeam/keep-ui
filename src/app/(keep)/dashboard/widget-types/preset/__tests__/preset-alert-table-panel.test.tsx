@@ -635,6 +635,11 @@ describe("PresetAlertTablePanel quick actions", () => {
     return result;
   };
 
+  const goToPreset = () =>
+    document.querySelector(
+      '[data-cy="dashboard-widget-preset-go-to-btn"]'
+    ) as HTMLButtonElement | null;
+
   it("swaps the count line for the strip while anything is ticked", () => {
     renderWithAlerts([a1, a2]);
     tick({ [a1.fingerprint]: true });
@@ -643,9 +648,21 @@ describe("PresetAlertTablePanel quick actions", () => {
       document.querySelector('[data-cy="widget-selection-strip"]')
     ).not.toBeNull();
     expect(screen.queryByText(/Alerts count:/)).toBeNull();
-    expect(
-      document.querySelector('[data-cy="dashboard-widget-preset-go-to-btn"]')
-    ).toBeNull();
+  });
+
+  it("keeps Go to preset in place but hidden and inert while anything is ticked", () => {
+    renderWithAlerts([a1, a2]);
+    tick({ [a1.fingerprint]: true });
+
+    const button = goToPreset();
+    expect(button).not.toBeNull();
+    expect(button).toHaveClass("invisible");
+    expect(button).toHaveAttribute("aria-hidden", "true");
+    expect(button).toHaveAttribute("tabindex", "-1");
+
+    fireEvent.click(button!);
+
+    expect(mockPush).not.toHaveBeenCalled();
   });
 
   it("brings the count line and Go to preset back on Clear", () => {
@@ -658,9 +675,12 @@ describe("PresetAlertTablePanel quick actions", () => {
       document.querySelector('[data-cy="widget-selection-strip"]')
     ).toBeNull();
     expect(screen.getByText("Alerts count:")).toBeInTheDocument();
-    expect(
-      document.querySelector('[data-cy="dashboard-widget-preset-go-to-btn"]')
-    ).not.toBeNull();
+    const button = goToPreset();
+    expect(button).not.toHaveClass("invisible");
+    expect(button).not.toHaveAttribute("aria-hidden");
+    expect(button).not.toHaveAttribute("tabindex");
+    fireEvent.click(button!);
+    expect(mockPush).toHaveBeenCalledWith("/alerts/feed");
     expect(tableSelection().rowSelection).toEqual({});
   });
 

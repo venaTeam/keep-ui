@@ -357,18 +357,19 @@ const PresetAlertTablePanel: React.FC<PresetAlertTablePanelProps> = ({
         </div>
         <div className="flex items-center gap-1.5">
           {isEditMode && <div ref={setSettingsSlot} className="contents" />}
-          {!isSelecting && (
-            <Button
-              color="orange"
-              variant="secondary"
-              size="xs"
-              onClick={handleGoToPresetClick}
-              disabled={isEditMode}
-              data-cy="dashboard-widget-preset-go-to-btn"
-            >
-              Go to preset
-            </Button>
-          )}
+          <Button
+            color="orange"
+            variant="secondary"
+            size="xs"
+            onClick={handleGoToPresetClick}
+            disabled={isEditMode || isSelecting}
+            className={isSelecting ? "invisible" : undefined}
+            aria-hidden={isSelecting ? "true" : undefined}
+            tabIndex={isSelecting ? -1 : undefined}
+            data-cy="dashboard-widget-preset-go-to-btn"
+          >
+            Go to preset
+          </Button>
         </div>
       </div>
       {countOfLastAlerts > 0 && (
