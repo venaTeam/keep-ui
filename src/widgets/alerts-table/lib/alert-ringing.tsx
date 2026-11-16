@@ -37,15 +37,22 @@ const isWord = (value: unknown, word: string) =>
   typeof value === "string" && value.toLowerCase() === word;
 
 /**
- * Whether an alert's row rings: the alert is critical (the word in any case,
- * or the numeric severity `severityMapping` maps to critical), it is firing,
- * and the table's preset is noisy.
+ * Whether an alert's row rings: the table's preset is noisy and the alert is
+ * one that makes the preset's alarm sound, i.e. it matches `NOISE_BASE_CEL`
+ * in `features/presets/custom-preset-links/ui/PresetsNoise.tsx`
+ * (`status == 'firing' && deleted == false && severity == 'critical'`).
+ * Keep the two in step. Critical is the word in any case or the numeric
+ * severity `severityMapping` maps to it; only `deleted === true` counts as
+ * deleted.
  */
 export function isAlertRinging(
-  alert: { severity?: unknown; status?: unknown } | null | undefined,
+  alert:
+    | { severity?: unknown; status?: unknown; deleted?: unknown }
+    | null
+    | undefined,
   presetNoisy?: boolean
 ): boolean {
-  if (!presetNoisy || !alert) {
+  if (!presetNoisy || !alert || alert.deleted === true) {
     return false;
   }
   const severity = severityMapping[Number(alert.severity)] ?? alert.severity;

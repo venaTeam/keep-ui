@@ -35,6 +35,12 @@ describe("WidgetAlertsTable ringing rows", () => {
     { name: "ring-numeric", severity: 5, status: "firing" },
     { name: "quiet-resolved", severity: "critical", status: "resolved" },
     { name: "quiet-high", severity: "high", status: "firing" },
+    {
+      name: "quiet-deleted",
+      severity: "critical",
+      status: "firing",
+      deleted: true,
+    },
   ];
 
   const renderTable = (presetNoisy?: boolean) =>
@@ -87,6 +93,16 @@ describe("WidgetAlertsTable ringing rows", () => {
         expect(cell.getAttribute("style")).toBeNull();
       });
     }
+  });
+
+  it("does not ring a deleted critical firing alert", () => {
+    const { container } = renderTable(true);
+
+    cellsOfRow(container, 4).forEach((cell) => {
+      expect(cell).not.toHaveClass(BLINK);
+      expect(cell).not.toHaveAttribute("data-ringing");
+    });
+    expect(screen.getAllByText(RINGING_REASON)).toHaveLength(2);
   });
 
   it.each([false, undefined])(

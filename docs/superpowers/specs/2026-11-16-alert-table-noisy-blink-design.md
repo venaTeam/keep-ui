@@ -17,10 +17,13 @@ Supersedes the visual part of "Alert Table readability" (PR #108, branch `feat/a
    - the dashboard Alert Table widget (`widget-alerts-table.tsx`).
 
    This branch is based on dev, so it doesn't carry readability's visuals at all.
-2. **Ringing row.** An alert row blinks when all three hold:
+2. **Ringing row.** An alert row blinks when all four hold:
    - its severity is critical, accepting either the word or the numeric severity value (see `severityMapping`);
    - its status is firing;
+   - the alert is not deleted (`deleted === true` is deleted; absent or false is not);
    - the table's preset is noisy (`preset.is_noisy`).
+
+   The first three are exactly the condition the noisy preset's alarm sounds on: `NOISE_BASE_CEL = "status == 'firing' && deleted == false && severity == 'critical'"` (`src/features/presets/custom-preset-links/ui/PresetsNoise.tsx`). The blink must mark exactly the alerts that make the alarm ring, so the helper's JSDoc names `NOISE_BASE_CEL` to keep the two in step (user decision, 2026-11-16).
 
    Every other row is unchanged. The rule needs a single helper with unit tests.
 3. **Surfaces.** Both the presets page table and the dashboard Alert Table widget. On the presets page that includes the rows inside groups, when grouped.
@@ -48,9 +51,9 @@ Supersedes the visual part of "Alert Table readability" (PR #108, branch `feat/a
 
 ## Tests
 
-- **Rule helper:** critical+firing+noisy is true. False when any one fails. Numeric critical severity counts as critical.
-- **Presets page body:** a ringing row carries the blink class and the attribute; a non-ringing row and a non-noisy preset carry neither; grouped child rows ring too.
-- **Widget:** every cell of a ringing row carries the class; other rows don't; a non-noisy preset gives none.
+- **Rule helper:** critical+firing+not deleted+noisy is true. False when any one fails (including a deleted critical firing alert in a noisy preset). Numeric critical severity counts as critical.
+- **Presets page body:** a ringing row carries the blink class and the attribute; a non-ringing row (including a deleted critical firing one) and a non-noisy preset carry neither; grouped child rows ring too.
+- **Widget:** every cell of a ringing row carries the class; other rows (including a deleted critical firing one) don't; a non-noisy preset gives none.
 - **Reduced motion:** the classes use `motion-safe:` / `motion-reduce:` variants (a class assertion is enough).
 - **Pinned-column fix:** carried over from readability; its existing tests come along.
 

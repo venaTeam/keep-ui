@@ -36,6 +36,7 @@ const alerts = [
   alert("ring-numeric", 5, "firing"),
   alert("resolved", "critical", "resolved"),
   alert("high", "high", "firing"),
+  { ...alert("deleted", "critical", "firing"), deleted: true } as AlertDto,
 ];
 
 const columns: ColumnDef<AlertDto>[] = [
@@ -109,6 +110,15 @@ describe("AlertsTableBody ringing rows", () => {
         .querySelectorAll("td")
         .forEach((cell) => expect(cell).not.toHaveClass("!bg-inherit"));
     }
+  });
+
+  it("does not ring a deleted critical firing alert", () => {
+    const { container } = render(<Harness presetNoisy />);
+    const row = rowOf(container, "deleted");
+
+    expect(row).not.toHaveAttribute("data-ringing");
+    expect(row).not.toHaveClass(BLINK);
+    expect(within(row).queryByText(RINGING_REASON)).toBeNull();
   });
 
   it.each([false, undefined])(

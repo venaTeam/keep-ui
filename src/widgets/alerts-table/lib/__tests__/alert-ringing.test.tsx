@@ -15,7 +15,13 @@ describe("isAlertRinging", () => {
     expect(isAlertRinging(critical, true)).toBe(true);
   });
 
-  it.each<[string, { severity?: unknown; status?: unknown }, boolean | undefined]>([
+  it.each<
+    [
+      string,
+      { severity?: unknown; status?: unknown; deleted?: unknown },
+      boolean | undefined,
+    ]
+  >([
     ["the preset is not noisy", critical, false],
     ["the preset's noise is unknown", critical, undefined],
     ["the severity is high", { ...critical, severity: "high" }, true],
@@ -24,6 +30,7 @@ describe("isAlertRinging", () => {
     ["the status is acknowledged", { ...critical, status: "acknowledged" }, true],
     ["the status is missing", { severity: "critical" }, true],
     ["the numeric severity is high", { ...critical, severity: 4 }, true],
+    ["the alert is deleted", { ...critical, deleted: true }, true],
   ])("stays quiet when %s", (_name, alert, presetNoisy) => {
     expect(isAlertRinging(alert, presetNoisy)).toBe(false);
   });
@@ -34,6 +41,10 @@ describe("isAlertRinging", () => {
     ["the word in upper case", "CRITICAL"],
   ])("counts %s as critical", (_name, severity) => {
     expect(isAlertRinging({ ...critical, severity }, true)).toBe(true);
+  });
+
+  it("rings an alert that is explicitly not deleted", () => {
+    expect(isAlertRinging({ ...critical, deleted: false }, true)).toBe(true);
   });
 
   it("accepts the status in any case", () => {
