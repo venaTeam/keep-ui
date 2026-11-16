@@ -1222,6 +1222,17 @@ describe("WidgetAlertsTable", () => {
 });
 
 describe("WidgetAlertsTable ringing rows", () => {
+  beforeEach(() => {
+    Object.defineProperty(HTMLElement.prototype, "getAnimations", {
+      configurable: true,
+      value: () => [],
+    });
+  });
+
+  afterEach(() => {
+    delete (HTMLElement.prototype as Partial<HTMLElement>).getAnimations;
+  });
+
   const BLINK = "motion-safe:animate-missing-blink";
   const STEADY = "motion-reduce:bg-[color:var(--blink-soft)]";
 
@@ -1230,6 +1241,7 @@ describe("WidgetAlertsTable ringing rows", () => {
     alertWith({ severity: 5, service: "checkout" }),
     alertWith({ severity: Severity.Critical, status: Status.Resolved }),
     alertWith({ severity: Severity.High, service: "checkout" }),
+    alertWith({ severity: Severity.Critical, deleted: true }),
   ];
 
   const renderRinging = (
@@ -1287,6 +1299,20 @@ describe("WidgetAlertsTable ringing rows", () => {
         .querySelectorAll("td")
         .forEach((cell) => expect(cell).not.toHaveClass("!bg-inherit"));
     }
+  });
+
+  it("does not ring a deleted critical firing alert", () => {
+    const [, , , , deleted] = renderRinging(true);
+    const row = rowOf(deleted);
+
+    expect(row).toBeInTheDocument();
+    expect(row).not.toHaveAttribute("data-ringing");
+    expect(row).not.toHaveClass(BLINK);
+    expect(row.getAttribute("style")).toBeNull();
+    row
+      .querySelectorAll("td")
+      .forEach((cell) => expect(cell).not.toHaveClass("!bg-inherit"));
+    expect(screen.getAllByText(RINGING_REASON)).toHaveLength(2);
   });
 
   it.each([false, undefined])(
@@ -1347,14 +1373,11 @@ describe("WidgetAlertsTable ringing rows", () => {
         ];
       },
     });
-    try {
-      const [critical, numericCritical, , high] = renderRinging(true);
+    const [critical, numericCritical, , high, deleted] = renderRinging(true);
 
-      expect(synced).toContain(rowOf(critical));
-      expect(synced).toContain(rowOf(numericCritical));
-      expect(synced).not.toContain(rowOf(high));
-    } finally {
-      delete (HTMLElement.prototype as Partial<HTMLElement>).getAnimations;
-    }
+    expect(synced).toContain(rowOf(critical));
+    expect(synced).toContain(rowOf(numericCritical));
+    expect(synced).not.toContain(rowOf(high));
+    expect(synced).not.toContain(rowOf(deleted));
   });
 });
