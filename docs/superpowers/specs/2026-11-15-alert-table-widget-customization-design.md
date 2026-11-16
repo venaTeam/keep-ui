@@ -329,7 +329,7 @@ Trade-offs:
 
 **Recommendation:** Option A.
 
-**Form hint.** When Group by is set and "Last alerts count" is under 10, the form shows a hint: "Grouping works best with 20 or more alerts". The default count stays 5, and nothing changes the count automatically.
+**Form hint.** When Group by is set and "Last alerts count" is under 20, the form shows a hint: "Grouping works best with 20 or more alerts". The threshold matches the text (review of `9216a4f7`; it was 10). The default count stays 5, and nothing changes the count automatically.
 
 ### 8. Narrow widgets
 

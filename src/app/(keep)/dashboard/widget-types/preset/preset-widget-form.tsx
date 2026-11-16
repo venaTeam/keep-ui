@@ -47,7 +47,7 @@ const getGroupedCounterRows = (countBy: CountBy) =>
     : GROUPED_COUNTER_ROWS;
 
 const GROUPING_HINT = "Grouping works best with 20 or more alerts";
-const GROUPING_HINT_BELOW_COUNT = 10;
+const GROUPING_HINT_BELOW_COUNT = 20;
 const DEFAULT_EMPTY_GROUP_POSITION: EmptyGroupPosition = "top";
 const isGroupableField = (field: string) =>
   !WIDGET_UNGROUPABLE_COLUMN_IDS.includes(field);
