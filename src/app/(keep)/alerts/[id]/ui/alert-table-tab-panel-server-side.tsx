@@ -116,6 +116,7 @@ export default function AlertTableTabPanelServerSide({
       presetName={preset.name}
       presetId={preset.id}
       counterShowsFiringOnly={preset.counter_shows_firing_only}
+      presetNoisy={preset.is_noisy}
       presetTabs={presetTabs}
       mutateAlerts={mutateAlerts}
       setRunWorkflowModalAlert={setRunWorkflowModalAlert}

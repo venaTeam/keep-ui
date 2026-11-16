@@ -276,6 +276,7 @@ const PresetAlertTablePanel: React.FC<PresetAlertTablePanelProps> = ({
               ? undefined
               : hexToRgb(getColor(), 0.1)
           }
+          presetNoisy={!!preset?.is_noisy}
         />
       )}
     </>

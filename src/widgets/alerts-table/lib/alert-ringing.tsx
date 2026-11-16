@@ -1,0 +1,75 @@
+import React, { type CSSProperties } from "react";
+import {
+  Severity,
+  Status,
+  severityMapping,
+} from "@/entities/alerts/model/types";
+import {
+  DEFAULT_BLINK_COLOR,
+  getRowBlinkStyle,
+} from "@/shared/lib/blink-palette";
+
+/** What assistive tech is told about a ringing row, which colour and motion alone don't convey. */
+export const RINGING_REASON = "Ringing: critical, firing, noisy preset";
+
+/**
+ * The Count feature's red pulse (`missing-blink`) on a ringing row, or a steady
+ * light red tint for viewers who prefer reduced motion.
+ */
+export const RINGING_CLASS_NAME =
+  "motion-safe:animate-missing-blink motion-reduce:bg-[color:var(--blink-soft)] motion-reduce:text-[color:var(--blink-soft-text)]";
+
+/**
+ * For the cells of a ringing `<tr>`: their own opaque background would hide
+ * the row's pulse, so they take the row's (animated) background instead.
+ */
+export const RINGING_CELL_CLASS_NAME = "!bg-inherit";
+
+const RINGING_STYLE = getRowBlinkStyle(DEFAULT_BLINK_COLOR);
+
+type RingingProps = {
+  className?: string;
+  style?: CSSProperties;
+  "data-ringing"?: "true";
+};
+
+const isWord = (value: unknown, word: string) =>
+  typeof value === "string" && value.toLowerCase() === word;
+
+/**
+ * Whether an alert's row rings: the alert is critical (the word in any case,
+ * or the numeric severity `severityMapping` maps to critical), it is firing,
+ * and the table's preset is noisy.
+ */
+export function isAlertRinging(
+  alert: { severity?: unknown; status?: unknown } | null | undefined,
+  presetNoisy?: boolean
+): boolean {
+  if (!presetNoisy || !alert) {
+    return false;
+  }
+  const severity = severityMapping[Number(alert.severity)] ?? alert.severity;
+  return (
+    isWord(severity, Severity.Critical) && isWord(alert.status, Status.Firing)
+  );
+}
+
+/**
+ * Props that make a row ring: the pulse classes, the blink palette's row
+ * colors and `data-ringing="true"`. On a CSS-grid table, give them to every
+ * cell of the row. Empty for a quiet row, which then renders as before.
+ */
+export function getRingingProps(ringing: boolean): RingingProps {
+  return ringing
+    ? {
+        className: RINGING_CLASS_NAME,
+        style: RINGING_STYLE,
+        "data-ringing": "true",
+      }
+    : {};
+}
+
+/** Visually hidden text that gives a ringing row's reason to assistive tech. */
+export function RingingReason() {
+  return <span className="sr-only">{RINGING_REASON}</span>;
+}
