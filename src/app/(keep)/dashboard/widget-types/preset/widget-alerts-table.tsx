@@ -25,6 +25,7 @@ import clsx from "clsx";
 import type { AlertDto } from "@/entities/alerts/model/types";
 import {
   GROUP_ROW_SELECTION,
+  OpenQuickActionHandler,
   QUICK_ACTIONS_TABLE_CLASS,
   QUICK_REVEAL_CLASS,
   getRangeIds,
@@ -73,7 +74,7 @@ import {
 export interface WidgetSelectionProps {
   rowSelection: RowSelectionState;
   onRowSelectionChange: (next: RowSelectionState) => void;
-  onOpenAction: (actionId: string, alerts: AlertDto[]) => void;
+  onOpenAction: OpenQuickActionHandler;
   openFingerprint: string | null;
 }
 

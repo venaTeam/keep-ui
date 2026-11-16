@@ -1,8 +1,13 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { RowSelectionState } from "@tanstack/react-table";
 import { uniqBy } from "lodash";
 import { Preset } from "@/entities/presets/model/types";
-import { AlertDto } from "@/entities/alerts/model/types";
 import {
   usePresetAlertCount,
   usePresetAlertsCount,
@@ -21,9 +26,11 @@ import "react-loading-skeleton/dist/skeleton.css";
 import { useRouter } from "next/navigation";
 import {
   OpenQuickAction,
+  OpenQuickActionHandler,
   QuickActionDialogHost,
   SelectionStrip,
   pruneSelection,
+  releasePointerOpener,
   useRefreshAlertQueries,
 } from "@/features/alerts/alert-quick-actions";
 import WidgetAlertsTable, {
@@ -116,6 +123,7 @@ const PresetAlertTablePanel: React.FC<PresetAlertTablePanelProps> = ({
   const [rowSelection, setRowSelection] =
     useState<RowSelectionState>(NO_SELECTION);
   const [openAction, setOpenAction] = useState<OpenQuickAction | null>(null);
+  const pointerOpener = useRef<HTMLElement | null>(null);
   const shownAlerts = isLoading ? undefined : alerts;
   const selectedAlerts = useMemo(
     () =>
@@ -161,19 +169,30 @@ const PresetAlertTablePanel: React.FC<PresetAlertTablePanelProps> = ({
 
   const clearSelection = useCallback(() => setRowSelection(NO_SELECTION), []);
 
-  const openQuickAction = useCallback(
-    (actionId: string, actionAlerts: AlertDto[]) =>
-      setOpenAction({ actionId, alerts: actionAlerts }),
+  const openQuickAction = useCallback<OpenQuickActionHandler>(
+    (actionId, actionAlerts, opener) => {
+      pointerOpener.current = opener;
+      setOpenAction({ actionId, alerts: actionAlerts });
+    },
     []
   );
 
-  const handleClose = useCallback(() => setOpenAction(null), []);
+  const releaseOpener = useCallback(() => {
+    releasePointerOpener(pointerOpener.current);
+    pointerOpener.current = null;
+  }, []);
+
+  const handleClose = useCallback(() => {
+    releaseOpener();
+    setOpenAction(null);
+  }, [releaseOpener]);
 
   const handleSuccess = useCallback(() => {
+    releaseOpener();
     setOpenAction(null);
     setRowSelection(NO_SELECTION);
     refresh();
-  }, [refresh]);
+  }, [refresh, releaseOpener]);
 
   const selection = useMemo<WidgetSelectionProps | undefined>(
     () =>

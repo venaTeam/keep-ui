@@ -85,6 +85,7 @@ A small floating tray appears at the right end of the hovered row, over the last
 - Buttons show only when they apply to that alert (registry `appliesTo`): Change Status always; Link to incident only when the alert has no live incident (definition below); Dismiss unless the alert is already suppressed.
 - The tray also appears when anything in the row has keyboard focus.
 - A click opens the action's dialog for that one alert. While the dialog is open the row stays highlighted.
+- When a dialog opened with the mouse closes, by any means, Esc included, its button loses the focus the dialog hands back, so the tray hides once the pointer leaves the row. A dialog opened from the keyboard returns focus to its button as usual. Strip buttons behave the same way.
 
 ### Selecting
 

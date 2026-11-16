@@ -1618,7 +1618,7 @@ describe("WidgetAlertsTable", () => {
         screen.getByRole("button", { name: `Dismiss: ${a1.name}` })
       );
 
-      expect(onOpenAction).toHaveBeenCalledWith("dismiss", [a1]);
+      expect(onOpenAction).toHaveBeenCalledWith("dismiss", [a1], null);
     });
 
     it("ticks a row by fingerprint and hides every tray while selecting", () => {

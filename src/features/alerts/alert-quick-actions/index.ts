@@ -12,8 +12,10 @@ export { useRefreshAlertQueries } from "./model/use-refresh-alert-queries";
 export { getRangeIds, pruneSelection, setIdsTicked } from "./model/selection";
 export { GROUP_ROW_SELECTION } from "./model/group-row-selection";
 export { ALERT_QUICK_ACTIONS } from "./model/actions";
+export { releasePointerOpener } from "./model/pointer-opener";
 export type {
   OpenQuickAction,
+  OpenQuickActionHandler,
   QuickActionDialogProps,
   WidgetAlertAction,
 } from "./model/types";
