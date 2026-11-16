@@ -1,6 +1,6 @@
 import React from "react";
 import { render } from "@testing-library/react";
-import { createColumnHelper } from "@tanstack/react-table";
+import { ColumnDef, createColumnHelper } from "@tanstack/react-table";
 import { AlertTableServerSide } from "@/widgets/alerts-table/ui/alert-table-server-side";
 import { AlertDto, Severity, Status } from "@/entities/alerts/model/types";
 
@@ -96,7 +96,7 @@ const columnHelper = createColumnHelper<AlertDto>();
 const columns = [
   columnHelper.accessor("name", { id: "name" }),
   columnHelper.accessor("service", { id: "service" }),
-];
+] as ColumnDef<AlertDto>[];
 
 const alert = {
   id: "a1",
