@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { act, renderHook } from "@testing-library/react";
 import { WidgetData, WidgetType } from "../../../types";
 import { defaultColumns } from "../constants";
@@ -384,7 +385,31 @@ describe("useWidgetColumnState", () => {
       expect(result.current.grouping).toEqual([]);
     });
 
-    it("clearing the grouping stores a null groupBy", () => {
+    it("clearing a saved grouping removes it from the widget", () => {
+      const onChange = jest.fn();
+      const item = {
+        ...baseItem,
+        alertTable: {
+          groupBy: "service",
+          emptyGroupPosition: "bottom" as const,
+          columnSizing: { name: 200 },
+        },
+      };
+      const { result } = renderHook(() =>
+        useWidgetColumnState({
+          item,
+          allColumnIds: ["name", "service"],
+          onChange,
+        })
+      );
+      act(() => result.current.setGrouping([]));
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange.mock.calls[0][0].alertTable).toEqual({
+        columnSizing: { name: 200 },
+      });
+    });
+
+    it("clearing the only saved setting removes alertTable", () => {
       const onChange = jest.fn();
       const item = { ...baseItem, alertTable: { groupBy: "service" } };
       const { result } = renderHook(() =>
@@ -395,7 +420,7 @@ describe("useWidgetColumnState", () => {
         })
       );
       act(() => result.current.setGrouping([]));
-      expect(onChange.mock.calls[0][0].alertTable.groupBy).toBeNull();
+      expect(onChange.mock.calls[0][0]).not.toHaveProperty("alertTable");
     });
 
     it("clearing the grouping of a widget with no saved grouping emits nothing", () => {
@@ -474,7 +499,7 @@ describe("useWidgetColumnState", () => {
     });
 
     it("is true when alertTable has a key", () => {
-      const item = { ...baseItem, alertTable: { groupBy: null } };
+      const item = { ...baseItem, alertTable: { groupBy: "service" } };
       const { result } = renderHook(() =>
         useWidgetColumnState({ item, allColumnIds: ["name"] })
       );
@@ -487,6 +512,108 @@ describe("useWidgetColumnState", () => {
         useWidgetColumnState({ item, allColumnIds: ["name"] })
       );
       expect(result.current.isCustomized).toBe(false);
+    });
+  });
+
+  describe("undoing a change on a default widget", () => {
+    const useEditedWidget = () => {
+      const [item, setItem] = useState<WidgetData>(baseItem);
+      const state = useWidgetColumnState({
+        item,
+        allColumnIds: ["name", "service"],
+        onChange: setItem,
+      });
+      return { item, state };
+    };
+
+    it("grouping then clearing it leaves the widget uncustomized", () => {
+      const { result } = renderHook(useEditedWidget);
+      act(() => result.current.state.setGrouping(["service"]));
+      act(() => result.current.state.setEmptyGroupPosition("bottom"));
+      expect(result.current.state.isCustomized).toBe(true);
+      act(() => result.current.state.setGrouping([]));
+      expect(result.current.state.isCustomized).toBe(false);
+      expect(result.current.item).toEqual(baseItem);
+    });
+
+    it("resizing then resetting the width leaves the widget uncustomized", () => {
+      const { result } = renderHook(useEditedWidget);
+      act(() =>
+        result.current.state.setColumnSizing((prev) => ({ ...prev, name: 240 }))
+      );
+      expect(result.current.state.isCustomized).toBe(true);
+      act(() =>
+        result.current.state.setColumnSizing((prev) => {
+          const next = { ...prev };
+          delete next.name;
+          return next;
+        })
+      );
+      expect(result.current.state.isCustomized).toBe(false);
+      expect(result.current.item).toEqual(baseItem);
+    });
+
+    it("renaming a column back leaves the widget uncustomized", () => {
+      const { result } = renderHook(useEditedWidget);
+      act(() => result.current.state.setColumnRenameMapping({ name: "Alert" }));
+      expect(result.current.state.isCustomized).toBe(true);
+      act(() => result.current.state.setColumnRenameMapping({}));
+      expect(result.current.state.isCustomized).toBe(false);
+      expect(result.current.item).toEqual(baseItem);
+    });
+  });
+
+  describe("order of visible columns outside the default order", () => {
+    it("follows presetColumns whatever order the alert fields come in", () => {
+      const item = {
+        ...baseItem,
+        presetColumns: ["name", "team", "region", "service"],
+      };
+      const orderFor = (allColumnIds: string[]) => {
+        const { result } = renderHook(() =>
+          useWidgetColumnState({ item, allColumnIds })
+        );
+        return result.current.columnOrder.filter(
+          (id) => result.current.columnVisibility[id]
+        );
+      };
+
+      const first = orderFor(["name", "service", "region", "team", "pod"]);
+      const second = orderFor(["pod", "team", "name", "region", "service"]);
+
+      expect(first).toEqual(["name", "team", "region", "service"]);
+      expect(second).toEqual(first);
+    });
+
+    it("places hidden columns after the visible ones", () => {
+      const item = { ...baseItem, presetColumns: ["name", "team"] };
+      const { result } = renderHook(() =>
+        useWidgetColumnState({
+          item,
+          allColumnIds: ["pod", "team", "name"],
+        })
+      );
+      expect(result.current.columnOrder).toEqual(["name", "team", "pod"]);
+    });
+
+    it("keeps a saved order and appends visible columns it lacks in presetColumns order", () => {
+      const item = {
+        ...baseItem,
+        presetColumns: ["name", "team", "region"],
+        alertTable: { columnOrder: ["region", "name"] },
+      };
+      const { result } = renderHook(() =>
+        useWidgetColumnState({
+          item,
+          allColumnIds: ["pod", "region", "team", "name"],
+        })
+      );
+      expect(result.current.columnOrder).toEqual([
+        "region",
+        "name",
+        "team",
+        "pod",
+      ]);
     });
   });
 

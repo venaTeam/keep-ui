@@ -9,7 +9,10 @@ import {
 } from "@testing-library/react";
 import WidgetAlertsTable from "../widget-alerts-table";
 import { WidgetData, WidgetType } from "../../../types";
-import { WIDGET_STATIC_COLUMN_IDS } from "../alert-table-widget-config";
+import {
+  WIDGET_STATIC_COLUMN_IDS,
+  WIDGET_UNGROUPABLE_COLUMN_IDS,
+} from "../alert-table-widget-config";
 import { AlertDto, Severity, Status } from "@/entities/alerts/model/types";
 import { useAlertTableCols } from "@/widgets/alerts-table/lib/alert-table-utils";
 import { useConfig } from "@/utils/hooks/useConfig";
@@ -206,6 +209,31 @@ describe("WidgetAlertsTable", () => {
     const ids = result.current.map((column) => column.id);
 
     WIDGET_STATIC_COLUMN_IDS.forEach((id) => expect(ids).toContain(id));
+  });
+
+  it("lists exactly the static columns useAlertTableCols cannot group as ungroupable", () => {
+    const { result } = renderHook(() =>
+      useAlertTableCols({
+        isCheckboxDisplayed: false,
+        isMenuDisplayed: false,
+        presetName: "drift-guard",
+      })
+    );
+    const staticIds: readonly string[] = WIDGET_STATIC_COLUMN_IDS;
+    const cannotGroup = result.current
+      .filter((column) => staticIds.includes(column.id as string))
+      .filter((column) => {
+        const hasAccessor =
+          ("accessorFn" in column && column.accessorFn !== undefined) ||
+          ("accessorKey" in column && column.accessorKey !== undefined);
+        const hasValue = hasAccessor || column.getGroupingValue !== undefined;
+        return !hasValue || column.enableGrouping === false;
+      })
+      .map((column) => column.id as string);
+
+    expect([...cannotGroup].sort()).toEqual(
+      [...WIDGET_UNGROUPABLE_COLUMN_IDS].sort()
+    );
   });
 
   it("legacy snake_case column shows the camelCase value", () => {
@@ -533,11 +561,8 @@ describe("WidgetAlertsTable", () => {
     rerender(widget(item, alerts, { isEditMode: true, onChange }));
     fireEvent.click(screen.getByRole("button", { name: "Clear grouping" }));
 
-    expect(onChange).toHaveBeenCalledWith(
-      expect.objectContaining({
-        alertTable: expect.objectContaining({ groupBy: null }),
-      })
-    );
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange.mock.calls[0][0]).not.toHaveProperty("alertTable");
   });
 
   it("Collapse all and Expand all toggle every group", () => {

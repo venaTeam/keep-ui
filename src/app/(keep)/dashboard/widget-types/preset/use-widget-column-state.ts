@@ -61,6 +61,9 @@ function resolveUpdater<T>(updater: Updater<T>, current: T): T {
  *
  * Each setting falls back on its own: the order to the shared default columns,
  * the renames and sizing to none, grouping to off and the empty group to the top.
+ * Visible columns the order does not place follow it in their `presetColumns`
+ * order, then every other column, so the visible order does not depend on the
+ * order the loaded alerts list their fields in.
  * Nothing is read from the viewer's browser, so every viewer sees the same table.
  *
  * Setters pass the whole next widget to `onChange` and build on the latest widget
@@ -95,8 +98,12 @@ export function useWidgetColumnState({
   );
   const savedOrder = item.alertTable?.columnOrder;
   const columnOrder = useMemo(
-    () => normalizeColumnOrder(savedOrder ?? DEFAULT_COLS, allColumnIds),
-    [savedOrder, allColumnIds]
+    () =>
+      normalizeColumnOrder(
+        [...(savedOrder ?? DEFAULT_COLS), ...visibleColumns],
+        allColumnIds
+      ),
+    [savedOrder, visibleColumns, allColumnIds]
   );
   const grouping = useMemo(
     () => getGrouping(item, allColumnIds),

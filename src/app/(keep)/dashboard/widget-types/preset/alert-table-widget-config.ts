@@ -25,7 +25,7 @@ export const WIDGET_PINNED_LEFT: readonly string[] = [
 ];
 
 /** Widget width in pixels below which the widget switches to its narrow layout. */
-export const NARROW_WIDGET_PX = 420;
+export const NARROW_WIDGET_PX = 320;
 
 /** Ids of the fixed alert table columns the widget can show, without the excluded ones. */
 export const WIDGET_STATIC_COLUMN_IDS = [
@@ -162,11 +162,37 @@ export function visibleIdsFromVisibilityState(
   return Array.from(visible);
 }
 
+function isUnsetValue(value: unknown): boolean {
+  if (value === null || value === undefined) {
+    return true;
+  }
+  if (Array.isArray(value)) {
+    return value.length === 0;
+  }
+  return typeof value === "object" && Object.keys(value).length === 0;
+}
+
+function compactAlertTable(
+  config: AlertTableWidgetConfig
+): AlertTableWidgetConfig | undefined {
+  const compacted = Object.fromEntries(
+    Object.entries(config).filter(([, value]) => !isUnsetValue(value))
+  ) as AlertTableWidgetConfig;
+  if ("groupBy" in config && compacted.groupBy === undefined) {
+    delete compacted.emptyGroupPosition;
+  }
+  return Object.keys(compacted).length > 0 ? compacted : undefined;
+}
+
 /**
  * Returns a copy of the widget with a column change applied.
  *
  * `visibleColumns` is written to `presetColumns`. Every other defined key is
  * merged into `alertTable`, keeping the keys the change does not mention.
+ * Settings that end up null, empty or unset are removed, so are the empty
+ * group's position when the grouping is cleared and `alertTable` itself when
+ * nothing is left in it. Undoing a change therefore leaves the widget as if it
+ * had never been customized.
  */
 export function applyWidgetColumnChange(
   item: WidgetData,
@@ -181,7 +207,15 @@ export function applyWidgetColumnChange(
     Object.entries(tableChange).filter(([, value]) => value !== undefined)
   ) as AlertTableWidgetConfig;
   if (Object.keys(definedChange).length > 0) {
-    next.alertTable = { ...item.alertTable, ...definedChange };
+    const alertTable = compactAlertTable({
+      ...item.alertTable,
+      ...definedChange,
+    });
+    if (alertTable) {
+      next.alertTable = alertTable;
+    } else {
+      delete next.alertTable;
+    }
   }
   return next;
 }

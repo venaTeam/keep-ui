@@ -20,8 +20,8 @@ describe("constants", () => {
     expect(WIDGET_EXCLUDED_COLUMNS).toEqual(["checkbox", "alertMenu", "noise"]));
   it("pins severity, status and source to the left", () =>
     expect(WIDGET_PINNED_LEFT).toEqual(["severity", "status", "source"]));
-  it("treats a widget under 420px as narrow", () =>
-    expect(NARROW_WIDGET_PX).toBe(420));
+  it("treats a widget under 320px as narrow", () =>
+    expect(NARROW_WIDGET_PX).toBe(320));
   it("lists the static column ids without the excluded ones", () => {
     expect(WIDGET_STATIC_COLUMN_IDS).toEqual([
       "severity",
@@ -193,10 +193,52 @@ describe("applyWidgetColumnChange / resetWidgetColumns", () => {
     expect(
       applyWidgetColumnChange(item, { columnOrder: ["name"] }).presetColumns
     ).toEqual(["name"]));
-  it("stores a null groupBy so grouping can be cleared", () =>
+  it("clearing groupBy removes it and its emptyGroupPosition, keeping the rest", () =>
     expect(
-      applyWidgetColumnChange(item, { groupBy: null }).alertTable
-    ).toEqual({ columnSizing: { name: 200 }, groupBy: null }));
+      applyWidgetColumnChange(
+        {
+          ...item,
+          alertTable: {
+            columnSizing: { name: 200 },
+            groupBy: "service",
+            emptyGroupPosition: "bottom",
+          },
+        },
+        { groupBy: null }
+      ).alertTable
+    ).toEqual({ columnSizing: { name: 200 } }));
+  it("removes alertTable when clearing groupBy leaves nothing", () => {
+    const next = applyWidgetColumnChange(
+      {
+        i: "w2",
+        alertTable: { groupBy: "service", emptyGroupPosition: "bottom" },
+      } as unknown as WidgetData,
+      { groupBy: null }
+    );
+    expect(next).not.toHaveProperty("alertTable");
+  });
+  it("removes empty sizing, renames and order", () => {
+    const next = applyWidgetColumnChange(
+      { i: "w2" } as unknown as WidgetData,
+      { columnSizing: {}, columnRenameMapping: {}, columnOrder: [] }
+    );
+    expect(next).not.toHaveProperty("alertTable");
+  });
+  it("removes an empty map while keeping the other settings", () =>
+    expect(
+      applyWidgetColumnChange(item, { columnSizing: {}, groupBy: "incident" })
+        .alertTable
+    ).toEqual({ groupBy: "incident" }));
+  it("keeps an emptyGroupPosition the change does not clear the grouping for", () =>
+    expect(
+      applyWidgetColumnChange({ i: "w2" } as unknown as WidgetData, {
+        emptyGroupPosition: "bottom",
+      }).alertTable
+    ).toEqual({ emptyGroupPosition: "bottom" }));
+  it("keeps an empty presetColumns list, which hides every column", () =>
+    expect(
+      applyWidgetColumnChange(item, { visibleColumns: [] }).presetColumns
+    ).toEqual([]));
   it("creates alertTable when the widget has none", () =>
     expect(
       applyWidgetColumnChange({ i: "w2" } as unknown as WidgetData, {
