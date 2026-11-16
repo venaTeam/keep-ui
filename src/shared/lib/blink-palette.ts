@@ -87,11 +87,13 @@ export function getBlinkStyle(color: string): CSSProperties {
  * Custom properties for a ringing table row in `color`, painted by an overlay
  * behind each cell's content whose opacity pulses (`ringingPulse`, in step
  * with `missing-blink`). `--blink-row-tint` is the color at 10% alpha over the
- * cell's own background, light enough that the row's red-500 marks keep 3:1
- * and its text 4.5:1 at every phase; `--blink-row-edge` is the solid color of
- * the overlay's edge, which carries the strong signal. Only custom properties
- * are set; the overlay, its pulse and the steady state under reduced motion
- * come from classes.
+ * cell's own background: on a default (white) or last-viewed row it keeps the
+ * row's red-500 marks at 3:1 and its text at 4.5:1 at every phase. Over the
+ * hover and selection backgrounds it would take red-500 under 3:1, so the
+ * ringing row turns the tint off there (`useRingingRows`) and only the edge
+ * pulses. `--blink-row-edge` is the solid color of the overlay's edge, which
+ * carries the strong signal. Only custom properties are set; the overlay, its
+ * pulse and the steady state under reduced motion come from classes.
  */
 export function getRowBlinkStyle(color: string): CSSProperties {
   const [r, g, b] = toRgb(color);

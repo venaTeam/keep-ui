@@ -244,8 +244,19 @@ describe("AlertsTableBody ringing rows", () => {
 
     expect(ringing).toHaveAttribute("data-ringing", "true");
     expect(ringing).toHaveClass(SELECTED);
-    cellsOf(ringing).forEach((cell) => expect(cell).toHaveClass(PULSE));
+    expect(ringing).toHaveAttribute("data-selection", "selected");
+    cellsOf(ringing).forEach((cell) =>
+      expect(cell).toHaveClass(
+        PULSE,
+        "[tr[data-selection]>&]:before:bg-transparent"
+      )
+    );
     expect(rowOf(container, "high")).toHaveClass(SELECTED);
+    expect(rowOf(container, "high")).toHaveAttribute(
+      "data-selection",
+      "selected"
+    );
+    expect(rowOf(container, "resolved")).not.toHaveAttribute("data-selection");
   });
 
   it("rings grouped child rows too", async () => {

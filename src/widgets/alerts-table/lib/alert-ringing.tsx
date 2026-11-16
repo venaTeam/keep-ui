@@ -14,6 +14,7 @@ const RINGING_CELL_CLASS_NAME = clsx(
   "isolate [&:not(.sticky)]:relative",
   "before:pointer-events-none before:absolute before:inset-0 before:-z-10",
   "before:border-y-2 before:border-[color:var(--blink-row-edge)] before:bg-[color:var(--blink-row-tint)]",
+  "[tr.group:hover>&]:before:bg-transparent [tr[data-selection]>&]:before:bg-transparent",
   "motion-safe:before:animate-ringing-pulse"
 );
 
@@ -86,7 +87,10 @@ export function isAlertRinging(
  * red edge on the top and bottom, and on the left of the first cell and the
  * right of the last, so the cells read as one row. Only the overlay's opacity
  * pulses, in step with the page's other blinks; under reduced motion it holds
- * still. A cell that is not sticky is made `relative` to hold the overlay.
+ * still. While a table row is hovered, selected or drag-selected
+ * (`data-selection`), the tint is off and only the edge pulses, because the
+ * tint over those backgrounds would take red-500 marks under 3:1. A cell that
+ * is not sticky is made `relative` to hold the overlay.
  */
 export function useRingingRows(presetNoisy: boolean) {
   const syncPulse = useSyncedAnimation(presetNoisy, "::before");

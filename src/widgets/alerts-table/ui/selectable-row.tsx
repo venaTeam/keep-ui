@@ -41,6 +41,9 @@ const Row = ({
             data-cy={dataCy}
             data-cy-id={dataCyId}
             data-ringing={dataRinging}
+            data-selection={
+                isSelected ? "selected" : isSelecting ? "selecting" : undefined
+            }
         >
             {children}
         </TableRow>

@@ -97,6 +97,23 @@ describe("useRingingRows", () => {
     ).toEqual([]);
   });
 
+  it("turns the tint off while the table row is hovered, selected or drag-selected, keeping the red edge", () => {
+    const classes = ringingRowOf(true)(critical)
+      .cellProps(1, 3)
+      .className!.split(" ");
+
+    expect(classes).toEqual(
+      expect.arrayContaining([
+        "[tr.group:hover>&]:before:bg-transparent",
+        "[tr[data-selection]>&]:before:bg-transparent",
+        "before:border-[color:var(--blink-row-edge)]",
+      ])
+    );
+    expect(
+      classes.filter((name) => name.includes("border-transparent"))
+    ).toEqual([]);
+  });
+
   it("closes the overlay's red edge at the first and the last cell", () => {
     const row = ringingRowOf(true)(critical);
     const edges = (index: number) =>
