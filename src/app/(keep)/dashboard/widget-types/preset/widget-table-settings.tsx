@@ -1,6 +1,7 @@
 import React, {
   CSSProperties,
   ReactNode,
+  RefObject,
   forwardRef,
   useId,
   useMemo,
@@ -38,11 +39,13 @@ import { CSS } from "@dnd-kit/utilities";
 import { FiSettings } from "react-icons/fi";
 import { RxDragHandleDots2 } from "react-icons/rx";
 import {
+  ArrowsRightLeftIcon,
   MagnifyingGlassIcon,
   PencilIcon,
   XMarkIcon,
 } from "@heroicons/react/20/solid";
 import { useFacetPotentialFields } from "@/features/filter/hooks";
+import { getAutofitColumnWidth } from "@/widgets/alerts-table/lib/column-autofit";
 import {
   COMMON_ENRICHMENT_FIELDS,
   getAlertColumnOptions,
@@ -57,9 +60,25 @@ import {
 import { GroupBySelect } from "./group-by-select";
 import type { WidgetColumnState } from "./use-widget-column-state";
 
+/** A visible column's current width and the range a width set for it is kept in, in pixels. */
+export interface WidgetColumnWidth {
+  width: number;
+  min: number;
+  max: number;
+}
+
+/** What the ⚙ panel needs to show and change column widths. */
+export interface WidgetColumnWidths {
+  /** The width and bounds of each visible column, by column id. */
+  columns: Readonly<Record<string, WidgetColumnWidth>>;
+  /** The widget's table element, which Auto-fit measures. */
+  tableRef: RefObject<HTMLElement | null>;
+}
+
 interface WidgetTableSettingsProps {
   state: WidgetColumnState;
   columnIds: string[];
+  columnWidths: WidgetColumnWidths;
   ungroupableColumnIds?: readonly string[];
 }
 
@@ -73,6 +92,8 @@ const SECTION_TITLE_CLASS =
   "mb-1 mt-3 text-[10px] font-semibold uppercase tracking-wide text-gray-500";
 const ICON_BUTTON_CLASS =
   "flex-none rounded p-0.5 text-gray-400 hover:text-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-300";
+const TEXT_BUTTON_CLASS =
+  "rounded px-1 py-0.5 text-orange-600 hover:bg-orange-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-300";
 
 const isPinned = (id: string) => WIDGET_PINNED_LEFT.includes(id);
 
@@ -133,23 +154,161 @@ function RenameInput({
   );
 }
 
+function WidthInput({
+  label,
+  width,
+  min,
+  max,
+  onCommit,
+}: WidgetColumnWidth & {
+  label: string;
+  onCommit: (width: number) => void;
+}) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const pending = useRef<string | null>(null);
+
+  const edit = (text: string | null) => {
+    pending.current = text;
+    setDraft(text);
+  };
+
+  const commit = () => {
+    const text = pending.current;
+    edit(null);
+    const value = Number(text);
+    if (text === null || text.trim() === "" || !Number.isFinite(value)) {
+      return;
+    }
+    onCommit(Math.round(Math.min(Math.max(value, min), max)));
+  };
+
+  return (
+    <input
+      type="number"
+      inputMode="numeric"
+      autoFocus
+      aria-label={`${label} width`}
+      min={min}
+      max={max}
+      step={1}
+      value={draft ?? String(width)}
+      onChange={(event) => edit(event.target.value)}
+      onFocus={(event) => event.currentTarget.select()}
+      onBlur={commit}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          commit();
+        } else if (event.key === "Escape" && pending.current !== null) {
+          event.preventDefault();
+          event.stopPropagation();
+          edit(null);
+        }
+      }}
+      className="w-16 rounded border border-gray-200 px-1 py-0.5 text-xs tabular-nums outline-none focus:border-orange-300 focus:ring-1 focus:ring-orange-300"
+    />
+  );
+}
+
+function ColumnWidthEditor({
+  id,
+  label,
+  width,
+  state,
+  tableRef,
+}: {
+  id: string;
+  label: string;
+  width: WidgetColumnWidth;
+  state: WidgetColumnState;
+  tableRef: RefObject<HTMLElement | null>;
+}) {
+  const sizing = state.columnSizing;
+  const saved = sizing[id];
+
+  const save = (value: number) => {
+    if (value !== saved) {
+      state.setColumnSizing({ ...sizing, [id]: value });
+    }
+  };
+
+  const autofit = () => {
+    const measured = getAutofitColumnWidth(tableRef.current, id, {
+      minSize: width.min,
+      maxSize: width.max,
+    });
+    if (measured !== null) {
+      save(measured);
+    }
+  };
+
+  const reset = () => {
+    const next = { ...sizing };
+    delete next[id];
+    state.setColumnSizing(next);
+  };
+
+  return (
+    <div className="mb-0.5 mt-1 flex items-center gap-1.5 pl-6">
+      <WidthInput label={label} {...width} onCommit={save} />
+      <span className="text-gray-500">px</span>
+      <button
+        type="button"
+        aria-label={`Auto-fit ${label}`}
+        title="Fit the column to its content"
+        className={TEXT_BUTTON_CLASS}
+        onClick={autofit}
+      >
+        Auto-fit
+      </button>
+      {saved !== undefined && (
+        <button
+          type="button"
+          aria-label={`Reset ${label} width`}
+          title="Back to the default width"
+          className={TEXT_BUTTON_CLASS}
+          onClick={reset}
+        >
+          Reset
+        </button>
+      )}
+    </div>
+  );
+}
+
 interface ColumnRowProps {
   id: string;
   state: WidgetColumnState;
   isRenaming: boolean;
   onRenamingChange: (id: string | null) => void;
+  width?: WidgetColumnWidth;
+  tableRef: RefObject<HTMLElement | null>;
+  isWidthOpen: boolean;
+  onWidthOpenChange: (id: string | null) => void;
   handle?: ReactNode;
   style?: CSSProperties;
 }
 
 const ColumnRow = forwardRef<HTMLLIElement, ColumnRowProps>(function ColumnRow(
-  { id, state, isRenaming, onRenamingChange, handle, style },
+  {
+    id,
+    state,
+    isRenaming,
+    onRenamingChange,
+    width,
+    tableRef,
+    isWidthOpen,
+    onWidthOpenChange,
+    handle,
+    style,
+  },
   ref
 ) {
   const renames = state.columnRenameMapping;
   const label = getColumnLabel(id, renames);
   const isRenamed = label !== getColumnLabel(id);
   const isVisible = !!state.columnVisibility[id];
+  const widthControls = isVisible && !isPinned(id) ? width : undefined;
 
   const toggle = () =>
     state.setVisibleColumns(
@@ -176,46 +335,69 @@ const ColumnRow = forwardRef<HTMLLIElement, ColumnRowProps>(function ColumnRow(
     <li
       ref={ref}
       style={style}
-      className="flex items-center gap-1.5 rounded bg-white py-0.5"
+      className="rounded bg-white py-0.5"
       data-table-settings-column={id}
     >
-      {handle ?? <span className="h-[18px] w-[18px] flex-none" />}
-      {isRenaming ? (
-        <RenameInput
+      <div className="flex items-center gap-1.5">
+        {handle ?? <span className="h-[18px] w-[18px] flex-none" />}
+        {isRenaming ? (
+          <RenameInput
+            label={label}
+            onCommit={rename}
+            onCancel={() => onRenamingChange(null)}
+          />
+        ) : (
+          <>
+            <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5">
+              <input
+                type="checkbox"
+                checked={isVisible}
+                onChange={toggle}
+                className="flex-none rounded border-gray-300 text-orange-500 accent-orange-500 focus:ring-orange-300"
+              />
+              <span
+                className={`truncate ${isVisible ? "text-gray-900" : "text-gray-500"}`}
+              >
+                {label}
+                {isRenamed && (
+                  <span className="ml-1 text-[10px] text-gray-400">({id})</span>
+                )}
+              </span>
+            </label>
+            {!isPinned(id) && (
+              <button
+                type="button"
+                aria-label={`Rename ${label}`}
+                title="Rename"
+                className={ICON_BUTTON_CLASS}
+                onClick={() => onRenamingChange(id)}
+              >
+                <PencilIcon className="h-3 w-3" />
+              </button>
+            )}
+            {widthControls && (
+              <button
+                type="button"
+                aria-label={`Edit ${label} width`}
+                aria-expanded={isWidthOpen}
+                title="Width"
+                className={`${ICON_BUTTON_CLASS} ${isWidthOpen ? "!text-orange-600" : ""}`}
+                onClick={() => onWidthOpenChange(isWidthOpen ? null : id)}
+              >
+                <ArrowsRightLeftIcon className="h-3 w-3" />
+              </button>
+            )}
+          </>
+        )}
+      </div>
+      {widthControls && isWidthOpen && (
+        <ColumnWidthEditor
+          id={id}
           label={label}
-          onCommit={rename}
-          onCancel={() => onRenamingChange(null)}
+          width={widthControls}
+          state={state}
+          tableRef={tableRef}
         />
-      ) : (
-        <>
-          <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5">
-            <input
-              type="checkbox"
-              checked={isVisible}
-              onChange={toggle}
-              className="flex-none rounded border-gray-300 text-orange-500 accent-orange-500 focus:ring-orange-300"
-            />
-            <span
-              className={`truncate ${isVisible ? "text-gray-900" : "text-gray-500"}`}
-            >
-              {label}
-              {isRenamed && (
-                <span className="ml-1 text-[10px] text-gray-400">({id})</span>
-              )}
-            </span>
-          </label>
-          {!isPinned(id) && (
-            <button
-              type="button"
-              aria-label={`Rename ${label}`}
-              title="Rename"
-              className={ICON_BUTTON_CLASS}
-              onClick={() => onRenamingChange(id)}
-            >
-              <PencilIcon className="h-3 w-3" />
-            </button>
-          )}
-        </>
       )}
     </li>
   );
@@ -260,8 +442,15 @@ function SortableColumnRow(props: Omit<ColumnRowProps, "handle" | "style">) {
   );
 }
 
-function ColumnList({ state }: { state: WidgetColumnState }) {
+function ColumnList({
+  state,
+  columnWidths,
+}: {
+  state: WidgetColumnState;
+  columnWidths: WidgetColumnWidths;
+}) {
   const [renaming, setRenaming] = useState<string | null>(null);
+  const [widthOpen, setWidthOpen] = useState<string | null>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(KeyboardSensor, {
@@ -295,6 +484,10 @@ function ColumnList({ state }: { state: WidgetColumnState }) {
     state,
     isRenaming: renaming === id,
     onRenamingChange: setRenaming,
+    width: columnWidths.columns[id],
+    tableRef: columnWidths.tableRef,
+    isWidthOpen: widthOpen === id,
+    onWidthOpenChange: setWidthOpen,
   });
 
   const announcements = useMemo<Announcements>(() => {
@@ -432,6 +625,7 @@ function EmptyGroupPositionSetting({ state }: { state: WidgetColumnState }) {
 function SettingsContent({
   state,
   columnIds,
+  columnWidths,
   ungroupableColumnIds,
   onClose,
 }: Required<WidgetTableSettingsProps> & { onClose: () => void }) {
@@ -458,7 +652,7 @@ function SettingsContent({
         </button>
       </div>
       <h5 className={SECTION_TITLE_CLASS}>Columns</h5>
-      <ColumnList state={state} />
+      <ColumnList state={state} columnWidths={columnWidths} />
       <AddColumnSearch state={state} fieldOptions={fieldOptions} />
       <h5 className={SECTION_TITLE_CLASS}>Group rows by</h5>
       <GroupBySelect
@@ -492,9 +686,13 @@ function SettingsContent({
  * ones. Each has a checkbox; all but the pinned icon columns can be renamed,
  * and the visible ones can be dragged (or moved with the keyboard) to reorder.
  * A reorder only moves visible columns, so hidden ones keep their saved
- * places. A search adds any alert field as a column. It also sets the
- * grouping, where rows with no value go, and resets the widget to the
- * defaults. Every change goes straight to `state`.
+ * places. Each visible, unpinned column also has a width editor, opened from
+ * its row one at a time: a pixel input that shows the current width and
+ * saves on Enter or blur, kept within the column's bounds; Auto-fit, which
+ * measures `columnWidths.tableRef`; and, once a width is saved, Reset. A
+ * search adds any alert field as a column. It also sets the grouping, where
+ * rows with no value go, and resets the widget to the defaults. Every change
+ * goes straight to `state`; a width change passes the whole sizing map.
  *
  * `columnIds` are the columns the widget can show; `ungroupableColumnIds` are
  * left out of the grouping options. The popover is a dialog named "Table
@@ -504,6 +702,7 @@ function SettingsContent({
 export function WidgetTableSettings({
   state,
   columnIds,
+  columnWidths,
   ungroupableColumnIds = NO_IDS,
 }: WidgetTableSettingsProps) {
   const { refs, floatingStyles } = useFloating({
@@ -537,6 +736,7 @@ export function WidgetTableSettings({
           <SettingsContent
             state={state}
             columnIds={columnIds}
+            columnWidths={columnWidths}
             ungroupableColumnIds={ungroupableColumnIds}
             onClose={close}
           />

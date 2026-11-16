@@ -1,16 +1,33 @@
 import React from "react";
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
-import { WidgetTableSettings } from "../widget-table-settings";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
+import {
+  WidgetColumnWidths,
+  WidgetTableSettings,
+} from "../widget-table-settings";
 import { WidgetColumnState } from "../use-widget-column-state";
 import {
   mergeVisibleColumnOrder,
   toVisibilityState,
 } from "../alert-table-widget-config";
 
+const mockGetAutofitColumnWidth = jest.fn();
+
 jest.mock("@/features/filter/hooks", () => ({
   useFacetPotentialFields: () => ({
     data: ["labels.region", "labels.team", "name", "checkbox"],
   }),
+}));
+
+jest.mock("@/widgets/alerts-table/lib/column-autofit", () => ({
+  getAutofitColumnWidth: (...args: unknown[]) =>
+    mockGetAutofitColumnWidth(...args),
 }));
 
 const COLUMN_ORDER = [
@@ -52,10 +69,30 @@ const makeState = (
   };
 };
 
-const renderSettings = (overrides: Partial<WidgetColumnState> = {}) => {
+const TABLE_ELEMENT = document.createElement("table");
+
+const makeWidths = (): WidgetColumnWidths => ({
+  columns: {
+    severity: { width: 2, min: 20, max: 2 },
+    status: { width: 36, min: 36, max: 36 },
+    source: { width: 44, min: 44, max: 44 },
+    name: { width: 180, min: 100, max: 600 },
+    description: { width: 420, min: 100, max: 800 },
+  },
+  tableRef: { current: TABLE_ELEMENT },
+});
+
+const renderSettings = (
+  overrides: Partial<WidgetColumnState> = {},
+  columnWidths: WidgetColumnWidths = makeWidths()
+) => {
   const state = makeState(overrides);
   const utils = render(
-    <WidgetTableSettings state={state} columnIds={state.columnOrder} />
+    <WidgetTableSettings
+      state={state}
+      columnIds={state.columnOrder}
+      columnWidths={columnWidths}
+    />
   );
   return { state, ...utils };
 };
@@ -87,6 +124,10 @@ const clickLikeAPointer = (element: Element) => {
   fireEvent.mouseUp(element);
   fireEvent.click(element);
 };
+
+beforeEach(() => {
+  mockGetAutofitColumnWidth.mockReset();
+});
 
 describe("WidgetTableSettings", () => {
   it("opens a 'Table settings' popover from the ⚙ button", () => {
@@ -432,6 +473,177 @@ describe("WidgetTableSettings", () => {
     expect(state.setColumnOrder).not.toHaveBeenCalled();
   });
 
+  describe("column widths", () => {
+    const openWidth = (label: string) => {
+      fireEvent.click(
+        screen.getByRole("button", { name: `Edit ${label} width` })
+      );
+      return screen.getByRole("spinbutton", { name: `${label} width` });
+    };
+
+    it("offers width controls only on visible, unpinned columns", () => {
+      renderSettings();
+      openSettings();
+
+      ["Alert name", "Description"].forEach((label) =>
+        expect(
+          screen.getByRole("button", { name: `Edit ${label} width` })
+        ).toBeInTheDocument()
+      );
+      ["severity", "status", "source", "environment", "assignee"].forEach(
+        (id) => {
+          const row = document.querySelector(
+            `[data-table-settings-column="${id}"]`
+          ) as HTMLElement;
+          expect(
+            within(row).queryByRole("button", { name: /width/ })
+          ).toBeNull();
+          expect(within(row).queryByRole("spinbutton")).toBeNull();
+        }
+      );
+    });
+
+    it("shows the column's current width and keeps the editor closed until asked", () => {
+      renderSettings();
+      openSettings();
+
+      expect(screen.queryByRole("spinbutton")).toBeNull();
+      const toggle = screen.getByRole("button", {
+        name: "Edit Description width",
+      });
+      expect(toggle).toHaveAttribute("aria-expanded", "false");
+
+      const input = openWidth("Description");
+
+      expect(input).toHaveValue(420);
+      expect(input).toHaveAttribute("min", "100");
+      expect(input).toHaveAttribute("max", "800");
+      expect(toggle).toHaveAttribute("aria-expanded", "true");
+    });
+
+    it("commits a typed width once on Enter, clamped, as the full sizing map", () => {
+      const { state } = renderSettings({ columnSizing: { description: 300 } });
+      openSettings();
+      const input = openWidth("Alert name");
+
+      fireEvent.change(input, { target: { value: "9" } });
+      fireEvent.change(input, { target: { value: "90" } });
+      fireEvent.change(input, { target: { value: "9000" } });
+      expect(state.setColumnSizing).not.toHaveBeenCalled();
+
+      fireEvent.keyDown(input, { key: "Enter" });
+      fireEvent.blur(input);
+
+      expect(state.setColumnSizing).toHaveBeenCalledTimes(1);
+      expect(state.setColumnSizing).toHaveBeenCalledWith({
+        description: 300,
+        name: 600,
+      });
+    });
+
+    it("commits on blur and clamps up to the minimum", () => {
+      const { state } = renderSettings();
+      openSettings();
+      const input = openWidth("Alert name");
+
+      fireEvent.change(input, { target: { value: "12" } });
+      fireEvent.blur(input);
+
+      expect(state.setColumnSizing).toHaveBeenCalledTimes(1);
+      expect(state.setColumnSizing).toHaveBeenCalledWith({ name: 100 });
+    });
+
+    it("emits nothing for an untouched, unchanged, empty or cancelled width", () => {
+      const { state } = renderSettings({ columnSizing: { name: 240 } });
+      const opened = openSettings();
+      const input = openWidth("Alert name");
+
+      fireEvent.blur(input);
+      fireEvent.change(input, { target: { value: "240" } });
+      fireEvent.keyDown(input, { key: "Enter" });
+      fireEvent.change(input, { target: { value: "" } });
+      fireEvent.blur(input);
+      fireEvent.change(input, { target: { value: "300" } });
+      fireEvent.keyDown(input, { key: "Escape" });
+      fireEvent.blur(input);
+
+      expect(state.setColumnSizing).not.toHaveBeenCalled();
+      expect(input).toHaveValue(180);
+      expect(opened).toBeInTheDocument();
+      expect(panel()).not.toBeNull();
+    });
+
+    it("Auto-fit measures the widget's table and saves the width", () => {
+      mockGetAutofitColumnWidth.mockReturnValue(275);
+      const { state } = renderSettings({ columnSizing: { name: 240 } });
+      openSettings();
+      openWidth("Description");
+
+      fireEvent.click(
+        screen.getByRole("button", { name: "Auto-fit Description" })
+      );
+
+      expect(mockGetAutofitColumnWidth).toHaveBeenCalledWith(
+        TABLE_ELEMENT,
+        "description",
+        { minSize: 100, maxSize: 800 }
+      );
+      expect(state.setColumnSizing).toHaveBeenCalledTimes(1);
+      expect(state.setColumnSizing).toHaveBeenCalledWith({
+        name: 240,
+        description: 275,
+      });
+    });
+
+    it("Auto-fit with nothing to measure emits nothing", () => {
+      mockGetAutofitColumnWidth.mockReturnValue(null);
+      const { state } = renderSettings();
+      openSettings();
+      openWidth("Description");
+
+      fireEvent.click(
+        screen.getByRole("button", { name: "Auto-fit Description" })
+      );
+
+      expect(state.setColumnSizing).not.toHaveBeenCalled();
+    });
+
+    it("Reset width shows only for a saved width and removes it", () => {
+      const { state } = renderSettings({
+        columnSizing: { name: 240, description: 300 },
+      });
+      openSettings();
+
+      openWidth("Alert name");
+      fireEvent.click(
+        screen.getByRole("button", { name: "Reset Alert name width" })
+      );
+      expect(state.setColumnSizing).toHaveBeenCalledTimes(1);
+      expect(state.setColumnSizing).toHaveBeenCalledWith({ description: 300 });
+
+      cleanup();
+      renderSettings({ columnSizing: { description: 300 } });
+      openSettings();
+      openWidth("Alert name");
+      expect(
+        screen.queryByRole("button", { name: "Reset Alert name width" })
+      ).toBeNull();
+    });
+
+    it("opens one width editor at a time", () => {
+      renderSettings();
+      openSettings();
+
+      openWidth("Alert name");
+      openWidth("Description");
+
+      expect(screen.getAllByRole("spinbutton")).toHaveLength(1);
+      expect(
+        screen.getByRole("spinbutton", { name: "Description width" })
+      ).toBeInTheDocument();
+    });
+  });
+
   describe("Group rows by inside the popover", () => {
     const openGroupBy = async () => {
       fireEvent.click(
@@ -499,6 +711,7 @@ describe("WidgetTableSettings", () => {
         <WidgetTableSettings
           state={state}
           columnIds={state.columnOrder}
+          columnWidths={makeWidths()}
           ungroupableColumnIds={["severity", "extraPayload"]}
         />
       );

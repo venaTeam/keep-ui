@@ -18,6 +18,7 @@ import { useAlertTableCols } from "@/widgets/alerts-table/lib/alert-table-utils"
 import { useConfig } from "@/utils/hooks/useConfig";
 
 const mockUsePresetColumnState = jest.fn();
+const mockGetAutofitColumnWidth = jest.fn();
 const mockDndContextProps: {
   onDragEnd?: (event: {
     active: { id: string };
@@ -42,6 +43,17 @@ jest.mock("@/entities/presets/model", () => ({
   usePresetColumnState: (...args: unknown[]) =>
     mockUsePresetColumnState(...args),
 }));
+
+jest.mock("@/widgets/alerts-table/lib/column-autofit", () => {
+  const actual = jest.requireActual(
+    "@/widgets/alerts-table/lib/column-autofit"
+  );
+  return {
+    ...actual,
+    getAutofitColumnWidth: (...args: unknown[]) =>
+      mockGetAutofitColumnWidth(...args),
+  };
+});
 
 jest.mock("@/features/filter/hooks", () => ({
   ...jest.requireActual("@/features/filter/hooks"),
@@ -168,6 +180,11 @@ const observeWidth = (width: number) => {
       this.callback = callback;
     }
     observe(target: Element) {
+      if (
+        target.getAttribute("data-cy") !== "dashboard-widget-alerts-table"
+      ) {
+        return;
+      }
       this.callback(
         [{ target, contentRect: { width } } as unknown as ResizeObserverEntry],
         this as unknown as ResizeObserver
@@ -180,6 +197,12 @@ const observeWidth = (width: number) => {
 
 beforeEach(() => {
   localStorage.clear();
+  mockGetAutofitColumnWidth
+    .mockReset()
+    .mockImplementation(
+      jest.requireActual("@/widgets/alerts-table/lib/column-autofit")
+        .getAutofitColumnWidth
+    );
   mockUsePresetColumnState.mockReset();
   mockUsePresetColumnState.mockReturnValue({
     columnOrder: ["description", "name"],
@@ -1012,6 +1035,123 @@ describe("WidgetAlertsTable", () => {
       expect(next.presetColumns).toBeUndefined();
       expect(next.alertTable).toBeUndefined();
       expect(next.name).toBe("Feed");
+    });
+
+    describe("column widths in ⚙", () => {
+      const openWidth = (label: string) => {
+        fireEvent.click(settingsButton() as HTMLElement);
+        fireEvent.click(
+          screen.getByRole("button", { name: `Edit ${label} width` })
+        );
+        return screen.getByRole("spinbutton", { name: `${label} width` });
+      };
+
+      it("are offered on a narrow widget, without the header controls", () => {
+        observeWidth(300);
+        renderWithSlot({}, { isEditMode: true, onChange: jest.fn() });
+
+        expect(screen.queryByTestId("resize-handle-name")).toBeNull();
+        expect(openWidth("Alert name")).toHaveValue(100);
+        expect(
+          screen.queryByRole("button", { name: /Edit Severity width/ })
+        ).toBeNull();
+      });
+
+      it("a typed width writes alertTable.columnSizing, clamped, once per commit", () => {
+        const onChange = jest.fn();
+        renderWithSlot(
+          { alertTable: { columnSizing: { description: 300 } } },
+          { isEditMode: true, onChange }
+        );
+        const input = openWidth("Alert name");
+
+        fireEvent.change(input, { target: { value: "2" } });
+        fireEvent.change(input, { target: { value: "25" } });
+        fireEvent.change(input, { target: { value: "2500" } });
+        expect(onChange).not.toHaveBeenCalled();
+        fireEvent.keyDown(input, { key: "Enter" });
+        fireEvent.blur(input);
+
+        expect(onChange).toHaveBeenCalledTimes(1);
+        expect(onChange.mock.calls[0][0].alertTable.columnSizing).toEqual({
+          description: 300,
+          name: 600,
+        });
+      });
+
+      it("Auto-fit measures the widget's table and writes the width", () => {
+        mockGetAutofitColumnWidth.mockReturnValue(222);
+        const onChange = jest.fn();
+        renderWithSlot({}, { isEditMode: true, onChange });
+        openWidth("Description");
+
+        fireEvent.click(
+          screen.getByRole("button", { name: "Auto-fit Description" })
+        );
+
+        expect(mockGetAutofitColumnWidth).toHaveBeenCalledWith(
+          widgetRoot().querySelector("table"),
+          "description",
+          { minSize: 100, maxSize: 800 }
+        );
+        expect(onChange).toHaveBeenCalledTimes(1);
+        expect(onChange.mock.calls[0][0].alertTable.columnSizing).toEqual({
+          description: 222,
+        });
+      });
+
+      it("Reset removes the width and leaves an otherwise default widget uncustomized", () => {
+        const onChange = jest.fn();
+        const { rerender } = renderWithSlot(
+          { alertTable: { columnSizing: { name: 240 } } },
+          { isEditMode: true, onChange }
+        );
+        openWidth("Alert name");
+        expect(
+          screen.getByText("Customized for this widget")
+        ).toBeInTheDocument();
+
+        fireEvent.click(
+          screen.getByRole("button", { name: "Reset Alert name width" })
+        );
+
+        expect(onChange).toHaveBeenCalledTimes(1);
+        const next: WidgetData = onChange.mock.calls[0][0];
+        expect(next.alertTable).toBeUndefined();
+        expect(next.presetColumns).toBeUndefined();
+
+        rerender(
+          <WidgetAlertsTable
+            item={next}
+            alerts={[alertWith({ service: "checkout" })]}
+            isEditMode
+            onChange={onChange}
+            settingsSlot={slot}
+          />
+        );
+        expect(screen.queryByText("Customized for this widget")).toBeNull();
+        expect(
+          screen.getByRole("button", { name: "Reset to defaults" })
+        ).toBeDisabled();
+        expect(
+          screen.queryByRole("button", { name: "Reset Alert name width" })
+        ).toBeNull();
+      });
+
+      it("show the flexible column's rendered width on a wide widget", () => {
+        observeWidth(1200);
+        renderWithSlot({}, { isEditMode: true, onChange: jest.fn() });
+        const rendered = Number.parseFloat(
+          (
+            screen
+              .getByTestId("header-cell-description")
+              .closest("th") as HTMLElement
+          ).style.width
+        );
+
+        expect(rendered).toBeGreaterThan(100);
+        expect(openWidth("Description")).toHaveValue(rendered);
+      });
     });
   });
 

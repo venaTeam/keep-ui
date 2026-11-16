@@ -11,6 +11,7 @@ import { createPortal } from "react-dom";
 import {
   ColumnDef,
   ColumnPinningState,
+  Table as ReactTable,
   getCoreRowModel,
   getGroupedRowModel,
   useReactTable,
@@ -33,10 +34,15 @@ import { withEmptyGroupPosition } from "./empty-group-row-model";
 import { useWidgetAlertColumns } from "./use-widget-alert-columns";
 import { useWidgetColumnState } from "./use-widget-column-state";
 import {
+  ColumnBounds,
+  getColumnBounds,
   getWidgetColumnLayout,
   withUnclampedColumn,
 } from "./widget-column-layout";
-import { WidgetTableSettings } from "./widget-table-settings";
+import {
+  WidgetColumnWidths,
+  WidgetTableSettings,
+} from "./widget-table-settings";
 
 interface WidgetAlertsTableProps {
   item: WidgetData;
@@ -89,6 +95,25 @@ function useElementWidth(ref: RefObject<HTMLElement | null>): number | null {
   return width;
 }
 
+function getColumnWidths(
+  table: ReactTable<AlertDto>,
+  bounds: ReadonlyMap<string, ColumnBounds>,
+  tableRef: RefObject<HTMLElement | null>
+): WidgetColumnWidths {
+  return {
+    columns: Object.fromEntries(
+      table.getVisibleLeafColumns().map((column) => [
+        column.id,
+        {
+          width: column.getSize(),
+          ...(bounds.get(column.id) ?? getColumnBounds(column.columnDef)),
+        },
+      ])
+    ),
+    tableRef,
+  };
+}
+
 function useLinkNavigationBlocked(
   ref: RefObject<HTMLElement | null>,
   blocked: boolean
@@ -124,6 +149,7 @@ function WidgetAlertsTableContent({
   const rootRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const a11yContainerRef = useRef<HTMLDivElement>(null);
+  const tableRef = useRef<HTMLTableElement>(null);
   const containerWidth = useElementWidth(wrapperRef);
   const isNarrow = containerWidth !== null && containerWidth < NARROW_WIDGET_PX;
   useLinkNavigationBlocked(rootRef, isEditMode);
@@ -186,6 +212,13 @@ function WidgetAlertsTableContent({
   const layoutColumns = useMemo(
     () => withUnclampedColumn(columns, layout.unclampedColumnId),
     [columns, layout.unclampedColumnId]
+  );
+  const columnBounds = useMemo(
+    () =>
+      new Map(
+        columns.map((column) => [column.id as string, getColumnBounds(column)])
+      ),
+    [columns]
   );
 
   const table = useReactTable({
@@ -282,6 +315,7 @@ function WidgetAlertsTableContent({
         data-cy="dashboard-widget-alerts-table"
       >
         <Table
+          ref={tableRef}
           style={
             layout.tableWidth === undefined
               ? undefined
@@ -334,6 +368,7 @@ function WidgetAlertsTableContent({
           <WidgetTableSettings
             state={state}
             columnIds={allColumnIds}
+            columnWidths={getColumnWidths(table, columnBounds, tableRef)}
             ungroupableColumnIds={ungroupableColumnIds}
           />,
           settingsSlot
@@ -350,7 +385,8 @@ function WidgetAlertsTableContent({
  * Header controls show only in edit mode with `onChange`, and not on a narrow
  * widget. Rows are plain, not clickable and always at the default density.
  * In edit mode with `onChange`, the ⚙ Table settings button is rendered into
- * `settingsSlot` (an element the caller places in its header), at every width.
+ * `settingsSlot` (an element the caller places in its header), at every width;
+ * its column widths are the rendered ones and its Auto-fit measures this table.
  *
  * Once the widget's width is measured, the table is laid out by
  * `getWidgetColumnLayout`: every column renders at exactly its own width, the
