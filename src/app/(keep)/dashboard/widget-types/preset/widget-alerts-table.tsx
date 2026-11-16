@@ -21,12 +21,7 @@ import { DEFAULT_COLS } from "@/widgets/alerts-table/lib/alert-table-utils";
 import { ColumnOrderState } from "@tanstack/table-core";
 import { startCase } from "lodash";
 import { defaultColumns } from "./constants";
-import { useSyncedAnimation } from "@/shared/lib/hooks/useSyncedAnimation";
-import {
-  RingingReason,
-  getRingingProps,
-  isAlertRinging,
-} from "@/widgets/alerts-table/lib/alert-ringing";
+import { useRingingRows } from "@/widgets/alerts-table/lib/alert-ringing";
 
 interface WidgetAlertsTableProps {
   presetName: string;
@@ -43,7 +38,7 @@ const WidgetAlertsTable: React.FC<WidgetAlertsTableProps> = ({
   background,
   presetNoisy = false,
 }) => {
-  const syncBlink = useSyncedAnimation(presetNoisy);
+  const ringingRow = useRingingRows(presetNoisy);
   const columnsGapClass = "pr-3";
   const borderClass = "border-b";
 
@@ -165,8 +160,7 @@ const WidgetAlertsTable: React.FC<WidgetAlertsTableProps> = ({
 
     return alertsToRender
       ?.map((alert, alertIndex) => {
-        const ringing = isAlertRinging(alert, presetNoisy);
-        const ringingProps = getRingingProps(ringing);
+        const ringing = ringingRow(alert);
         return orderedColumns?.map((column, index) => {
           const columnMeta = columnsMeta[column];
           let columnValue;
@@ -183,17 +177,18 @@ const WidgetAlertsTable: React.FC<WidgetAlertsTableProps> = ({
             index < orderedColumns.length - 1 ? columnsGapClass : "";
           const _borderClass =
             alertIndex < alertsToRender.length - 1 ? borderClass : "";
+          const ringingCell = ringing.cellProps(index, orderedColumns.length);
 
           return (
             <div
               key={`${column}-${alertIndex}`}
               title={alert?.[column]}
-              className={`min-h-7 text-xs flex min-w-0 items-center overflow-hidden whitespace-nowrap select-text ${_borderClass} ${_columnsGapClass}${ringing ? ` ${ringingProps.className}` : ""}`}
-              style={ringingProps.style}
-              ref={ringing ? syncBlink : undefined}
-              data-ringing={ringingProps["data-ringing"]}
+              className={`min-h-7 text-xs flex min-w-0 items-center overflow-hidden whitespace-nowrap select-text ${_borderClass} ${_columnsGapClass}${ringingCell.className ? ` ${ringingCell.className}` : ""}`}
+              style={ringingCell.style}
+              ref={ringingCell.ref}
+              {...ringing.rowProps}
             >
-              {ringing && index === 0 && <RingingReason />}
+              {index === 0 && ringing.reason}
               {columnValue}
             </div>
           );

@@ -38,8 +38,16 @@ describe("WidgetAlertsTable ringing rows", () => {
     delete (HTMLElement.prototype as Partial<HTMLElement>).getAnimations;
   });
 
-  const BLINK = "motion-safe:animate-missing-blink";
-  const STEADY = "motion-reduce:bg-[color:var(--blink-soft)]";
+  const PULSE = "motion-safe:before:animate-ringing-pulse";
+  const OVERLAY = [
+    "isolate",
+    "[&:not(.sticky)]:relative",
+    "before:absolute",
+    "before:inset-0",
+    "before:-z-10",
+    "before:pointer-events-none",
+    PULSE,
+  ];
   const columns = ["status", "name", "description"];
   const alerts = [
     { name: "ring", severity: "critical", status: "firing" },
@@ -76,17 +84,19 @@ describe("WidgetAlertsTable ringing rows", () => {
     ) as HTMLElement[];
   };
 
-  it("gives every cell of a critical firing row the pulse in a noisy preset", () => {
+  it("puts the pulse on an overlay behind every cell of a critical firing row in a noisy preset", () => {
     const { container } = renderTable(true);
 
     for (const rowIndex of [0]) {
       const cells = cellsOfRow(container, rowIndex);
       expect(cells).toHaveLength(columns.length);
       cells.forEach((cell) => {
-        expect(cell).toHaveClass(BLINK, STEADY);
+        expect(cell).toHaveClass(...OVERLAY);
         expect(cell).toHaveAttribute("data-ringing", "true");
-        expect(cell.style.getPropertyValue("--blink-strong")).not.toBe("");
+        expect(cell.style.getPropertyValue("--blink-row-tint")).not.toBe("");
       });
+      expect(cells[0]).toHaveClass("before:border-l-2");
+      expect(cells[cells.length - 1]).toHaveClass("before:border-r-2");
       expect(cells[0]).toHaveTextContent(RINGING_REASON);
     }
     expect(screen.getAllByText(RINGING_REASON)).toHaveLength(1);
@@ -100,7 +110,7 @@ describe("WidgetAlertsTable ringing rows", () => {
 
     for (const rowIndex of [1, 2, 4, 5]) {
       cellsOfRow(container, rowIndex).forEach((cell) => {
-        expect(cell).not.toHaveClass(BLINK);
+        expect(cell).not.toHaveClass(PULSE);
         expect(cell).not.toHaveAttribute("data-ringing");
         expect(cell.getAttribute("style")).toBeNull();
       });
@@ -111,7 +121,7 @@ describe("WidgetAlertsTable ringing rows", () => {
     const { container } = renderTable(true);
 
     cellsOfRow(container, 3).forEach((cell) => {
-      expect(cell).not.toHaveClass(BLINK);
+      expect(cell).not.toHaveClass(PULSE);
       expect(cell).not.toHaveAttribute("data-ringing");
     });
     expect(screen.getAllByText(RINGING_REASON)).toHaveLength(1);
@@ -124,7 +134,7 @@ describe("WidgetAlertsTable ringing rows", () => {
 
       expect(container.querySelector("[data-ringing]")).toBeNull();
       expect(
-        container.querySelector(".motion-safe\\:animate-missing-blink")
+        container.querySelector(".motion-safe\\:before\\:animate-ringing-pulse")
       ).toBeNull();
       expect(screen.queryByText(RINGING_REASON)).toBeNull();
     }
@@ -138,6 +148,7 @@ describe("WidgetAlertsTable ringing rows", () => {
         const element = this;
         return [
           {
+            effect: { target: element, pseudoElement: "::before" },
             set startTime(value: number) {
               if (value === 0) {
                 synced.push(element);
@@ -149,9 +160,7 @@ describe("WidgetAlertsTable ringing rows", () => {
     });
     const { container } = renderTable(true);
 
-    expect(synced).toEqual(
-      expect.arrayContaining(cellsOfRow(container, 0))
-    );
+    expect(synced).toEqual(expect.arrayContaining(cellsOfRow(container, 0)));
     cellsOfRow(container, 2).forEach((cell) =>
       expect(synced).not.toContain(cell)
     );

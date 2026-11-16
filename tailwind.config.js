@@ -122,6 +122,10 @@ module.exports = {
             color: "var(--blink-soft-text)",
           },
         },
+        ringingPulse: {
+          "0%, 55%, 100%": { opacity: "1" },
+          "62%, 93%": { opacity: "0.25" },
+        },
         hide: {
           from: { opacity: "1" },
           to: { opacity: "0" },
@@ -170,6 +174,7 @@ module.exports = {
           "drawerSlideLeftAndFade 150ms cubic-bezier(0.16, 1, 0.3, 1)",
         drawerSlideRightAndFade: "drawerSlideRightAndFade 150ms ease-in",
         "missing-blink": "missingBlink 1.2s ease-in-out infinite",
+        "ringing-pulse": "ringingPulse 1.2s ease-in-out infinite",
       },
     },
   },

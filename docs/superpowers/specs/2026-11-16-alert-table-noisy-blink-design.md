@@ -29,13 +29,14 @@ Supersedes the visual part of "Alert Table readability" (PR #108, branch `feat/a
 
    Every other row is unchanged. The rule needs a single helper with unit tests.
 3. **Surfaces.** Both the presets page table and the dashboard Alert Table widget. On the presets page that includes the rows inside groups, when grouped.
-4. **Blink style.**
-   - The same red pulse as the Count feature's blinking "+N alerts not in an incident" line: the `missing-blink` keyframes / `animate-missing-blink` and its red, from `blink-palette.ts`.
+4. **Blink style.** Revised after the review of PR #111 (2026-11-16).
+   - The Count feature's red (`DEFAULT_BLINK_COLOR`, from `blink-palette.ts`) on the Count blink's timing: its own `ringingPulse` keyframes have the same offsets and duration as `missing-blink`, so the two stay in phase.
    - Kept in phase with other blinks on the page, reusing the `useSyncedAnimation` approach.
-   - It tints the row's background and keeps text legible: a row must stay readable at every point in the pulse.
-   - With `prefers-reduced-motion`, there is no animation: a steady light red tint instead.
+   - The pulse is an overlay behind each cell's content (a `::before` with a negative z-index in an isolated cell), and only its opacity animates (1 to 0.25), which the browser runs on the compositor. The cells keep their own backgrounds, so hover, last viewed and selection still show under the tint.
+   - The overlay is a 10% tint of the red with a 2px solid red edge on the top and bottom of every cell, the left of the first and the right of the last, so the cells read as one row. The tint keeps the row's red-500 marks at 3:1 or more and its text at 4.5:1 or more at every phase; the solid edge carries the strong signal. A left-edge strip alone would not show on the presets page, where the critical severity cell already paints a full-height red-500 bar on the row's left edge.
+   - With `prefers-reduced-motion`, there is no animation: the overlay holds still at full strength.
 5. **Accessibility.** A ringing row exposes the reason as text for assistive tech, not by colour or motion alone (e.g. a visually hidden "Ringing: critical, firing, noisy preset" in the row, or an equivalent). Give the row `data-cy="alerts-row-ringing"` or a `data-ringing` attribute for tests and e2e.
-6. **Kept from readability:** the pinned-column fix from `aff47252`. Left-pinned cells get their computed z-index, so horizontally scrolled cells no longer paint over them. Only `src/shared/ui/utils/table-utils.ts` and its test come across (the readability spec file doesn't exist on this branch). Credit the source commit in the commit message.
+6. **Kept from readability:** the pinned-column fix from `aff47252`. Left-pinned cells get a z-index, so horizontally scrolled cells no longer paint over them. After the review of PR #111 it is the same for every left-pinned cell (1), so a later row's non-portaled status tooltip is not hidden under an earlier row's pinned cells. Only `src/shared/ui/utils/table-utils.ts` and its test come across (the readability spec file doesn't exist on this branch). Credit the source commit in the commit message.
 7. **No other changes.**
    - The Count feature (`countBy`) is untouched.
    - `getStatusIcon` behaviour is unchanged.
@@ -43,20 +44,21 @@ Supersedes the visual part of "Alert Table readability" (PR #108, branch `feat/a
 
 ## Approach
 
-- **Shared code:** put the rule helper and a small row-class/attribute helper under `src/widgets/alerts-table/lib/`.
+- **Shared code:** put the rule helper and one ringing-row hook, `useRingingRows`, under `src/widgets/alerts-table/lib/`. Every surface takes its row attribute, cell classes, colors, sync ref and reason from it.
   - `AlertsTableBody` and `GroupedRow` get an optional `presetNoisy?: boolean`, or an `isRowRinging` predicate. The default (absent or false) renders exactly as today.
   - `AlertTableServerSide` receives `presetNoisy` from `alert-table-tab-panel-server-side.tsx`, which already has the preset, and passes it down.
 - **Dashboard widget:** on dev it is a hand-built CSS grid, so a "row" is a run of grid cells.
-  - Apply the ringing classes to every cell of a ringing row; the pulse must read as one row.
+  - Give every cell of a ringing row the hook's cell props; the pulse must read as one row.
   - Pass `presetNoisy={!!preset?.is_noisy}` from `preset-alert-table-panel.tsx`.
 - **Shared hook:** if `useSyncedAnimation` or the blink palette are needed outside `src/app/(keep)/dashboard/...`, move them to `src/shared/lib/` and keep re-exports at the old paths, so the Count feature's imports and tests are untouched.
 
 ## Tests
 
 - **Rule helper:** critical+firing+not deleted+noisy is true. False when any one fails (including a deleted critical firing alert in a noisy preset). A numeric critical severity, or the words in another case, stay quiet.
-- **Presets page body:** a ringing row carries the blink class and the attribute; a non-ringing row (including a deleted critical firing one) and a non-noisy preset carry neither; grouped child rows ring too.
+- **Presets page body:** a ringing row carries the attribute and its cells the overlay; a non-ringing row (including a deleted critical firing one) and a non-noisy preset carry neither; grouped child rows ring too; a ringing row keeps the last-viewed, hover and selection classes.
 - **Widget:** every cell of a ringing row carries the class; other rows (including a deleted critical firing one) don't; a non-noisy preset gives none.
-- **Reduced motion:** the classes use `motion-safe:` / `motion-reduce:` variants (a class assertion is enough).
+- **Reduced motion:** the pulse uses a `motion-safe:` variant (a class assertion is enough).
+- **Contrast:** red-500 marks keep 3:1 and row text 4.5:1 on the ringing row's background at every keyframe of `ringingPulse`, on white and on the last-viewed orange.
 - **Pinned-column fix:** carried over from readability; its existing tests come along.
 
 ## Out of scope

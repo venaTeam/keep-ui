@@ -1,55 +1,89 @@
 import {
   DEFAULT_BLINK_COLOR,
   contrastRatio,
-  getBlinkStyle,
   getRowBlinkStyle,
 } from "../blink-palette";
+
+const tailwindConfig = require("../../../../tailwind.config.js");
+
+const RED_500 = "#ef4444";
+const WHITE = "#ffffff";
+const ORANGE_50 = "#fff7ed";
+const ROW_TEXT = ["#333333", "#4b5563"];
 
 const rowVars = (color: string) =>
   getRowBlinkStyle(color) as Record<string, string>;
 
+const pulseOpacities = (): number[] =>
+  Object.values(
+    tailwindConfig.theme.extend.keyframes.ringingPulse as Record<
+      string,
+      { opacity: string }
+    >
+  ).map((frame) => Number(frame.opacity));
+
+const channels = (hex: string) =>
+  [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+
+const composite = (tint: string, base: string, opacity: number) => {
+  const [, r, g, b, alpha] = tint
+    .match(/^rgb\((\d+) (\d+) (\d+) \/ ([\d.]+)\)$/)!
+    .map(Number);
+  const weight = alpha * opacity;
+  return (
+    "#" +
+    channels(base)
+      .map((value, i) => [r, g, b][i] * weight + value * (1 - weight))
+      .map((value) => Math.round(value).toString(16).padStart(2, "0"))
+      .join("")
+  );
+};
+
+const ringingBackgrounds = () =>
+  [WHITE, ORANGE_50].flatMap((base) =>
+    pulseOpacities().map((opacity) =>
+      composite(rowVars(DEFAULT_BLINK_COLOR)["--blink-row-tint"], base, opacity)
+    )
+  );
+
 describe("getRowBlinkStyle", () => {
-  it("tints a row in the default red, lighter than the solid strip", () => {
+  it("tints a ringing row at 10% of the color and edges it in the solid color", () => {
     const vars = rowVars(DEFAULT_BLINK_COLOR);
 
-    expect(vars["--blink-strong"]).toBe("#f6c9c9");
-    expect(vars["--blink-soft"]).toBe("#fce9e9");
-    expect(vars["--blink-strong"]).not.toBe(
-      (getBlinkStyle(DEFAULT_BLINK_COLOR) as Record<string, string>)[
-        "--blink-strong"
-      ]
+    expect(vars["--blink-row-tint"]).toBe("rgb(220 38 38 / 0.1)");
+    expect(vars["--blink-row-edge"]).toBe(DEFAULT_BLINK_COLOR);
+  });
+
+  it("keeps red-500 marks at 3:1 or more on a ringing row at every phase of the pulse", () => {
+    const backgrounds = ringingBackgrounds();
+
+    expect(backgrounds).toContain("#fce9e9");
+    backgrounds.forEach((background) =>
+      expect(contrastRatio(RED_500, background)).toBeGreaterThanOrEqual(3)
     );
   });
 
-  it.each(["#dc2626", "#2563eb", "#facc15", "#16a34a", "#ffffff", "#000000"])(
-    "keeps the row text readable at every point of the %s pulse",
-    (color) => {
-      const vars = rowVars(color);
-
-      expect(vars["--blink-strong-text"]).toBe(vars["--blink-soft-text"]);
-      expect(
-        contrastRatio(vars["--blink-strong-text"], vars["--blink-strong"])
-      ).toBeGreaterThanOrEqual(4.5);
-      expect(
-        contrastRatio(vars["--blink-soft-text"], vars["--blink-soft"])
-      ).toBeGreaterThanOrEqual(4.5);
-    }
-  );
-
-  it("keeps the darker grey text of a row readable on the stronger tint", () => {
-    expect(
-      contrastRatio("#4b5563", rowVars(DEFAULT_BLINK_COLOR)["--blink-strong"])
-    ).toBeGreaterThanOrEqual(4.5);
+  it("keeps the row's text at 4.5:1 or more at every phase of the pulse", () => {
+    ringingBackgrounds().forEach((background) =>
+      ROW_TEXT.forEach((text) =>
+        expect(contrastRatio(text, background)).toBeGreaterThanOrEqual(4.5)
+      )
+    );
   });
 
-  it("lets borders follow the background, so only the tint pulses", () => {
-    const vars = rowVars(DEFAULT_BLINK_COLOR);
+  it("pulses in step with the Count feature's missing-blink", () => {
+    const { keyframes, animation } = tailwindConfig.theme.extend;
 
-    expect(vars["--blink-strong-border"]).toBe(vars["--blink-strong"]);
-    expect(vars["--blink-soft-border"]).toBe(vars["--blink-soft"]);
+    expect(Object.keys(keyframes.ringingPulse)).toEqual(
+      Object.keys(keyframes.missingBlink)
+    );
+    expect(animation["ringing-pulse"].replace("ringingPulse", "")).toBe(
+      animation["missing-blink"].replace("missingBlink", "")
+    );
+    expect(pulseOpacities()[0]).toBe(1);
   });
 
-  it("sets only custom properties, leaving the still state to classes", () => {
+  it("sets only custom properties, leaving the pulse to classes", () => {
     expect(
       Object.keys(getRowBlinkStyle(DEFAULT_BLINK_COLOR)).every((key) =>
         key.startsWith("--blink-")
