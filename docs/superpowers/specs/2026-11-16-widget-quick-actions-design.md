@@ -81,14 +81,14 @@ A small floating tray appears at the right end of the hovered row, over the last
  ! P  High CPU on db-prod-01   CPU above 95%…   2 minutes ago  [» Change Status] [⛓ Link to incident] [🔕 Dismiss]
 ```
 
-- Labels and icons match the presets page's row menu ("Change Status", "Dismiss"). Link to incident uses the presets page's bulk-tray wording.
+- Labels and icons match the presets page's row menu ("Change Status", "Dismiss"). For linking, the presets page says "Correlate Incident" (row menu) and "Associate with incident" (bulk bar); the widget uses "Link to incident", as in the approved mock.
 - Buttons show only when they apply to that alert (registry `appliesTo`): Change Status always; Link to incident only when the alert has no live incident (definition below); Dismiss unless the alert is already suppressed.
 - The tray also appears when anything in the row has keyboard focus.
 - A click opens the action's dialog for that one alert. While the dialog is open the row stays highlighted.
 
 ### Selecting
 
-- Hovering a row also fades in a checkbox in the left gutter. The header has a select-all-shown checkbox in the same gutter, and every group header row has a three-state group checkbox there (none / some / all of the group's shown rows).
+- Hovering a row also fades in a checkbox in the left gutter. The header has a select-all-shown checkbox in the same gutter. Every group header row has a three-state group checkbox (none / some / all of the group's shown rows) right of the group's chevron, where the shared group row draws it, not in the gutter.
 - Once anything is ticked, every row, group header and the column header show their checkboxes (selection mode), and ticked rows get a light highlight.
 - Shift-click ticks or unticks the range between the last clicked row and this one, in display order (across groups).
 - Ticking a group header ticks every shown row in that group, also when the group is collapsed. A group only holds what the widget shows: "INC-142 · 2 shown · 9 in incident" ticks those 2.
@@ -157,12 +157,12 @@ Order in the registry is the order on screen. The three entries this round: Chan
   - `index.ts` barrel.
 - **Widget wiring** in `src/app/(keep)/dashboard/widget-types/preset/`:
   - `widget-alerts-table.tsx`: turn on row selection (rows already use `getRowId: fingerprint`), prune the selection to shown rows on every data change, clear it and close dialogs in edit mode, render the tray and the dialog host.
-  - `use-widget-alert-columns.ts`: add a narrow widget checkbox column (id `checkbox`, so the shared group row shows its checkbox) styled to appear on hover or in selection mode, and a trailing zero-width column whose cell hosts the row tray.
+  - `widget-quick-action-columns.tsx` (not `use-widget-alert-columns.ts`, whose output feeds grouping, the ⚙ panel and the saved config): the chrome columns, a narrow checkbox column (id `checkbox`, so the shared group row shows its checkbox) styled to appear on hover or in selection mode, and a trailing zero-width column whose cell hosts the row tray. Group-row selection (a group checkbox ticks the group's shown rows) is a scoped TanStack table feature in the quick-actions `model/`.
   - `preset-alert-table-panel.tsx`: swap the count line for the strip while anything is selected.
 - **Shared table**, leaving the presets page's behaviour unchanged:
   - `alert-grouped-row.tsx`: let the group checkbox take the widget's hover-reveal styling (a prop or class).
   - `alerts-table-body.tsx`: today one `selectable` prop turns on both the checkboxes and `react-selectable-fast` mouse drag-to-select. Split them so the widget gets checkboxes without drag-select (my call: drag-select over a dashboard competes with text selection and the dashboard's own interactions).
-- **Data refresh**: `usePresetAlertsCount` currently does not return `mutate`; expose it (or revalidate its SWR key) so the widget refreshes immediately.
+- **Data refresh**: after a success the widget revalidates the `/alerts/query` and `/preset` SWR key prefixes, which cover every widget's alert list, the count queries and the preset counters. `usePresetAlertsCount` is unchanged.
 - **Not touched**: `src/features/alerts/alert-change-status/`, `src/features/alerts/dismiss-alert/`, `src/features/alerts/alert-associate-to-incident/`, and everything under keep-api-gateway.
 
 ## Testing
