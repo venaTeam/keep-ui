@@ -14,6 +14,7 @@ type DashboardLinkProps = {
   dashboard: Dashboard;
   pathname: string | null;
   deleteDashboard: (id: string) => void;
+  duplicateDashboard: (id: string) => void;
   titleClassName?: string;
 };
 
@@ -21,6 +22,7 @@ export const DashboardLink = ({
   dashboard,
   pathname,
   deleteDashboard,
+  duplicateDashboard,
   titleClassName,
 }: DashboardLinkProps) => {
   const href = `/dashboard/${dashboard.dashboard_name}`;
@@ -36,6 +38,9 @@ export const DashboardLink = ({
       icon={FiLayout}
       isDeletable={true}
       onDelete={() => deleteDashboard(dashboard.id)}
+      onDuplicate={() => duplicateDashboard(dashboard.id)}
+      duplicateAriaLabel={`Duplicate ${dashboard.dashboard_name}`}
+      duplicateDataCy={`nav-link-dashboard-duplicate-${dashboard.id}`}
       data-cy={`nav-link-dashboard-${dashboard.id}`}
     >
       <Subtitle

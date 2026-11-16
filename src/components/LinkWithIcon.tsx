@@ -1,9 +1,11 @@
 import { AnchorHTMLAttributes, ReactNode, useState } from "react";
 import Link, { LinkProps } from "next/link";
 import { IconType } from "react-icons/lib";
+import { FiCopy } from "react-icons/fi";
 import { Badge, Icon } from "@tremor/react";
 import { usePathname } from "next/navigation";
 import { Trashcan } from "@/components/icons";
+import { Tooltip } from "@/shared/ui";
 import clsx from "clsx";
 import { ShortNumber } from "./ui";
 import type { JSX } from "react";
@@ -15,6 +17,9 @@ type LinkWithIconProps = {
   isBeta?: boolean;
   isDeletable?: boolean;
   onDelete?: () => void;
+  onDuplicate?: () => void;
+  duplicateAriaLabel?: string;
+  duplicateDataCy?: string;
   className?: string;
   testId?: string;
   isExact?: boolean;
@@ -31,6 +36,9 @@ export const LinkWithIcon = ({
   isBeta = false,
   isDeletable = false,
   onDelete,
+  onDuplicate,
+  duplicateAriaLabel,
+  duplicateDataCy,
   className,
   testId,
   isExact = false,
@@ -67,6 +75,12 @@ export const LinkWithIcon = ({
     if (restOfLinkProps.onClick) {
       restOfLinkProps.onClick(e);
     }
+  };
+
+  const handleDuplicate = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onDuplicate?.();
   };
 
   return (
@@ -114,12 +128,25 @@ export const LinkWithIcon = ({
             Beta
           </Badge>
         )}
+        {onDuplicate && (
+          <Tooltip content="Duplicate" asChild>
+            <button
+              type="button"
+              onClick={handleDuplicate}
+              aria-label={duplicateAriaLabel}
+              data-cy={duplicateDataCy}
+              className="flex items-center text-slate-400 hover:text-orange-500 p-0"
+            >
+              <FiCopy className="text-slate-400 hover:text-orange-500 group-hover:block group-focus-within:block hidden h-4 w-4" />
+            </button>
+          </Tooltip>
+        )}
         {isDeletable && onDelete && (
           <button
             onClick={onDelete}
             className={`flex items-center text-slate-400 hover:text-red-500 p-0`}
           >
-            <Trashcan className="text-slate-400 hover:text-red-500 group-hover:block hidden h-4 w-4" />
+            <Trashcan className="text-slate-400 hover:text-red-500 group-hover:block group-focus-within:block hidden h-4 w-4" />
           </button>
         )}
       </div>
