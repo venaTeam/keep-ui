@@ -9,7 +9,6 @@ import React, {
 } from "react";
 import { createPortal } from "react-dom";
 import {
-  ColumnDef,
   ColumnPinningState,
   Table as ReactTable,
   getCoreRowModel,
@@ -30,7 +29,10 @@ import {
   WIDGET_PINNED_LEFT,
   mergeVisibleColumnOrder,
 } from "./alert-table-widget-config";
-import { withEmptyGroupPosition } from "./empty-group-row-model";
+import {
+  isGroupableColumn,
+  withEmptyGroupPosition,
+} from "./empty-group-row-model";
 import { useWidgetAlertColumns } from "./use-widget-alert-columns";
 import { useWidgetColumnState } from "./use-widget-column-state";
 import {
@@ -64,16 +66,6 @@ const COMPACT_GROUP_HEADER_CLASSES = "[&_td.group-header-cell]:py-1";
 const BORDER_TOLERANCE_PX = 0.01;
 
 function noop() {}
-
-function getDefaultColumnLabel(columnId: string): string {
-  return getColumnLabel(columnId);
-}
-
-function isGroupable(column: ColumnDef<AlertDto>): boolean {
-  return (
-    column.getGroupingValue !== undefined && column.enableGrouping !== false
-  );
-}
 
 function useElementWidth(ref: RefObject<HTMLElement | null>): number | null {
   const [width, setWidth] = useState<number | null>(null);
@@ -144,28 +136,6 @@ function getColumnWidths(
   };
 }
 
-function useLinkNavigationBlocked(
-  ref: RefObject<HTMLElement | null>,
-  blocked: boolean
-) {
-  useEffect(() => {
-    if (!blocked) {
-      return;
-    }
-    const blockLink = (event: MouseEvent) => {
-      const anchor =
-        event.target instanceof Element
-          ? event.target.closest("a[href]")
-          : null;
-      if (anchor && ref.current?.contains(anchor)) {
-        event.preventDefault();
-      }
-    };
-    window.addEventListener("click", blockLink, true);
-    return () => window.removeEventListener("click", blockLink, true);
-  }, [ref, blocked]);
-}
-
 function WidgetAlertsTableContent({
   item,
   presetNoisy,
@@ -176,30 +146,40 @@ function WidgetAlertsTableContent({
   settingsSlot,
 }: WidgetAlertsTableProps) {
   const widgetKey = `dashboard-widget-${item.i}`;
-  const rootRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const a11yContainerRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLTableElement>(null);
   const containerWidth = useElementWidth(wrapperRef);
   const borderWidth = useCollapsedBorderWidth(tableRef);
   const isNarrow = containerWidth !== null && containerWidth < NARROW_WIDGET_PX;
-  useLinkNavigationBlocked(rootRef, isEditMode);
 
   const { columns, allColumnIds } = useWidgetAlertColumns({
     item,
     alerts,
     presetName: widgetKey,
-    presetNoisy,
   });
   const state = useWidgetColumnState({ item, allColumnIds, onChange });
   const groupExpansion = useGroupExpansion(true);
 
+  const ungroupableColumnIds = useMemo(
+    () =>
+      new Set(
+        columns
+          .filter((column) => !isGroupableColumn(column))
+          .map((column) => column.id as string)
+      ),
+    [columns]
+  );
+  const isGroupable = useCallback(
+    (columnId: string) => !ungroupableColumnIds.has(columnId),
+    [ungroupableColumnIds]
+  );
   const grouping = useMemo(
     () =>
-      state.grouping.filter((id) =>
-        columns.some((column) => column.id === id && isGroupable(column))
+      state.grouping.filter(
+        (id) => isGroupable(id) && columns.some((column) => column.id === id)
       ),
-    [state.grouping, columns]
+    [state.grouping, columns, isGroupable]
   );
   const columnPinning = useMemo<ColumnPinningState>(
     () => ({
@@ -288,21 +268,17 @@ function WidgetAlertsTableContent({
     [renames]
   );
 
-  const ungroupableColumnIds = useMemo(
-    () =>
-      columns
-        .filter((column) => !isGroupable(column))
-        .map((column) => column.id as string),
-    [columns]
-  );
-
   const groupedBy = grouping[0];
+  const allShownGroupsExpanded = table
+    .getRowModel()
+    .rows.filter((row) => row.getIsGrouped())
+    .every((row) => groupExpansion.isGroupExpanded(row.id));
   const opaqueBackground = background
     ? `linear-gradient(${background}, ${background}), #fff`
     : "#fff";
 
   return (
-    <div ref={rootRef} className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1">
       {groupedBy && (
         <div
           className="flex items-center gap-2 text-xs"
@@ -327,11 +303,13 @@ function WidgetAlertsTableContent({
           <button
             type="button"
             className="text-orange-700 hover:underline"
-            onClick={groupExpansion.toggleAll}
+            onClick={
+              allShownGroupsExpanded
+                ? groupExpansion.collapseAll
+                : groupExpansion.expandAll
+            }
           >
-            {groupExpansion.areAllGroupsExpanded()
-              ? "Collapse all"
-              : "Expand all"}
+            {allShownGroupsExpanded ? "Collapse all" : "Expand all"}
           </button>
         </div>
       )}
@@ -373,7 +351,7 @@ function WidgetAlertsTableContent({
             interactive={isEditMode && !!onChange && !isNarrow}
             showSortItems={false}
             showFormatItems={false}
-            getOriginalColumnName={getDefaultColumnLabel}
+            getOriginalColumnName={getColumnLabel}
           />
           <AlertsTableBody
             table={table}
@@ -384,12 +362,12 @@ function WidgetAlertsTableContent({
             presetName={widgetKey}
             groupExpansionState={groupExpansion}
             presetNoisy={presetNoisy}
-            rowStyleOverride="default"
             rowAppearance="plain"
             selectable={false}
             showIncidentDetails
             linksDisabled={isEditMode}
             getColumnLabel={labelOf}
+            inert={isEditMode}
           />
         </Table>
         <div ref={a11yContainerRef} className="sr-only" />
@@ -402,7 +380,7 @@ function WidgetAlertsTableContent({
             state={state}
             columnIds={allColumnIds}
             columnWidths={getColumnWidths(table, columnBounds, tableRef)}
-            ungroupableColumnIds={ungroupableColumnIds}
+            isGroupable={isGroupable}
           />,
           settingsSlot
         )}
@@ -417,6 +395,8 @@ function WidgetAlertsTableContent({
  *
  * Header controls show only in edit mode with `onChange`, and not on a narrow
  * widget. Rows are plain, not clickable and always at the default density.
+ * Expand all / Collapse all reads the groups shown now, so a regrouping or a
+ * refresh that drops a collapsed group does not leave it stale.
  * In a noisy preset (`presetNoisy`), critical firing rows ring as on the
  * presets page; a ringing row's pinned cells take the row's pulsing
  * background instead of the widget's opaque tint.
@@ -431,9 +411,11 @@ function WidgetAlertsTableContent({
  * collapsed outer borders add (an incident group's colored edge) is measured
  * and left free, so a table that fits never scrolls.
  *
- * In edit mode no link inside the widget navigates. A capture listener on
- * `window` cancels the click before the dashboard's leave guard (a capture
- * listener on `document`) sees it, so it never asks to discard unsaved changes.
+ * In edit mode the table body is `inert`: none of its links, rows or group
+ * headers can be clicked or focused, so nothing in it navigates or reaches the
+ * dashboard's leave guard as a link click. The headers, the grouping chip,
+ * Expand all / Collapse all and the ⚙ panel (in `settingsSlot`) sit outside it
+ * and keep working; a single group can't be toggled while editing.
  */
 export default function WidgetAlertsTable(props: WidgetAlertsTableProps) {
   return (

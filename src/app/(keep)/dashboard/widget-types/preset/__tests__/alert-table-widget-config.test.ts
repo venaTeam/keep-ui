@@ -5,8 +5,8 @@ import {
   WIDGET_PINNED_LEFT,
   WIDGET_STATIC_COLUMN_IDS,
   applyWidgetColumnChange,
+  getKnownColumnIds,
   getVisibleColumnIds,
-  isEmptyGroupValue,
   mergeVisibleColumnOrder,
   normalizeColumnOrder,
   resetWidgetColumns,
@@ -53,6 +53,31 @@ describe("resolveWidgetColumnId", () => {
     expect(resolveWidgetColumnId("ticket_id", known)).toBe("ticket_id"));
   it("keeps a known dotted id", () =>
     expect(resolveWidgetColumnId("labels.team", known)).toBe("labels.team"));
+});
+
+describe("getKnownColumnIds", () => {
+  it("knows the fixed columns and the alert's known keys without alerts", () => {
+    const known = getKnownColumnIds();
+    WIDGET_STATIC_COLUMN_IDS.forEach((id) => expect(known.has(id)).toBe(true));
+    expect(known.has("duplicateReason")).toBe(true);
+    expect(known.has("isDuplicate")).toBe(true);
+    expect(known.has("firingCounter")).toBe(false);
+  });
+
+  it("adds the given loaded ids", () => {
+    const known = getKnownColumnIds(["firingCounter", "labels.team"]);
+    expect(known.has("firingCounter")).toBe(true);
+    expect(known.has("labels.team")).toBe(true);
+  });
+
+  it("lets a snake_case id resolve to a known alert key", () => {
+    expect(resolveWidgetColumnId("duplicate_reason", getKnownColumnIds())).toBe(
+      "duplicateReason"
+    );
+    expect(resolveWidgetColumnId("is_duplicate", getKnownColumnIds())).toBe(
+      "isDuplicate"
+    );
+  });
 });
 
 describe("getVisibleColumnIds", () => {
@@ -267,14 +292,4 @@ describe("applyWidgetColumnChange / resetWidgetColumns", () => {
     expect(item.presetColumns).toEqual(["name"]);
     expect(item.alertTable).toEqual({ columnSizing: { name: 200 } });
   });
-});
-
-describe("isEmptyGroupValue", () => {
-  it.each([undefined, null, "", "undefined", "null", []])(
-    "treats %p as empty",
-    (v) => expect(isEmptyGroupValue(v)).toBe(true)
-  );
-  it.each(["firing", 0, false, ["prometheus"]])("treats %p as a value", (v) =>
-    expect(isEmptyGroupValue(v)).toBe(false)
-  );
 });

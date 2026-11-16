@@ -15,6 +15,9 @@ import {
 } from "../alert-table-widget-config";
 import { AlertDto, Severity, Status } from "@/entities/alerts/model/types";
 import { useAlertTableCols } from "@/widgets/alerts-table/lib/alert-table-utils";
+import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import { isGroupableColumn } from "../empty-group-row-model";
+import { useWidgetAlertColumns } from "../use-widget-alert-columns";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { RINGING_REASON } from "@/widgets/alerts-table/lib/alert-ringing";
 
@@ -246,18 +249,36 @@ describe("WidgetAlertsTable", () => {
     const staticIds: readonly string[] = WIDGET_STATIC_COLUMN_IDS;
     const cannotGroup = result.current
       .filter((column) => staticIds.includes(column.id as string))
-      .filter((column) => {
-        const hasAccessor =
-          ("accessorFn" in column && column.accessorFn !== undefined) ||
-          ("accessorKey" in column && column.accessorKey !== undefined);
-        const hasValue = hasAccessor || column.getGroupingValue !== undefined;
-        return !hasValue || column.enableGrouping === false;
-      })
+      .filter((column) => !isGroupableColumn(column))
       .map((column) => column.id as string);
 
     expect([...cannotGroup].sort()).toEqual(
       [...WIDGET_UNGROUPABLE_COLUMN_IDS].sort()
     );
+  });
+
+  it("the header's getCanGroup agrees with isGroupableColumn for every static column", () => {
+    const { result } = renderHook(() => {
+      const { columns } = useWidgetAlertColumns({
+        item: { ...baseItem, presetColumns: [...WIDGET_STATIC_COLUMN_IDS] },
+        alerts: [alertWith()],
+        presetName: "drift-guard",
+      });
+      return useReactTable({
+        data: [],
+        columns,
+        enableGrouping: true,
+        getCoreRowModel: getCoreRowModel(),
+      });
+    });
+
+    WIDGET_STATIC_COLUMN_IDS.forEach((id) => {
+      const column = result.current.getColumn(id)!;
+      expect([id, column.getCanGroup()]).toEqual([
+        id,
+        isGroupableColumn(column.columnDef),
+      ]);
+    });
   });
 
   it("legacy snake_case column shows the camelCase value", () => {
@@ -269,6 +290,17 @@ describe("WidgetAlertsTable", () => {
     expect(cellsOf("lastReceived")[0].querySelector("span")).toHaveAttribute(
       "title",
       "2026-10-01T10:00:00.000Z"
+    );
+  });
+
+  it("a saved snake_case column whose camelCase form is a known alert key shows the value", () => {
+    renderWidget({ presetColumns: ["name", "duplicate_reason"] }, [
+      alertWith({ duplicateReason: "same fingerprint" }),
+    ]);
+
+    expect(headerIds()).toEqual(["name", "duplicateReason"]);
+    expect(cellsOf("duplicateReason")[0]).toHaveTextContent(
+      "same fingerprint"
     );
   });
 
@@ -380,6 +412,54 @@ describe("WidgetAlertsTable", () => {
       "No Service 3 shown",
     ]);
     expect(texts).toContain("checkout 1 shown");
+  });
+
+  it("a saved snake_case groupBy groups by the alerts' camelCase field", () => {
+    renderWidget({ alertTable: { groupBy: "firing_counter" } }, [
+      alertWith({ firingCounter: 3 }),
+      alertWith({ firingCounter: 3 }),
+      alertWith({ firingCounter: 5 }),
+    ]);
+
+    expect(groupHeaderTexts()).toEqual(["3 2 shown", "5 1 shown"]);
+    expect(
+      screen.getByText("Rows grouped by Firing Counter")
+    ).toBeInTheDocument();
+  });
+
+  it("a saved groupBy on a list field renders ungrouped", () => {
+    renderWidget({ alertTable: { groupBy: "enriched_fields" } }, [
+      alertWith({ enriched_fields: ["a"] }),
+      alertWith({ enriched_fields: ["b"] }),
+    ]);
+
+    expect(groupHeaders()).toHaveLength(0);
+    expect(bodyRows()).toHaveLength(2);
+    expect(screen.queryByText(/Rows grouped by/)).toBeNull();
+  });
+
+  it("the header cannot group a field whose loaded values are lists or objects", () => {
+    const { result } = renderHook(() => {
+      const { columns } = useWidgetAlertColumns({
+        item: { ...baseItem, presetColumns: ["name", "enriched_fields", "region"] },
+        alerts: [
+          alertWith({ enriched_fields: ["a"], region: "eu" }),
+          alertWith({ enriched_fields: [], region: "us" }),
+        ],
+        presetName: "list-guard",
+      });
+      return useReactTable({
+        data: [],
+        columns,
+        enableGrouping: true,
+        getCoreRowModel: getCoreRowModel(),
+      });
+    });
+
+    const listColumn = result.current.getColumn("enriched_fields")!;
+    expect(listColumn.getCanGroup()).toBe(false);
+    expect(isGroupableColumn(listColumn.columnDef)).toBe(false);
+    expect(result.current.getColumn("region")!.getCanGroup()).toBe(true);
   });
 
   it("a display-only group-by column renders ungrouped", () => {
@@ -782,6 +862,49 @@ describe("WidgetAlertsTable", () => {
     expect(bodyRows()).toHaveLength(2);
   });
 
+  it("after regrouping, the toggle reads from the shown groups and its first click collapses them", () => {
+    const alerts = [
+      linkedAlert("i1", "Checkout degraded"),
+      alertWith({ service: "payments" }),
+    ];
+    const { rerender } = renderWidget(
+      { alertTable: { groupBy: "environment" } },
+      alerts
+    );
+    fireEvent.click(groupHeader("prod"));
+    expect(screen.getByRole("button", { name: "Expand all" })).toBeInTheDocument();
+
+    rerender(widget({ alertTable: { groupBy: "incident" } }, alerts));
+    expect(bodyRows()).toHaveLength(2);
+    expect(
+      screen.getByRole("button", { name: "Collapse all" })
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Collapse all" }));
+    expect(bodyRows()).toHaveLength(0);
+    expect(screen.getByRole("button", { name: "Expand all" })).toBeInTheDocument();
+  });
+
+  it("a refresh that drops the only collapsed group brings back Collapse all", () => {
+    const { rerender } = renderWidget({ alertTable: { groupBy: "service" } }, [
+      alertWith({ service: "checkout" }),
+      alertWith({ service: "payments" }),
+    ]);
+    fireEvent.click(groupHeader("payments"));
+    expect(screen.getByRole("button", { name: "Expand all" })).toBeInTheDocument();
+
+    rerender(
+      widget({ alertTable: { groupBy: "service" } }, [
+        alertWith({ service: "checkout" }),
+      ])
+    );
+
+    expect(bodyRows()).toHaveLength(1);
+    expect(
+      screen.getByRole("button", { name: "Collapse all" })
+    ).toBeInTheDocument();
+  });
+
   it("a collapsed group stays collapsed after the alerts refresh", () => {
     const { rerender } = renderWidget({ alertTable: { groupBy: "incident" } }, [
       linkedAlert("i1", "Checkout degraded"),
@@ -818,22 +941,7 @@ describe("WidgetAlertsTable", () => {
     expect(within(groupHeader("Checkout degraded")).queryByRole("link")).toBeNull();
   });
 
-  describe("links inside the table", () => {
-    const seenByLeaveGuard: boolean[] = [];
-    const recordLikeLeaveGuard = (event: MouseEvent) => {
-      seenByLeaveGuard.push(event.defaultPrevented);
-      event.preventDefault();
-    };
-
-    beforeEach(() => {
-      seenByLeaveGuard.length = 0;
-      document.addEventListener("click", recordLikeLeaveGuard, true);
-    });
-
-    afterEach(() => {
-      document.removeEventListener("click", recordLikeLeaveGuard, true);
-    });
-
+  describe("links and rows in edit mode", () => {
     const alerts = () => [
       alertWith({
         incident: "i1",
@@ -846,53 +954,58 @@ describe("WidgetAlertsTable", () => {
     const item = { presetColumns: ["name", "incident", "runbook"] };
     const linkIn = (columnId: string) =>
       within(cellsOf(columnId)[0] as HTMLElement).getByRole("link");
+    const tableBody = () =>
+      widgetRoot().querySelector("tbody") as HTMLTableSectionElement;
+    const isInsideInert = (element: Element) => !!element.closest("[inert]");
 
-    it("a link in a cell navigates in view mode", () => {
+    it("in view mode the table body is not inert and its links are live", () => {
       renderWidget(item, alerts());
 
-      fireEvent.click(linkIn("incident"));
-      fireEvent.click(linkIn("runbook"));
-
-      expect(seenByLeaveGuard).toEqual([false, false]);
+      expect(tableBody()).not.toHaveAttribute("inert");
+      expect(isInsideInert(linkIn("incident"))).toBe(false);
+      expect(isInsideInert(linkIn("runbook"))).toBe(false);
     });
 
-    it("no link in a cell navigates in edit mode, before the leave guard sees the click", () => {
-      renderWidget(item, alerts(), { isEditMode: true, onChange: jest.fn() });
-
-      expect(linkIn("incident")).toHaveAttribute("href", "/incidents/i1");
-      fireEvent.click(linkIn("incident"));
-      fireEvent.click(linkIn("runbook"));
-
-      expect(seenByLeaveGuard).toEqual([true, true]);
-    });
-
-    it("links stop navigating on entering edit mode and navigate again after it", () => {
-      const data = alerts();
-      const { rerender } = renderWidget(item, data);
-      rerender(widget(item, data, { isEditMode: true, onChange: jest.fn() }));
-      fireEvent.click(linkIn("incident"));
-      rerender(widget(item, data));
-      fireEvent.click(linkIn("incident"));
-
-      expect(seenByLeaveGuard).toEqual([true, false]);
-    });
-
-    it("leaves links outside the widget and buttons inside it alone in edit mode", () => {
+    it("in edit mode every link and row sits inside the inert table body", () => {
       renderWidget(
         { ...item, alertTable: { groupBy: "incident" } },
         alerts(),
         { isEditMode: true, onChange: jest.fn() }
       );
-      const outside = document.createElement("a");
-      outside.href = "/alerts/feed";
-      document.body.appendChild(outside);
 
-      fireEvent.click(outside);
-      fireEvent.click(screen.getByRole("button", { name: "Collapse all" }));
+      expect(tableBody()).toHaveAttribute("inert");
+      [linkIn("incident"), linkIn("runbook"), ...bodyRows(), ...groupHeaders()].forEach(
+        (element) => expect(isInsideInert(element)).toBe(true)
+      );
+    });
 
-      expect(seenByLeaveGuard).toEqual([false, false]);
+    it("in edit mode the headers, the grouping chip and Expand all stay usable", () => {
+      renderWidget(
+        { ...item, alertTable: { groupBy: "incident" } },
+        alerts(),
+        { isEditMode: true, onChange: jest.fn() }
+      );
+
+      expect(isInsideInert(widgetRoot().querySelector("thead")!)).toBe(false);
+      expect(isInsideInert(screen.getByTestId("drag-handle-name"))).toBe(false);
+      expect(
+        isInsideInert(screen.getByRole("button", { name: "Clear grouping" }))
+      ).toBe(false);
+      const collapseAll = screen.getByRole("button", { name: "Collapse all" });
+      expect(isInsideInert(collapseAll)).toBe(false);
+
+      fireEvent.click(collapseAll);
       expect(bodyRows()).toHaveLength(0);
-      outside.remove();
+    });
+
+    it("the body turns inert on entering edit mode and live again after it", () => {
+      const data = alerts();
+      const { rerender } = renderWidget(item, data);
+      rerender(widget(item, data, { isEditMode: true, onChange: jest.fn() }));
+      expect(tableBody()).toHaveAttribute("inert");
+
+      rerender(widget(item, data));
+      expect(tableBody()).not.toHaveAttribute("inert");
     });
   });
 
@@ -965,6 +1078,17 @@ describe("WidgetAlertsTable", () => {
 
     expect(widgetRoot()).toHaveClass("overflow-x-auto", "text-xs");
     expect(widgetRoot().style.background).toBe("rgba(16, 185, 129, 0.1)");
+  });
+
+  it("skeleton rows match the widget's visible columns", () => {
+    renderWidget(
+      { presetColumns: ["name", "description", "lastReceived"] },
+      "loading"
+    );
+
+    const rows = document.querySelectorAll('[data-cy="alerts-row-skeleton"]');
+    expect(rows).toHaveLength(5);
+    rows.forEach((row) => expect(row.querySelectorAll("td")).toHaveLength(3));
   });
 
   it("shows 5 skeleton rows while alerts are undefined", () => {
@@ -1047,6 +1171,100 @@ describe("WidgetAlertsTable", () => {
 
       expect(onChange).toHaveBeenCalledTimes(1);
       expect(onChange.mock.calls[0][0].presetColumns).toEqual(["name"]);
+    });
+
+    it("a saved snake_case groupBy adds no empty column beside the real one", () => {
+      renderWithSlot(
+        { alertTable: { groupBy: "firing_counter" } },
+        { isEditMode: true, onChange: jest.fn() },
+        [alertWith({ firingCounter: 3 })]
+      );
+
+      fireEvent.click(settingsButton() as HTMLElement);
+      const columnIds = Array.from(
+        document.querySelectorAll("[data-table-settings-column]")
+      ).map((row) => row.getAttribute("data-table-settings-column"));
+
+      expect(columnIds).toContain("firingCounter");
+      expect(columnIds).not.toContain("firing_counter");
+    });
+
+    it("does not offer a list field in Group rows by", async () => {
+      renderWithSlot({}, { isEditMode: true, onChange: jest.fn() }, [
+        alertWith({ enriched_fields: ["a"], region: "eu" }),
+      ]);
+
+      fireEvent.click(settingsButton() as HTMLElement);
+      fireEvent.click(
+        screen.getByRole("button", { name: "Show Group rows by options" })
+      );
+      const listbox = await screen.findByRole("listbox");
+
+      expect(
+        within(listbox).queryByRole("option", { name: "enriched_fields" })
+      ).toBeNull();
+      expect(
+        within(listbox).getByRole("option", { name: "region" })
+      ).toBeInTheDocument();
+    });
+
+    it("offers a list field as one column, never one column per item", () => {
+      renderWithSlot({}, { isEditMode: true, onChange: jest.fn() }, [
+        linkedAlert("i1", "Checkout degraded"),
+        alertWith({ enriched_fields: ["service"] }),
+      ]);
+
+      fireEvent.click(settingsButton() as HTMLElement);
+      const columnIds = Array.from(
+        document.querySelectorAll("[data-table-settings-column]")
+      ).map((row) => row.getAttribute("data-table-settings-column"));
+
+      expect(columnIds).toEqual(
+        expect.arrayContaining(["incident_dto", "enriched_fields"])
+      );
+      expect(columnIds.filter((id) => /\.\d+(\.|$)/.test(id ?? ""))).toEqual(
+        []
+      );
+    });
+
+    it("a widget the form saved with the default columns is not customized", () => {
+      renderWithSlot(
+        {
+          presetColumns: [
+            "severity",
+            "status",
+            "source",
+            "name",
+            "description",
+            "lastReceived",
+          ],
+        },
+        { isEditMode: true, onChange: jest.fn() }
+      );
+
+      fireEvent.click(settingsButton() as HTMLElement);
+
+      expect(screen.queryByText("Customized for this widget")).toBeNull();
+      expect(
+        screen.getByRole("button", { name: "Reset to defaults" })
+      ).toBeDisabled();
+    });
+
+    it("a widget the form saved with other columns is customized, and Reset brings back the defaults", () => {
+      const onChange = jest.fn();
+      renderWithSlot(
+        { presetColumns: ["name", "service"] },
+        { isEditMode: true, onChange }
+      );
+
+      fireEvent.click(settingsButton() as HTMLElement);
+      expect(
+        screen.getByText("Customized for this widget")
+      ).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Reset to defaults" }));
+
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange.mock.calls[0][0]).not.toHaveProperty("presetColumns");
     });
 
     it("Reset to defaults emits one change that drops the widget's settings", () => {

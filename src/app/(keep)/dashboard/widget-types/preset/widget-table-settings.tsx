@@ -3,7 +3,6 @@ import React, {
   ReactNode,
   RefObject,
   forwardRef,
-  useId,
   useMemo,
   useRef,
   useState,
@@ -50,13 +49,14 @@ import {
   COMMON_ENRICHMENT_FIELDS,
   getAlertColumnOptions,
   getColumnLabel,
+  matchesSearch,
 } from "@/widgets/alerts-table/lib/alert-column-options";
 import {
-  EmptyGroupPosition,
   WIDGET_PINNED_LEFT,
   mergeVisibleColumnOrder,
-  resolveWidgetColumnId,
+  resolveFieldIds,
 } from "./alert-table-widget-config";
+import { EmptyGroupPositionControl } from "./empty-group-position-control";
 import { GroupBySelect } from "./group-by-select";
 import type { WidgetColumnState } from "./use-widget-column-state";
 
@@ -79,15 +79,11 @@ interface WidgetTableSettingsProps {
   state: WidgetColumnState;
   columnIds: string[];
   columnWidths: WidgetColumnWidths;
-  ungroupableColumnIds?: readonly string[];
+  isGroupable?: (columnId: string) => boolean;
 }
 
 const NO_FIELDS: string[] = [];
-const NO_IDS: readonly string[] = [];
-const EMPTY_GROUP_POSITIONS: { value: EmptyGroupPosition; label: string }[] = [
-  { value: "top", label: "Top" },
-  { value: "bottom", label: "Bottom" },
-];
+const anyColumn = () => true;
 const SECTION_TITLE_CLASS =
   "mb-1 mt-3 text-[10px] font-semibold uppercase tracking-wide text-gray-500";
 const ICON_BUTTON_CLASS =
@@ -97,19 +93,19 @@ const TEXT_BUTTON_CLASS =
 
 const isPinned = (id: string) => WIDGET_PINNED_LEFT.includes(id);
 
-const matches = (text: string, query: string) =>
-  text.toLowerCase().includes(query.toLowerCase());
-
 function useFieldOptions(columnIds: string[]): string[] {
   const { data } = useFacetPotentialFields("alerts");
-  return useMemo(() => {
-    const known = new Set(columnIds);
-    const extraFields = [...(data ?? NO_FIELDS), ...COMMON_ENRICHMENT_FIELDS];
-    return getAlertColumnOptions(
-      columnIds,
-      extraFields.map((id) => resolveWidgetColumnId(id, known))
-    );
-  }, [columnIds, data]);
+  return useMemo(
+    () =>
+      getAlertColumnOptions(
+        columnIds,
+        resolveFieldIds(
+          [...(data ?? NO_FIELDS), ...COMMON_ENRICHMENT_FIELDS],
+          columnIds
+        )
+      ),
+    [columnIds, data]
+  );
 }
 
 function RenameInput({
@@ -546,7 +542,7 @@ function AddColumnSearch({
   const search = query.trim();
   const results = search
     ? fieldOptions.filter(
-        (id) => !state.columnVisibility[id] && matches(id, search)
+        (id) => !state.columnVisibility[id] && matchesSearch(id, search)
       )
     : [];
 
@@ -594,46 +590,14 @@ function AddColumnSearch({
   );
 }
 
-function EmptyGroupPositionSetting({ state }: { state: WidgetColumnState }) {
-  const name = useId();
-
-  return (
-    <fieldset>
-      <legend className={SECTION_TITLE_CLASS}>Rows with no value</legend>
-      <div className="flex gap-3">
-        {EMPTY_GROUP_POSITIONS.map((option) => (
-          <label
-            key={option.value}
-            className="flex cursor-pointer items-center gap-1"
-          >
-            <input
-              type="radio"
-              name={name}
-              value={option.value}
-              checked={state.emptyGroupPosition === option.value}
-              onChange={() => state.setEmptyGroupPosition(option.value)}
-              className="border-gray-300 text-orange-500 accent-orange-500 focus:ring-orange-300"
-            />
-            {option.label}
-          </label>
-        ))}
-      </div>
-    </fieldset>
-  );
-}
-
 function SettingsContent({
   state,
   columnIds,
   columnWidths,
-  ungroupableColumnIds,
+  isGroupable,
   onClose,
 }: Required<WidgetTableSettingsProps> & { onClose: () => void }) {
   const fieldOptions = useFieldOptions(columnIds);
-  const groupOptions = useMemo(
-    () => fieldOptions.filter((id) => !ungroupableColumnIds.includes(id)),
-    [fieldOptions, ungroupableColumnIds]
-  );
   const groupBy = state.grouping[0] ?? null;
 
   return (
@@ -658,10 +622,17 @@ function SettingsContent({
       <GroupBySelect
         value={groupBy}
         onChange={(value) => state.setGrouping(value ? [value] : [])}
-        fieldOptions={groupOptions}
+        fieldOptions={fieldOptions}
+        isGroupable={isGroupable}
         data-cy="dashboard-widget-table-settings-group-by"
       />
-      {groupBy && <EmptyGroupPositionSetting state={state} />}
+      {groupBy && (
+        <EmptyGroupPositionControl
+          value={state.emptyGroupPosition}
+          onChange={state.setEmptyGroupPosition}
+          titleClassName={SECTION_TITLE_CLASS}
+        />
+      )}
       <div className="mt-3 flex items-center gap-2 border-t border-gray-200 pt-2">
         {state.isCustomized && (
           <span className="text-gray-500">Customized for this widget</span>
@@ -694,16 +665,17 @@ function SettingsContent({
  * rows with no value go, and resets the widget to the defaults. Every change
  * goes straight to `state`; a width change passes the whole sizing map.
  *
- * `columnIds` are the columns the widget can show; `ungroupableColumnIds` are
- * left out of the grouping options. The popover is a dialog named "Table
- * settings", rendered in a portal so the dashboard grid cannot clip or cover
- * it. Reorder announcements read the columns' labels, not their ids.
+ * `columnIds` are the columns the widget can show; the grouping options are
+ * the fields `isGroupable` accepts (every field by default). The popover is a
+ * dialog named "Table settings", rendered in a portal so the dashboard grid
+ * cannot clip or cover it. Reorder announcements read the columns' labels,
+ * not their ids.
  */
 export function WidgetTableSettings({
   state,
   columnIds,
   columnWidths,
-  ungroupableColumnIds = NO_IDS,
+  isGroupable = anyColumn,
 }: WidgetTableSettingsProps) {
   const { refs, floatingStyles } = useFloating({
     strategy: "fixed",
@@ -737,7 +709,7 @@ export function WidgetTableSettings({
             state={state}
             columnIds={columnIds}
             columnWidths={columnWidths}
-            ungroupableColumnIds={ungroupableColumnIds}
+            isGroupable={isGroupable}
             onClose={close}
           />
         )}

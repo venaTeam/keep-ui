@@ -10,12 +10,14 @@ import { RiArrowDownSLine } from "react-icons/ri";
 import {
   GROUP_BY_SHORTLIST,
   GROUP_BY_SHORTLIST_LABELS,
+  matchesSearch,
 } from "@/widgets/alerts-table/lib/alert-column-options";
 
 interface GroupBySelectProps {
   value: string | null;
   onChange: (value: string | null) => void;
   fieldOptions: string[];
+  isGroupable?: (field: string) => boolean;
   "data-testid"?: string;
   "data-cy"?: string;
 }
@@ -34,8 +36,7 @@ const getOptionLabel = (option: string) =>
     ? NONE_LABEL
     : (GROUP_BY_SHORTLIST_LABELS.get(option) ?? option);
 
-const matches = (text: string, query: string) =>
-  text.toLowerCase().includes(query.toLowerCase());
+const anyField = () => true;
 
 const isTextInput = (event: React.KeyboardEvent) =>
   event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey;
@@ -52,8 +53,9 @@ const Option = ({ value, label }: { value: string; label: string }) => (
  * filters all of them. While the list is open the box shows only the search
  * text, and typing or pasting into the closed box replaces the shown label,
  * so a search never starts with the current label. `onChange` receives null
- * for None. A saved field that is no longer among `fieldOptions` stays listed
- * so it remains visible.
+ * for None. Only fields `isGroupable` accepts (every field by default) are
+ * listed, shortlist included. A saved field that is no longer among
+ * `fieldOptions`, or no longer groupable, stays listed so it remains visible.
  * The root's `data-cy` is the passed `data-cy`, else the passed `data-testid`
  * (also set as `data-testid`), else `dashboard-widget-form-group-rows-by`.
  */
@@ -61,6 +63,7 @@ export function GroupBySelect({
   value,
   onChange,
   fieldOptions,
+  isGroupable = anyField,
   "data-testid": dataTestId,
   "data-cy": dataCy,
 }: GroupBySelectProps) {
@@ -68,7 +71,7 @@ export function GroupBySelect({
   const otherFieldsLabelId = useId();
 
   const otherFields = useMemo(() => {
-    const fields = new Set(fieldOptions);
+    const fields = new Set(fieldOptions.filter(isGroupable));
     if (value) {
       fields.add(value);
     }
@@ -77,14 +80,16 @@ export function GroupBySelect({
         (field) => field !== NONE && !GROUP_BY_SHORTLIST_LABELS.has(field)
       )
       .sort((first, second) => first.localeCompare(second));
-  }, [fieldOptions, value]);
+  }, [fieldOptions, isGroupable, value]);
 
   const search = query.trim();
-  const showNone = matches(NONE_LABEL, search);
+  const showNone = matchesSearch(NONE_LABEL, search);
   const shortlist = GROUP_BY_SHORTLIST.filter(
-    (option) => matches(option.label, search) || matches(option.value, search)
+    (option) =>
+      (isGroupable(option.value) || option.value === value) &&
+      (matchesSearch(option.label, search) || matchesSearch(option.value, search))
   );
-  const others = otherFields.filter((field) => matches(field, search));
+  const others = otherFields.filter((field) => matchesSearch(field, search));
   const hasTopOptions = showNone || shortlist.length > 0;
 
   const handleChange = (next: string | null) => {

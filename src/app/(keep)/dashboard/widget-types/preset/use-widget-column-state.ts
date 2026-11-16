@@ -11,6 +11,7 @@ import {
   EmptyGroupPosition,
   WidgetColumnChange,
   applyWidgetColumnChange,
+  getGroupByColumnId,
   getVisibleColumnIds,
   normalizeColumnOrder,
   resetWidgetColumns,
@@ -44,10 +45,25 @@ export interface WidgetColumnState {
 
 function getGrouping(
   item: WidgetData,
-  allColumnIds: readonly string[]
+  knownIds: ReadonlySet<string>
 ): GroupingState {
-  const groupBy = item.alertTable?.groupBy;
-  return groupBy && allColumnIds.includes(groupBy) ? [groupBy] : [];
+  const groupBy = getGroupByColumnId(item, knownIds);
+  return groupBy && knownIds.has(groupBy) ? [groupBy] : [];
+}
+
+function showsDefaultColumns(
+  item: WidgetData,
+  visibleColumns: readonly string[],
+  knownIds: ReadonlySet<string>
+): boolean {
+  const defaults = getVisibleColumnIds(
+    { ...item, presetColumns: undefined },
+    knownIds
+  );
+  return (
+    visibleColumns.length === defaults.length &&
+    defaults.every((id) => visibleColumns.includes(id))
+  );
 }
 
 function resolveUpdater<T>(updater: Updater<T>, current: T): T {
@@ -61,15 +77,23 @@ function resolveUpdater<T>(updater: Updater<T>, current: T): T {
  *
  * Each setting falls back on its own: the order to the shared default columns,
  * the renames and sizing to none, grouping to off and the empty group to the top.
+ * Saved visible columns and `groupBy` resolve against `allColumnIds` through
+ * `resolveWidgetColumnId`, so a legacy snake_case id reads as its column.
  * Visible columns the order does not place follow it in their `presetColumns`
  * order, then every other column, so the visible order does not depend on the
  * order the loaded alerts list their fields in.
  * Nothing is read from the viewer's browser, so every viewer sees the same table.
  *
+ * `isCustomized` is true when `alertTable` holds a setting or the visible
+ * columns, compared as a set once resolved, differ from the widget defaults.
+ * A widget the form saved with the default columns is therefore not
+ * customized. `reset` removes both `presetColumns` and `alertTable`.
+ *
  * Setters pass the whole next widget to `onChange` and build on the latest widget
  * they emitted, so several calls in one tick compose. A grouping equal to the
- * saved one emits nothing, so clearing an ungrouped widget does not mark it
- * customized. Without `onChange` the setters do nothing and `canEdit` is
+ * saved one, once resolved, emits nothing, so neither clearing an ungrouped
+ * widget nor choosing the column a saved snake_case `groupBy` resolves to marks
+ * it customized. Without `onChange` the setters do nothing and `canEdit` is
  * false. Pass a memoized `allColumnIds` to keep the setters stable between
  * renders.
  */
@@ -88,9 +112,10 @@ export function useWidgetColumnState({
     latestItem.current = item;
   }, [item]);
 
+  const knownIds = useMemo(() => new Set(allColumnIds), [allColumnIds]);
   const visibleColumns = useMemo(
-    () => getVisibleColumnIds(item, new Set(allColumnIds)),
-    [item, allColumnIds]
+    () => getVisibleColumnIds(item, knownIds),
+    [item, knownIds]
   );
   const columnVisibility = useMemo(
     () => toVisibilityState(visibleColumns, allColumnIds),
@@ -106,8 +131,8 @@ export function useWidgetColumnState({
     [savedOrder, visibleColumns, allColumnIds]
   );
   const grouping = useMemo(
-    () => getGrouping(item, allColumnIds),
-    [item, allColumnIds]
+    () => getGrouping(item, knownIds),
+    [item, knownIds]
   );
 
   const emit = useCallback(
@@ -135,10 +160,10 @@ export function useWidgetColumnState({
       emit({
         visibleColumns: visibleIdsFromVisibilityState(
           next,
-          getVisibleColumnIds(latestItem.current, new Set(allColumnIds))
+          getVisibleColumnIds(latestItem.current, knownIds)
         ),
       }),
-    [emit, allColumnIds]
+    [emit, knownIds]
   );
   const setColumnRenameMapping = useCallback(
     (mapping: Record<string, string>) =>
@@ -159,15 +184,17 @@ export function useWidgetColumnState({
     (updater: Updater<GroupingState>) => {
       const next = resolveUpdater(
         updater,
-        getGrouping(latestItem.current, allColumnIds)
+        getGrouping(latestItem.current, knownIds)
       );
       const groupBy = next[0] ?? null;
-      if (groupBy === (latestItem.current.alertTable?.groupBy ?? null)) {
+      if (
+        groupBy === (getGroupByColumnId(latestItem.current, knownIds) ?? null)
+      ) {
         return;
       }
       emit({ groupBy });
     },
-    [emit, allColumnIds]
+    [emit, knownIds]
   );
   const setEmptyGroupPosition = useCallback(
     (position: EmptyGroupPosition) => emit({ emptyGroupPosition: position }),
@@ -191,8 +218,8 @@ export function useWidgetColumnState({
     grouping,
     emptyGroupPosition: item.alertTable?.emptyGroupPosition ?? "top",
     isCustomized:
-      item.presetColumns !== undefined ||
-      Object.keys(item.alertTable ?? {}).length > 0,
+      Object.keys(item.alertTable ?? {}).length > 0 ||
+      !showsDefaultColumns(item, visibleColumns, knownIds),
     canEdit: onChange !== undefined,
     setColumnOrder,
     setColumnVisibility,

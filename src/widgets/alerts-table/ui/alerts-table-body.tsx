@@ -3,10 +3,7 @@ import { AlertDto } from "@/entities/alerts/model";
 import { Table, flexRender } from "@tanstack/react-table";
 import React, { useRef, useEffect } from "react";
 import { GroupedRow } from "@/widgets/alerts-table/ui/alert-grouped-row";
-import {
-  RowStyle,
-  useAlertRowStyle,
-} from "@/entities/alerts/model/useAlertRowStyle";
+import { useAlertRowStyle } from "@/entities/alerts/model/useAlertRowStyle";
 import { getCommonPinningStylesAndClassNames } from "@/shared/ui";
 import {
   getRowClassName,
@@ -40,12 +37,12 @@ interface Props {
   presetName: string;
   groupExpansionState?: ReturnType<typeof useGroupExpansion>;
   presetNoisy?: boolean;
-  rowStyleOverride?: RowStyle;
   rowAppearance?: RowAppearance;
   selectable?: boolean;
   showIncidentDetails?: boolean;
   linksDisabled?: boolean;
   getColumnLabel?: (columnId: string) => string;
+  inert?: boolean;
 }
 
 export function AlertsTableBody({
@@ -58,15 +55,14 @@ export function AlertsTableBody({
   pageSize,
   groupExpansionState,
   presetNoisy = false,
-  rowStyleOverride,
   rowAppearance = "default",
   selectable = true,
   showIncidentDetails = false,
   linksDisabled = false,
   getColumnLabel,
+  inert,
 }: Props) {
-  const [storedRowStyle] = useAlertRowStyle();
-  const rowStyle = rowStyleOverride ?? storedRowStyle;
+  const [rowStyle] = useAlertRowStyle();
   const syncBlink = useSyncedAnimation(presetNoisy);
   const { isRowExpanded } = useExpandedRows(presetName);
 
@@ -144,7 +140,7 @@ export function AlertsTableBody({
 
   if (showSkeleton) {
     return (
-      <TableBody data-cy="alerts-table-body">
+      <TableBody data-cy="alerts-table-body" inert={inert}>
         {Array.from({ length: pageSize || 20 }).map((_, index) => (
           <TableRow
             key={index}
@@ -159,7 +155,7 @@ export function AlertsTableBody({
               rowAppearance
             )}
           >
-            {Array.from({ length: 7 }).map((_, cellIndex) => (
+            {table.getVisibleLeafColumns().map((_, cellIndex) => (
               <TableCell
                 key={cellIndex}
                 className={applyRowAppearance(
@@ -363,11 +359,15 @@ export function AlertsTableBody({
   });
 
   if (!selectable) {
-    return <TableBody data-cy="alerts-table-body">{rows}</TableBody>;
+    return (
+      <TableBody data-cy="alerts-table-body" inert={inert}>
+        {rows}
+      </TableBody>
+    );
   }
 
   return (
-    <TableBody data-cy="alerts-table-body">
+    <TableBody data-cy="alerts-table-body" inert={inert}>
       {/* @ts-ignore */}
       <SelectableGroup
         ref={selectableGroupRef}

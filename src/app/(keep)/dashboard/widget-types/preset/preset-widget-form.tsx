@@ -10,7 +10,7 @@ import {
   TextInput,
   Switch,
 } from "@tremor/react";
-import { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Controller,
   get,
@@ -28,11 +28,11 @@ import {
 } from "../../types";
 import ColumnsSelection from "./columns-selection";
 import { CountByControl } from "./count-by-control";
+import { EmptyGroupPositionControl } from "./empty-group-position-control";
 import { GroupBySelect } from "./group-by-select";
 import {
-  WIDGET_STATIC_COLUMN_IDS,
   WIDGET_UNGROUPABLE_COLUMN_IDS,
-  resolveWidgetColumnId,
+  resolveFieldIds,
 } from "./alert-table-widget-config";
 import { CountBy, isShowingMissing } from "@/entities/presets/model/count-by";
 import { useFacetPotentialFields } from "@/features/filter/hooks";
@@ -47,18 +47,10 @@ const getGroupedCounterRows = (countBy: CountBy) =>
     : GROUPED_COUNTER_ROWS;
 
 const GROUPING_HINT = "Grouping works best with 20 or more alerts";
-const GROUPING_HINT_BELOW_COUNT = 10;
+const GROUPING_HINT_BELOW_COUNT = 20;
 const DEFAULT_EMPTY_GROUP_POSITION: EmptyGroupPosition = "top";
-const STATIC_COLUMN_IDS: ReadonlySet<string> = new Set(
-  WIDGET_STATIC_COLUMN_IDS
-);
-const EMPTY_GROUP_POSITIONS: ReadonlyArray<{
-  value: EmptyGroupPosition;
-  label: string;
-}> = [
-  { value: "top", label: "Top" },
-  { value: "bottom", label: "Bottom" },
-];
+const isGroupableField = (field: string) =>
+  !WIDGET_UNGROUPABLE_COLUMN_IDS.includes(field);
 
 const getAlertTableConfig = (
   saved: AlertTableWidgetConfig | undefined,
@@ -88,10 +80,7 @@ function GroupRowsByControl({
   const { data } = useFacetPotentialFields("alerts");
   const fieldOptions = useMemo(
     () =>
-      getAlertColumnOptions(
-        [],
-        (data ?? []).map((id) => resolveWidgetColumnId(id, STATIC_COLUMN_IDS))
-      ).filter((id) => !WIDGET_UNGROUPABLE_COLUMN_IDS.includes(id)),
+      getAlertColumnOptions([], resolveFieldIds(data ?? [])),
     [data]
   );
 
@@ -102,51 +91,9 @@ function GroupRowsByControl({
         value={value}
         onChange={onChange}
         fieldOptions={fieldOptions}
+        isGroupable={isGroupableField}
       />
       {showHint && <Text className="mt-1 text-xs">{GROUPING_HINT}</Text>}
-    </div>
-  );
-}
-
-function RowsWithNoValueControl({
-  value,
-  onChange,
-}: {
-  value: EmptyGroupPosition;
-  onChange: (value: EmptyGroupPosition) => void;
-}) {
-  const name = useId();
-  const titleId = useId();
-
-  return (
-    <div
-      className="mb-4 mt-2"
-      data-cy="dashboard-widget-form-rows-with-no-value"
-    >
-      <Subtitle id={titleId}>Rows with no value</Subtitle>
-      <div
-        role="radiogroup"
-        aria-labelledby={titleId}
-        className="mt-1 flex gap-4 text-sm text-gray-700"
-      >
-        {EMPTY_GROUP_POSITIONS.map((option) => (
-          <label
-            key={option.value}
-            className="flex cursor-pointer items-center gap-1.5"
-          >
-            <input
-              type="radio"
-              name={name}
-              value={option.value}
-              checked={option.value === value}
-              onChange={() => onChange(option.value)}
-              data-cy={`dashboard-widget-form-rows-with-no-value-${option.value}`}
-              className="border-gray-300 text-orange-500 accent-orange-500 focus:ring-orange-300"
-            />
-            {option.label}
-          </label>
-        ))}
-      </div>
     </div>
   );
 }
@@ -465,9 +412,13 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
             }
           />
           {groupBy && (
-            <RowsWithNoValueControl
+            <EmptyGroupPositionControl
               value={emptyGroupPosition}
               onChange={setEmptyGroupPosition}
+              titleAs={Subtitle}
+              className="mb-4 mt-2"
+              optionsClassName="mt-1 flex gap-4 text-sm text-gray-700"
+              data-cy="dashboard-widget-form-rows-with-no-value"
             />
           )}
         </>

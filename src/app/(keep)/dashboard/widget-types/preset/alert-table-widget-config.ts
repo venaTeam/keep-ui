@@ -1,5 +1,6 @@
 import { camelCase } from "lodash";
 import type { VisibilityState } from "@tanstack/react-table";
+import { AlertKnownKeys } from "@/entities/alerts/model/types";
 import type {
   AlertTableWidgetConfig,
   EmptyGroupPosition,
@@ -8,7 +9,6 @@ import type {
 import { defaultColumns } from "./constants";
 
 export type { AlertTableWidgetConfig, EmptyGroupPosition };
-export { isEmptyGroupValue } from "@/widgets/alerts-table/lib/group-values";
 
 /** Row-chrome columns the widget never shows, even when a saved config lists them. */
 export const WIDGET_EXCLUDED_COLUMNS: readonly string[] = [
@@ -54,6 +54,18 @@ export const WIDGET_UNGROUPABLE_COLUMN_IDS: readonly string[] = [
   "extraPayload",
 ];
 
+/**
+ * Returns the column a widget's saved `groupBy` names, resolved against
+ * `knownIds` like a visible column, or undefined when it is not grouped.
+ */
+export function getGroupByColumnId(
+  item: WidgetData,
+  knownIds: ReadonlySet<string>
+): string | undefined {
+  const groupBy = item.alertTable?.groupBy;
+  return groupBy ? resolveWidgetColumnId(groupBy, knownIds) : undefined;
+}
+
 /** A partial update to a widget's column state. */
 export type WidgetColumnChange = {
   columnOrder?: string[];
@@ -63,6 +75,22 @@ export type WidgetColumnChange = {
   groupBy?: string | null;
   emptyGroupPosition?: EmptyGroupPosition;
 };
+
+/**
+ * Returns the ids a saved column id can resolve to: the widget's fixed columns,
+ * the alert's known keys (`AlertKnownKeys`, such as `duplicateReason`) and
+ * `loadedIds`, the field keys and generated column ids of the loaded alerts.
+ * Without `loadedIds` it is what a widget knows before any alert loads.
+ */
+export function getKnownColumnIds(
+  loadedIds: Iterable<string> = []
+): ReadonlySet<string> {
+  return new Set<string>([
+    ...WIDGET_STATIC_COLUMN_IDS,
+    ...AlertKnownKeys,
+    ...loadedIds,
+  ]);
+}
 
 /**
  * Maps a saved column id to the id the table uses.
@@ -81,6 +109,21 @@ export function resolveWidgetColumnId(
   }
   const camelCaseId = camelCase(id);
   return knownIds.has(camelCaseId) ? camelCaseId : id;
+}
+
+/**
+ * Maps field ids from the facet list (and other extra fields) to the column
+ * ids the widget uses, each through `resolveWidgetColumnId` against
+ * `getKnownColumnIds(columnIds)`. The ⚙ panel passes the widget's columns;
+ * the widget form, which has no loaded alerts, passes none, and the widget
+ * resolves what is left when it reads the saved setting.
+ */
+export function resolveFieldIds(
+  fields: readonly string[],
+  columnIds: Iterable<string> = []
+): string[] {
+  const knownIds = getKnownColumnIds(columnIds);
+  return fields.map((id) => resolveWidgetColumnId(id, knownIds));
 }
 
 /**

@@ -445,7 +445,9 @@ describe("WidgetTableSettings", () => {
 
     const grouped = renderSettings({ grouping: ["service"] });
     openSettings();
-    expect(screen.getByText("Rows with no value")).toBeInTheDocument();
+    expect(
+      screen.getByRole("radiogroup", { name: "Rows with no value" })
+    ).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "Top" })).toBeChecked();
 
     fireEvent.click(screen.getByRole("radio", { name: "Bottom" }));
@@ -705,14 +707,14 @@ describe("WidgetTableSettings", () => {
       expect(state.setGrouping).toHaveBeenCalledWith([]);
     });
 
-    it("leaves display-only columns out of the group options", async () => {
+    it("offers only the fields isGroupable accepts, shortlist included", async () => {
       const state = makeState();
       render(
         <WidgetTableSettings
           state={state}
           columnIds={state.columnOrder}
           columnWidths={makeWidths()}
-          ungroupableColumnIds={["severity", "extraPayload"]}
+          isGroupable={(id) => !["severity", "extraPayload", "status"].includes(id)}
         />
       );
       openSettings();
@@ -720,6 +722,9 @@ describe("WidgetTableSettings", () => {
       const listbox = await openGroupBy();
       expect(
         within(listbox).queryByRole("option", { name: "severity" })
+      ).toBeNull();
+      expect(
+        within(listbox).queryByRole("option", { name: "Status" })
       ).toBeNull();
       expect(
         within(listbox).getByRole("option", { name: "environment" })

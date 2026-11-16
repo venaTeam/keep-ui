@@ -21,8 +21,6 @@ export interface WidgetColumnLayout {
   columnSizing: ColumnSizingState;
   /** The table's width in pixels, or undefined while the widget's width is unknown. */
   tableWidth?: number;
-  /** The column that takes the spare width, when there is any. */
-  flexColumnId?: string;
   /** The flexible column, when its widened width passes its maximum. */
   unclampedColumnId?: string;
 }
@@ -121,7 +119,6 @@ export function getWidgetColumnLayout({
   return {
     columnSizing: { ...savedSizing, [flexColumnId]: flexSize },
     tableWidth: containerWidth,
-    flexColumnId,
     unclampedColumnId: flexSize > max ? flexColumnId : undefined,
   };
 }

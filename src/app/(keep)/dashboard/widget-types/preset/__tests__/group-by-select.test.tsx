@@ -261,6 +261,27 @@ describe("GroupBySelect", () => {
     expect(input()).toHaveValue("labels.team");
   });
 
+  it("filters the shortlist and the other fields through isGroupable", async () => {
+    setup({
+      isGroupable: (id) => id !== "service" && id !== "labels.team",
+    });
+
+    const listbox = await open();
+
+    expect(optionTexts(listbox)).toEqual([
+      "None",
+      "Incident",
+      "Alert name",
+      "Host",
+      "Application",
+      "Site",
+      "Assignee",
+      "Source",
+      "Status",
+      "labels.region",
+    ]);
+  });
+
   it("keeps a saved field that is not among the options selectable", async () => {
     setup({ value: "labels.gone", fieldOptions: [] });
 

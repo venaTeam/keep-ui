@@ -80,6 +80,18 @@ function getGroupingSource<T>(
 }
 
 /**
+ * Tells whether rows can be grouped by a column: it has a grouping value (a
+ * `getGroupingValue` or an accessor) and does not turn grouping off. This is
+ * the rule TanStack's `column.getCanGroup()` applies in a table with grouping
+ * on, read from the column definition alone.
+ */
+export function isGroupableColumn<T>(column: ColumnDef<T>): boolean {
+  return (
+    getGroupingSource(column) !== undefined && column.enableGrouping !== false
+  );
+}
+
+/**
  * Makes every empty grouping value of the given columns `undefined`.
  *
  * Grouping keys are the value's string form, so `null`, `undefined` and `""`

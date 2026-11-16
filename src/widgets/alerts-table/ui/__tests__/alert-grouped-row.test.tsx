@@ -12,6 +12,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { AlertDto, Status, Severity } from "@/entities/alerts/model/types";
+import { RowStyleOverrideProvider } from "@/entities/alerts/model/useAlertRowStyle";
 
 jest.mock("react-selectable-fast", () => {
   const React = require("react");
@@ -545,22 +546,23 @@ describe("AlertsTableBody", () => {
     );
   });
 
-  it("rowStyleOverride replaces the stored row style", () => {
-    const { container } = render(<BodyHarness rowStyleOverride="relaxed" />);
+  it("a RowStyleOverrideProvider replaces the stored row style", () => {
+    const { container } = render(
+      <RowStyleOverrideProvider value="relaxed">
+        <BodyHarness />
+      </RowStyleOverrideProvider>
+    );
     bodyRows(container).forEach((row) => {
       expect(row).toHaveClass("h-12");
       expect(row).not.toHaveClass("h-8");
     });
   });
 
-  it("skeleton rows follow rowStyleOverride and the plain appearance", () => {
+  it("skeleton rows follow the RowStyleOverrideProvider and the plain appearance", () => {
     const { container } = render(
-      <BodyHarness
-        showSkeleton
-        pageSize={2}
-        rowStyleOverride="relaxed"
-        rowAppearance="plain"
-      />
+      <RowStyleOverrideProvider value="relaxed">
+        <BodyHarness showSkeleton pageSize={2} rowAppearance="plain" />
+      </RowStyleOverrideProvider>
     );
     const rows = Array.from(
       container.querySelectorAll('[data-cy="alerts-row-skeleton"]')
@@ -570,6 +572,32 @@ describe("AlertsTableBody", () => {
       expect(row).toHaveClass("h-12");
       expect(backgroundOrPointerClasses(row)).toEqual([]);
     });
+  });
+
+  it("skeleton rows draw one cell per visible column", () => {
+    const { container } = render(<BodyHarness showSkeleton pageSize={2} />);
+    const rows = Array.from(
+      container.querySelectorAll('[data-cy="alerts-row-skeleton"]')
+    );
+    expect(rows).toHaveLength(2);
+    rows.forEach((row) => expect(row.querySelectorAll("td")).toHaveLength(1));
+  });
+
+  it("inert makes the table body inert, rows and skeleton alike", () => {
+    const { container, rerender } = render(<BodyHarness />);
+    const body = () =>
+      container.querySelector('[data-cy="alerts-table-body"]') as HTMLElement;
+    expect(body()).not.toHaveAttribute("inert");
+
+    rerender(<BodyHarness inert />);
+    expect(body().tagName).toBe("TBODY");
+    expect(body()).toHaveAttribute("inert");
+
+    rerender(<BodyHarness inert selectable={false} />);
+    expect(body()).toHaveAttribute("inert");
+
+    rerender(<BodyHarness inert showSkeleton pageSize={1} />);
+    expect(body()).toHaveAttribute("inert");
   });
 
   it("calls onRowClick when given", () => {

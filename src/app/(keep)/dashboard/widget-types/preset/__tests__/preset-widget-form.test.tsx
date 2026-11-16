@@ -26,6 +26,8 @@ jest.mock("@/features/filter/hooks", () => ({
       "extraPayload",
       "last_received",
       "description",
+      "duplicate_reason",
+      "firing_counter",
     ],
   }),
 }));
@@ -547,7 +549,13 @@ describe("PresetWidgetForm row grouping", () => {
       within(others)
         .getAllByRole("option")
         .map((option) => option.textContent)
-    ).toEqual(["description", "labels.team", "lastReceived"]);
+    ).toEqual([
+      "description",
+      "duplicateReason",
+      "firing_counter",
+      "labels.team",
+      "lastReceived",
+    ]);
   });
 
   it("leaves the ungroupable severity and extraPayload columns out", async () => {
@@ -585,7 +593,26 @@ describe("PresetWidgetForm row grouping", () => {
     );
   });
 
-  it("shows the hint when grouped with fewer than 10 alerts", async () => {
+  it("maps a facet id to a known alert key and keeps one only loaded alerts can resolve", async () => {
+    const onChange = await renderForm(tableWidget());
+
+    const listbox = await openGroupRowsBy();
+    expect(
+      within(listbox).queryByRole("option", { name: "duplicate_reason" })
+    ).toBeNull();
+    fireEvent.mouseDown(
+      within(listbox).getByRole("option", { name: "duplicateReason" })
+    );
+
+    await waitFor(() =>
+      expect(lastValue(onChange).alertTable).toEqual({
+        groupBy: "duplicateReason",
+        emptyGroupPosition: "top",
+      })
+    );
+  });
+
+  it("shows the hint when grouped with fewer than 20 alerts", async () => {
     await renderForm(tableWidget());
 
     expect(screen.queryByText(HINT)).not.toBeInTheDocument();
@@ -595,7 +622,7 @@ describe("PresetWidgetForm row grouping", () => {
     expect(await screen.findByText(HINT)).toBeInTheDocument();
   });
 
-  it("shows the hint only while the alert count is under 10", async () => {
+  it("shows the hint only while the alert count is under 20, as the hint says", async () => {
     await renderForm(
       tableWidget({
         preset: {
@@ -612,10 +639,10 @@ describe("PresetWidgetForm row grouping", () => {
     const countInput = document.querySelector(
       'input[data-cy="dashboard-widget-form-count-of-last-alerts-input"]'
     ) as HTMLInputElement;
-    fireEvent.change(countInput, { target: { value: "9" } });
+    fireEvent.change(countInput, { target: { value: "19" } });
     expect(await screen.findByText(HINT)).toBeInTheDocument();
 
-    fireEvent.change(countInput, { target: { value: "10" } });
+    fireEvent.change(countInput, { target: { value: "20" } });
     await waitFor(() =>
       expect(screen.queryByText(HINT)).not.toBeInTheDocument()
     );

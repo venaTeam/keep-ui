@@ -78,7 +78,9 @@ A client asked to see dashboard alerts grouped by incident, so operators can tel
     | Grouping | none |
 
     Each setting falls back independently. For example, renaming one column doesn't freeze the order.
-14. "Reset to defaults" clears all of this widget's column and grouping settings, so the widget falls back again.
+14. "Reset to defaults" clears all of this widget's column and grouping settings (`presetColumns` and `alertTable`), so the widget falls back again.
+    - The panel shows "Customized for this widget" and enables Reset only when `alertTable` holds a setting, or the visible columns differ from the widget defaults (compared as a set, after resolving legacy ids).
+    - The form's Columns picker always saves `presetColumns`. A widget added with the default columns is therefore not customized. One added with other columns is, and Reset brings back the widget defaults, not the form's pick.
 15. The checkbox, row-menu and noise columns never appear in the widget.
     - The severity, status and source icon columns can still be shown or hidden, because existing widgets may already hide them through the form picker.
     - When visible, they are pinned to the left. They have no header menu, as on the presets page.
@@ -257,6 +259,8 @@ Trade-offs:
 
 **Recommendation:** Option A.
 
+**As built (review of `9216a4f7`):** `GridItem` no longer makes the Alert Table widget inert. The widget makes its own table body (`tbody`) `inert` in edit mode instead, so no link, row or group header in it can be clicked or focused, now or in a future cell. The headers, the grouping chip with Expand all / Collapse all, and the ⚙ panel (portalled into the panel header) sit outside the body and keep working. A single group can't be expanded or collapsed while editing.
+
 Other things the builder must check:
 
 - `handleSaveEdit` also calls `closeModal()` and `applyEditedItemToLayout`. Confirm that a config-only change leaves the widget's layout alone and doesn't flicker the modal.
@@ -292,7 +296,7 @@ Other things the builder must check:
 
 - Call `useAlertTableCols` with:
   - `isCheckboxDisplayed: false`, `isMenuDisplayed: false`;
-  - the preset's name and, once the readability work lands, `presetNoisy`;
+  - a widget-scoped name (builder-check 3). `presetNoisy` is not passed: it only changes the `noise` column, which the widget never shows (requirement 15);
   - `additionalColsToGenerate` = union of (a) the field keys of the loaded alerts, (b) the configured visible columns, (c) the group-by field, and (d) `incident`.
 - (a) is derived inline today in `src/app/(keep)/alerts/[id]/ui/alert-table-tab-panel-server-side.tsx:59-85`. Move it into a shared helper both callers use.
 - (b) and (c) guarantee requirement 16: a column nobody has still gets a definition and renders empty.
@@ -327,7 +331,7 @@ Trade-offs:
 
 **Recommendation:** Option A.
 
-**Form hint.** When Group by is set and "Last alerts count" is under 10, the form shows a hint: "Grouping works best with 20 or more alerts". The default count stays 5, and nothing changes the count automatically.
+**Form hint.** When Group by is set and "Last alerts count" is under 20, the form shows a hint: "Grouping works best with 20 or more alerts". The threshold matches the text (review of `9216a4f7`; it was 10). The default count stays 5, and nothing changes the count automatically.
 
 ### 8. Narrow widgets
 
@@ -353,8 +357,8 @@ Measure the widget's width (a container query or `ResizeObserver`). Below the bu
 
 - **Alert Table readability** (local branch `feat/alert-table-readability`, spec commit `28e7e798`, not merged):
   - It edits this widget's hand-built `columnsMeta` (severity and status cells) and threads `presetNoisy` into it. This story replaces that renderer with `useAlertTableCols`, where readability's shared `status-severity-cells.tsx` also lands.
-  - If readability merges first, this story deletes its widget-only cell code and the widget picks the badges up through `useAlertTableCols`. The `presetNoisy` pass-through must be kept.
-  - If this story merges first, readability only needs to pass `presetNoisy` to the widget's `useAlertTableCols` call.
+  - If readability merges first, this story deletes its widget-only cell code and the widget picks the badges up through `useAlertTableCols`.
+  - As built, the widget passes no `presetNoisy` (review of `9216a4f7`): nothing on its path reads it. The noisy-preset row work (ui#111) adds what it needs when the two are combined.
   - Either order works. The second to merge rebases.
 - **Incident Table widget** (ui#99, open): no overlap. It lists incidents; this story groups alerts.
 
