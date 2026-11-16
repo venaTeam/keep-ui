@@ -638,11 +638,7 @@ export default function AlertsTableHeaders({
             >
               {headerGroup.headers.map((header) => {
                 const { style, className } =
-                  getCommonPinningStylesAndClassNames(
-                    header.column,
-                    table.getState().columnPinning.left?.length,
-                    table.getState().columnPinning.right?.length
-                  );
+                  getCommonPinningStylesAndClassNames(header.column);
 
                 // Apply the renamed header if it exists
                 const displayHeader = header.isPlaceholder ? null : (

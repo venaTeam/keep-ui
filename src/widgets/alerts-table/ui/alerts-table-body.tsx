@@ -227,11 +227,8 @@ export function AlertsTableBody({
               data-ringing={ringingProps["data-ringing"]}
             >
               {row.getVisibleCells().map((cell, cellIndex) => {
-                const { style, className } = getCommonPinningStylesAndClassNames(
-                  cell.column,
-                  table.getState().columnPinning.left?.length,
-                  table.getState().columnPinning.right?.length
-                );
+                const { style, className } =
+                  getCommonPinningStylesAndClassNames(cell.column);
 
                 const isNameCell = cell.column.id === "name";
                 const isDescriptionCell = cell.column.id === "description";
