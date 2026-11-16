@@ -71,7 +71,7 @@ Selection works per row, per group (when the widget groups rows, from PR #110) a
 
 ### At rest
 
-Exactly today's widget (as of #110). Nothing new is visible. The table gets one narrow, empty left gutter (about 16 px) that will hold checkboxes.
+Exactly today's widget (as of #110). Nothing new is visible. The table gets one narrow, empty left gutter (28 px) that will hold checkboxes.
 
 ### Hovering a row: the tray
 
