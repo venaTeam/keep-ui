@@ -11,9 +11,14 @@ jest.mock("../MenuButton", () => ({
   ),
 }));
 
+const mockPresetGridItem = jest.fn();
+
 jest.mock("../widget-types/preset/preset-grid-item", () => ({
   __esModule: true,
-  default: () => <div data-testid="preset-grid-item" />,
+  default: (props: unknown) => {
+    mockPresetGridItem(props);
+    return <div data-testid="preset-grid-item" />;
+  },
 }));
 
 jest.mock("../widget-types/metric/metric-grid-item", () => ({
@@ -167,9 +172,64 @@ describe("GridItem edit mode", () => {
     expect(widgetBody(container)).not.toHaveAttribute("inert");
   });
 
-  it("makes panel content inert in edit mode so it cannot navigate", () => {
+  it("does not make an alert table inert in edit mode, so its header controls work", () => {
     const { container } = renderItem(baseItem(), { isEditMode: true });
+    expect(widgetBody(container)).not.toHaveAttribute("inert");
+  });
+
+  it("does not make a legacy alert table without a panel type inert in edit mode", () => {
+    const { container } = renderItem(
+      baseItem({ presetPanelType: undefined }),
+      { isEditMode: true }
+    );
+    expect(widgetBody(container)).not.toHaveAttribute("inert");
+  });
+
+  it("still makes a metric widget inert in edit mode so it cannot navigate", () => {
+    const { container } = renderItem(
+      baseItem({
+        preset: undefined,
+        presetPanelType: undefined,
+        widgetType: WidgetType.METRIC,
+        metric: { id: "m1", name: "MTTR", data: [] },
+      } as Partial<WidgetData>),
+      { isEditMode: true }
+    );
     expect(widgetBody(container)).toHaveAttribute("inert");
+  });
+
+  it("still makes an incident table inert in edit mode so it cannot navigate", () => {
+    const { container } = renderItem(
+      baseItem({
+        preset: undefined,
+        presetPanelType: undefined,
+        widgetType: WidgetType.INCIDENT_TABLE,
+      }),
+      { isEditMode: true }
+    );
+    expect(widgetBody(container)).toHaveAttribute("inert");
+  });
+
+  it("gives the preset widget onSave only in edit mode", () => {
+    const onSave = jest.fn();
+    const renderWith = (isEditMode: boolean) =>
+      render(
+        <DashboardEditModeProvider value={isEditMode}>
+          <GridItem item={baseItem()} onEdit={jest.fn()} onDelete={jest.fn()} onSave={onSave} />
+        </DashboardEditModeProvider>
+      );
+
+    mockPresetGridItem.mockClear();
+    renderWith(true);
+    expect(mockPresetGridItem).toHaveBeenLastCalledWith(
+      expect.objectContaining({ onSave })
+    );
+
+    mockPresetGridItem.mockClear();
+    renderWith(false);
+    expect(mockPresetGridItem.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({ onSave: undefined })
+    );
   });
 
   it("does not make a counter panel inert, since its menu lives in its body", () => {

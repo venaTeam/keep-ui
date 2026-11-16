@@ -43,6 +43,10 @@ const GridItem: React.FC<GridItemProps> = ({
   const isEditMode = useDashboardEditMode();
   const isAlertCountPanel =
     item.presetPanelType === PresetPanelType.ALERT_COUNT_PANEL;
+  const isAlertTablePanel =
+    !!item.preset &&
+    (item.presetPanelType === PresetPanelType.ALERT_TABLE ||
+      !item.presetPanelType);
 
   return (
     <Card className="relative w-full h-full p-3" data-cy={`dashboard-widget-${item.i}`}>
@@ -73,7 +77,12 @@ const GridItem: React.FC<GridItemProps> = ({
             links, so they stay usable. */}
         <div
           className="contents"
-          inert={isEditMode && !isAlertCountPanel && !item.genericMetrics}
+          inert={
+            isEditMode &&
+            !isAlertCountPanel &&
+            !isAlertTablePanel &&
+            !item.genericMetrics
+          }
           data-cy="dashboard-widget-body"
         >
           {item.preset && (
@@ -81,6 +90,7 @@ const GridItem: React.FC<GridItemProps> = ({
               item={item}
               onEdit={handleEdit}
               onDelete={handleDelete}
+              onSave={isEditMode ? onSave : undefined}
             />
           )}
           {item.metric && <MetricGridItem item={item} />}
