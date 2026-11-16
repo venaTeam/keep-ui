@@ -512,10 +512,52 @@ describe("useWidgetColumnState", () => {
   });
 
   describe("isCustomized", () => {
-    it("is true when presetColumns is set", () => {
+    const allColumnIds = [...defaultColumns, "service"];
+
+    it("is true when presetColumns shows other columns than the defaults", () => {
       const item = { ...baseItem, presetColumns: ["name"] };
       const { result } = renderHook(() =>
         useWidgetColumnState({ item, allColumnIds: ["name"] })
+      );
+      expect(result.current.isCustomized).toBe(true);
+    });
+
+    it("is false when presetColumns lists the default columns, as the widget form saves them", () => {
+      const item = { ...baseItem, presetColumns: [...defaultColumns] };
+      const { result } = renderHook(() =>
+        useWidgetColumnState({ item, allColumnIds })
+      );
+      expect(result.current.isCustomized).toBe(false);
+    });
+
+    it("compares the columns as a set, after resolving legacy ids", () => {
+      const item = {
+        ...baseItem,
+        presetColumns: [...defaultColumns]
+          .reverse()
+          .map((id) => (id === "lastReceived" ? "last_received" : id)),
+      };
+      const { result } = renderHook(() =>
+        useWidgetColumnState({ item, allColumnIds })
+      );
+      expect(result.current.isCustomized).toBe(false);
+    });
+
+    it("is true when presetColumns adds a column to the defaults", () => {
+      const item = {
+        ...baseItem,
+        presetColumns: [...defaultColumns, "service"],
+      };
+      const { result } = renderHook(() =>
+        useWidgetColumnState({ item, allColumnIds })
+      );
+      expect(result.current.isCustomized).toBe(true);
+    });
+
+    it("is true when presetColumns hides every column", () => {
+      const item = { ...baseItem, presetColumns: [] };
+      const { result } = renderHook(() =>
+        useWidgetColumnState({ item, allColumnIds })
       );
       expect(result.current.isCustomized).toBe(true);
     });

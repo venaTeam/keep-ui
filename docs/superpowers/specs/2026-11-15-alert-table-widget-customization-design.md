@@ -78,7 +78,9 @@ A client asked to see dashboard alerts grouped by incident, so operators can tel
     | Grouping | none |
 
     Each setting falls back independently. For example, renaming one column doesn't freeze the order.
-14. "Reset to defaults" clears all of this widget's column and grouping settings, so the widget falls back again.
+14. "Reset to defaults" clears all of this widget's column and grouping settings (`presetColumns` and `alertTable`), so the widget falls back again.
+    - The panel shows "Customized for this widget" and enables Reset only when `alertTable` holds a setting, or the visible columns differ from the widget defaults (compared as a set, after resolving legacy ids).
+    - The form's Columns picker always saves `presetColumns`. A widget added with the default columns is therefore not customized. One added with other columns is, and Reset brings back the widget defaults, not the form's pick.
 15. The checkbox, row-menu and noise columns never appear in the widget.
     - The severity, status and source icon columns can still be shown or hidden, because existing widgets may already hide them through the form picker.
     - When visible, they are pinned to the left. They have no header menu, as on the presets page.

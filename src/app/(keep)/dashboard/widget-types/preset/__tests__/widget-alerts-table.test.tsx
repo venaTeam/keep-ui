@@ -1107,6 +1107,46 @@ describe("WidgetAlertsTable", () => {
       );
     });
 
+    it("a widget the form saved with the default columns is not customized", () => {
+      renderWithSlot(
+        {
+          presetColumns: [
+            "severity",
+            "status",
+            "source",
+            "name",
+            "description",
+            "lastReceived",
+          ],
+        },
+        { isEditMode: true, onChange: jest.fn() }
+      );
+
+      fireEvent.click(settingsButton() as HTMLElement);
+
+      expect(screen.queryByText("Customized for this widget")).toBeNull();
+      expect(
+        screen.getByRole("button", { name: "Reset to defaults" })
+      ).toBeDisabled();
+    });
+
+    it("a widget the form saved with other columns is customized, and Reset brings back the defaults", () => {
+      const onChange = jest.fn();
+      renderWithSlot(
+        { presetColumns: ["name", "service"] },
+        { isEditMode: true, onChange }
+      );
+
+      fireEvent.click(settingsButton() as HTMLElement);
+      expect(
+        screen.getByText("Customized for this widget")
+      ).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Reset to defaults" }));
+
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange.mock.calls[0][0]).not.toHaveProperty("presetColumns");
+    });
+
     it("Reset to defaults emits one change that drops the widget's settings", () => {
       const onChange = jest.fn();
       renderWithSlot(

@@ -51,6 +51,21 @@ function getGrouping(
   return groupBy && knownIds.has(groupBy) ? [groupBy] : [];
 }
 
+function showsDefaultColumns(
+  item: WidgetData,
+  visibleColumns: readonly string[],
+  knownIds: ReadonlySet<string>
+): boolean {
+  const defaults = getVisibleColumnIds(
+    { ...item, presetColumns: undefined },
+    knownIds
+  );
+  return (
+    visibleColumns.length === defaults.length &&
+    defaults.every((id) => visibleColumns.includes(id))
+  );
+}
+
 function resolveUpdater<T>(updater: Updater<T>, current: T): T {
   return typeof updater === "function"
     ? (updater as (old: T) => T)(current)
@@ -68,6 +83,11 @@ function resolveUpdater<T>(updater: Updater<T>, current: T): T {
  * order, then every other column, so the visible order does not depend on the
  * order the loaded alerts list their fields in.
  * Nothing is read from the viewer's browser, so every viewer sees the same table.
+ *
+ * `isCustomized` is true when `alertTable` holds a setting or the visible
+ * columns, compared as a set once resolved, differ from the widget defaults.
+ * A widget the form saved with the default columns is therefore not
+ * customized. `reset` removes both `presetColumns` and `alertTable`.
  *
  * Setters pass the whole next widget to `onChange` and build on the latest widget
  * they emitted, so several calls in one tick compose. A grouping equal to the
@@ -198,8 +218,8 @@ export function useWidgetColumnState({
     grouping,
     emptyGroupPosition: item.alertTable?.emptyGroupPosition ?? "top",
     isCustomized:
-      item.presetColumns !== undefined ||
-      Object.keys(item.alertTable ?? {}).length > 0,
+      Object.keys(item.alertTable ?? {}).length > 0 ||
+      !showsDefaultColumns(item, visibleColumns, knownIds),
     canEdit: onChange !== undefined,
     setColumnOrder,
     setColumnVisibility,
