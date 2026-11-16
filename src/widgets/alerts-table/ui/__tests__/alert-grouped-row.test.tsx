@@ -570,6 +570,15 @@ describe("AlertsTableBody", () => {
     });
   });
 
+  it("skeleton rows draw one cell per visible column", () => {
+    const { container } = render(<BodyHarness showSkeleton pageSize={2} />);
+    const rows = Array.from(
+      container.querySelectorAll('[data-cy="alerts-row-skeleton"]')
+    );
+    expect(rows).toHaveLength(2);
+    rows.forEach((row) => expect(row.querySelectorAll("td")).toHaveLength(1));
+  });
+
   it("calls onRowClick when given", () => {
     const onRowClick = jest.fn();
     const { container } = render(<BodyHarness onRowClick={onRowClick} />);

@@ -1054,6 +1054,17 @@ describe("WidgetAlertsTable", () => {
     expect(widgetRoot().style.background).toBe("rgba(16, 185, 129, 0.1)");
   });
 
+  it("skeleton rows match the widget's visible columns", () => {
+    renderWidget(
+      { presetColumns: ["name", "description", "lastReceived"] },
+      "loading"
+    );
+
+    const rows = document.querySelectorAll('[data-cy="alerts-row-skeleton"]');
+    expect(rows).toHaveLength(5);
+    rows.forEach((row) => expect(row.querySelectorAll("td")).toHaveLength(3));
+  });
+
   it("shows 5 skeleton rows while alerts are undefined", () => {
     renderWidget({}, "loading");
 

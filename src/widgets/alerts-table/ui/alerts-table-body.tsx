@@ -143,7 +143,7 @@ export function AlertsTableBody({
               rowAppearance
             )}
           >
-            {Array.from({ length: 7 }).map((_, cellIndex) => (
+            {table.getVisibleLeafColumns().map((_, cellIndex) => (
               <TableCell
                 key={cellIndex}
                 className={applyRowAppearance(
