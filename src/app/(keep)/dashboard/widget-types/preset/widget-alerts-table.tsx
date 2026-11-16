@@ -46,7 +46,6 @@ import {
 
 interface WidgetAlertsTableProps {
   item: WidgetData;
-  presetNoisy?: boolean;
   alerts?: AlertDto[];
   background?: string;
   isEditMode: boolean;
@@ -168,7 +167,6 @@ function useLinkNavigationBlocked(
 
 function WidgetAlertsTableContent({
   item,
-  presetNoisy,
   alerts,
   background,
   isEditMode,
@@ -189,7 +187,6 @@ function WidgetAlertsTableContent({
     item,
     alerts,
     presetName: widgetKey,
-    presetNoisy,
   });
   const state = useWidgetColumnState({ item, allColumnIds, onChange });
   const groupExpansion = useGroupExpansion(true);

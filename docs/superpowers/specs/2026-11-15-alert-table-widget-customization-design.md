@@ -292,7 +292,7 @@ Other things the builder must check:
 
 - Call `useAlertTableCols` with:
   - `isCheckboxDisplayed: false`, `isMenuDisplayed: false`;
-  - the preset's name and, once the readability work lands, `presetNoisy`;
+  - a widget-scoped name (builder-check 3). `presetNoisy` is not passed: it only changes the `noise` column, which the widget never shows (requirement 15);
   - `additionalColsToGenerate` = union of (a) the field keys of the loaded alerts, (b) the configured visible columns, (c) the group-by field, and (d) `incident`.
 - (a) is derived inline today in `src/app/(keep)/alerts/[id]/ui/alert-table-tab-panel-server-side.tsx:59-85`. Move it into a shared helper both callers use.
 - (b) and (c) guarantee requirement 16: a column nobody has still gets a definition and renders empty.
@@ -353,8 +353,8 @@ Measure the widget's width (a container query or `ResizeObserver`). Below the bu
 
 - **Alert Table readability** (local branch `feat/alert-table-readability`, spec commit `28e7e798`, not merged):
   - It edits this widget's hand-built `columnsMeta` (severity and status cells) and threads `presetNoisy` into it. This story replaces that renderer with `useAlertTableCols`, where readability's shared `status-severity-cells.tsx` also lands.
-  - If readability merges first, this story deletes its widget-only cell code and the widget picks the badges up through `useAlertTableCols`. The `presetNoisy` pass-through must be kept.
-  - If this story merges first, readability only needs to pass `presetNoisy` to the widget's `useAlertTableCols` call.
+  - If readability merges first, this story deletes its widget-only cell code and the widget picks the badges up through `useAlertTableCols`.
+  - As built, the widget passes no `presetNoisy` (review of `9216a4f7`): nothing on its path reads it. The noisy-preset row work (ui#111) adds what it needs when the two are combined.
   - Either order works. The second to merge rebases.
 - **Incident Table widget** (ui#99, open): no overlap. It lists incidents; this story groups alerts.
 

@@ -52,12 +52,10 @@ export function useWidgetAlertColumns({
   item,
   alerts,
   presetName,
-  presetNoisy,
 }: {
   item: WidgetData;
   alerts?: AlertDto[];
   presetName: string;
-  presetNoisy?: boolean;
 }): { columns: ColumnDef<AlertDto>[]; allColumnIds: string[] } {
   const alertKeys = useStableIds(
     getAdditionalColsToGenerate(alerts ?? NO_ALERTS)
@@ -85,7 +83,6 @@ export function useWidgetAlertColumns({
     isCheckboxDisplayed: false,
     isMenuDisplayed: false,
     presetName,
-    presetNoisy,
   });
 
   const renames = item.alertTable?.columnRenameMapping;
