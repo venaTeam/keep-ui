@@ -333,7 +333,11 @@ export function AlertsTableBody({
   });
 
   if (!selectable) {
-    return <TableBody data-cy="alerts-table-body" inert={inert}>{rows}</TableBody>;
+    return (
+      <TableBody data-cy="alerts-table-body" inert={inert}>
+        {rows}
+      </TableBody>
+    );
   }
 
   return (

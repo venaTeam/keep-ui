@@ -666,9 +666,10 @@ function SettingsContent({
  * goes straight to `state`; a width change passes the whole sizing map.
  *
  * `columnIds` are the columns the widget can show; the grouping options are
- * the fields `isGroupable` accepts (every field by default). The popover is a dialog named "Table
- * settings", rendered in a portal so the dashboard grid cannot clip or cover
- * it. Reorder announcements read the columns' labels, not their ids.
+ * the fields `isGroupable` accepts (every field by default). The popover is a
+ * dialog named "Table settings", rendered in a portal so the dashboard grid
+ * cannot clip or cover it. Reorder announcements read the columns' labels,
+ * not their ids.
  */
 export function WidgetTableSettings({
   state,

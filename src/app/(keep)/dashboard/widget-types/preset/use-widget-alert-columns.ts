@@ -48,14 +48,14 @@ function atMinimumSize(column: ColumnDef<AlertDto>): ColumnDef<AlertDto> {
  * column, the group-by field and `incident`, so a configured column nobody
  * has still renders (empty). A saved snake_case id resolves to its camelCase
  * form when that is a fixed column, a known alert key or a field of the
- * loaded alerts; the group-by field resolves the same way. The checkbox, menu and noise columns are left out. Empty
- * grouping values share one group, and every
- * column except the icon columns is headed by its widget label, so no stored
- * presets-page name can show through. Those columns also start at their
- * minimum width (`WIDGET_COLUMN_MIN_SIZE` for name and description), so a
- * full-width table spreads the spare room over them; a width saved on the
- * widget wins. `presetName` scopes the browser keys the
- * shared column hook reads, so pass a widget-scoped name.
+ * loaded alerts; the group-by field resolves the same way. The checkbox, menu
+ * and noise columns are left out. Empty grouping values share one group, and
+ * every column except the icon columns is headed by its widget label, so no
+ * stored presets-page name can show through. Those columns also start at
+ * their minimum width (`WIDGET_COLUMN_MIN_SIZE` for name and description), so
+ * a full-width table spreads the spare room over them; a width saved on the
+ * widget wins. `presetName` scopes the browser keys the shared column hook
+ * reads, so pass a widget-scoped name.
  */
 export function useWidgetAlertColumns({
   item,
