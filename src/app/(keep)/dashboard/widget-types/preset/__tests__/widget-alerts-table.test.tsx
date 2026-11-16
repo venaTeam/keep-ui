@@ -154,6 +154,38 @@ describe("WidgetAlertsTable ringing rows", () => {
     expect(dropsTop(3)).toEqual([false, false, false]);
   });
 
+  it("lets the shared edge's vertical sides run on: the upper of two touching ringing rows trades its divider for the same 1px of padding", () => {
+    const run = [
+      { name: "ring-a", severity: "critical", status: "firing" },
+      { name: "ring-b", severity: "critical", status: "firing" },
+      { name: "quiet", severity: "high", status: "firing" },
+      { name: "ring-c", severity: "critical", status: "firing" },
+      { name: "quiet-last", severity: "high", status: "firing" },
+    ];
+    const { container } = render(
+      <WidgetAlertsTable
+        presetName="noisy"
+        alerts={run}
+        columns={columns}
+        presetNoisy
+      />
+    );
+    const bottoms = (rowIndex: number) =>
+      cellsOfRow(container, rowIndex).map((cell) =>
+        cell.classList.contains("pb-px")
+          ? "padding"
+          : cell.classList.contains("border-b")
+            ? "divider"
+            : "none"
+      );
+
+    expect(bottoms(0)).toEqual(["padding", "padding", "padding"]);
+    expect(bottoms(1)).toEqual(["divider", "divider", "divider"]);
+    expect(bottoms(2)).toEqual(["divider", "divider", "divider"]);
+    expect(bottoms(3)).toEqual(["divider", "divider", "divider"]);
+    expect(bottoms(4)).toEqual(["none", "none", "none"]);
+  });
+
   it("leaves the other rows as they were", () => {
     const { container } = renderTable(true);
 

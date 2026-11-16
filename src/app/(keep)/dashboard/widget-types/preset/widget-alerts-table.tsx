@@ -168,6 +168,9 @@ const WidgetAlertsTable: React.FC<WidgetAlertsTableProps> = ({
         const belowRingingRow =
           alertIndex > 0 &&
           isAlertRinging(alertsToRender[alertIndex - 1], presetNoisy);
+        const aboveRingingRow =
+          isAlertRinging(alert, presetNoisy) &&
+          isAlertRinging(alertsToRender[alertIndex + 1], presetNoisy);
         return orderedColumns?.map((column, index) => {
           const columnMeta = columnsMeta[column];
           let columnValue;
@@ -183,7 +186,11 @@ const WidgetAlertsTable: React.FC<WidgetAlertsTableProps> = ({
           const _columnsGapClass =
             index < orderedColumns.length - 1 ? columnsGapClass : "";
           const _borderClass =
-            alertIndex < alertsToRender.length - 1 ? borderClass : "";
+            alertIndex < alertsToRender.length - 1
+              ? aboveRingingRow
+                ? "pb-px"
+                : borderClass
+              : "";
           const ringingCell = ringing.cellProps(
             index,
             orderedColumns.length,
