@@ -246,6 +246,7 @@ export const GroupedRow = ({
                   return (
                     <TableCell
                       key={cell.id}
+                      data-column-id={cell.column.id}
                       className={applyRowAppearance(
                         getCellClassName(
                           cell,
@@ -297,6 +298,7 @@ export const GroupedRow = ({
         return (
           <TableCell
             key={cell.id}
+            data-column-id={cell.column.id}
             className={applyRowAppearance(
               getCellClassName(cell, className, rowStyle, isLastViewed),
               rowAppearance

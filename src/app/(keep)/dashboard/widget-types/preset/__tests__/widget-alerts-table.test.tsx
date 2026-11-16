@@ -513,6 +513,29 @@ describe("WidgetAlertsTable", () => {
     );
   });
 
+  it("header Rename starts from the name the header shows", async () => {
+    renderWidget(
+      { presetColumns: ["name", "node_name"] },
+      [alertWith({ node_name: "db-1" })],
+      { isEditMode: true, onChange: jest.fn() }
+    );
+    expect(
+      within(screen.getByTestId("header-cell-node_name")).getByText("Host")
+    ).toBeInTheDocument();
+
+    const cell = screen.getByTestId("header-cell-node_name");
+    const trigger = within(cell).getByTestId("dropdown-menu-button");
+    fireEvent.mouseDown(trigger);
+    fireEvent.click(trigger);
+    await screen.findByTestId("dropdown-menu-list");
+    const rename = screen.getByText("Rename column");
+    fireEvent.pointerEnter(rename);
+    fireEvent.mouseMove(rename);
+
+    expect(await screen.findByDisplayValue("Host")).toBeInTheDocument();
+    expect(screen.queryByDisplayValue("Node Name")).toBeNull();
+  });
+
   it("Move left on description puts it before name, skipping hidden columns", async () => {
     const onChange = jest.fn();
     const alerts = [alertWith(), alertWith()];

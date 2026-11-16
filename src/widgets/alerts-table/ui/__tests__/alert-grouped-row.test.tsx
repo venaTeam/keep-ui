@@ -8,6 +8,7 @@ import {
   Column,
   createColumnHelper,
   getCoreRowModel,
+  getGroupedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 import { AlertDto, Status, Severity } from "@/entities/alerts/model/types";
@@ -590,5 +591,55 @@ describe("AlertsTableBody", () => {
       window.removeEventListener("error", onError);
     }
     expect(errors).toEqual([]);
+  });
+
+  it("cells of grouped alert rows carry data-column-id, so auto-fit can measure them", () => {
+    const groupedColumns = [
+      ...columns,
+      columnHelper.accessor("description", {
+        id: "description",
+        cell: (context) => context.getValue(),
+      }),
+    ];
+
+    function GroupedBodyHarness() {
+      const table = useReactTable({
+        data: alerts,
+        columns: groupedColumns,
+        state: { grouping: ["description"] },
+        enableGrouping: true,
+        groupedColumnMode: false,
+        getCoreRowModel: getCoreRowModel(),
+        getGroupedRowModel: getGroupedRowModel(),
+        getRowId: (row) => row.fingerprint,
+      });
+
+      return (
+        <table>
+          <AlertsTableBody
+            table={table}
+            showSkeleton={false}
+            theme={{}}
+            lastViewedAlert={null}
+            presetName="body-test"
+          />
+        </table>
+      );
+    }
+
+    const { container } = render(<GroupedBodyHarness />);
+
+    expect(
+      container.querySelectorAll('[data-cy="alerts-group-header"]')
+    ).toHaveLength(1);
+    const rows = bodyRows(container);
+    expect(rows).toHaveLength(2);
+    rows.forEach((row) =>
+      expect(
+        Array.from(row.querySelectorAll("td")).map((cell) =>
+          cell.getAttribute("data-column-id")
+        )
+      ).toEqual(["name", "description"])
+    );
   });
 });

@@ -92,6 +92,7 @@ interface DraggableHeaderCellProps {
   interactive: boolean;
   showSortItems: boolean;
   showFormatItems: boolean;
+  getOriginalColumnName?: (columnId: string) => string;
 }
 
 const DraggableHeaderCell = ({
@@ -115,6 +116,7 @@ const DraggableHeaderCell = ({
   interactive,
   showSortItems,
   showFormatItems,
+  getOriginalColumnName,
 }: DraggableHeaderCellProps) => {
   const { column, getResizeHandler } = header;
   const [rowStyle] = useAlertRowStyle();
@@ -395,7 +397,8 @@ const DraggableHeaderCell = ({
                   column.id,
                   columnRenameMapping,
                   setColumnRenameMapping,
-                  DropdownMenu
+                  DropdownMenu,
+                  getOriginalColumnName
                 )}
                 {column.getCanGroup() !== false && (
                   <DropdownMenu.Item
@@ -551,6 +554,7 @@ interface Props {
   interactive?: boolean;
   showSortItems?: boolean;
   showFormatItems?: boolean;
+  getOriginalColumnName?: (columnId: string) => string;
 }
 
 export default function AlertsTableHeaders({
@@ -571,6 +575,7 @@ export default function AlertsTableHeaders({
   interactive = true,
   showSortItems = true,
   showFormatItems = true,
+  getOriginalColumnName,
 }: Props) {
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -701,6 +706,7 @@ export default function AlertsTableHeaders({
                     interactive={interactive}
                     showSortItems={showSortItems}
                     showFormatItems={showFormatItems}
+                    getOriginalColumnName={getOriginalColumnName}
                     dropIndicatorSide={
                       dropTarget?.columnId === header.column.id
                         ? dropTarget.side

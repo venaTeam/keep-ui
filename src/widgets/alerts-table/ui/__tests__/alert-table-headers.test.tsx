@@ -25,6 +25,7 @@ type HarnessProps = {
   interactive?: boolean;
   showSortItems?: boolean;
   showFormatItems?: boolean;
+  getOriginalColumnName?: (columnId: string) => string;
 };
 
 const buildColumns = (ids: string[]): ColumnDef<AlertDto>[] =>
@@ -171,6 +172,31 @@ describe("AlertsTableHeaders", () => {
     fireEvent.keyDown(document.body, { key: "Escape" });
     await openMenuFor("name");
     expect(isDisabled("Move column right")).toBe(false);
+  });
+
+  describe("Rename", () => {
+    const openRenameFor = async (columnId: string) => {
+      await openMenuFor(columnId);
+      const rename = screen.getByText(/rename column/i);
+      fireEvent.pointerEnter(rename);
+      fireEvent.mouseMove(rename);
+    };
+
+    it("starts from the column id as words by default, as on the presets page", async () => {
+      renderHeaders({ columnIds: ["node_name", "service"] });
+      await openRenameFor("node_name");
+      expect(await screen.findByDisplayValue("Node Name")).toBeInTheDocument();
+    });
+
+    it("starts from getOriginalColumnName when given", async () => {
+      renderHeaders({
+        columnIds: ["node_name", "service"],
+        getOriginalColumnName: (columnId) =>
+          columnId === "node_name" ? "Host" : columnId,
+      });
+      await openRenameFor("node_name");
+      expect(await screen.findByDisplayValue("Host")).toBeInTheDocument();
+    });
   });
 
   it("with one visible column the menu opens without throwing and Move right is disabled", async () => {

@@ -54,6 +54,10 @@ const COMPACT_GROUP_HEADER_CLASSES = "[&_td.group-header-cell]:py-1";
 
 function noop() {}
 
+function getDefaultColumnLabel(columnId: string): string {
+  return getColumnLabel(columnId);
+}
+
 function isGroupable(column: ColumnDef<AlertDto>): boolean {
   return (
     column.getGroupingValue !== undefined && column.enableGrouping !== false
@@ -275,6 +279,7 @@ function WidgetAlertsTableContent({
             interactive={isEditMode && !!onChange && !isNarrow}
             showSortItems={false}
             showFormatItems={false}
+            getOriginalColumnName={getDefaultColumnLabel}
           />
           <AlertsTableBody
             table={table}
