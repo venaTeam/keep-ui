@@ -291,6 +291,10 @@ function WidgetAlertsTableContent({
   );
 
   const groupedBy = grouping[0];
+  const allShownGroupsExpanded = table
+    .getRowModel()
+    .rows.filter((row) => row.getIsGrouped())
+    .every((row) => groupExpansion.isGroupExpanded(row.id));
   const opaqueBackground = background
     ? `linear-gradient(${background}, ${background}), #fff`
     : "#fff";
@@ -321,11 +325,13 @@ function WidgetAlertsTableContent({
           <button
             type="button"
             className="text-orange-700 hover:underline"
-            onClick={groupExpansion.toggleAll}
+            onClick={
+              allShownGroupsExpanded
+                ? groupExpansion.collapseAll
+                : groupExpansion.expandAll
+            }
           >
-            {groupExpansion.areAllGroupsExpanded()
-              ? "Collapse all"
-              : "Expand all"}
+            {allShownGroupsExpanded ? "Collapse all" : "Expand all"}
           </button>
         </div>
       )}
@@ -409,6 +415,8 @@ function WidgetAlertsTableContent({
  *
  * Header controls show only in edit mode with `onChange`, and not on a narrow
  * widget. Rows are plain, not clickable and always at the default density.
+ * Expand all / Collapse all reads the groups shown now, so a regrouping or a
+ * refresh that drops a collapsed group does not leave it stale.
  * In edit mode with `onChange`, the ⚙ Table settings button is rendered into
  * `settingsSlot` (an element the caller places in its header), at every width;
  * its column widths are the rendered ones and its Auto-fit measures this table.

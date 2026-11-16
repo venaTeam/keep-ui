@@ -826,6 +826,49 @@ describe("WidgetAlertsTable", () => {
     expect(bodyRows()).toHaveLength(2);
   });
 
+  it("after regrouping, the toggle reads from the shown groups and its first click collapses them", () => {
+    const alerts = [
+      linkedAlert("i1", "Checkout degraded"),
+      alertWith({ service: "payments" }),
+    ];
+    const { rerender } = renderWidget(
+      { alertTable: { groupBy: "environment" } },
+      alerts
+    );
+    fireEvent.click(groupHeader("prod"));
+    expect(screen.getByRole("button", { name: "Expand all" })).toBeInTheDocument();
+
+    rerender(widget({ alertTable: { groupBy: "incident" } }, alerts));
+    expect(bodyRows()).toHaveLength(2);
+    expect(
+      screen.getByRole("button", { name: "Collapse all" })
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Collapse all" }));
+    expect(bodyRows()).toHaveLength(0);
+    expect(screen.getByRole("button", { name: "Expand all" })).toBeInTheDocument();
+  });
+
+  it("a refresh that drops the only collapsed group brings back Collapse all", () => {
+    const { rerender } = renderWidget({ alertTable: { groupBy: "service" } }, [
+      alertWith({ service: "checkout" }),
+      alertWith({ service: "payments" }),
+    ]);
+    fireEvent.click(groupHeader("payments"));
+    expect(screen.getByRole("button", { name: "Expand all" })).toBeInTheDocument();
+
+    rerender(
+      widget({ alertTable: { groupBy: "service" } }, [
+        alertWith({ service: "checkout" }),
+      ])
+    );
+
+    expect(bodyRows()).toHaveLength(1);
+    expect(
+      screen.getByRole("button", { name: "Collapse all" })
+    ).toBeInTheDocument();
+  });
+
   it("a collapsed group stays collapsed after the alerts refresh", () => {
     const { rerender } = renderWidget({ alertTable: { groupBy: "incident" } }, [
       linkedAlert("i1", "Checkout degraded"),
