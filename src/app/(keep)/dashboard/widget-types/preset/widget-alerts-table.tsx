@@ -36,8 +36,6 @@ import { WidgetTableSettings } from "./widget-table-settings";
 
 interface WidgetAlertsTableProps {
   item: WidgetData;
-  presetName: string;
-  presetId?: string;
   presetNoisy?: boolean;
   alerts?: AlertDto[];
   background?: string;
@@ -51,7 +49,7 @@ const NO_THEME: Record<string, string> = {};
 const NO_FORMATS = {};
 const SKELETON_ROWS = 5;
 const OPAQUE_CELL_CLASSES =
-  "[&_th]:[background:var(--widget-opaque-bg)] [&_td.sticky]:[background:var(--widget-opaque-bg)] [&_th.sticky]:z-10 [&_td.sticky]:z-10";
+  "[&_th]:[background:var(--widget-opaque-bg)] [&_td.sticky]:[background:var(--widget-opaque-bg)] [&_th.sticky]:z-40 [&_td.sticky]:z-10";
 const COMPACT_GROUP_HEADER_CLASSES = "[&_td.group-header-cell]:py-1";
 
 function noop() {}

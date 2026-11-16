@@ -27,6 +27,15 @@ export const WIDGET_PINNED_LEFT: readonly string[] = [
 /** Widget width in pixels below which the widget switches to its narrow layout. */
 export const NARROW_WIDGET_PX = 320;
 
+/**
+ * Minimum widths, in pixels, the widget uses instead of the presets-page ones,
+ * so a default-size widget fits its default columns.
+ */
+export const WIDGET_COLUMN_MIN_SIZE: ReadonlyMap<string, number> = new Map([
+  ["name", 100],
+  ["description", 100],
+]);
+
 /** Ids of the fixed alert table columns the widget can show, without the excluded ones. */
 export const WIDGET_STATIC_COLUMN_IDS = [
   "severity",

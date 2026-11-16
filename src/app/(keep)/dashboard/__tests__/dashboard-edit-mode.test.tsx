@@ -50,10 +50,15 @@ jest.mock("react-toastify", () => ({ toast: { success: jest.fn() } }));
 jest.mock("@/shared/ui", () => ({ showErrorToast: jest.fn() }));
 
 // The grid is replaced by a stub that shows the edit-mode flag the panels see
-// and lets a test move a panel or change a widget's own table settings.
+// and lets a test move a panel.
 jest.mock("../GridLayout", () => ({
   __esModule: true,
-  default: ({ layout, onLayoutChange, data, onSave }: any) => {
+  default: function MockGridLayout({
+    layout,
+    onLayoutChange,
+    data,
+    onSave,
+  }: any) {
     const isEditMode = useDashboardEditMode();
     return (
       <div data-testid="grid" data-edit-mode={String(isEditMode)}>

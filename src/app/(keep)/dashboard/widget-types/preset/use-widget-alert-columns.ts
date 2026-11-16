@@ -6,6 +6,7 @@ import { getAdditionalColsToGenerate } from "@/widgets/alerts-table/lib/addition
 import { getColumnLabel } from "@/widgets/alerts-table/lib/alert-column-options";
 import type { WidgetData } from "../../types";
 import {
+  WIDGET_COLUMN_MIN_SIZE,
   WIDGET_EXCLUDED_COLUMNS,
   WIDGET_PINNED_LEFT,
   WIDGET_STATIC_COLUMN_IDS,
@@ -27,6 +28,12 @@ function isShownInWidget(column: ColumnDef<AlertDto>): boolean {
   return !WIDGET_EXCLUDED_COLUMNS.includes(column.id as string);
 }
 
+function atMinimumSize(column: ColumnDef<AlertDto>): ColumnDef<AlertDto> {
+  const minSize =
+    WIDGET_COLUMN_MIN_SIZE.get(column.id as string) ?? column.minSize;
+  return minSize === undefined ? column : { ...column, minSize, size: minSize };
+}
+
 /**
  * Builds the column definitions of an Alert Table widget.
  *
@@ -35,7 +42,10 @@ function isShownInWidget(column: ColumnDef<AlertDto>): boolean {
  * configured column nobody has still renders (empty). The checkbox, menu and
  * noise columns are left out. Empty grouping values share one group, and every
  * column except the icon columns is headed by its widget label, so no stored
- * presets-page name can show through. `presetName` scopes the browser keys the
+ * presets-page name can show through. Those columns also start at their
+ * minimum width (`WIDGET_COLUMN_MIN_SIZE` for name and description), so a
+ * full-width table spreads the spare room over them; a width saved on the
+ * widget wins. `presetName` scopes the browser keys the
  * shared column hook reads, so pass a widget-scoped name.
  */
 export function useWidgetAlertColumns({
@@ -85,7 +95,10 @@ export function useWidgetAlertColumns({
         (column) =>
           WIDGET_PINNED_LEFT.includes(column.id as string)
             ? column
-            : { ...column, header: getColumnLabel(column.id as string, renames) }
+            : {
+                ...atMinimumSize(column),
+                header: getColumnLabel(column.id as string, renames),
+              }
       ),
     [tableColumns, renames]
   );

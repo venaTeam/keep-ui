@@ -276,8 +276,6 @@ const PresetAlertTablePanel: React.FC<PresetAlertTablePanelProps> = ({
       {countOfLastAlerts > 0 && (
         <WidgetAlertsTable
           item={item}
-          presetName={preset?.name as string}
-          presetId={preset?.id}
           presetNoisy={!!preset?.is_noisy}
           isEditMode={isEditMode}
           onChange={isEditMode ? onSave : undefined}

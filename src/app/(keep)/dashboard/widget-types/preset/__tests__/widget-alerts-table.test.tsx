@@ -124,7 +124,6 @@ const widget = (
 ) => (
   <WidgetAlertsTable
     item={{ ...baseItem, ...overrides }}
-    presetName="atw"
     alerts={alerts === "loading" ? undefined : alerts}
     isEditMode={isEditMode}
     onChange={onChange}
@@ -452,6 +451,46 @@ describe("WidgetAlertsTable", () => {
     expect(screen.getByTestId("drag-handle-name")).toBeInTheDocument();
   });
 
+  it("a default-size widget on a laptop keeps the header controls in edit mode", () => {
+    observeWidth(360);
+    renderWidget({}, undefined, { isEditMode: true, onChange: jest.fn() });
+    expect(screen.getByTestId("drag-handle-name")).toBeInTheDocument();
+  });
+
+  describe("column widths", () => {
+    const widthOf = (columnId: string) =>
+      (screen.getByTestId(`header-cell-${columnId}`).closest("th") as HTMLElement)
+        .style.width;
+
+    it("starts every non-pinned column at its widget minimum width", () => {
+      renderWidget({
+        presetColumns: [
+          "severity",
+          "status",
+          "source",
+          "name",
+          "description",
+          "lastReceived",
+          "assignee",
+          "service",
+        ],
+      });
+
+      expect(widthOf("name")).toBe("100px");
+      expect(widthOf("description")).toBe("100px");
+      expect(widthOf("lastReceived")).toBe("80px");
+      expect(widthOf("assignee")).toBe("100px");
+      expect(widthOf("service")).toBe("100px");
+    });
+
+    it("a saved width overrides the minimum", () => {
+      renderWidget({ alertTable: { columnSizing: { name: 240 } } });
+
+      expect(widthOf("name")).toBe("240px");
+      expect(widthOf("description")).toBe("100px");
+    });
+  });
+
   it("Group by in the header menu writes the widget's groupBy", async () => {
     const onChange = jest.fn();
     renderWidget({ presetColumns: ["name", "description"] }, undefined, {
@@ -519,7 +558,6 @@ describe("WidgetAlertsTable", () => {
     render(
       <WidgetAlertsTable
         item={{ ...baseItem, alertTable: { columnOrder: savedOrder } }}
-        presetName="atw"
         alerts={[alertWith(), alertWith()]}
         isEditMode
         onChange={onChange}
@@ -738,7 +776,6 @@ describe("WidgetAlertsTable", () => {
     render(
       <WidgetAlertsTable
         item={baseItem}
-        presetName="atw"
         alerts={[alertWith()]}
         background="rgb(220, 38, 38, 0.1)"
         isEditMode={false}
@@ -755,7 +792,6 @@ describe("WidgetAlertsTable", () => {
     render(
       <WidgetAlertsTable
         item={baseItem}
-        presetName="atw"
         alerts={[alertWith()]}
         background="rgba(16, 185, 129, 0.1)"
         isEditMode={false}
@@ -796,7 +832,6 @@ describe("WidgetAlertsTable", () => {
       render(
         <WidgetAlertsTable
           item={{ ...baseItem, ...item }}
-          presetName="atw"
           alerts={alerts}
           isEditMode={options.isEditMode ?? false}
           onChange={options.onChange}
@@ -874,6 +909,12 @@ describe("WidgetAlertsTable", () => {
     renderWidget();
 
     expect(widgetRoot()).toHaveClass("isolate");
+  });
+
+  it("stacks pinned header cells above the resize edges and drop indicator of scrolled columns", () => {
+    renderWidget();
+
+    expect(widgetRoot()).toHaveClass("[&_th.sticky]:z-40");
   });
 
   it("never reads the preset's per-user column state", () => {

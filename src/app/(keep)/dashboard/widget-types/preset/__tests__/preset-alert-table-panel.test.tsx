@@ -438,7 +438,7 @@ describe("PresetAlertTablePanel in dashboard edit mode", () => {
     expect(mockLastTableProps?.settingsSlot ?? null).toBeNull();
   });
 
-  it("gives the table the widget, the preset id and whether the preset is noisy", () => {
+  it("gives the table the widget and whether the preset is noisy", () => {
     const item = buildItem();
     render(
       <PresetAlertTablePanel
@@ -449,13 +449,10 @@ describe("PresetAlertTablePanel in dashboard edit mode", () => {
     );
 
     expect(mockLastTableProps).toEqual(
-      expect.objectContaining({
-        item,
-        presetName: "feed",
-        presetId: "p1",
-        presetNoisy: true,
-      })
+      expect.objectContaining({ item, presetNoisy: true })
     );
+    expect(mockLastTableProps).not.toHaveProperty("presetName");
+    expect(mockLastTableProps).not.toHaveProperty("presetId");
 
     renderInMode(false);
     expect(mockLastTableProps).toEqual(

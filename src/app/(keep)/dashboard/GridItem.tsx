@@ -73,10 +73,8 @@ const GridItem: React.FC<GridItemProps> = ({
         )}
         {/* While editing, panel content must not navigate or open links. The
             counter panel keeps its menu in its body, so it blocks its own clicks.
-            The alert table's header controls must work while editing, so it
-            turns off its own links and Go to preset. Generic metrics hold
-            settings (filters saved from the menu) and no links, so they stay
-            usable. */}
+            Generic metrics hold settings (filters saved from the menu) and no
+            links, so they stay usable. */}
         <div
           className="contents"
           inert={
