@@ -11,13 +11,25 @@ import { createPortal } from "react-dom";
 import {
   ColumnPinningState,
   Table as ReactTable,
+  Row,
+  RowSelectionState,
+  Updater,
+  functionalUpdate,
   getCoreRowModel,
   getGroupedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 import { Table } from "@tremor/react";
 import { XMarkIcon } from "@heroicons/react/20/solid";
+import clsx from "clsx";
 import type { AlertDto } from "@/entities/alerts/model/types";
+import {
+  GROUP_ROW_SELECTION,
+  QUICK_ACTIONS_TABLE_CLASS,
+  QUICK_REVEAL_CLASS,
+  getRangeIds,
+  setIdsTicked,
+} from "@/features/alerts/alert-quick-actions";
 import { RowStyleOverrideProvider } from "@/entities/alerts/model/useAlertRowStyle";
 import AlertsTableHeaders from "@/widgets/alerts-table/ui/alert-table-headers";
 import { AlertsTableBody } from "@/widgets/alerts-table/ui/alerts-table-body";
@@ -26,6 +38,7 @@ import { useGroupExpansion } from "@/utils/hooks/useGroupExpansion";
 import { WidgetData } from "../../types";
 import {
   NARROW_WIDGET_PX,
+  QUICK_TRAY_COMPACT_PX,
   WIDGET_PINNED_LEFT,
   mergeVisibleColumnOrder,
 } from "./alert-table-widget-config";
@@ -45,6 +58,24 @@ import {
   WidgetColumnWidths,
   WidgetTableSettings,
 } from "./widget-table-settings";
+import {
+  CHECKBOX_COLUMN_ID,
+  CHECKBOX_COLUMN_PX,
+  QUICK_ACTION_COLUMNS,
+  ROW_ACTIONS_COLUMN_ID,
+} from "./widget-quick-action-columns";
+import {
+  WidgetRowActions,
+  WidgetRowActionsContext,
+} from "./widget-row-actions-context";
+
+/** The selection the widget's caller holds, and the hooks the table's chrome calls. */
+export interface WidgetSelectionProps {
+  rowSelection: RowSelectionState;
+  onRowSelectionChange: (next: RowSelectionState) => void;
+  onOpenAction: (actionId: string, alerts: AlertDto[]) => void;
+  openFingerprint: string | null;
+}
 
 interface WidgetAlertsTableProps {
   item: WidgetData;
@@ -54,6 +85,7 @@ interface WidgetAlertsTableProps {
   isEditMode: boolean;
   onChange?: (item: WidgetData) => void;
   settingsSlot?: HTMLElement | null;
+  selection?: WidgetSelectionProps;
 }
 
 const NO_ALERTS: AlertDto[] = [];
@@ -63,9 +95,29 @@ const SKELETON_ROWS = 5;
 const OPAQUE_CELL_CLASSES =
   "[&_th]:[background:var(--widget-opaque-bg)] [&_td.sticky]:[background:var(--widget-opaque-bg)] [&_th.sticky]:!z-40 [&_td.sticky]:!z-40";
 const COMPACT_GROUP_HEADER_CLASSES = "[&_td.group-header-cell]:py-1";
+const TABLE_FEATURES = [GROUP_ROW_SELECTION];
 const BORDER_TOLERANCE_PX = 0.01;
 
 function noop() {}
+
+function isAlertRow(row: Row<AlertDto>): boolean {
+  return !row.getIsGrouped();
+}
+
+/** Ids of the alert rows in display order, leaving out the rows of collapsed groups. */
+function getShownRowIds(
+  rows: Row<AlertDto>[],
+  isGroupExpanded: (groupId: string) => boolean
+): string[] {
+  return rows.flatMap((row) => {
+    if (!row.getIsGrouped()) {
+      return [row.id];
+    }
+    return isGroupExpanded(row.id)
+      ? getShownRowIds(row.subRows, isGroupExpanded)
+      : [];
+  });
+}
 
 function useElementWidth(ref: RefObject<HTMLElement | null>): number | null {
   const [width, setWidth] = useState<number | null>(null);
@@ -144,14 +196,19 @@ function WidgetAlertsTableContent({
   isEditMode,
   onChange,
   settingsSlot,
+  selection,
 }: WidgetAlertsTableProps) {
   const widgetKey = `dashboard-widget-${item.i}`;
+  const chromeSelection = isEditMode ? undefined : selection;
+  const chrome = chromeSelection !== undefined;
   const wrapperRef = useRef<HTMLDivElement>(null);
   const a11yContainerRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLTableElement>(null);
   const containerWidth = useElementWidth(wrapperRef);
   const borderWidth = useCollapsedBorderWidth(tableRef);
   const isNarrow = containerWidth !== null && containerWidth < NARROW_WIDGET_PX;
+  const isTrayCompact =
+    containerWidth !== null && containerWidth < QUICK_TRAY_COMPACT_PX;
 
   const { columns, allColumnIds } = useWidgetAlertColumns({
     item,
@@ -181,13 +238,17 @@ function WidgetAlertsTableContent({
       ),
     [state.grouping, columns, isGroupable]
   );
-  const columnPinning = useMemo<ColumnPinningState>(
-    () => ({
-      left: WIDGET_PINNED_LEFT.filter((id) => state.visibleColumns.includes(id)),
-      right: [],
-    }),
-    [state.visibleColumns]
-  );
+  const columnPinning = useMemo<ColumnPinningState>(() => {
+    const pinnedLeft = WIDGET_PINNED_LEFT.filter((id) =>
+      state.visibleColumns.includes(id)
+    );
+    return chrome
+      ? {
+          left: [CHECKBOX_COLUMN_ID, ...pinnedLeft],
+          right: [ROW_ACTIONS_COLUMN_ID],
+        }
+      : { left: pinnedLeft, right: [] };
+  }, [state.visibleColumns, chrome]);
 
   const emptyGroupPosition = useRef(state.emptyGroupPosition);
   emptyGroupPosition.current = state.emptyGroupPosition;
@@ -217,9 +278,18 @@ function WidgetAlertsTableContent({
         visibleOrder: visibleColumnOrder,
         savedSizing,
         containerWidth:
-          containerWidth === null ? null : containerWidth - borderWidth,
+          containerWidth === null
+            ? null
+            : containerWidth - borderWidth - (chrome ? CHECKBOX_COLUMN_PX : 0),
       }),
-    [columns, visibleColumnOrder, savedSizing, containerWidth, borderWidth]
+    [
+      columns,
+      visibleColumnOrder,
+      savedSizing,
+      containerWidth,
+      borderWidth,
+      chrome,
+    ]
   );
   const layoutColumns = useMemo(
     () => withUnclampedColumn(columns, layout.unclampedColumnId),
@@ -233,19 +303,83 @@ function WidgetAlertsTableContent({
     [columns]
   );
 
+  const tableSetup = useMemo(
+    () =>
+      chrome
+        ? {
+            columns: [
+              QUICK_ACTION_COLUMNS.checkbox,
+              ...layoutColumns,
+              QUICK_ACTION_COLUMNS.rowActions,
+            ],
+            columnOrder: [
+              CHECKBOX_COLUMN_ID,
+              ...state.columnOrder,
+              ROW_ACTIONS_COLUMN_ID,
+            ],
+            columnVisibility: {
+              ...state.columnVisibility,
+              [CHECKBOX_COLUMN_ID]: true,
+              [ROW_ACTIONS_COLUMN_ID]: true,
+            },
+            columnSizing: {
+              ...layout.columnSizing,
+              [CHECKBOX_COLUMN_ID]: CHECKBOX_COLUMN_PX,
+              [ROW_ACTIONS_COLUMN_ID]: 0,
+            },
+            tableWidth:
+              layout.tableWidth === undefined
+                ? undefined
+                : layout.tableWidth + CHECKBOX_COLUMN_PX,
+          }
+        : {
+            columns: layoutColumns,
+            columnOrder: state.columnOrder,
+            columnVisibility: state.columnVisibility,
+            columnSizing: layout.columnSizing,
+            tableWidth: layout.tableWidth,
+          },
+    [
+      chrome,
+      layoutColumns,
+      state.columnOrder,
+      state.columnVisibility,
+      layout.columnSizing,
+      layout.tableWidth,
+    ]
+  );
+
+  const onRowSelectionChange = useCallback(
+    (updater: Updater<RowSelectionState>) => {
+      if (!chromeSelection) {
+        return;
+      }
+      chromeSelection.onRowSelectionChange(
+        functionalUpdate(updater, chromeSelection.rowSelection)
+      );
+    },
+    [chromeSelection]
+  );
+
   const table = useReactTable({
+    _features: TABLE_FEATURES,
     data: alerts ?? NO_ALERTS,
-    columns: layoutColumns,
+    columns: tableSetup.columns,
     getRowId: (row) => row.fingerprint,
     state: {
-      columnOrder: state.columnOrder,
-      columnVisibility: state.columnVisibility,
-      columnSizing: layout.columnSizing,
+      columnOrder: tableSetup.columnOrder,
+      columnVisibility: tableSetup.columnVisibility,
+      columnSizing: tableSetup.columnSizing,
       grouping,
       columnPinning,
+      ...(chromeSelection
+        ? { rowSelection: chromeSelection.rowSelection }
+        : {}),
     },
     onColumnSizingChange: state.setColumnSizing,
     onGroupingChange: state.setGrouping,
+    enableRowSelection: chrome ? isAlertRow : false,
+    onRowSelectionChange: chrome ? onRowSelectionChange : undefined,
     enableSorting: false,
     manualSorting: true,
     enableGrouping: true,
@@ -255,6 +389,46 @@ function WidgetAlertsTableContent({
     getCoreRowModel: getCoreRowModel(),
     getGroupedRowModel: groupedRowModel,
   });
+
+  const { isGroupExpanded } = groupExpansion;
+  const lastPickRef = useRef<string | null>(null);
+  const onPick = useCallback(
+    (rowId: string, shiftKey: boolean) => {
+      if (!chromeSelection) {
+        return;
+      }
+      const current = chromeSelection.rowSelection;
+      const order = getShownRowIds(table.getRowModel().rows, isGroupExpanded);
+      const last = lastPickRef.current;
+      const hasAnchor =
+        last !== null &&
+        Object.keys(current).length > 0 &&
+        order.includes(last);
+      const ids =
+        shiftKey && hasAnchor ? getRangeIds(order, last, rowId) : [rowId];
+      lastPickRef.current = rowId;
+      chromeSelection.onRowSelectionChange(
+        setIdsTicked(current, ids, !current[rowId])
+      );
+    },
+    [chromeSelection, table, isGroupExpanded]
+  );
+
+  const isSelecting =
+    !!chromeSelection && Object.keys(chromeSelection.rowSelection).length > 0;
+  const rowActions = useMemo<WidgetRowActions | null>(
+    () =>
+      chromeSelection
+        ? {
+            isSelecting,
+            compact: isTrayCompact,
+            openFingerprint: chromeSelection.openFingerprint,
+            onPick,
+            onOpenAction: chromeSelection.onOpenAction,
+          }
+        : null,
+    [chromeSelection, isSelecting, isTrayCompact, onPick]
+  );
 
   const setVisibleColumnOrder = useCallback(
     (order: string[]) =>
@@ -321,55 +495,65 @@ function WidgetAlertsTableContent({
             "--widget-opaque-bg": opaqueBackground,
           } as CSSProperties
         }
-        className={`isolate max-w-full overflow-x-auto border rounded-md text-xs ${OPAQUE_CELL_CLASSES} ${COMPACT_GROUP_HEADER_CLASSES}`}
+        className={clsx(
+          "isolate max-w-full overflow-x-auto border rounded-md text-xs",
+          OPAQUE_CELL_CLASSES,
+          COMPACT_GROUP_HEADER_CLASSES,
+          chrome && QUICK_ACTIONS_TABLE_CLASS
+        )}
         data-cy="dashboard-widget-alerts-table"
+        data-selecting={isSelecting ? "" : undefined}
       >
-        <Table
-          ref={tableRef}
-          style={
-            layout.tableWidth === undefined
-              ? undefined
-              : { width: layout.tableWidth }
-          }
-          className="[&>table]:table-fixed [&>table]:w-full [&>table]:text-xs"
-        >
-          <AlertsTableHeaders
-            columns={layoutColumns}
-            table={table}
-            presetName={widgetKey}
-            a11yContainerRef={a11yContainerRef}
-            columnTimeFormats={NO_FORMATS}
-            setColumnTimeFormats={noop}
-            columnListFormats={NO_FORMATS}
-            setColumnListFormats={noop}
-            columnOrder={visibleColumnOrder}
-            setColumnOrder={setVisibleColumnOrder}
-            columnVisibility={state.columnVisibility}
-            setColumnVisibility={state.setColumnVisibility}
-            columnRenameMapping={renames}
-            setColumnRenameMapping={state.setColumnRenameMapping}
-            interactive={isEditMode && !!onChange && !isNarrow}
-            showSortItems={false}
-            showFormatItems={false}
-            getOriginalColumnName={getColumnLabel}
-          />
-          <AlertsTableBody
-            table={table}
-            showSkeleton={!alerts}
-            pageSize={SKELETON_ROWS}
-            theme={NO_THEME}
-            lastViewedAlert={null}
-            presetName={widgetKey}
-            groupExpansionState={groupExpansion}
-            presetNoisy={presetNoisy}
-            rowAppearance="plain"
-            selectable={false}
-            showIncidentDetails
-            linksDisabled={isEditMode}
-            getColumnLabel={labelOf}
-            inert={isEditMode}
-          />
-        </Table>
+        <WidgetRowActionsContext.Provider value={rowActions}>
+          <Table
+            ref={tableRef}
+            style={
+              tableSetup.tableWidth === undefined
+                ? undefined
+                : { width: tableSetup.tableWidth }
+            }
+            className="[&>table]:table-fixed [&>table]:w-full [&>table]:text-xs"
+          >
+            <AlertsTableHeaders
+              columns={layoutColumns}
+              table={table}
+              presetName={widgetKey}
+              a11yContainerRef={a11yContainerRef}
+              columnTimeFormats={NO_FORMATS}
+              setColumnTimeFormats={noop}
+              columnListFormats={NO_FORMATS}
+              setColumnListFormats={noop}
+              columnOrder={visibleColumnOrder}
+              setColumnOrder={setVisibleColumnOrder}
+              columnVisibility={state.columnVisibility}
+              setColumnVisibility={state.setColumnVisibility}
+              columnRenameMapping={renames}
+              setColumnRenameMapping={state.setColumnRenameMapping}
+              interactive={isEditMode && !!onChange && !isNarrow}
+              showSortItems={false}
+              showFormatItems={false}
+              getOriginalColumnName={getColumnLabel}
+            />
+            <AlertsTableBody
+              table={table}
+              showSkeleton={!alerts}
+              pageSize={SKELETON_ROWS}
+              theme={NO_THEME}
+              lastViewedAlert={null}
+              presetName={widgetKey}
+              groupExpansionState={groupExpansion}
+              presetNoisy={presetNoisy}
+              rowAppearance="plain"
+              selectable={chrome}
+              dragSelectable={false}
+              groupCheckboxClassName={QUICK_REVEAL_CLASS}
+              showIncidentDetails
+              linksDisabled={isEditMode}
+              getColumnLabel={labelOf}
+              inert={isEditMode}
+            />
+          </Table>
+        </WidgetRowActionsContext.Provider>
         <div ref={a11yContainerRef} className="sr-only" />
       </div>
       {isEditMode &&
@@ -411,6 +595,18 @@ function WidgetAlertsTableContent({
  * and columns that do not fit scroll sideways. The width the table's
  * collapsed outer borders add (an incident group's colored edge) is measured
  * and left free, so a table that fits never scrolls.
+ *
+ * With `selection` and outside edit mode, the table adds its selection chrome:
+ * a 28 px checkbox gutter pinned left, before the pinned icon columns, with a
+ * select-all-shown header checkbox and a three-state checkbox on each group
+ * header; and a zero-width row-actions column pinned right, whose quick-action
+ * tray floats over the row's last cells and hides while anything is ticked.
+ * Ticks live in the caller's `selection.rowSelection`, keyed by fingerprint and
+ * never holding a group row; shift-click ticks the range in display order,
+ * skipping the rows of collapsed groups, and with nothing ticked it acts as a
+ * plain click, so a Clear leaves no anchor behind. The gutter's width comes
+ * out of the layout, so the table still fills the widget exactly. In edit mode
+ * there is no chrome, so none of it is saved or listed in the ⚙ panel.
  *
  * In edit mode the table body is `inert`: none of its links, rows or group
  * headers can be clicked or focused, so nothing in it navigates or reaches the
