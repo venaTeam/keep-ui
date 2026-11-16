@@ -1048,6 +1048,25 @@ describe("WidgetAlertsTable", () => {
       expect(onChange.mock.calls[0][0].presetColumns).toEqual(["name"]);
     });
 
+    it("offers a list field as one column, never one column per item", () => {
+      renderWithSlot({}, { isEditMode: true, onChange: jest.fn() }, [
+        linkedAlert("i1", "Checkout degraded"),
+        alertWith({ enriched_fields: ["service"] }),
+      ]);
+
+      fireEvent.click(settingsButton() as HTMLElement);
+      const columnIds = Array.from(
+        document.querySelectorAll("[data-table-settings-column]")
+      ).map((row) => row.getAttribute("data-table-settings-column"));
+
+      expect(columnIds).toEqual(
+        expect.arrayContaining(["incident_dto", "enriched_fields"])
+      );
+      expect(columnIds.filter((id) => /\.\d+(\.|$)/.test(id ?? ""))).toEqual(
+        []
+      );
+    });
+
     it("Reset to defaults emits one change that drops the widget's settings", () => {
       const onChange = jest.fn();
       renderWithSlot(

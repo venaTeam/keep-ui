@@ -38,7 +38,8 @@ function atMinimumSize(column: ColumnDef<AlertDto>): ColumnDef<AlertDto> {
  * Builds the column definitions of an Alert Table widget.
  *
  * Besides the fixed columns it generates one for every field of the loaded
- * alerts, every visible column, the group-by field and `incident`, so a
+ * alerts (a list field is one column, not one per item), every visible
+ * column, the group-by field and `incident`, so a
  * configured column nobody has still renders (empty). The checkbox, menu and
  * noise columns are left out. Empty grouping values share one group, and every
  * column except the icon columns is headed by its widget label, so no stored
@@ -58,7 +59,7 @@ export function useWidgetAlertColumns({
   presetName: string;
 }): { columns: ColumnDef<AlertDto>[]; allColumnIds: string[] } {
   const alertKeys = useStableIds(
-    getAdditionalColsToGenerate(alerts ?? NO_ALERTS)
+    getAdditionalColsToGenerate(alerts ?? NO_ALERTS, { arraysAsLeaves: true })
   );
   const knownIds = useMemo(
     () => new Set<string>([...WIDGET_STATIC_COLUMN_IDS, ...alertKeys]),
