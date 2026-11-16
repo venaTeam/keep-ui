@@ -15,6 +15,9 @@ import {
 } from "../alert-table-widget-config";
 import { AlertDto, Severity, Status } from "@/entities/alerts/model/types";
 import { useAlertTableCols } from "@/widgets/alerts-table/lib/alert-table-utils";
+import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import { isGroupableColumn } from "../empty-group-row-model";
+import { useWidgetAlertColumns } from "../use-widget-alert-columns";
 import { useConfig } from "@/utils/hooks/useConfig";
 
 const mockUsePresetColumnState = jest.fn();
@@ -245,18 +248,36 @@ describe("WidgetAlertsTable", () => {
     const staticIds: readonly string[] = WIDGET_STATIC_COLUMN_IDS;
     const cannotGroup = result.current
       .filter((column) => staticIds.includes(column.id as string))
-      .filter((column) => {
-        const hasAccessor =
-          ("accessorFn" in column && column.accessorFn !== undefined) ||
-          ("accessorKey" in column && column.accessorKey !== undefined);
-        const hasValue = hasAccessor || column.getGroupingValue !== undefined;
-        return !hasValue || column.enableGrouping === false;
-      })
+      .filter((column) => !isGroupableColumn(column))
       .map((column) => column.id as string);
 
     expect([...cannotGroup].sort()).toEqual(
       [...WIDGET_UNGROUPABLE_COLUMN_IDS].sort()
     );
+  });
+
+  it("the header's getCanGroup agrees with isGroupableColumn for every static column", () => {
+    const { result } = renderHook(() => {
+      const { columns } = useWidgetAlertColumns({
+        item: { ...baseItem, presetColumns: [...WIDGET_STATIC_COLUMN_IDS] },
+        alerts: [alertWith()],
+        presetName: "drift-guard",
+      });
+      return useReactTable({
+        data: [],
+        columns,
+        enableGrouping: true,
+        getCoreRowModel: getCoreRowModel(),
+      });
+    });
+
+    WIDGET_STATIC_COLUMN_IDS.forEach((id) => {
+      const column = result.current.getColumn(id)!;
+      expect([id, column.getCanGroup()]).toEqual([
+        id,
+        isGroupableColumn(column.columnDef),
+      ]);
+    });
   });
 
   it("legacy snake_case column shows the camelCase value", () => {

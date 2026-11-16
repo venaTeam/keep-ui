@@ -79,11 +79,11 @@ interface WidgetTableSettingsProps {
   state: WidgetColumnState;
   columnIds: string[];
   columnWidths: WidgetColumnWidths;
-  ungroupableColumnIds?: readonly string[];
+  isGroupable?: (columnId: string) => boolean;
 }
 
 const NO_FIELDS: string[] = [];
-const NO_IDS: readonly string[] = [];
+const anyColumn = () => true;
 const EMPTY_GROUP_POSITIONS: { value: EmptyGroupPosition; label: string }[] = [
   { value: "top", label: "Top" },
   { value: "bottom", label: "Bottom" },
@@ -629,14 +629,10 @@ function SettingsContent({
   state,
   columnIds,
   columnWidths,
-  ungroupableColumnIds,
+  isGroupable,
   onClose,
 }: Required<WidgetTableSettingsProps> & { onClose: () => void }) {
   const fieldOptions = useFieldOptions(columnIds);
-  const groupOptions = useMemo(
-    () => fieldOptions.filter((id) => !ungroupableColumnIds.includes(id)),
-    [fieldOptions, ungroupableColumnIds]
-  );
   const groupBy = state.grouping[0] ?? null;
 
   return (
@@ -661,7 +657,8 @@ function SettingsContent({
       <GroupBySelect
         value={groupBy}
         onChange={(value) => state.setGrouping(value ? [value] : [])}
-        fieldOptions={groupOptions}
+        fieldOptions={fieldOptions}
+        isGroupable={isGroupable}
         data-cy="dashboard-widget-table-settings-group-by"
       />
       {groupBy && <EmptyGroupPositionSetting state={state} />}
@@ -697,8 +694,8 @@ function SettingsContent({
  * rows with no value go, and resets the widget to the defaults. Every change
  * goes straight to `state`; a width change passes the whole sizing map.
  *
- * `columnIds` are the columns the widget can show; `ungroupableColumnIds` are
- * left out of the grouping options. The popover is a dialog named "Table
+ * `columnIds` are the columns the widget can show; the grouping options are
+ * the fields `isGroupable` accepts (every field by default). The popover is a dialog named "Table
  * settings", rendered in a portal so the dashboard grid cannot clip or cover
  * it. Reorder announcements read the columns' labels, not their ids.
  */
@@ -706,7 +703,7 @@ export function WidgetTableSettings({
   state,
   columnIds,
   columnWidths,
-  ungroupableColumnIds = NO_IDS,
+  isGroupable = anyColumn,
 }: WidgetTableSettingsProps) {
   const { refs, floatingStyles } = useFloating({
     strategy: "fixed",
@@ -740,7 +737,7 @@ export function WidgetTableSettings({
             state={state}
             columnIds={columnIds}
             columnWidths={columnWidths}
-            ungroupableColumnIds={ungroupableColumnIds}
+            isGroupable={isGroupable}
             onClose={close}
           />
         )}

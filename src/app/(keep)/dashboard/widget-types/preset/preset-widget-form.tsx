@@ -48,6 +48,8 @@ const getGroupedCounterRows = (countBy: CountBy) =>
 const GROUPING_HINT = "Grouping works best with 20 or more alerts";
 const GROUPING_HINT_BELOW_COUNT = 10;
 const DEFAULT_EMPTY_GROUP_POSITION: EmptyGroupPosition = "top";
+const isGroupableField = (field: string) =>
+  !WIDGET_UNGROUPABLE_COLUMN_IDS.includes(field);
 const EMPTY_GROUP_POSITIONS: ReadonlyArray<{
   value: EmptyGroupPosition;
   label: string;
@@ -84,9 +86,7 @@ function GroupRowsByControl({
   const { data } = useFacetPotentialFields("alerts");
   const fieldOptions = useMemo(
     () =>
-      getAlertColumnOptions([], resolveFieldIds(data ?? [])).filter(
-        (id) => !WIDGET_UNGROUPABLE_COLUMN_IDS.includes(id)
-      ),
+      getAlertColumnOptions([], resolveFieldIds(data ?? [])),
     [data]
   );
 
@@ -97,6 +97,7 @@ function GroupRowsByControl({
         value={value}
         onChange={onChange}
         fieldOptions={fieldOptions}
+        isGroupable={isGroupableField}
       />
       {showHint && <Text className="mt-1 text-xs">{GROUPING_HINT}</Text>}
     </div>

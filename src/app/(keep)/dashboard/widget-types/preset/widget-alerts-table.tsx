@@ -9,7 +9,6 @@ import React, {
 } from "react";
 import { createPortal } from "react-dom";
 import {
-  ColumnDef,
   ColumnPinningState,
   Table as ReactTable,
   getCoreRowModel,
@@ -30,7 +29,10 @@ import {
   WIDGET_PINNED_LEFT,
   mergeVisibleColumnOrder,
 } from "./alert-table-widget-config";
-import { withEmptyGroupPosition } from "./empty-group-row-model";
+import {
+  isGroupableColumn,
+  withEmptyGroupPosition,
+} from "./empty-group-row-model";
 import { useWidgetAlertColumns } from "./use-widget-alert-columns";
 import { useWidgetColumnState } from "./use-widget-column-state";
 import {
@@ -63,12 +65,6 @@ const COMPACT_GROUP_HEADER_CLASSES = "[&_td.group-header-cell]:py-1";
 const BORDER_TOLERANCE_PX = 0.01;
 
 function noop() {}
-
-function isGroupable(column: ColumnDef<AlertDto>): boolean {
-  return (
-    column.getGroupingValue !== undefined && column.enableGrouping !== false
-  );
-}
 
 function useElementWidth(ref: RefObject<HTMLElement | null>): number | null {
   const [width, setWidth] = useState<number | null>(null);
@@ -187,12 +183,25 @@ function WidgetAlertsTableContent({
   const state = useWidgetColumnState({ item, allColumnIds, onChange });
   const groupExpansion = useGroupExpansion(true);
 
+  const ungroupableColumnIds = useMemo(
+    () =>
+      new Set(
+        columns
+          .filter((column) => !isGroupableColumn(column))
+          .map((column) => column.id as string)
+      ),
+    [columns]
+  );
+  const isGroupable = useCallback(
+    (columnId: string) => !ungroupableColumnIds.has(columnId),
+    [ungroupableColumnIds]
+  );
   const grouping = useMemo(
     () =>
-      state.grouping.filter((id) =>
-        columns.some((column) => column.id === id && isGroupable(column))
+      state.grouping.filter(
+        (id) => isGroupable(id) && columns.some((column) => column.id === id)
       ),
-    [state.grouping, columns]
+    [state.grouping, columns, isGroupable]
   );
   const columnPinning = useMemo<ColumnPinningState>(
     () => ({
@@ -279,14 +288,6 @@ function WidgetAlertsTableContent({
   const labelOf = useCallback(
     (columnId: string) => getColumnLabel(columnId, renames),
     [renames]
-  );
-
-  const ungroupableColumnIds = useMemo(
-    () =>
-      columns
-        .filter((column) => !isGroupable(column))
-        .map((column) => column.id as string),
-    [columns]
   );
 
   const groupedBy = grouping[0];
@@ -393,7 +394,7 @@ function WidgetAlertsTableContent({
             state={state}
             columnIds={allColumnIds}
             columnWidths={getColumnWidths(table, columnBounds, tableRef)}
-            ungroupableColumnIds={ungroupableColumnIds}
+            isGroupable={isGroupable}
           />,
           settingsSlot
         )}
