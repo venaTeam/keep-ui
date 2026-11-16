@@ -137,7 +137,7 @@ export const LinkWithIcon = ({
               data-cy={duplicateDataCy}
               className="flex items-center text-slate-400 hover:text-orange-500 p-0"
             >
-              <FiCopy className="text-slate-400 hover:text-orange-500 group-hover:block group-focus-within:block hidden h-4 w-4" />
+              <FiCopy className="text-slate-400 hover:text-orange-500 group-hover:block group-has-[:focus-visible]:block hidden h-4 w-4 mr-1" />
             </button>
           </Tooltip>
         )}
@@ -146,7 +146,7 @@ export const LinkWithIcon = ({
             onClick={onDelete}
             className={`flex items-center text-slate-400 hover:text-red-500 p-0`}
           >
-            <Trashcan className="text-slate-400 hover:text-red-500 group-hover:block group-focus-within:block hidden h-4 w-4" />
+            <Trashcan className="text-slate-400 hover:text-red-500 group-hover:block hidden h-4 w-4" />
           </button>
         )}
       </div>

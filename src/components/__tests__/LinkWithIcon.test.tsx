@@ -60,6 +60,28 @@ describe("LinkWithIcon duplicate action", () => {
     expect(screen.getAllByRole("button")).toHaveLength(1);
   });
 
+  it("keeps the original trash icon classes without onDuplicate", () => {
+    renderLink({ isDeletable: true, onDelete: jest.fn() });
+    const trashIcon = screen.getByRole("button").querySelector("svg");
+    expect(trashIcon).toHaveAttribute(
+      "class",
+      "tremor-Icon-icon shrink-0 text-slate-400 hover:text-red-500 group-hover:block hidden h-4 w-4"
+    );
+  });
+
+  it("reveals the copy icon on hover and keyboard focus only", () => {
+    renderLink({ onDuplicate: jest.fn(), duplicateAriaLabel: "Duplicate Ops" });
+    const copyIcon = screen
+      .getByRole("button", { name: "Duplicate Ops" })
+      .querySelector("svg");
+    expect(copyIcon).toHaveClass(
+      "hidden",
+      "group-hover:block",
+      "group-has-[:focus-visible]:block"
+    );
+    expect(copyIcon).not.toHaveClass("group-focus-within:block");
+  });
+
   it("places duplicate before delete and keeps delete working", () => {
     const onDelete = jest.fn();
     const onDuplicate = jest.fn();
