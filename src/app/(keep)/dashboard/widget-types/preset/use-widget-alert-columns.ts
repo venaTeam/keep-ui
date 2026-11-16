@@ -10,6 +10,7 @@ import {
   WIDGET_EXCLUDED_COLUMNS,
   WIDGET_PINNED_LEFT,
   WIDGET_STATIC_COLUMN_IDS,
+  getKnownColumnIds,
   getVisibleColumnIds,
 } from "./alert-table-widget-config";
 import { normalizeEmptyGrouping } from "./empty-group-row-model";
@@ -22,6 +23,10 @@ const NO_ALERTS: AlertDto[] = [];
 function useStableIds(ids: string[]): string[] {
   const key = JSON.stringify(ids);
   return useMemo(() => JSON.parse(key) as string[], [key]);
+}
+
+function getFieldKeys(alerts: AlertDto[]): string[] {
+  return Array.from(new Set(alerts.flatMap(Object.keys))).sort();
 }
 
 function isShownInWidget(column: ColumnDef<AlertDto>): boolean {
@@ -39,9 +44,11 @@ function atMinimumSize(column: ColumnDef<AlertDto>): ColumnDef<AlertDto> {
  *
  * Besides the fixed columns it generates one for every field of the loaded
  * alerts (a list field is one column, not one per item), every visible
- * column, the group-by field and `incident`, so a
- * configured column nobody has still renders (empty). The checkbox, menu and
- * noise columns are left out. Empty grouping values share one group, and every
+ * column, the group-by field and `incident`, so a configured column nobody
+ * has still renders (empty). A saved snake_case id resolves to its camelCase
+ * form when that is a fixed column, a known alert key or a field of the
+ * loaded alerts. The checkbox, menu and noise columns are left out. Empty
+ * grouping values share one group, and every
  * column except the icon columns is headed by its widget label, so no stored
  * presets-page name can show through. Those columns also start at their
  * minimum width (`WIDGET_COLUMN_MIN_SIZE` for name and description), so a
@@ -61,9 +68,10 @@ export function useWidgetAlertColumns({
   const alertKeys = useStableIds(
     getAdditionalColsToGenerate(alerts ?? NO_ALERTS, { arraysAsLeaves: true })
   );
+  const fieldKeys = useStableIds(getFieldKeys(alerts ?? NO_ALERTS));
   const knownIds = useMemo(
-    () => new Set<string>([...WIDGET_STATIC_COLUMN_IDS, ...alertKeys]),
-    [alertKeys]
+    () => getKnownColumnIds([...alertKeys, ...fieldKeys]),
+    [alertKeys, fieldKeys]
   );
   const groupBy = item.alertTable?.groupBy;
   const additionalColsToGenerate = useStableIds(

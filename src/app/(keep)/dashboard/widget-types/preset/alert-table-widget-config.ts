@@ -1,5 +1,6 @@
 import { camelCase } from "lodash";
 import type { VisibilityState } from "@tanstack/react-table";
+import { AlertKnownKeys } from "@/entities/alerts/model/types";
 import type {
   AlertTableWidgetConfig,
   EmptyGroupPosition,
@@ -62,6 +63,22 @@ export type WidgetColumnChange = {
   groupBy?: string | null;
   emptyGroupPosition?: EmptyGroupPosition;
 };
+
+/**
+ * Returns the ids a saved column id can resolve to: the widget's fixed columns,
+ * the alert's known keys (`AlertKnownKeys`, such as `duplicateReason`) and
+ * `loadedIds`, the field keys and generated column ids of the loaded alerts.
+ * Without `loadedIds` it is what a widget knows before any alert loads.
+ */
+export function getKnownColumnIds(
+  loadedIds: Iterable<string> = []
+): ReadonlySet<string> {
+  return new Set<string>([
+    ...WIDGET_STATIC_COLUMN_IDS,
+    ...AlertKnownKeys,
+    ...loadedIds,
+  ]);
+}
 
 /**
  * Maps a saved column id to the id the table uses.

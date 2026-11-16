@@ -271,6 +271,17 @@ describe("WidgetAlertsTable", () => {
     );
   });
 
+  it("a saved snake_case column whose camelCase form is a known alert key shows the value", () => {
+    renderWidget({ presetColumns: ["name", "duplicate_reason"] }, [
+      alertWith({ duplicateReason: "same fingerprint" }),
+    ]);
+
+    expect(headerIds()).toEqual(["name", "duplicateReason"]);
+    expect(cellsOf("duplicateReason")[0]).toHaveTextContent(
+      "same fingerprint"
+    );
+  });
+
   it("an uncustomized widget uses the default columns, pinned icons first", () => {
     renderWidget();
 
