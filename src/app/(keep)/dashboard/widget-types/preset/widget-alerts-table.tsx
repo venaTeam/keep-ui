@@ -380,7 +380,6 @@ function WidgetAlertsTableContent({
             lastViewedAlert={null}
             presetName={widgetKey}
             groupExpansionState={groupExpansion}
-            rowStyleOverride="default"
             rowAppearance="plain"
             selectable={false}
             showIncidentDetails

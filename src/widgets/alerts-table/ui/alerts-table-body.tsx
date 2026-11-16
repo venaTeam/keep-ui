@@ -3,10 +3,7 @@ import { AlertDto } from "@/entities/alerts/model";
 import { Table, flexRender } from "@tanstack/react-table";
 import React, { useRef, useEffect } from "react";
 import { GroupedRow } from "@/widgets/alerts-table/ui/alert-grouped-row";
-import {
-  RowStyle,
-  useAlertRowStyle,
-} from "@/entities/alerts/model/useAlertRowStyle";
+import { useAlertRowStyle } from "@/entities/alerts/model/useAlertRowStyle";
 import { getCommonPinningStylesAndClassNames } from "@/shared/ui";
 import {
   getRowClassName,
@@ -32,7 +29,6 @@ interface Props {
   lastViewedAlert: string | null;
   presetName: string;
   groupExpansionState?: ReturnType<typeof useGroupExpansion>;
-  rowStyleOverride?: RowStyle;
   rowAppearance?: RowAppearance;
   selectable?: boolean;
   showIncidentDetails?: boolean;
@@ -49,15 +45,13 @@ export function AlertsTableBody({
   presetName,
   pageSize,
   groupExpansionState,
-  rowStyleOverride,
   rowAppearance = "default",
   selectable = true,
   showIncidentDetails = false,
   linksDisabled = false,
   getColumnLabel,
 }: Props) {
-  const [storedRowStyle] = useAlertRowStyle();
-  const rowStyle = rowStyleOverride ?? storedRowStyle;
+  const [rowStyle] = useAlertRowStyle();
   const { isRowExpanded } = useExpandedRows(presetName);
 
   // Use provided groupExpansionState or create a local one

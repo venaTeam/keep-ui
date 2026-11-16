@@ -12,6 +12,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { AlertDto, Status, Severity } from "@/entities/alerts/model/types";
+import { RowStyleOverrideProvider } from "@/entities/alerts/model/useAlertRowStyle";
 
 jest.mock("react-selectable-fast", () => {
   const React = require("react");
@@ -541,22 +542,23 @@ describe("AlertsTableBody", () => {
     );
   });
 
-  it("rowStyleOverride replaces the stored row style", () => {
-    const { container } = render(<BodyHarness rowStyleOverride="relaxed" />);
+  it("a RowStyleOverrideProvider replaces the stored row style", () => {
+    const { container } = render(
+      <RowStyleOverrideProvider value="relaxed">
+        <BodyHarness />
+      </RowStyleOverrideProvider>
+    );
     bodyRows(container).forEach((row) => {
       expect(row).toHaveClass("h-12");
       expect(row).not.toHaveClass("h-8");
     });
   });
 
-  it("skeleton rows follow rowStyleOverride and the plain appearance", () => {
+  it("skeleton rows follow the RowStyleOverrideProvider and the plain appearance", () => {
     const { container } = render(
-      <BodyHarness
-        showSkeleton
-        pageSize={2}
-        rowStyleOverride="relaxed"
-        rowAppearance="plain"
-      />
+      <RowStyleOverrideProvider value="relaxed">
+        <BodyHarness showSkeleton pageSize={2} rowAppearance="plain" />
+      </RowStyleOverrideProvider>
     );
     const rows = Array.from(
       container.querySelectorAll('[data-cy="alerts-row-skeleton"]')
