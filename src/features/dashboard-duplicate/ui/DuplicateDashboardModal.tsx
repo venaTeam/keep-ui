@@ -28,7 +28,9 @@ interface DuplicateDashboardModalProps {
  * the copy. The dialog is open while `source` is set; the last source stays
  * shown while it closes. A result that arrives after the dialog was dismissed
  * or switched to another source only toasts a success; it never closes,
- * navigates or touches the dialog's state.
+ * navigates or touches the dialog's state. A 404 keeps Duplicate disabled
+ * until another source is opened; a 409 reloads the dashboards list so the
+ * local name check catches the clash.
  */
 export function DuplicateDashboardModal({
   source,
@@ -58,6 +60,7 @@ export function DuplicateDashboardModal({
   const [sourceName, setSourceName] = useState("");
   const [name, setName] = useState("");
   const [serverError, setServerError] = useState<string | null>(null);
+  const [sourceGone, setSourceGone] = useState(false);
   const [pending, setPending] = useState(false);
 
   if (source !== prevSource) {
@@ -66,13 +69,17 @@ export function DuplicateDashboardModal({
       setSourceName(source.dashboard_name);
       setName(defaultCopyName(source.dashboard_name, existingNames));
       setServerError(null);
+      setSourceGone(false);
       setPending(false);
     }
   }
 
   const nameTaken = isDashboardNameTaken(name, existingNames);
-  const canSubmit = name.trim() !== "" && !nameTaken && !pending;
-  const nameError = serverError ?? (nameTaken && !pending ? NAME_TAKEN : null);
+  const canSubmit =
+    name.trim() !== "" && !nameTaken && !pending && !sourceGone;
+  const nameError = sourceGone
+    ? SOURCE_GONE
+    : serverError ?? (nameTaken && !pending ? NAME_TAKEN : null);
   const showUnsavedNote =
     hasUnsavedChanges &&
     decodeURIComponent(pathname) === `/dashboard/${sourceName}`;
@@ -99,8 +106,9 @@ export function DuplicateDashboardModal({
         error instanceof KeepApiError ? error.statusCode : undefined;
       if (status === 409) {
         setServerError(NAME_TAKEN);
+        refreshDashboards();
       } else if (status === 404) {
-        setServerError(SOURCE_GONE);
+        setSourceGone(true);
         refreshDashboards();
       } else {
         showErrorToast(error, "Failed to duplicate dashboard");

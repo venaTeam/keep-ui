@@ -235,6 +235,74 @@ describe("DuplicateDashboardModal", () => {
     expect(showErrorToast).not.toHaveBeenCalled();
   });
 
+  it("keeps Duplicate disabled and the source-gone message after a 404, even when the name changes", async () => {
+    mockPost.mockRejectedValue(new KeepApiError("x", "u", "", {}, 404));
+    await renderModal();
+
+    pressEnter();
+    await waitFor(() =>
+      expect(byCy("dashboard-duplicate-name-error")).toHaveTextContent(
+        SOURCE_GONE
+      )
+    );
+    expect(submitButton()).toBeDisabled();
+
+    typeName("Something new");
+
+    expect(byCy("dashboard-duplicate-name-error")).toHaveTextContent(
+      SOURCE_GONE
+    );
+    expect(submitButton()).toBeDisabled();
+    pressEnter();
+    expect(mockPost).toHaveBeenCalledTimes(1);
+  });
+
+  it("re-enables Duplicate when another dashboard is opened after a 404", async () => {
+    mockPost.mockRejectedValue(new KeepApiError("x", "u", "", {}, 404));
+    const { rerender, onClose } = await renderModal();
+    pressEnter();
+    await waitFor(() =>
+      expect(byCy("dashboard-duplicate-name-error")).toHaveTextContent(
+        SOURCE_GONE
+      )
+    );
+
+    const ops = { id: "d3", dashboard_name: "Ops", dashboard_config: {} };
+    rerender(
+      <DuplicateDashboardModal
+        source={null}
+        existingNames={existingNames}
+        onClose={onClose}
+      />
+    );
+    rerender(
+      <DuplicateDashboardModal
+        source={ops}
+        existingNames={existingNames}
+        onClose={onClose}
+      />
+    );
+    await waitForOpenDialog();
+
+    expect(byCy("dashboard-duplicate-name-error")).toBeNull();
+    expect(submitButton()).toBeEnabled();
+  });
+
+  it("refreshes the list on 409 so the local name check catches the name", async () => {
+    mockPost.mockRejectedValue(new KeepApiError("x", "u", "", {}, 409));
+    await renderModal();
+
+    pressEnter();
+
+    await waitFor(() =>
+      expect(byCy("dashboard-duplicate-name-error")).toHaveTextContent(
+        NAME_TAKEN
+      )
+    );
+    expect(mockMutate).toHaveBeenCalledTimes(1);
+    expect(mockMutate).toHaveBeenCalledWith();
+  });
+
   it("toasts other errors", async () => {
     const error = new KeepApiError("x", "u", "", {}, 500);
     mockPost.mockRejectedValue(error);
