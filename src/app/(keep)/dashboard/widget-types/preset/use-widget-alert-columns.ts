@@ -4,6 +4,7 @@ import type { AlertDto } from "@/entities/alerts/model/types";
 import { useAlertTableCols } from "@/widgets/alerts-table/lib/alert-table-utils";
 import { getAdditionalColsToGenerate } from "@/widgets/alerts-table/lib/additional-cols";
 import { getColumnLabel } from "@/widgets/alerts-table/lib/alert-column-options";
+import { isDateTimeColumn } from "@/widgets/alerts-table/lib/alert-table-time-format";
 import { getNestedValue } from "@/shared/lib/object-utils";
 import type { WidgetData } from "../../types";
 import {
@@ -40,6 +41,48 @@ function getObjectValuedIds(alerts: AlertDto[], ids: string[]): string[] {
   );
 }
 
+function isEmptyCellValue(value: unknown): boolean {
+  return value === null || value === undefined || value === "";
+}
+
+function isInvalidDateValue(value: unknown): boolean {
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime());
+  }
+  if (typeof value === "string" || typeof value === "number") {
+    return Number.isNaN(new Date(value).getTime());
+  }
+  return false;
+}
+
+function withGuardedCell(column: ColumnDef<AlertDto>): ColumnDef<AlertDto> {
+  const renderCell = column.cell;
+  if (typeof renderCell !== "function") {
+    return column;
+  }
+  const isDateColumn = isDateTimeColumn(column.id as string);
+  return {
+    ...column,
+    cell: (context) => {
+      const value = context.getValue();
+      if (
+        isEmptyCellValue(value) ||
+        (isDateColumn && isInvalidDateValue(value))
+      ) {
+        return "";
+      }
+      if (!isDateColumn && (value === 0 || value === false)) {
+        const getText = () => String(value);
+        return renderCell({
+          ...context,
+          getValue: getText as typeof context.getValue,
+        });
+      }
+      return renderCell(context);
+    },
+  };
+}
+
 function isShownInWidget(column: ColumnDef<AlertDto>): boolean {
   return !WIDGET_EXCLUDED_COLUMNS.includes(column.id as string);
 }
@@ -62,13 +105,15 @@ function atMinimumSize(column: ColumnDef<AlertDto>): ColumnDef<AlertDto> {
  * and noise columns are left out. Empty grouping values share one group. A
  * generated column whose loaded values include a list or an object (such as
  * `enriched_fields`) cannot group rows, since its shared grouping value puts
- * every such alert in one "object" group. Every column except the icon
- * columns is headed by its widget label, so no stored presets-page name can
- * show through. Those columns also start at their minimum width
- * (`WIDGET_COLUMN_MIN_SIZE` for name and description), so a full-width table
- * spreads the spare room over them; a width saved on the widget wins.
- * `presetName` scopes the browser keys the shared column hook reads, so pass
- * a widget-scoped name.
+ * every such alert in one "object" group. A generated column's cell is empty
+ * for null, undefined or "" and, in a date column, for a value that is not a
+ * valid date, where the shared renderer would throw; 0 and false show as text
+ * in the shared markup. Every column except the icon columns is headed by its
+ * widget label, so no stored presets-page name can show through. Those
+ * columns also start at their minimum width (`WIDGET_COLUMN_MIN_SIZE` for name
+ * and description), so a full-width table spreads the spare room over them; a
+ * width saved on the widget wins. `presetName` scopes the browser keys the
+ * shared column hook reads, so pass a widget-scoped name.
  */
 export function useWidgetAlertColumns({
   item,
@@ -120,7 +165,9 @@ export function useWidgetAlertColumns({
           WIDGET_PINNED_LEFT.includes(column.id as string)
             ? column
             : {
-                ...atMinimumSize(column),
+                ...(STATIC_COLUMN_IDS.has(column.id as string)
+                  ? atMinimumSize(column)
+                  : withGuardedCell(atMinimumSize(column))),
                 header: getColumnLabel(column.id as string, renames),
                 ...(objectValuedIds.includes(column.id as string)
                   ? { enableGrouping: false }
