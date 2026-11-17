@@ -22,6 +22,7 @@ const CollapsibleIncidentsList = ({ incidents }: CollapsibleIncidentsListProps) 
                 const title = incident.user_generated_name || incident.ai_generated_name;
                 return (
                     <Link
+                        key={incident.id}
                         href={`/incidents/${incident.id}`}
                         className="text-blue-600 hover:underline truncate max-w-full inline-block"
                         title={title}
