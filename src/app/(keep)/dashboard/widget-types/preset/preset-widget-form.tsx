@@ -36,8 +36,7 @@ import {
   resolveFieldIds,
 } from "./alert-table-widget-config";
 import { CountBy, isShowingMissing } from "@/entities/presets/model/count-by";
-import { useFacetPotentialFields } from "@/features/filter/hooks";
-import { getAlertColumnOptions } from "@/widgets/alerts-table/lib/alert-column-options";
+import { getGroupByFieldOptions } from "@/widgets/alerts-table/lib/alert-column-options";
 
 const GROUPED_COUNTER_ROWS = 4;
 const GROUPED_COUNTER_ROWS_WITH_MISSING = 5;
@@ -83,20 +82,26 @@ const keepUnsetDefault = <T,>(
     ? undefined
     : value;
 
+/**
+ * The form's Group rows by select. It offers the shortlist,
+ * `GROUPABLE_ALERT_FIELDS` and the columns picked in the form (`columns`, or
+ * the default columns while none are picked), resolved to the ids the widget
+ * reads.
+ */
 function GroupRowsByControl({
   value,
   onChange,
   showHint,
+  columns,
 }: {
   value: string | null;
   onChange: (value: string | null) => void;
   showHint: boolean;
+  columns: string[] | undefined;
 }) {
-  const { data } = useFacetPotentialFields("alerts");
   const fieldOptions = useMemo(
-    () =>
-      getAlertColumnOptions([], resolveFieldIds(data ?? [])),
-    [data]
+    () => getGroupByFieldOptions(resolveFieldIds(columns ?? defaultColumns)),
+    [columns]
   );
 
   return (
@@ -441,6 +446,7 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
           <GroupRowsByControl
             value={groupBy}
             onChange={setGroupBy}
+            columns={presetColumns}
             showHint={
               !!groupBy &&
               normalizedFormValues.countOfLastAlerts < GROUPING_HINT_BELOW_COUNT

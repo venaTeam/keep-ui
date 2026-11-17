@@ -19,10 +19,20 @@ import {
 
 const mockGetAutofitColumnWidth = jest.fn();
 
+const FEW_POTENTIAL_FIELDS = [
+  "labels.region",
+  "labels.team",
+  "name",
+  "checkbox",
+];
+const MANY_POTENTIAL_FIELDS = Array.from(
+  { length: 2500 },
+  (_, index) => `labels.f_${index}`
+);
+let mockPotentialFields = FEW_POTENTIAL_FIELDS;
+
 jest.mock("@/features/filter/hooks", () => ({
-  useFacetPotentialFields: () => ({
-    data: ["labels.region", "labels.team", "name", "checkbox"],
-  }),
+  useFacetPotentialFields: () => ({ data: mockPotentialFields }),
 }));
 
 jest.mock("@/widgets/alerts-table/lib/column-autofit", () => ({
@@ -127,6 +137,7 @@ const clickLikeAPointer = (element: Element) => {
 
 beforeEach(() => {
   mockGetAutofitColumnWidth.mockReset();
+  mockPotentialFields = FEW_POTENTIAL_FIELDS;
 });
 
 describe("WidgetTableSettings", () => {
@@ -437,6 +448,22 @@ describe("WidgetTableSettings", () => {
     expect(screen.getByText("No matching fields")).toBeInTheDocument();
   });
 
+  it("search still finds a field only the tenant's potential-field list has", () => {
+    mockPotentialFields = MANY_POTENTIAL_FIELDS;
+    const { state } = renderSettings();
+    openSettings();
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Find a field" }), {
+      target: { value: "f_1234" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "labels.f_1234" }));
+
+    expect(state.setVisibleColumns).toHaveBeenCalledWith([
+      ...VISIBLE,
+      "labels.f_1234",
+    ]);
+  });
+
   it("'Rows with no value' shows only when grouped and calls setEmptyGroupPosition", () => {
     const { state, unmount } = renderSettings();
     openSettings();
@@ -687,7 +714,29 @@ describe("WidgetTableSettings", () => {
       expect(panel()).toBeNull();
     });
 
-    it("offers facet and widget fields under 'Any other field…' and None clears", async () => {
+    const optionTexts = (listbox: HTMLElement) =>
+      within(listbox)
+        .getAllByRole("option")
+        .map((option) => option.textContent);
+
+    const groupByBox = () =>
+      screen.getByRole("combobox", { name: "Group rows by" });
+
+    const OTHER_FIELDS = [
+      "component",
+      "description",
+      "dismiss_mode",
+      "environment",
+      "group",
+      "impact",
+      "object",
+      "providerId",
+      "severity",
+      "ticket_status",
+      "ticket_type",
+    ];
+
+    it("offers the groupable alert fields and the visible columns under 'Any other field…', and None clears", async () => {
       const { state } = renderSettings({ grouping: ["service"] });
       openSettings();
 
@@ -698,13 +747,82 @@ describe("WidgetTableSettings", () => {
       const otherIds = within(others)
         .getAllByRole("option")
         .map((option) => option.textContent);
-      expect(otherIds).toEqual(
-        expect.arrayContaining(["labels.region", "environment", "ticket_id"])
+      expect(otherIds).toEqual(OTHER_FIELDS);
+      ["labels.region", "ticket_id", "lastReceived", "checkbox"].forEach((id) =>
+        expect(otherIds).not.toContain(id)
       );
-      expect(otherIds).not.toContain("checkbox");
 
       clickLikeAPointer(within(listbox).getByRole("option", { name: "None" }));
       expect(state.setGrouping).toHaveBeenCalledWith([]);
+    });
+
+    it("offers a visible custom column, not a hidden one", async () => {
+      renderSettings({
+        columnOrder: [...COLUMN_ORDER, "labels.team", "labels.owner"],
+        visibleColumns: [...VISIBLE, "labels.team"],
+      });
+      openSettings();
+
+      const listbox = await openGroupBy();
+
+      expect(
+        within(listbox).getByRole("option", { name: "labels.team" })
+      ).toBeInTheDocument();
+      expect(
+        within(listbox).queryByRole("option", { name: "labels.owner" })
+      ).toBeNull();
+    });
+
+    it("keeps a saved grouping that is neither listed nor visible", async () => {
+      renderSettings({ grouping: ["labels.gone"] });
+      openSettings();
+
+      const listbox = await openGroupBy();
+
+      expect(
+        within(listbox).getByRole("option", { name: "labels.gone" })
+      ).toHaveAttribute("aria-selected", "true");
+    });
+
+    it("lists Incident first after None", async () => {
+      renderSettings();
+      openSettings();
+
+      const listbox = await openGroupBy();
+
+      expect(optionTexts(listbox).slice(0, 2)).toEqual(["None", "Incident"]);
+    });
+
+    it("lists a bounded set, not the tenant's thousands of potential fields", async () => {
+      mockPotentialFields = MANY_POTENTIAL_FIELDS;
+      renderSettings();
+      openSettings();
+
+      fireEvent.change(groupByBox(), { target: { value: "f_1234" } });
+      const searched = await screen.findByRole("listbox");
+      expect(
+        within(searched).queryByRole("option", { name: "labels.f_1234" })
+      ).toBeNull();
+      expect(
+        within(searched).getByText("No matching fields")
+      ).toBeInTheDocument();
+      fireEvent.keyDown(groupByBox(), { key: "Escape" });
+
+      const options = optionTexts(await openGroupBy());
+      expect(options).toEqual([
+        "None",
+        "Incident",
+        "Alert name",
+        "Service",
+        "Host",
+        "Application",
+        "Site",
+        "Assignee",
+        "Source",
+        "Status",
+        ...OTHER_FIELDS,
+      ]);
+      expect(options.length).toBeLessThan(30);
     });
 
     it("offers only the fields isGroupable accepts, shortlist included", async () => {

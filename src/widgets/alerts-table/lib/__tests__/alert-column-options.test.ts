@@ -1,9 +1,11 @@
 import { COUNT_BY_ALERT_FIELD_OPTIONS } from "@/entities/presets/model/count-by";
 import {
   COMMON_ENRICHMENT_FIELDS,
+  GROUPABLE_ALERT_FIELDS,
   GROUP_BY_SHORTLIST,
   getAlertColumnOptions,
   getColumnLabel,
+  getGroupByFieldOptions,
   matchesSearch,
 } from "../alert-column-options";
 
@@ -23,6 +25,52 @@ describe("getAlertColumnOptions", () => {
 
   it("returns an empty list when there is nothing to offer", () =>
     expect(getAlertColumnOptions([], [])).toEqual([]));
+});
+
+describe("GROUPABLE_ALERT_FIELDS", () => {
+  it("lists the alert fields worth grouping by besides the shortlist", () =>
+    expect(GROUPABLE_ALERT_FIELDS).toEqual([
+      "environment",
+      "component",
+      "object",
+      "impact",
+      "group",
+      "providerId",
+      "ticket_status",
+      "ticket_type",
+      "dismiss_mode",
+    ]));
+
+  it("repeats no shortlist field", () =>
+    GROUP_BY_SHORTLIST.forEach((option) =>
+      expect(GROUPABLE_ALERT_FIELDS).not.toContain(option.value)
+    ));
+});
+
+describe("getGroupByFieldOptions", () => {
+  it("joins the groupable alert fields and the given columns, de-duplicated, without row chrome, sorted", () =>
+    expect(
+      getGroupByFieldOptions(["labels.team", "environment", "checkbox", "name"])
+    ).toEqual([
+      "component",
+      "dismiss_mode",
+      "environment",
+      "group",
+      "impact",
+      "labels.team",
+      "name",
+      "object",
+      "providerId",
+      "ticket_status",
+      "ticket_type",
+    ]));
+
+  it("is the groupable alert fields alone when the widget has no columns", () =>
+    expect(getGroupByFieldOptions([])).toEqual(
+      [...GROUPABLE_ALERT_FIELDS].sort((first, second) =>
+        first.localeCompare(second)
+      )
+    ));
 });
 
 describe("getColumnLabel", () => {
