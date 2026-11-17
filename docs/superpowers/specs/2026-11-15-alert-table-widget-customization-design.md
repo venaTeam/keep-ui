@@ -40,7 +40,7 @@ A client asked to see dashboard alerts grouped by incident, so operators can tel
 1. The widget header row shows a ⚙ button next to "Go to preset". It opens a "Table settings" panel with:
    - the column list, showing each column's checkbox (visible/hidden), drag handle (reorder) and rename action;
    - a search box that adds any alert field as a column;
-   - a **Group by** select: None, Incident, then Service, Host, Application, Assignee, Source, Severity, Status, then "Any other field…" (search);
+   - a **Group by** select: None, Incident, then Service, Host, Application, Assignee, Source, Severity, Status, then "Any other field…" (search). "Any other field…" holds the other groupable alert fields and the widget's columns, not every potential field (see "Shared field list" below);
    - when Group by is set, **"Alerts with no value: Top / Bottom"** (default Top);
    - **Reset to defaults**.
 2. Hovering a column header shows a drag handle (reorder by drag and drop), a resize edge (drag to resize, double-click to auto-fit) and a column menu with: Rename, Group by / Ungroup, Auto-fit width, Reset width, Move left, Move right, Hide column. Sort and the time/list display formats are **not** offered in the widget.
@@ -408,7 +408,7 @@ The Alert Table and Alert Count widgets already have **Count** (`countBy`: Alert
 
 - **Separate settings:** the two settings are independent. Row grouping lives in `alertTable.groupBy`, and `countBy` is never read or written.
 - **Modal labels:** the new control reads **"Group rows by"**, with **"Rows with no value"** (Top/Bottom) beneath it. Both show only for Alert Table, after Columns. The Count control is unchanged: same place, labels, test ids and tests. The chip above the table reads "Rows grouped by <label>".
-- **Shared field list:** the Group rows by shortlist reuses the Count control's field ids and labels (`COUNT_BY_ALERT_FIELD_OPTIONS`): Incident, Alert name, Service, Host, Application, Site, Assignee, then Source and Status.
+- **Shared field list:** the Group rows by shortlist reuses the Count control's field ids and labels (`COUNT_BY_ALERT_FIELD_OPTIONS`): Incident, Alert name, Service, Host, Application, Site, Assignee, then Source and Status. After it the select lists only the other groupable alert fields (`GROUPABLE_ALERT_FIELDS`: environment, component, object, impact, group, providerId, ticket_status, ticket_type, dismiss_mode) and the widget's columns (the visible ones in the ⚙ panel, the selected ones in the form), not every potential field: a tenant's potential-field list can hold thousands of names, and listing them all froze the dropdown.
 - **"Shown" counts:** in the widget, group headers count what is shown ("<n> shown", "No incident · <n> shown"). They can't be confused with the Count line's whole-preset numbers.
 
 ## What's left to the builder

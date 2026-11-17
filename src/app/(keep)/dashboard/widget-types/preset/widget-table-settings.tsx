@@ -49,6 +49,7 @@ import {
   COMMON_ENRICHMENT_FIELDS,
   getAlertColumnOptions,
   getColumnLabel,
+  getGroupByFieldOptions,
   matchesSearch,
 } from "@/widgets/alerts-table/lib/alert-column-options";
 import {
@@ -604,6 +605,10 @@ function SettingsContent({
   onClose,
 }: Required<WidgetTableSettingsProps> & { onClose: () => void }) {
   const fieldOptions = useFieldOptions(columnIds);
+  const groupByOptions = useMemo(
+    () => getGroupByFieldOptions(state.visibleColumns),
+    [state.visibleColumns]
+  );
   const groupBy = state.grouping[0] ?? null;
 
   return (
@@ -628,7 +633,7 @@ function SettingsContent({
       <GroupBySelect
         value={groupBy}
         onChange={(value) => state.setGrouping(value ? [value] : [])}
-        fieldOptions={fieldOptions}
+        fieldOptions={groupByOptions}
         isGroupable={isGroupable}
         data-cy="dashboard-widget-table-settings-group-by"
       />
@@ -672,11 +677,13 @@ function SettingsContent({
  * rows with no value go, and resets the widget to the defaults. Every change
  * goes straight to `state`; a width change passes the whole sizing map.
  *
- * `columnIds` are the columns the widget can show; the grouping options are
- * the fields `isGroupable` accepts (every field by default). The popover is a
- * dialog named "Table settings", rendered in a portal so the dashboard grid
- * cannot clip or cover it. Reorder announcements read the columns' labels,
- * not their ids.
+ * `columnIds` are the columns the widget can show. The search offers them and
+ * every potential alert field; the grouping options are only the shortlist,
+ * `GROUPABLE_ALERT_FIELDS` and the visible columns (`getGroupByFieldOptions`),
+ * each kept only if `isGroupable` accepts it (every field by default). The
+ * popover is a dialog named "Table settings", rendered in a portal so the
+ * dashboard grid cannot clip or cover it. Reorder announcements read the
+ * columns' labels, not their ids.
  */
 export function WidgetTableSettings({
   state,

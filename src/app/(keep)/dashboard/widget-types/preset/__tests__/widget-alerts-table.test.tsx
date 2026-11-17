@@ -1438,10 +1438,12 @@ describe("WidgetAlertsTable", () => {
       expect(onChange.mock.calls[0][0].alertTable.groupBy).toBe("service");
     });
 
-    it("does not offer a list field in Group rows by", async () => {
-      renderWithSlot({}, { isEditMode: true, onChange: jest.fn() }, [
-        alertWith({ enriched_fields: ["a"], region: "eu" }),
-      ]);
+    it("does not offer a list field in Group rows by, even as a visible column", async () => {
+      renderWithSlot(
+        { presetColumns: ["name", "enriched_fields", "region"] },
+        { isEditMode: true, onChange: jest.fn() },
+        [alertWith({ enriched_fields: ["a"], region: "eu" })]
+      );
 
       fireEvent.click(settingsButton() as HTMLElement);
       fireEvent.click(
@@ -1455,6 +1457,59 @@ describe("WidgetAlertsTable", () => {
       expect(
         within(listbox).getByRole("option", { name: "region" })
       ).toBeInTheDocument();
+    });
+
+    it("Group rows by offers a groupable alert field that is not a column, and the table groups by it", async () => {
+      const onChange = jest.fn();
+      const alerts = [
+        alertWith({ environment: "prod" }),
+        alertWith({ environment: "staging" }),
+        alertWith({ environment: "prod" }),
+      ];
+      const { rerender } = renderWithSlot(
+        { presetColumns: ["name"] },
+        { isEditMode: true, onChange },
+        alerts
+      );
+      expect(headerIds()).not.toContain("environment");
+
+      fireEvent.click(settingsButton() as HTMLElement);
+      fireEvent.click(
+        screen.getByRole("button", { name: "Show Group rows by options" })
+      );
+      fireEvent.mouseDown(
+        within(await screen.findByRole("listbox")).getByRole("option", {
+          name: "environment",
+        })
+      );
+
+      expect(onChange).toHaveBeenCalledTimes(1);
+      const grouped: WidgetData = onChange.mock.calls[0][0];
+      expect(grouped.alertTable?.groupBy).toBe("environment");
+      expect(grouped.presetColumns).toEqual(["name"]);
+
+      rerender(
+        <WidgetAlertsTable
+          item={grouped}
+          alerts={alerts}
+          isEditMode={false}
+          settingsSlot={slot}
+        />
+      );
+
+      expect(headerIds()).toEqual(["name"]);
+      expect(groupHeaderTexts()).toEqual(["prod 2 shown", "staging 1 shown"]);
+    });
+
+    it("groups by a groupable alert field no loaded alert carries, in one empty group", () => {
+      renderWithSlot(
+        { presetColumns: ["name"], alertTable: { groupBy: "ticket_status" } },
+        { isEditMode: false },
+        [alertWith(), alertWith()]
+      );
+
+      expect(headerIds()).toEqual(["name"]);
+      expect(groupHeaderTexts()).toEqual(["No Ticket Status 2 shown"]);
     });
 
     it("offers a list field as one column, never one column per item", () => {
