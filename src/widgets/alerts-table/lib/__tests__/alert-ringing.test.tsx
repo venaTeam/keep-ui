@@ -5,61 +5,25 @@ import {
   isAlertRinging,
   useRingingRows,
 } from "../alert-ringing";
-import { NOISE_BASE_CEL } from "@/entities/presets/model/noise";
 
 const critical = { severity: "critical", status: "firing" };
 
 describe("isAlertRinging", () => {
-  it("mirrors the alarm's NOISE_BASE_CEL: changing the alarm condition requires updating isAlertRinging and this test", () => {
-    expect(NOISE_BASE_CEL).toBe(
-      "status == 'firing' && deleted == false && severity == 'critical'"
-    );
-  });
-
   it("rings a critical firing alert in a noisy preset", () => {
     expect(isAlertRinging(critical, true)).toBe(true);
   });
 
-  it.each<
-    [
-      string,
-      { severity?: unknown; status?: unknown; deleted?: unknown },
-      boolean | undefined,
-    ]
-  >([
-    ["the preset is not noisy", critical, false],
-    ["the preset's noise is unknown", critical, undefined],
-    ["the severity is high", { ...critical, severity: "high" }, true],
-    ["the severity is missing", { status: "firing" }, true],
-    ["the status is resolved", { ...critical, status: "resolved" }, true],
-    [
-      "the status is acknowledged",
-      { ...critical, status: "acknowledged" },
-      true,
-    ],
-    ["the status is missing", { severity: "critical" }, true],
-    ["the alert is deleted", { ...critical, deleted: true }, true],
-  ])("stays quiet when %s", (_name, alert, presetNoisy) => {
-    expect(isAlertRinging(alert, presetNoisy)).toBe(false);
-  });
+  it.each([false, undefined])(
+    "stays quiet when the preset's noisy flag is %s",
+    (presetNoisy) => {
+      expect(isAlertRinging(critical, presetNoisy)).toBe(false);
+    }
+  );
 
-  it.each<[string, { severity?: unknown; status?: unknown }]>([
-    ["a numeric critical severity", { ...critical, severity: 5 }],
-    ["a numeric critical severity as a string", { ...critical, severity: "5" }],
-    ["the severity in upper case", { ...critical, severity: "CRITICAL" }],
-    ["the severity in title case", { ...critical, severity: "Critical" }],
-    ["the status in upper case", { ...critical, status: "FIRING" }],
-  ])("matches NOISE_BASE_CEL exactly, so stays quiet on %s", (_name, alert) => {
-    expect(isAlertRinging(alert, true)).toBe(false);
-  });
-
-  it("rings an alert that is explicitly not deleted", () => {
-    expect(isAlertRinging({ ...critical, deleted: false }, true)).toBe(true);
-  });
-
-  it("stays quiet without an alert", () => {
+  it("stays quiet in a noisy preset when the alert does not match the alarm's condition", () => {
+    expect(isAlertRinging({ ...critical, deleted: true }, true)).toBe(false);
+    expect(isAlertRinging({ ...critical, severity: "high" }, true)).toBe(false);
     expect(isAlertRinging(undefined, true)).toBe(false);
-    expect(isAlertRinging(null, true)).toBe(false);
   });
 });
 

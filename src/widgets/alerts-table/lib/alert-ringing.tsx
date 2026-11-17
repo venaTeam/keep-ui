@@ -1,6 +1,6 @@
 import React, { type CSSProperties, type ReactNode, useCallback } from "react";
 import clsx from "clsx";
-import { Severity, Status } from "@/entities/alerts/model/types";
+import { matchesNoiseBase } from "@/entities/presets/model/noise";
 import {
   DEFAULT_BLINK_COLOR,
   getRowBlinkStyle,
@@ -65,25 +65,15 @@ const QUIET_ROW: RingingRow = {
 
 /**
  * Whether an alert's row rings: the table's preset is noisy and the alert is
- * one that makes the preset's alarm sound, i.e. it matches `NOISE_BASE_CEL`
- * in `entities/presets/model/noise.ts`
- * (`status == 'firing' && deleted == false && severity == 'critical'`).
- * Keep the two in step: this file's tests pin that exact string. The match
- * is exact and case-sensitive, like the alarm's: the gateway's
- * `POST /alerts/query` sends severity and status as the lowercase words of
- * its enums, never numbers, and the alarm compares the stored lowercase
- * values with `=`. Only `deleted === true` counts as deleted.
+ * one that makes the preset's alarm sound, i.e. `matchesNoiseBase` from
+ * `entities/presets/model/noise.ts`, the same definition `NOISE_BASE_CEL`
+ * (the alarm's CEL) is built from.
  */
 export function isAlertRinging(
   alert: RingingAlert | null | undefined,
   presetNoisy?: boolean
 ): boolean {
-  return (
-    !!presetNoisy &&
-    alert?.severity === Severity.Critical &&
-    alert.status === Status.Firing &&
-    alert.deleted !== true
-  );
+  return !!presetNoisy && matchesNoiseBase(alert);
 }
 
 /**
