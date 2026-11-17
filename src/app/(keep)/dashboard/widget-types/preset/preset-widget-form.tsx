@@ -20,9 +20,15 @@ import {
 import { LayoutItem, Threshold, PresetPanelType } from "../../types";
 import ColumnsSelection from "./columns-selection";
 import { CountByControl } from "./count-by-control";
-import { CountBy } from "@/entities/presets/model/count-by";
+import { CountBy, isShowingMissing } from "@/entities/presets/model/count-by";
 
 const GROUPED_COUNTER_ROWS = 4;
+const GROUPED_COUNTER_ROWS_WITH_MISSING = 5;
+
+const getGroupedCounterRows = (countBy: CountBy) =>
+  isShowingMissing(countBy)
+    ? GROUPED_COUNTER_ROWS_WITH_MISSING
+    : GROUPED_COUNTER_ROWS;
 
 interface PresetForm {
   selectedPreset: string;
@@ -101,25 +107,27 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
       if (!isAlertCountPanel) {
         return {} as LayoutItem;
       }
-      const isGrouped = Boolean(normalizedFormValues.countBy);
+      const countBy = normalizedFormValues.countBy;
+      const groupedRows = countBy ? getGroupedCounterRows(countBy) : undefined;
       const savedHeight = editingItem.h;
       const needsRows =
-        isGrouped &&
-        !(typeof savedHeight === "number" && savedHeight >= GROUPED_COUNTER_ROWS);
+        groupedRows !== undefined &&
+        !(typeof savedHeight === "number" && savedHeight >= groupedRows);
       return {
-        ...(needsRows ? { h: GROUPED_COUNTER_ROWS } : {}),
-        minH: isGrouped ? GROUPED_COUNTER_ROWS : 2,
+        ...(needsRows ? { h: groupedRows } : {}),
+        minH: groupedRows ?? 2,
       } as LayoutItem;
     }
     
     if (isAlertCountPanel) {
       // Narrower, more compact layout for count panels with no minimum width
-      const isGrouped = Boolean(normalizedFormValues.countBy);
+      const countBy = normalizedFormValues.countBy;
+      const groupedRows = countBy ? getGroupedCounterRows(countBy) : undefined;
       return {
         w: 4,
-        h: isGrouped ? GROUPED_COUNTER_ROWS : 3,
+        h: groupedRows ?? 3,
         minW: 0,
-        minH: isGrouped ? GROUPED_COUNTER_ROWS : 2,
+        minH: groupedRows ?? 2,
         static: false,
       } as LayoutItem;
     }

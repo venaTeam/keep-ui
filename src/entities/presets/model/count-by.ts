@@ -14,6 +14,9 @@ export type IncidentStatusFilter = "active" | "firing" | "acknowledged";
 export interface CountBy {
   field: CountByField;
   incidentStatus?: IncidentStatusFilter;
+  showMissing?: boolean;
+  blinkMissing?: boolean;
+  blinkColor?: string;
 }
 
 export type CountMode = "alerts" | "incidents" | "field";
@@ -23,6 +26,10 @@ export const DEFAULT_INCIDENT_STATUS: IncidentStatusFilter = "active";
 export const COUNT_LOAD_ERROR_LABEL = "Couldn't load count";
 
 export const UNKNOWN_COUNT_FIELD_LABEL = "Unknown field";
+
+export const MISSING_UNAVAILABLE_LABEL = "—";
+
+export const BLINK_MISSING_TOGGLE_LABEL = "Make it blink";
 
 export const INCIDENT_STATUS_OPTIONS: ReadonlyArray<{
   value: IncidentStatusFilter;
@@ -106,4 +113,83 @@ export function getCountUnitLabel(countBy: CountBy, count: number): string {
   }
   const labels = ALERT_FIELD_LABELS[field];
   return isSingular ? labels.singular : labels.plural;
+}
+
+const MISSING_FIELD_NOUNS: Record<
+  CountByAlertField,
+  { noun: string; article: "a" | "an" }
+> = {
+  name: { noun: "alert name", article: "an" },
+  service: { noun: "service", article: "a" },
+  node_name: { noun: "host", article: "a" },
+  application: { noun: "application", article: "an" },
+  site: { noun: "site", article: "a" },
+  assignee: { noun: "assignee", article: "an" },
+};
+
+const MISSING_VALUE_NOUN = { noun: "value", article: "a" as const };
+
+const getMissingFieldNoun = (countBy: CountBy) => {
+  const field: unknown = countBy.field;
+  if (typeof field !== "string") {
+    return MISSING_VALUE_NOUN;
+  }
+  if (hasOwnKey(MISSING_FIELD_NOUNS, field)) {
+    return MISSING_FIELD_NOUNS[field];
+  }
+  return { noun: field, article: "a" as const };
+};
+
+/** Whether a widget asked to show the alerts its count leaves out. */
+export function isShowingMissing(countBy?: CountBy): boolean {
+  return countBy?.showMissing === true;
+}
+
+/**
+ * Whether a widget asked for its left-out alerts to blink. Only a widget that
+ * shows them can blink.
+ */
+export function isBlinkingMissing(countBy?: CountBy): boolean {
+  return isShowingMissing(countBy) && countBy?.blinkMissing === true;
+}
+
+/** Label of the form switch that shows the alerts a count leaves out. */
+export function getMissingToggleLabel(countBy: CountBy): string {
+  if (countBy.field === "incident") {
+    return "Show alerts not in an incident";
+  }
+  return `Show alerts with no ${getMissingFieldNoun(countBy).noun}`;
+}
+
+/** Help line under that switch. */
+export function getMissingToggleHelp(countBy: CountBy): string {
+  if (countBy.field === "incident") {
+    return "Adds how many matching alerts aren't in any incident.";
+  }
+  return `Adds how many matching alerts have no ${getMissingFieldNoun(countBy).noun}.`;
+}
+
+/** Help line under the switch that makes the left-out alerts blink. */
+export function getBlinkMissingToggleHelp(countBy: CountBy): string {
+  if (countBy.field === "incident") {
+    return "While any alert isn't in an incident.";
+  }
+  return `While any alert has no ${getMissingFieldNoun(countBy).noun}.`;
+}
+
+/**
+ * Text for the number of matching alerts with no incident, or no value for
+ * the counted field. Zero says that every alert is covered instead.
+ */
+export function getMissingCountLabel(countBy: CountBy, missing: number): string {
+  const alerts = missing === 1 ? "alert" : "alerts";
+  if (countBy.field === "incident") {
+    return missing === 0
+      ? "Every alert is in an incident"
+      : `+ ${missing} ${alerts} not in an incident`;
+  }
+  const { noun, article } = getMissingFieldNoun(countBy);
+  return missing === 0
+    ? `Every alert has ${article} ${noun}`
+    : `+ ${missing} ${alerts} with no ${noun}`;
 }

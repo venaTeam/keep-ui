@@ -4,16 +4,23 @@ import { usePresetAlertCount } from "@/features/presets/custom-preset-links";
 import {
   COUNT_LOAD_ERROR_LABEL,
   CountBy,
+  MISSING_UNAVAILABLE_LABEL,
   getCountUnitLabel,
+  getMissingCountLabel,
+  isBlinkingMissing,
+  isShowingMissing,
 } from "@/entities/presets/model/count-by";
 import { useDashboardPreset } from "@/utils/hooks/useDashboardPresets";
 import { Button, Icon } from "@tremor/react";
 import { FireIcon, ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline";
 import MenuButton from "../../MenuButton";
+import { useDashboardEditMode } from "../../DashboardEditModeContext";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
+import { useSyncedAnimation } from "./use-synced-animation";
+import { getBlinkColor, getBlinkStyle } from "./blink-palette";
 
 const ERROR_COLOR = "#9ca3af";
 
@@ -26,7 +33,6 @@ interface WidgetAlertCountPanelProps {
   widgetName?: string;
   onEdit?: () => void;
   onDelete?: () => void;
-  onSave?: () => void;
   countBy?: CountBy;
 }
 
@@ -39,7 +45,6 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
   widgetName,
   onEdit,
   onDelete,
-  onSave,
   countBy,
 }) => {
   const searchParams = useSearchParams();
@@ -52,6 +57,7 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
     return "";
   }, [searchParams]);
 
+  const isEditMode = useDashboardEditMode();
   const presets = useDashboardPreset();
   const preset = useMemo(
     () => presets.find((preset) => preset.name === presetName),
@@ -69,9 +75,11 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
   );
 
   const appliesFiringOnly = showFiringOnly && countBy?.field !== "incident";
+  const showMissing = isShowingMissing(countBy);
 
   const {
     totalCount: alertsCount,
+    missingCount,
     isLoading,
     isError,
   } = usePresetAlertCount({
@@ -79,6 +87,7 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
     counterShowsFiringOnly: appliesFiringOnly,
     groupBy: countBy?.field,
     incidentStatus: countBy?.incidentStatus,
+    includeMissing: showMissing,
     refreshInterval: 30000,
     enabled: !!preset,
   });
@@ -101,7 +110,7 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
   }
 
   function handleBoxClick() {
-    if (!preset) {
+    if (!preset || isEditMode) {
       return;
     }
     handleGoToPresetClick();
@@ -114,7 +123,8 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
     }
   }
 
-  const hasMenu = Boolean(onEdit && onDelete);
+  const hasMenu = isEditMode && Boolean(onEdit && onDelete);
+  const hasCustomLink = !isEditMode && Boolean(customLink);
   const title = widgetName?.trim() ? widgetName : preset?.name;
 
   const isCountLoading = isLoading || !preset;
@@ -160,12 +170,24 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
       : getCountUnitLabel(countBy, alertsCount)
     : undefined;
 
+  const missingLabel =
+    countBy && missingCount !== undefined
+      ? getMissingCountLabel(countBy, missingCount)
+      : MISSING_UNAVAILABLE_LABEL;
+
+  const blinksMissing =
+    isBlinkingMissing(countBy) &&
+    !isCountLoading &&
+    missingCount !== undefined &&
+    missingCount > 0;
+  const syncBlink = useSyncedAnimation(blinksMissing);
+
   return (
     <div className="flex flex-col h-full" data-cy="dashboard-widget-alert-count-panel">
       <div
-        role="link"
-        tabIndex={0}
-        aria-label={`Go to preset ${preset?.name ?? ""}`}
+        role={isEditMode ? undefined : "link"}
+        tabIndex={isEditMode ? undefined : 0}
+        aria-label={isEditMode ? undefined : `Go to preset ${preset?.name ?? ""}`}
         onClick={handleBoxClick}
         onKeyDown={handleBoxKeyDown}
         style={{
@@ -173,7 +195,11 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
           borderColor: color,
           borderWidth: "2px",
         }}
-        className="relative flex flex-col max-w-full border rounded-lg p-2 h-full shadow-sm cursor-pointer transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-1"
+        className={`relative flex flex-col max-w-full border rounded-lg p-2 h-full shadow-sm ${
+          isEditMode
+            ? ""
+            : "cursor-pointer transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-1"
+        }`}
         data-cy="dashboard-widget-alert-count-box"
       >
         <div className="flex-none flex items-center gap-1 min-w-0">
@@ -188,9 +214,9 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
               />
             )}
           </div>
-          {(customLink || hasMenu) && (
+          {(hasCustomLink || hasMenu) && (
             <div className="flex-none flex items-center space-x-1">
-              {customLink && (
+              {hasCustomLink && (
                 <Button
                   color="blue"
                   variant="secondary"
@@ -208,7 +234,6 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
                   compact
                   onEdit={onEdit!}
                   onDelete={onDelete!}
-                  onSave={onSave}
                 />
               )}
             </div>
@@ -260,6 +285,27 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
               <Skeleton containerClassName="h-8 w-16" />
             ) : (
               alertsCount
+            )}
+          </div>
+        )}
+        {countBy && showMissing && !isError && (
+          <div
+            className={`-mx-2 -mb-2 mt-1 flex-none truncate rounded-b-md border-t px-2 py-1 text-center text-xs ${
+              blinksMissing
+                ? "font-bold motion-safe:animate-missing-blink"
+                : "border-black/10 bg-white/75 text-gray-600"
+            }`}
+            style={
+              blinksMissing ? getBlinkStyle(getBlinkColor(countBy)) : undefined
+            }
+            title={isCountLoading ? undefined : missingLabel}
+            ref={syncBlink}
+            data-cy="dashboard-widget-count-missing"
+          >
+            {isCountLoading ? (
+              <Skeleton containerClassName="inline-block w-32" />
+            ) : (
+              missingLabel
             )}
           </div>
         )}

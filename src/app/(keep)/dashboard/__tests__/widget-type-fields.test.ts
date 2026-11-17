@@ -71,4 +71,33 @@ describe("stripForeignTypeFields", () => {
       "countBy"
     );
   });
+
+  it("keeps incidentTable only for incident table widgets", () => {
+    const incidentWidget = {
+      ...presetWidget,
+      widgetType: WidgetType.INCIDENT_TABLE,
+      incidentTable: {
+        statuses: ["firing"],
+        severities: ["critical"],
+        columns: ["name"],
+        limit: 10,
+      },
+    } as unknown as WidgetData;
+
+    expect(stripForeignTypeFields(incidentWidget, WidgetType.IMAGE)).not.toHaveProperty(
+      "incidentTable"
+    );
+    expect(
+      stripForeignTypeFields(incidentWidget, WidgetType.INCIDENT_TABLE)
+    ).toHaveProperty("incidentTable", incidentWidget.incidentTable);
+  });
+
+  it("drops preset fields when a preset widget becomes an incident table", () => {
+    const result = stripForeignTypeFields(presetWidget, WidgetType.INCIDENT_TABLE);
+    expect(result).not.toHaveProperty("preset");
+    expect(result).not.toHaveProperty("presetPanelType");
+    expect(result).not.toHaveProperty("thresholds");
+    expect(result).not.toHaveProperty("customLink");
+    expect(result).not.toHaveProperty("countBy");
+  });
 });

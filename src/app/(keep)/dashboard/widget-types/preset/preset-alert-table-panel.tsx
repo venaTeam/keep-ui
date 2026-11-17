@@ -6,13 +6,19 @@ import {
 } from "@/features/presets/custom-preset-links";
 import {
   COUNT_LOAD_ERROR_LABEL,
+  MISSING_UNAVAILABLE_LABEL,
   getCountUnitLabel,
+  getMissingCountLabel,
+  isBlinkingMissing,
+  isShowingMissing,
 } from "@/entities/presets/model/count-by";
 import { Button } from "@tremor/react";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { useRouter } from "next/navigation";
 import WidgetAlertsTable from "./widget-alerts-table";
+import { useSyncedAnimation } from "./use-synced-animation";
+import { getBlinkColor, getBlinkStyle } from "./blink-palette";
 import { WidgetData, WidgetType } from "../../types";
 
 interface PresetAlertTablePanelProps {
@@ -67,8 +73,10 @@ const PresetAlertTablePanel: React.FC<PresetAlertTablePanelProps> = ({
     !!preset
   );
   const countBy = item.countBy;
+  const showMissing = isShowingMissing(countBy);
   const {
     totalCount: groupCount,
+    missingCount,
     isLoading: isGroupLoading,
     isError: isGroupError,
   } = usePresetAlertCount({
@@ -76,9 +84,16 @@ const PresetAlertTablePanel: React.FC<PresetAlertTablePanelProps> = ({
     counterShowsFiringOnly: false,
     groupBy: countBy?.field,
     incidentStatus: countBy?.incidentStatus,
+    includeMissing: showMissing,
     refreshInterval: 30000,
     enabled: !!preset && !!countBy,
   });
+  const blinksMissing =
+    isBlinkingMissing(countBy) &&
+    !isGroupLoading &&
+    missingCount !== undefined &&
+    missingCount > 0;
+  const syncBlink = useSyncedAnimation(blinksMissing);
 
   function handleGoToPresetClick() {
     const presetUrl = `/alerts/${preset?.name.toLowerCase()}`;
@@ -194,11 +209,49 @@ const PresetAlertTablePanel: React.FC<PresetAlertTablePanelProps> = ({
     );
   };
 
+  const renderMissingLine = () => {
+    if (!countBy || !showMissing || isGroupError) {
+      return null;
+    }
+    const label =
+      missingCount === undefined
+        ? MISSING_UNAVAILABLE_LABEL
+        : getMissingCountLabel(countBy, missingCount);
+
+    return (
+      <div
+        className="flex gap-1.5 items-center text-gray-600"
+        data-cy="dashboard-widget-group-missing"
+      >
+        {!blinksMissing && (
+          <span className="inline-block h-[7px] w-[7px] shrink-0 rounded-full border-[1.5px] border-gray-400" />
+        )}
+        {isGroupLoading ? (
+          <Skeleton containerClassName="h-4 w-40 relative -top-0.5" />
+        ) : blinksMissing ? (
+          <span
+            className="truncate rounded-full px-2 font-bold motion-safe:animate-missing-blink"
+            style={getBlinkStyle(getBlinkColor(countBy))}
+            title={label}
+            ref={syncBlink}
+          >
+            {label}
+          </span>
+        ) : (
+          <span className="truncate" title={label}>
+            {label}
+          </span>
+        )}
+      </div>
+    );
+  };
+
   return (
     <>
       <div className="flex gap-2">
         <div className="flex-1 min-w-0 overflow-hidden whitespace-nowrap">
           {renderGroupCountLine()}
+          {renderMissingLine()}
           {renderAlertsCountText()}
         </div>
         <div className="flex items-center">

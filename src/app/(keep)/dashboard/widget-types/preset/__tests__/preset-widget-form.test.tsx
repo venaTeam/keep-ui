@@ -290,3 +290,68 @@ describe("PresetWidgetForm layout when editing a saved widget", () => {
     expectNoLayoutKeys(lastValue(onChange));
   });
 });
+
+describe("PresetWidgetForm layout with the left-out alerts strip", () => {
+  const incidents: CountBy = { field: "incident", incidentStatus: "active" };
+
+  const clickMissingToggle = () => {
+    const root = document.querySelector(
+      '[data-cy="dashboard-widget-form-count-missing"]'
+    ) as HTMLElement;
+    fireEvent.click(within(root).getByRole("switch"));
+  };
+
+  it("gives a new grouped counter with the strip five rows", async () => {
+    const onChange = await renderForm();
+
+    await choosePanelType("Alert Count Panel");
+    fireEvent.click(screen.getByRole("radio", { name: "Incidents" }));
+    clickMissingToggle();
+
+    await waitFor(() =>
+      expect(lastValue(onChange)).toMatchObject({
+        w: 4,
+        h: 5,
+        minW: 0,
+        minH: 5,
+        static: false,
+        countBy: { ...incidents, showMissing: true },
+      })
+    );
+  });
+
+  it("grows a four-row grouped counter to five rows when the strip is turned on", async () => {
+    const onChange = await renderForm(savedWidget({ h: 4, countBy: incidents }));
+
+    clickMissingToggle();
+
+    await waitFor(() =>
+      expect(lastValue(onChange)).toMatchObject({ h: 5, minH: 5 })
+    );
+    expectNoFootprintKeys(lastValue(onChange));
+  });
+
+  it("emits only the five-row minimum for a counter with the strip that is tall enough", async () => {
+    const onChange = await renderForm(
+      savedWidget({ h: 6, countBy: { ...incidents, showMissing: true } })
+    );
+
+    expectOnlyMinH(lastValue(onChange), 5);
+  });
+
+  it("lowers the minimum to four rows when the strip is turned off and keeps the height", async () => {
+    const onChange = await renderForm(
+      savedWidget({ h: 5, countBy: { ...incidents, showMissing: true } })
+    );
+
+    clickMissingToggle();
+
+    await waitFor(() =>
+      expect(lastValue(onChange).countBy).toEqual({
+        ...incidents,
+        showMissing: false,
+      })
+    );
+    expectOnlyMinH(lastValue(onChange), 4);
+  });
+});

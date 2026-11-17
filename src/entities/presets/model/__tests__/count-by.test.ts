@@ -1,11 +1,19 @@
 import {
+  BLINK_MISSING_TOGGLE_LABEL,
   COUNT_BY_ALERT_FIELD_OPTIONS,
   CountBy,
   DEFAULT_INCIDENT_STATUS,
   INCIDENT_STATUS_OPTIONS,
+  MISSING_UNAVAILABLE_LABEL,
   UNKNOWN_COUNT_FIELD_LABEL,
   getCountMode,
+  getBlinkMissingToggleHelp,
   getCountUnitLabel,
+  getMissingCountLabel,
+  getMissingToggleHelp,
+  getMissingToggleLabel,
+  isBlinkingMissing,
+  isShowingMissing,
 } from "../count-by";
 
 describe("getCountMode", () => {
@@ -135,5 +143,135 @@ describe("option lists", () => {
       "acknowledged",
     ]);
     expect(DEFAULT_INCIDENT_STATUS).toBe("active");
+  });
+});
+
+describe("isShowingMissing", () => {
+  it.each<[string, CountBy | undefined, boolean]>([
+    ["no countBy", undefined, false],
+    ["the toggle unset", { field: "incident" }, false],
+    ["the toggle off", { field: "service", showMissing: false }, false],
+    ["the toggle on", { field: "service", showMissing: true }, true],
+    [
+      "a saved value that is not a boolean",
+      { field: "service", showMissing: "true" } as unknown as CountBy,
+      false,
+    ],
+  ])("is %s -> %s", (_name, countBy, expected) => {
+    expect(isShowingMissing(countBy)).toBe(expected);
+  });
+});
+
+describe("isBlinkingMissing", () => {
+  it.each<[string, CountBy | undefined, boolean]>([
+    ["no countBy", undefined, false],
+    ["the blink unset", { field: "incident", showMissing: true }, false],
+    [
+      "the blink off",
+      { field: "incident", showMissing: true, blinkMissing: false },
+      false,
+    ],
+    [
+      "the blink on",
+      { field: "incident", showMissing: true, blinkMissing: true },
+      true,
+    ],
+    [
+      "the blink on with the strip off",
+      { field: "service", showMissing: false, blinkMissing: true },
+      false,
+    ],
+    [
+      "a saved value that is not a boolean",
+      {
+        field: "service",
+        showMissing: true,
+        blinkMissing: "true",
+      } as unknown as CountBy,
+      false,
+    ],
+  ])("is %s -> %s", (_name, countBy, expected) => {
+    expect(isBlinkingMissing(countBy)).toBe(expected);
+  });
+});
+
+describe("blink toggle labels", () => {
+  it("names the switch", () => {
+    expect(BLINK_MISSING_TOGGLE_LABEL).toBe("Make it blink");
+  });
+
+  it.each<[CountBy, string]>([
+    [{ field: "incident" }, "While any alert isn't in an incident."],
+    [{ field: "service" }, "While any alert has no service."],
+    [{ field: "name" }, "While any alert has no alert name."],
+    [{ field: "team" } as unknown as CountBy, "While any alert has no team."],
+    [{ field: {} } as unknown as CountBy, "While any alert has no value."],
+  ])("explains when %j blinks", (countBy, help) => {
+    expect(getBlinkMissingToggleHelp(countBy)).toBe(help);
+  });
+});
+
+describe("missing labels", () => {
+  const unknownField = { field: "team" } as unknown as CountBy;
+  const nonStringField = { field: {} } as unknown as CountBy;
+
+  it.each<[CountBy, string, string]>([
+    [
+      { field: "incident" },
+      "Show alerts not in an incident",
+      "Adds how many matching alerts aren't in any incident.",
+    ],
+    [
+      { field: "service" },
+      "Show alerts with no service",
+      "Adds how many matching alerts have no service.",
+    ],
+    [
+      { field: "node_name" },
+      "Show alerts with no host",
+      "Adds how many matching alerts have no host.",
+    ],
+    [
+      { field: "name" },
+      "Show alerts with no alert name",
+      "Adds how many matching alerts have no alert name.",
+    ],
+    [
+      unknownField,
+      "Show alerts with no team",
+      "Adds how many matching alerts have no team.",
+    ],
+    [
+      nonStringField,
+      "Show alerts with no value",
+      "Adds how many matching alerts have no value.",
+    ],
+  ])("labels the toggle for %j", (countBy, label, help) => {
+    expect(getMissingToggleLabel(countBy)).toBe(label);
+    expect(getMissingToggleHelp(countBy)).toBe(help);
+  });
+
+  it.each<[CountBy, number, string]>([
+    [{ field: "incident" }, 10, "+ 10 alerts not in an incident"],
+    [{ field: "incident" }, 1, "+ 1 alert not in an incident"],
+    [{ field: "incident" }, 0, "Every alert is in an incident"],
+    [{ field: "service" }, 7, "+ 7 alerts with no service"],
+    [{ field: "service" }, 1, "+ 1 alert with no service"],
+    [{ field: "service" }, 0, "Every alert has a service"],
+    [{ field: "node_name" }, 0, "Every alert has a host"],
+    [{ field: "site" }, 0, "Every alert has a site"],
+    [{ field: "application" }, 0, "Every alert has an application"],
+    [{ field: "assignee" }, 0, "Every alert has an assignee"],
+    [{ field: "name" }, 0, "Every alert has an alert name"],
+    [unknownField, 2, "+ 2 alerts with no team"],
+    [unknownField, 0, "Every alert has a team"],
+    [nonStringField, 3, "+ 3 alerts with no value"],
+    [nonStringField, 0, "Every alert has a value"],
+  ])("labels %j with %d missing", (countBy, missing, label) => {
+    expect(getMissingCountLabel(countBy, missing)).toBe(label);
+  });
+
+  it("uses a dash when the number is unavailable", () => {
+    expect(MISSING_UNAVAILABLE_LABEL).toBe("—");
   });
 });

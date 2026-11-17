@@ -54,6 +54,7 @@ const renderPanel = (item: WidgetData) =>
 
 const groupState = (state: {
   totalCount?: number;
+  missingCount?: number;
   isLoading?: boolean;
   isError?: boolean;
 }) =>
@@ -212,5 +213,146 @@ describe("PresetAlertTablePanel with a saved field the UI does not know", () => 
       container.querySelector('[data-cy="dashboard-widget-group-count"]')
     ).toHaveTextContent("—");
     expect(screen.getByTitle("Couldn't load count")).toBeInTheDocument();
+  });
+});
+
+describe("PresetAlertTablePanel alerts left out of the count", () => {
+  const withMissing: CountBy = { ...incidents, showMissing: true };
+
+  const missingLine = (container: HTMLElement) =>
+    container.querySelector('[data-cy="dashboard-widget-group-missing"]');
+
+  it("asks for the missing count only when the toggle is on", () => {
+    renderPanel(buildItem({ countBy: withMissing }));
+    expect(mockUsePresetAlertCount).toHaveBeenLastCalledWith(
+      expect.objectContaining({ includeMissing: true })
+    );
+
+    renderPanel(buildItem({ countBy: incidents }));
+    expect(mockUsePresetAlertCount).toHaveBeenLastCalledWith(
+      expect.objectContaining({ includeMissing: false })
+    );
+  });
+
+  it("shows no line when the toggle is off", () => {
+    groupState({ totalCount: 3, missingCount: 4 });
+    const { container } = renderPanel(buildItem({ countBy: incidents }));
+
+    expect(missingLine(container)).toBeNull();
+  });
+
+  it("shows the left-out alerts under the group count", () => {
+    groupState({ totalCount: 3, missingCount: 4 });
+    const { container } = renderPanel(buildItem({ countBy: withMissing }));
+
+    expect(missingLine(container)).toHaveTextContent(
+      "+ 4 alerts not in an incident"
+    );
+    expect(screen.getByTestId("alerts-table")).toBeInTheDocument();
+    expect(screen.getByText("showing 5 out of 120")).toBeInTheDocument();
+  });
+
+  it("shows a dash when the gateway leaves the number out", () => {
+    groupState({ totalCount: 3 });
+    const { container } = renderPanel(buildItem({ countBy: withMissing }));
+
+    expect(missingLine(container)).toHaveTextContent(/^—$/);
+  });
+
+  it("shows no line when the group count fails", () => {
+    groupState({ isError: true, missingCount: 4 });
+    const { container } = renderPanel(buildItem({ countBy: withMissing }));
+
+    expect(missingLine(container)).toBeNull();
+  });
+
+  it("keeps the line without a number while loading", () => {
+    groupState({ isLoading: true });
+    const { container } = renderPanel(buildItem({ countBy: withMissing }));
+
+    expect(missingLine(container)).not.toBeNull();
+    expect(missingLine(container)).not.toHaveTextContent(/\d|—/);
+  });
+});
+
+describe("PresetAlertTablePanel blinking line", () => {
+  const blinking: CountBy = {
+    ...incidents,
+    showMissing: true,
+    blinkMissing: true,
+  };
+
+  const missingLine = (container: HTMLElement) =>
+    container.querySelector(
+      '[data-cy="dashboard-widget-group-missing"]'
+    ) as HTMLElement;
+
+  const blinkingPart = (container: HTMLElement) =>
+    missingLine(container).querySelector(
+      ".motion-safe\\:animate-missing-blink"
+    );
+
+  it("shows the left-out alerts as a blinking red label", () => {
+    groupState({ totalCount: 3, missingCount: 4 });
+    const { container } = renderPanel(buildItem({ countBy: blinking }));
+
+    expect(blinkingPart(container)).toHaveTextContent(
+      "+ 4 alerts not in an incident"
+    );
+    expect(blinkingPart(container)).toHaveStyle({
+      backgroundColor: "#dc2626",
+      color: "#ffffff",
+    });
+  });
+
+  it("blinks in the color the widget chose", () => {
+    groupState({ totalCount: 3, missingCount: 4 });
+    const { container } = renderPanel(
+      buildItem({ countBy: { ...blinking, blinkColor: "#16a34a" } })
+    );
+
+    expect(
+      (blinkingPart(container) as HTMLElement).style.getPropertyValue(
+        "--blink-strong"
+      )
+    ).toBe("#16a34a");
+    expect(blinkingPart(container)).toHaveStyle({ backgroundColor: "#16a34a" });
+  });
+
+  it.each<[string, Partial<CountBy>, { missingCount?: number; isLoading?: boolean }]>([
+    ["the blink is off", { blinkMissing: false }, { missingCount: 4 }],
+    ["nothing is left out", {}, { missingCount: 0 }],
+    ["the gateway leaves the number out", {}, {}],
+    ["the count is loading", {}, { isLoading: true }],
+  ])("stays grey when %s", (_name, countByChange, state) => {
+    groupState({ totalCount: 3, ...state });
+    const { container } = renderPanel(
+      buildItem({ countBy: { ...blinking, ...countByChange } })
+    );
+
+    expect(missingLine(container)).not.toBeNull();
+    expect(blinkingPart(container)).toBeNull();
+    expect(missingLine(container)).toHaveClass("text-gray-600");
+  });
+
+  it("starts the blink at the page's time zero so every label blinks together", () => {
+    const animatedElements: Element[] = [];
+    const animation = { startTime: 640 as number | null };
+    Object.defineProperty(HTMLElement.prototype, "getAnimations", {
+      configurable: true,
+      value: function (this: HTMLElement) {
+        animatedElements.push(this);
+        return [animation];
+      },
+    });
+    try {
+      groupState({ totalCount: 3, missingCount: 4 });
+      const { container } = renderPanel(buildItem({ countBy: blinking }));
+
+      expect(animatedElements).toContain(blinkingPart(container));
+      expect(animation.startTime).toBe(0);
+    } finally {
+      delete (HTMLElement.prototype as Partial<HTMLElement>).getAnimations;
+    }
   });
 });

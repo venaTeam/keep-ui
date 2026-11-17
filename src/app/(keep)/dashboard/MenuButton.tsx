@@ -3,12 +3,10 @@ import { Menu, Portal, Transition } from "@headlessui/react";
 import { Icon } from "@tremor/react";
 import { PencilIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { EllipsisVerticalIcon } from "@heroicons/react/20/solid";
-import { FiSave } from "react-icons/fi";
 
 interface MenuButtonProps {
   onEdit: () => void;
   onDelete: () => void;
-  onSave?: () => void;
   icon?: React.ElementType;
   compact?: boolean;
 }
@@ -18,7 +16,6 @@ const MENU_WIDTH = 144; // matches w-36
 const MenuButton: React.FC<MenuButtonProps> = ({
   onEdit,
   onDelete,
-  onSave,
   icon = EllipsisVerticalIcon,
   compact = false,
 }) => {
@@ -90,25 +87,6 @@ const MenuButton: React.FC<MenuButtonProps> = ({
           </button>
         )}
       </Menu.Item>
-      {onSave && (
-        <Menu.Item>
-          {({ active }) => (
-            <button
-              onClick={(e) => {
-                stopPropagation(e);
-                onSave();
-              }}
-              className={`${
-                active ? "bg-slate-200" : "text-gray-900"
-              } group flex w-full items-center rounded-md px-2 py-2 text-xs`}
-              data-cy="dashboard-widget-menu-save"
-            >
-              <FiSave className="mr-2 h-4 w-4" aria-hidden="true" />
-              Save
-            </button>
-          )}
-        </Menu.Item>
-      )}
     </div>
   );
 

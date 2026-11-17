@@ -1,6 +1,7 @@
 import React from "react";
-import { Select, SelectItem, Subtitle, Text } from "@tremor/react";
+import { Select, SelectItem, Subtitle, Switch, Text } from "@tremor/react";
 import {
+  BLINK_MISSING_TOGGLE_LABEL,
   COUNT_BY_ALERT_FIELD_OPTIONS,
   CountBy,
   CountByAlertField,
@@ -8,8 +9,14 @@ import {
   DEFAULT_INCIDENT_STATUS,
   INCIDENT_STATUS_OPTIONS,
   IncidentStatusFilter,
+  getBlinkMissingToggleHelp,
   getCountMode,
+  getMissingToggleHelp,
+  getMissingToggleLabel,
+  isBlinkingMissing,
+  isShowingMissing,
 } from "@/entities/presets/model/count-by";
+import { getBlinkColor } from "./blink-palette";
 
 interface CountByControlProps {
   value?: CountBy;
@@ -24,13 +31,33 @@ const MODES: ReadonlyArray<{ mode: CountMode; label: string }> = [
 
 /**
  * Chooses what a preset widget counts: alerts (the default), distinct
- * incidents, or distinct values of one allowlisted alert field.
+ * incidents, or distinct values of one allowlisted alert field. A grouped
+ * count can also show the alerts it leaves out, and make them blink in a
+ * chosen color; those choices survive changes of status, field and grouped
+ * mode, and are dropped with the grouping.
  */
 export const CountByControl: React.FC<CountByControlProps> = ({
   value,
   onChange,
 }) => {
   const mode = getCountMode(value);
+  const showMissing = isShowingMissing(value);
+  const blinkMissing = isBlinkingMissing(value);
+
+  const change = (next: CountBy) => {
+    if (!showMissing) {
+      onChange(next);
+      return;
+    }
+    const kept: CountBy = { ...next, showMissing: true };
+    if (blinkMissing) {
+      kept.blinkMissing = true;
+    }
+    if (value?.blinkColor !== undefined) {
+      kept.blinkColor = value.blinkColor;
+    }
+    onChange(kept);
+  };
 
   const selectMode = (nextMode: CountMode) => {
     if (nextMode === mode) {
@@ -39,9 +66,9 @@ export const CountByControl: React.FC<CountByControlProps> = ({
     if (nextMode === "alerts") {
       onChange(undefined);
     } else if (nextMode === "incidents") {
-      onChange({ field: "incident", incidentStatus: DEFAULT_INCIDENT_STATUS });
+      change({ field: "incident", incidentStatus: DEFAULT_INCIDENT_STATUS });
     } else {
-      onChange({ field: COUNT_BY_ALERT_FIELD_OPTIONS[0].value });
+      change({ field: COUNT_BY_ALERT_FIELD_OPTIONS[0].value });
     }
   };
 
@@ -84,7 +111,7 @@ export const CountByControl: React.FC<CountByControlProps> = ({
             <Select
               value={value?.incidentStatus ?? DEFAULT_INCIDENT_STATUS}
               onValueChange={(status) =>
-                onChange({
+                change({
                   field: "incident",
                   incidentStatus: status as IncidentStatusFilter,
                 })
@@ -107,7 +134,7 @@ export const CountByControl: React.FC<CountByControlProps> = ({
             <Select
               value={value?.field ?? COUNT_BY_ALERT_FIELD_OPTIONS[0].value}
               onValueChange={(field) =>
-                onChange({ field: field as CountByAlertField })
+                change({ field: field as CountByAlertField })
               }
               data-cy="dashboard-widget-form-count-field-select"
             >
@@ -123,6 +150,51 @@ export const CountByControl: React.FC<CountByControlProps> = ({
             counted.
           </Text>
         </>
+      )}
+      {value && mode !== "alerts" && (
+        <div className="mt-3" data-cy="dashboard-widget-form-count-missing">
+          <div className="flex items-center justify-between gap-2">
+            <Subtitle>{getMissingToggleLabel(value)}</Subtitle>
+            <Switch
+              checked={showMissing}
+              onChange={(checked) =>
+                onChange({ ...value, showMissing: checked })
+              }
+            />
+          </div>
+          <Text className="mt-1 text-xs">{getMissingToggleHelp(value)}</Text>
+        </div>
+      )}
+      {value && mode !== "alerts" && showMissing && (
+        <div
+          className="ml-3 mt-2 border-l-2 border-gray-200 pl-3"
+          data-cy="dashboard-widget-form-count-missing-blink"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <Subtitle>{BLINK_MISSING_TOGGLE_LABEL}</Subtitle>
+            {blinkMissing && (
+              <input
+                type="color"
+                aria-label="Blink color"
+                value={getBlinkColor(value)}
+                onChange={(e) =>
+                  onChange({ ...value, blinkColor: e.target.value })
+                }
+                className="ml-auto h-7 w-9 cursor-pointer rounded border p-0.5"
+                data-cy="dashboard-widget-form-count-missing-blink-color"
+              />
+            )}
+            <Switch
+              checked={blinkMissing}
+              onChange={(checked) =>
+                onChange({ ...value, blinkMissing: checked })
+              }
+            />
+          </div>
+          <Text className="mt-1 text-xs">
+            {getBlinkMissingToggleHelp(value)}
+          </Text>
+        </div>
       )}
     </div>
   );

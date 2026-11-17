@@ -9,14 +9,12 @@ interface GridItemProps {
   item: WidgetData;
   onEdit?: () => void;
   onDelete?: () => void;
-  onSave?: () => void;
 }
 
 const PresetGridItem: React.FC<GridItemProps> = ({
   item,
   onEdit,
   onDelete,
-  onSave,
 }) => {
   const searchParams = useSearchParams();
   const timeRangeCel = useMemo(() => {
@@ -73,7 +71,6 @@ const PresetGridItem: React.FC<GridItemProps> = ({
           widgetName={item.name}
           onEdit={onEdit}
           onDelete={onDelete}
-          onSave={onSave}
         />
       )}
     </div>
