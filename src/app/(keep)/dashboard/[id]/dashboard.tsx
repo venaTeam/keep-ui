@@ -173,8 +173,9 @@ const DashboardPage = () => {
       ...newItem,
       ...widget,
     };
-    setLayout((prevLayout) => [...prevLayout, newWidget]);
-    setWidgetData((prevData) => [...prevData, newWidget]);
+    const nextWidgets = [...widgetData, newWidget];
+    setLayout(compactLayout([...layout, newItem], nextWidgets.map((item) => item.i)));
+    setWidgetData(nextWidgets);
   };
 
   const handleEditWidget = (id: string, update?: WidgetData) => {
@@ -191,13 +192,19 @@ const DashboardPage = () => {
     setWidgetData((prevData) =>
       prevData.map((item) => (item.i === updatedItem.i ? updatedItem : item))
     );
-    setLayout((prevLayout) => applyEditedItemToLayout(prevLayout, updatedItem));
+    setLayout((prevLayout) =>
+      compactLayout(
+        applyEditedItemToLayout(prevLayout, updatedItem),
+        widgetData.map((item) => item.i)
+      )
+    );
     closeModal();
   };
 
   const handleDeleteWidget = (id: string) => {
-    setLayout(layout.filter((item) => item.i !== id));
-    setWidgetData(widgetData.filter((item) => item.i !== id));
+    const remaining = widgetData.filter((item) => item.i !== id);
+    setLayout(compactLayout(layout, remaining.map((item) => item.i)));
+    setWidgetData(remaining);
   };
 
   const handleLayoutChange = (newLayout: LayoutItem[]) => {
