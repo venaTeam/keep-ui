@@ -75,9 +75,11 @@ const GridLayout: React.FC<GridLayoutProps> = ({
   }, [layout]);
 
   const dragStartLayout = useRef<Layout[] | null>(null);
+  const lastPointer = useRef<{ x: number; y: number } | null>(null);
 
   const handleDragStart = useCallback((current: Layout[]) => {
     dragStartLayout.current = current.map((panel) => ({ ...panel }));
+    lastPointer.current = null;
   }, []);
 
   /**
@@ -87,12 +89,12 @@ const GridLayout: React.FC<GridLayoutProps> = ({
    * layout it keeps, so each panel's position is rewritten in place there.
    */
   const followDragFromStart = useCallback(
-    (working: Layout[], _oldItem: Layout, dragged: Layout) => {
+    (working: Layout[], id: string, x: number, y: number) => {
       const start = dragStartLayout.current;
       if (!start) {
         return;
       }
-      const next = layoutForDrag(start, dragged.i, dragged.x, dragged.y);
+      const next = layoutForDrag(start, id, x, y);
       for (const panel of working) {
         const placed = next.find((candidate) => candidate.i === panel.i);
         if (placed) {
@@ -104,10 +106,26 @@ const GridLayout: React.FC<GridLayoutProps> = ({
     []
   );
 
+  const handleDrag = useCallback(
+    (working: Layout[], _oldItem: Layout, dragged: Layout) => {
+      lastPointer.current = { x: dragged.x, y: dragged.y };
+      followDragFromStart(working, dragged.i, dragged.x, dragged.y);
+    },
+    [followDragFromStart]
+  );
+
+  /**
+   * The drop lands where the last drag step showed. react-grid-layout has
+   * already compacted the layout it hands onDragStop, which can move the
+   * dragged panel itself, so the pointer is taken from the last drag step
+   * (the library drops at that same spot).
+   */
   const handleDragStop = useCallback(
-    (working: Layout[], oldItem: Layout, dragged: Layout) => {
-      followDragFromStart(working, oldItem, dragged);
+    (working: Layout[], _oldItem: Layout, dragged: Layout) => {
+      const pointer = lastPointer.current ?? { x: dragged.x, y: dragged.y };
+      followDragFromStart(working, dragged.i, pointer.x, pointer.y);
       dragStartLayout.current = null;
+      lastPointer.current = null;
     },
     [followDragFromStart]
   );
@@ -141,7 +159,7 @@ const GridLayout: React.FC<GridLayoutProps> = ({
         onLayoutChange={handleLayoutChange}
         onBreakpointChange={handleBreakpointChange}
         onDragStart={handleDragStart}
-        onDrag={followDragFromStart}
+        onDrag={handleDrag}
         onDragStop={handleDragStop}
         breakpoints={BREAKPOINTS}
         cols={COLS}

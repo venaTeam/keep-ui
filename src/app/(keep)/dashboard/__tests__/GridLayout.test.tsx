@@ -106,6 +106,63 @@ const drag = (start: Layout[], id: string, waypoints: [number, number][]) => {
   return { layout: final, overlapSeen: overlapSeen || hasOverlap(final) };
 };
 
+const RealGridLayout = jest.requireActual("react-grid-layout");
+
+/**
+ * Runs a drag through react-grid-layout's own drag handlers (the real grid,
+ * not a replay) wired to the dashboard grid's onDragStart / onDrag /
+ * onDragStop, and returns what the last drag step showed and what the grid
+ * kept after the drop.
+ */
+const dragWithLibrary = (start: Layout[], id: string, steps: [number, number][]) => {
+  renderGrid(true);
+  const { onDragStart, onDrag, onDragStop } = mockGridProps.current;
+  const grid = React.createRef<any>();
+  render(
+    <RealGridLayout
+      ref={grid}
+      layout={start}
+      cols={COLS}
+      rowHeight={30}
+      width={1200}
+      compactType={GRID_COMPACT_TYPE}
+      onDragStart={onDragStart}
+      onDrag={onDrag}
+      onDragStop={onDragStop}
+    >
+      {start.map((panel) => (
+        <div key={panel.i} />
+      ))}
+    </RealGridLayout>
+  );
+  const pointer = { e: new MouseEvent("mousemove"), node: document.createElement("div") };
+  const begin = item(start, id);
+  act(() => grid.current.onDragStart(id, begin.x, begin.y, pointer));
+  let shown: Layout[] = start;
+  for (const [x, y] of steps) {
+    act(() => grid.current.onDrag(id, x, y, pointer));
+    shown = utils.cloneLayout(grid.current.state.layout);
+  }
+  const [lastX, lastY] = steps[steps.length - 1];
+  act(() => grid.current.onDragStop(id, lastX, lastY, pointer));
+  return { shown, dropped: grid.current.state.layout as Layout[] };
+};
+
+const pointerPath = (from: [number, number], waypoints: [number, number][]) => {
+  const steps: [number, number][] = [];
+  let [fromX, fromY] = from;
+  for (const [toX, toY] of waypoints) {
+    for (let step = 1; step <= STEPS_PER_WAYPOINT; step++) {
+      steps.push([
+        Math.round(fromX + ((toX - fromX) * step) / STEPS_PER_WAYPOINT),
+        Math.round(fromY + ((toY - fromY) * step) / STEPS_PER_WAYPOINT),
+      ]);
+    }
+    [fromX, fromY] = [toX, toY];
+  }
+  return steps;
+};
+
 const renderGrid = (isEditMode: boolean) => {
   const onLayoutChange = jest.fn();
   render(
@@ -142,6 +199,43 @@ describe("dashboard grid wiring", () => {
     const editChange = renderGrid(true);
     act(() => mockGridProps.current.onLayoutChange([{ i: "c1", x: 0, y: 0, w: 6, h: 5 }]));
     expect(editChange).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("dragging panels with react-grid-layout's own drag handlers", () => {
+  it("drops every panel where the last drag step showed it", () => {
+    const { shown, dropped } = dragWithLibrary(fixture(), "c1", [[7, 6]]);
+
+    expect(positions(dropped)).toEqual(positions(shown));
+  });
+
+  it("drops where the last drag step showed after a full pointer path", () => {
+    const { shown, dropped } = dragWithLibrary(
+      fixture(),
+      "c1",
+      pointerPath([0, 0], [[7, 6]])
+    );
+
+    expect(positions(dropped)).toEqual(positions(shown));
+  });
+
+  it("restores the starting layout when the panel comes back", () => {
+    const start: Layout[] = [
+      { i: "p1", x: 12, y: 0, w: 9, h: 4 },
+      { i: "p2", x: 4, y: 7, w: 7, h: 6 },
+      { i: "p3", x: 4, y: 4, w: 9, h: 3 },
+    ];
+
+    const { dropped } = dragWithLibrary(
+      start,
+      "p3",
+      pointerPath([4, 4], [
+        [0, 4],
+        [4, 4],
+      ])
+    );
+
+    expect(positions(dropped)).toEqual(positions(start));
   });
 });
 
