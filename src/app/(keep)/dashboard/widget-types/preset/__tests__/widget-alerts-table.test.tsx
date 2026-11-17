@@ -314,6 +314,78 @@ describe("WidgetAlertsTable", () => {
     );
   });
 
+  describe("generated column cells", () => {
+    const cellText = (columnId: string) =>
+      cellsOf(columnId).map((cell) => cell.textContent);
+
+    it("a date column renders empty, without throwing, for an alert that lacks the field", () => {
+      renderWidget({ presetColumns: ["name", "createdAt"] }, [
+        alertWith({ createdAt: "2026-10-01T10:00:00Z" }),
+        alertWith(),
+      ]);
+
+      const [present, missing] = cellsOf("createdAt");
+      expect(present.querySelector("span")).toHaveAttribute(
+        "title",
+        "2026-10-01T10:00:00.000Z"
+      );
+      expect(missing).toHaveTextContent(/^$/);
+    });
+
+    it("a date column renders empty for an invalid date or null", () => {
+      renderWidget({ presetColumns: ["name", "firingStartTime"] }, [
+        alertWith({ firingStartTime: "not a date" }),
+        alertWith({ firingStartTime: null }),
+        alertWith({ firingStartTime: "" }),
+      ]);
+
+      expect(cellText("firingStartTime")).toEqual(["", "", ""]);
+    });
+
+    it("a valid date renders through the shared renderer, with its ISO title", () => {
+      renderWidget({ presetColumns: ["name", "updatedAt"] }, [
+        alertWith({ updatedAt: "2026-10-01T10:00:00Z" }),
+      ]);
+
+      const span = cellsOf("updatedAt")[0].querySelector("span");
+      expect(span).toHaveAttribute("title", "2026-10-01T10:00:00.000Z");
+      expect(span?.textContent).toMatch(/ago$/);
+    });
+
+    it("a saved unresolved_counter shows a zero unresolvedCounter as 0, in the shared markup", () => {
+      renderWidget({ presetColumns: ["name", "unresolved_counter"] }, [
+        alertWith({ unresolvedCounter: 0 }),
+        alertWith({ unresolvedCounter: 4 }),
+      ]);
+
+      expect(headerIds()).toEqual(["name", "unresolvedCounter"]);
+      expect(cellText("unresolvedCounter")).toEqual(["0", "4"]);
+      expect(
+        cellsOf("unresolvedCounter")[0].querySelector("div.select-text")
+      ).toHaveTextContent("0");
+    });
+
+    it("false renders as false", () => {
+      renderWidget({ presetColumns: ["name", "acknowledged"] }, [
+        alertWith({ acknowledged: false }),
+        alertWith({ acknowledged: true }),
+      ]);
+
+      expect(cellText("acknowledged")).toEqual(["false", "true"]);
+    });
+
+    it("null, undefined and an empty string render empty", () => {
+      renderWidget({ presetColumns: ["name", "team"] }, [
+        alertWith({ team: null }),
+        alertWith({ team: undefined }),
+        alertWith({ team: "" }),
+        alertWith({ team: "core" }),
+      ]);
+
+      expect(cellText("team")).toEqual(["", "", "", "core"]);
+    });
+  });
+
   it("an uncustomized widget uses the default columns, pinned icons first", () => {
     renderWidget();
 
