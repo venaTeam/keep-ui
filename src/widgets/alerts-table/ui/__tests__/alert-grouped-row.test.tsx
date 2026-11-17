@@ -26,7 +26,11 @@ jest.mock("react-selectable-fast", () => {
       ),
     createSelectable: (Component: React.ComponentType<any>) =>
       function SelectableMock(props: any) {
-        return React.createElement(Component, { ...props, isSelecting: false });
+        return React.createElement(Component, {
+          ...props,
+          isSelecting: false,
+          selectableRef: () => {},
+        });
       },
   };
 });

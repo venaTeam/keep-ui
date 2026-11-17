@@ -157,3 +157,7 @@ html.workaround-dark {
 .tremor-TableRow-row>td.bg-tremor-background {
   background-color: inherit !important;
 }
+
+tr[data-ringing] + tr[data-ringing] {
+  border-top-width: 0 !important;
+}

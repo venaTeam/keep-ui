@@ -23,6 +23,7 @@ import {
 import { isGroupableColumn } from "../empty-group-row-model";
 import { useWidgetAlertColumns } from "../use-widget-alert-columns";
 import { useConfig } from "@/utils/hooks/useConfig";
+import { RINGING_REASON } from "@/widgets/alerts-table/lib/alert-ringing";
 
 const mockUsePresetColumnState = jest.fn();
 const mockGetAutofitColumnWidth = jest.fn();
@@ -1673,7 +1674,19 @@ describe("WidgetAlertsTable", () => {
   it("stacks pinned header cells above the resize edges and drop indicator of scrolled columns", () => {
     renderWidget();
 
-    expect(widgetRoot()).toHaveClass("[&_th.sticky]:z-40");
+    const pinnedHeader = screen
+      .getByTestId("header-cell-severity")
+      .closest("th") as HTMLElement;
+    expect(pinnedHeader).toHaveClass("sticky");
+    expect(pinnedHeader.style.zIndex).toBe("1");
+    expect(widgetRoot()).toHaveClass("[&_th.sticky]:!z-40");
+  });
+
+  it("gives every pinned cell, header and body, the same z-index so DOM order decides among them", () => {
+    renderWidget();
+
+    expect(widgetRoot()).toHaveClass("[&_th.sticky]:!z-40", "[&_td.sticky]:!z-40");
+    expect(cellsOf("severity")[0]).toHaveClass("sticky");
   });
 
   it("never reads the preset's per-user column state", () => {
@@ -2135,5 +2148,239 @@ describe("WidgetAlertsTable", () => {
         expect(tableWidth()).toBe(`${plain.total}px`);
       });
     });
+  });
+});
+
+describe("WidgetAlertsTable ringing rows", () => {
+  beforeEach(() => {
+    Object.defineProperty(HTMLElement.prototype, "getAnimations", {
+      configurable: true,
+      value: () => [],
+    });
+  });
+
+  afterEach(() => {
+    delete (HTMLElement.prototype as Partial<HTMLElement>).getAnimations;
+  });
+
+  const PULSE = "motion-safe:before:animate-ringing-pulse";
+  const OVERLAY = [
+    "isolate",
+    "before:absolute",
+    "before:inset-0",
+    "before:-z-10",
+    "before:pointer-events-none",
+    "before:border-y-2",
+    "before:bg-[color:var(--blink-row-tint)]",
+    PULSE,
+  ];
+
+  const ringingAlerts = () => [
+    alertWith({ severity: Severity.Critical, service: "checkout" }),
+    alertWith({ severity: 5, service: "checkout" }),
+    alertWith({ severity: "CRITICAL", status: "FIRING", service: "checkout" }),
+    alertWith({ severity: Severity.Critical, status: Status.Resolved }),
+    alertWith({ severity: Severity.High, service: "checkout" }),
+    alertWith({ severity: Severity.Critical, deleted: true }),
+  ];
+
+  const renderRinging = (
+    presetNoisy: boolean | undefined,
+    overrides: Partial<WidgetData> = {},
+    { isEditMode = false }: { isEditMode?: boolean } = {}
+  ) => {
+    const alerts = ringingAlerts();
+    render(
+      <WidgetAlertsTable
+        item={{
+          ...baseItem,
+          presetColumns: ["severity", "status", "source", "name"],
+          ...overrides,
+        }}
+        alerts={alerts}
+        background="rgb(16, 185, 129, 0.1)"
+        presetNoisy={presetNoisy}
+        isEditMode={isEditMode}
+        onChange={isEditMode ? jest.fn() : undefined}
+      />
+    );
+    return alerts;
+  };
+
+  const rowOf = (alert: AlertDto) =>
+    document.querySelector(
+      `[data-cy="alerts-row"][data-cy-id="${alert.fingerprint}"]`
+    ) as HTMLElement;
+
+  const cellsOfRow = (alert: AlertDto) =>
+    Array.from(rowOf(alert).querySelectorAll("td"));
+
+  const expectQuiet = (alert: AlertDto) => {
+    const row = rowOf(alert);
+    expect(row).toBeInTheDocument();
+    expect(row).not.toHaveAttribute("data-ringing");
+    expect(within(row).queryByText(RINGING_REASON)).toBeNull();
+    cellsOfRow(alert).forEach((cell) => {
+      expect(cell).not.toHaveClass(PULSE);
+      expect(cell.style.getPropertyValue("--blink-row-tint")).toBe("");
+    });
+  };
+
+  it("puts the pulse on an overlay behind every cell of a critical firing plain row", () => {
+    const [critical] = renderRinging(true);
+    const row = rowOf(critical);
+    const cells = cellsOfRow(critical);
+
+    expect(row).toHaveAttribute("data-ringing", "true");
+    expect(row).not.toHaveClass("cursor-pointer");
+    expect(row.getAttribute("style")).toBeNull();
+    expect(cells).toHaveLength(4);
+    cells.forEach((cell) => {
+      expect(cell).toHaveClass(...OVERLAY);
+      expect(cell.style.getPropertyValue("--blink-row-tint")).not.toBe("");
+      expect(cell.style.getPropertyValue("--blink-row-edge")).not.toBe("");
+    });
+    expect(cells[0]).toHaveClass("before:border-l-2");
+    expect(cells[cells.length - 1]).toHaveClass("before:border-r-2");
+    cells.slice(1, -1).forEach((cell) => {
+      expect(cell).not.toHaveClass("before:border-l-2");
+      expect(cell).not.toHaveClass("before:border-r-2");
+    });
+    expect(cells[0].firstElementChild).not.toHaveTextContent(RINGING_REASON);
+    expect(cells[0].lastElementChild).toHaveTextContent(RINGING_REASON);
+    expect(cells[0].lastElementChild).toHaveClass("sr-only", "select-none");
+    expect(screen.getAllByText(RINGING_REASON)).toHaveLength(1);
+  });
+
+  it("lets the outline reach both sides of the widget, which has no side padding", () => {
+    const [critical] = renderRinging(true);
+    const cells = cellsOfRow(critical);
+
+    expect(widgetRoot().className).not.toMatch(/(^|\s)p[xlr]?-/);
+    expect(rowOf(critical).firstElementChild).toBe(cells[0]);
+    expect(rowOf(critical).lastElementChild).toBe(cells[cells.length - 1]);
+  });
+
+  it("leaves resolved, non-critical, numeric and upper-case rows as they were", () => {
+    const [, numeric, upperCase, resolved, high] = renderRinging(true);
+
+    [numeric, upperCase, resolved, high].forEach(expectQuiet);
+  });
+
+  it("does not ring a deleted critical firing alert", () => {
+    const [, , , , , deleted] = renderRinging(true);
+
+    expectQuiet(deleted);
+    expect(screen.getAllByText(RINGING_REASON)).toHaveLength(1);
+  });
+
+  it.each([false, undefined])(
+    "rings nothing when the preset's noisy flag is %s",
+    (presetNoisy) => {
+      renderRinging(presetNoisy);
+
+      expect(document.querySelector("[data-ringing]")).toBeNull();
+      expect(
+        document.querySelector(".motion-safe\\:before\\:animate-ringing-pulse")
+      ).toBeNull();
+      expect(screen.queryByText(RINGING_REASON)).toBeNull();
+    }
+  );
+
+  it("rings the child rows of a grouped widget while its group headers stay quiet", () => {
+    const [critical, numeric, , , high] = renderRinging(true, {
+      alertTable: { groupBy: "service" },
+    });
+
+    expect(groupHeaders().length).toBeGreaterThan(1);
+    groupHeaders().forEach((header) =>
+      expect(header).not.toHaveAttribute("data-ringing")
+    );
+    expect(rowOf(critical)).toHaveAttribute("data-ringing", "true");
+    cellsOfRow(critical).forEach((cell) => expect(cell).toHaveClass(...OVERLAY));
+    expectQuiet(numeric);
+    expectQuiet(high);
+  });
+
+  it("rings a collapsed group's header while one of its alerts would, and only that group's", () => {
+    renderRinging(true, { alertTable: { groupBy: "service" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Collapse all" }));
+
+    expect(bodyRows()).toHaveLength(0);
+    const checkout = groupHeader("checkout");
+    const headerCell = checkout.querySelector("td") as HTMLElement;
+    expect(checkout).toHaveAttribute("data-ringing", "true");
+    expect(headerCell).toHaveClass(
+      ...OVERLAY,
+      "before:border-l-2",
+      "before:border-r-2"
+    );
+    expect(within(checkout).getByText(RINGING_REASON)).toHaveClass("sr-only");
+    groupHeaders()
+      .filter((header) => header !== checkout)
+      .forEach((header) => {
+        expect(header).not.toHaveAttribute("data-ringing");
+        expect(within(header).queryByText(RINGING_REASON)).toBeNull();
+      });
+  });
+
+  it("keeps the opaque tint on a ringing row's pinned cells, under the overlay", () => {
+    const [critical] = renderRinging(true);
+
+    expect(widgetRoot()).toHaveClass(
+      "[&_td.sticky]:[background:var(--widget-opaque-bg)]"
+    );
+    expect(widgetRoot().className).not.toContain("[data-ringing]");
+    const pinned = cellsOfRow(critical).slice(0, 3);
+    pinned.forEach((cell) => {
+      expect(cell).toHaveClass("sticky", ...OVERLAY);
+      expect(cell).not.toHaveClass("!bg-inherit");
+    });
+  });
+
+  describe("pulse sync", () => {
+    const synced: Element[] = [];
+
+    beforeEach(() => {
+      synced.length = 0;
+      Object.defineProperty(HTMLElement.prototype, "getAnimations", {
+        configurable: true,
+        value: function (this: HTMLElement) {
+          const element = this;
+          return [
+            {
+              effect: { target: element, pseudoElement: "::before" },
+              set startTime(value: number) {
+                if (value === 0) {
+                  synced.push(element);
+                }
+              },
+            },
+          ];
+        },
+      });
+    });
+
+    it.each([false, true])(
+      "starts every ringing cell's pulse at the page's time zero (edit mode: %s)",
+      (isEditMode) => {
+        const [critical, numeric, , , high, deleted] = renderRinging(
+          true,
+          {},
+          { isEditMode }
+        );
+
+        expect(
+          widgetRoot().querySelector("tbody")!.hasAttribute("inert")
+        ).toBe(isEditMode);
+        expect(synced).toEqual(expect.arrayContaining(cellsOfRow(critical)));
+        [numeric, high, deleted].forEach((alert) =>
+          cellsOfRow(alert).forEach((cell) =>
+            expect(synced).not.toContain(cell)
+          )
+        );
+      }
+    );
   });
 });

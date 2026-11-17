@@ -15,6 +15,7 @@ import {
 } from "@/widgets/alerts-table/lib/row-appearance";
 import { useExpandedRows } from "@/utils/hooks/useExpandedRows";
 import { useGroupExpansion } from "@/utils/hooks/useGroupExpansion";
+import { useRingingRows } from "@/widgets/alerts-table/lib/alert-ringing";
 import clsx from "clsx";
 import "react-loading-skeleton/dist/skeleton.css";
 import { SelectableGroup } from "react-selectable-fast";
@@ -29,6 +30,7 @@ interface Props {
   lastViewedAlert: string | null;
   presetName: string;
   groupExpansionState?: ReturnType<typeof useGroupExpansion>;
+  presetNoisy?: boolean;
   rowAppearance?: RowAppearance;
   /**
    * Shows the selection checkbox on group header rows when the table has a
@@ -57,6 +59,7 @@ export function AlertsTableBody({
   presetName,
   pageSize,
   groupExpansionState,
+  presetNoisy = false,
   rowAppearance = "default",
   selectable = true,
   dragSelectable,
@@ -68,6 +71,7 @@ export function AlertsTableBody({
 }: Props) {
   const dragSelect = dragSelectable ?? selectable;
   const [rowStyle] = useAlertRowStyle();
+  const ringingRow = useRingingRows(presetNoisy);
   const { isRowExpanded } = useExpandedRows(presetName);
 
   // Use provided groupExpansionState or create a local one
@@ -218,6 +222,7 @@ export function AlertsTableBody({
           getColumnLabel={getColumnLabel}
           rowAppearance={rowAppearance}
           selectable={selectable}
+          presetNoisy={presetNoisy}
           checkboxClassName={groupCheckboxClassName}
         />
       );
@@ -225,6 +230,7 @@ export function AlertsTableBody({
 
     const isLastViewed = row.original.fingerprint === lastViewedAlert;
     const expanded = isRowExpanded(row.original.fingerprint);
+    const ringing = ringingRow(row.original);
 
     const rowClassName = applyRowAppearance(
       clsx(
@@ -236,12 +242,11 @@ export function AlertsTableBody({
       rowAppearance
     );
 
-    const cells = row.getVisibleCells().map((cell) => {
+    const cells = row.getVisibleCells().map((cell, cellIndex, visibleCells) => {
       const { style, className } = getCommonPinningStylesAndClassNames(
-        cell.column,
-        table.getState().columnPinning.left?.length,
-        table.getState().columnPinning.right?.length
+        cell.column
       );
+      const ringingCell = ringing.cellProps(cellIndex, visibleCells.length);
 
       const isNameCell = cell.column.id === "name";
       const isDescriptionCell = cell.column.id === "description";
@@ -251,36 +256,41 @@ export function AlertsTableBody({
       return (
         <TableCell
           key={cell.id}
+          ref={ringingCell.ref}
           data-column-id={cell.column.id}
           data-cy={`alerts-cell-${cell.column.id}`}
-          className={applyRowAppearance(
-            clsx(
-              getCellClassName(
-                cell,
-                className,
-                rowStyle,
-                isLastViewed,
-                expanded
+          className={clsx(
+            applyRowAppearance(
+              clsx(
+                getCellClassName(
+                  cell,
+                  className,
+                  rowStyle,
+                  isLastViewed,
+                  expanded
+                ),
+                // Force padding when expanded but not for source column
+                expanded && !isSourceCell ? "!p-2" : null,
+                // Source cell needs specific treatment when expanded
+                expanded && isSourceCell
+                  ? "!p-1 !w-8 !min-w-8 !max-w-8"
+                  : null,
+                // Name cell specific classes when expanded
+                expanded && isNameCell
+                  ? "!max-w-[180px] w-[180px] !overflow-hidden"
+                  : null,
+                // Description cell specific classes when expanded
+                expanded && isDescriptionCell
+                  ? "!whitespace-pre-wrap !break-words w-auto"
+                  : null
               ),
-              // Force padding when expanded but not for source column
-              expanded && !isSourceCell ? "!p-2" : null,
-              // Source cell needs specific treatment when expanded
-              expanded && isSourceCell
-                ? "!p-1 !w-8 !min-w-8 !max-w-8"
-                : null,
-              // Name cell specific classes when expanded
-              expanded && isNameCell
-                ? "!max-w-[180px] w-[180px] !overflow-hidden"
-                : null,
-              // Description cell specific classes when expanded
-              expanded && isDescriptionCell
-                ? "!whitespace-pre-wrap !break-words w-auto"
-                : null
+              rowAppearance
             ),
-            rowAppearance
+            ringingCell.className
           )}
           style={{
             ...style,
+            ...ringingCell.style,
             // For source cells, enforce fixed width always
             ...(isSourceCell
               ? {
@@ -314,6 +324,7 @@ export function AlertsTableBody({
           }}
         >
           {flexRender(cell.column.columnDef.cell, cell.getContext())}
+          {cellIndex === 0 && ringing.reason}
         </TableCell>
       );
     });
@@ -326,6 +337,7 @@ export function AlertsTableBody({
           onClick={(e) => handleRowClick(e, row.original)}
           data-cy="alerts-row"
           data-cy-id={row.original.fingerprint}
+          {...ringing.rowProps}
         >
           {cells}
         </TableRow>
@@ -341,6 +353,7 @@ export function AlertsTableBody({
         data-row-id={row.id}
         data-cy="alerts-row"
         data-cy-id={row.original.fingerprint}
+        {...ringing.rowProps}
       >
         {cells}
       </SelectableRow>

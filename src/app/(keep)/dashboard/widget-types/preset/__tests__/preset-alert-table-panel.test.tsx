@@ -501,7 +501,7 @@ describe("PresetAlertTablePanel in dashboard edit mode", () => {
     expect(mockLastTableProps?.settingsSlot ?? null).toBeNull();
   });
 
-  it("gives the table the widget, and not the preset's name, id or noisy flag", () => {
+  it("gives the table the widget and whether the preset is noisy", () => {
     const item = buildItem();
     render(
       <PresetAlertTablePanel
@@ -511,10 +511,16 @@ describe("PresetAlertTablePanel in dashboard edit mode", () => {
       />
     );
 
-    expect(mockLastTableProps).toEqual(expect.objectContaining({ item }));
+    expect(mockLastTableProps).toEqual(
+      expect.objectContaining({ item, presetNoisy: true })
+    );
     expect(mockLastTableProps).not.toHaveProperty("presetName");
     expect(mockLastTableProps).not.toHaveProperty("presetId");
-    expect(mockLastTableProps).not.toHaveProperty("presetNoisy");
+
+    renderInMode(false);
+    expect(mockLastTableProps).toEqual(
+      expect.objectContaining({ presetNoisy: false })
+    );
   });
 
   it("keeps the count lines, the alerts line and Go to preset in order in edit mode", () => {
