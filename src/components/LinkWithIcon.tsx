@@ -83,6 +83,18 @@ export const LinkWithIcon = ({
     onDuplicate?.();
   };
 
+  /**
+   * Keeps the "Duplicate" tooltip closed when focus arrives without a visible
+   * focus ring, such as the dialog handing focus back after a mouse close.
+   * The Radix trigger skips its open-on-focus handler once this one prevents
+   * the default.
+   */
+  const handleDuplicateFocus = (e: React.FocusEvent<HTMLButtonElement>) => {
+    if (!e.currentTarget.matches(":focus-visible")) {
+      e.preventDefault();
+    }
+  };
+
   return (
     <div
       className={clsx(
@@ -133,6 +145,7 @@ export const LinkWithIcon = ({
             <button
               type="button"
               onClick={handleDuplicate}
+              onFocus={handleDuplicateFocus}
               aria-label={duplicateAriaLabel}
               data-cy={duplicateDataCy}
               className="flex items-center text-slate-400 hover:text-orange-500 p-0"

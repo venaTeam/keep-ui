@@ -1,5 +1,5 @@
 import React from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { FiLayout } from "react-icons/fi";
 import { LinkWithIcon } from "../LinkWithIcon";
 
@@ -96,5 +96,46 @@ describe("LinkWithIcon duplicate action", () => {
     fireEvent.click(deleteButton);
     expect(onDelete).toHaveBeenCalledTimes(1);
     expect(onDuplicate).not.toHaveBeenCalled();
+  });
+});
+
+describe("LinkWithIcon duplicate tooltip", () => {
+  const duplicateButton = () =>
+    screen.getByRole("button", { name: "Duplicate Ops" });
+
+  const focusWithRing = (button: HTMLElement, focusVisible: boolean) => {
+    const matches = button.matches.bind(button);
+    jest
+      .spyOn(button, "matches")
+      .mockImplementation((selector: string) =>
+        selector === ":focus-visible" ? focusVisible : matches(selector)
+      );
+    act(() => button.focus());
+  };
+
+  it("stays closed when focus lands without a visible focus ring", () => {
+    renderLink({ onDuplicate: jest.fn(), duplicateAriaLabel: "Duplicate Ops" });
+
+    focusWithRing(duplicateButton(), false);
+
+    expect(duplicateButton()).toHaveFocus();
+    expect(duplicateButton()).toHaveAttribute("data-state", "closed");
+    expect(screen.queryByRole("tooltip")).toBeNull();
+  });
+
+  it("opens on keyboard focus", () => {
+    renderLink({ onDuplicate: jest.fn(), duplicateAriaLabel: "Duplicate Ops" });
+
+    focusWithRing(duplicateButton(), true);
+
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Duplicate");
+  });
+
+  it("opens on pointer hover", async () => {
+    renderLink({ onDuplicate: jest.fn(), duplicateAriaLabel: "Duplicate Ops" });
+
+    fireEvent.pointerMove(duplicateButton());
+
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Duplicate");
   });
 });
