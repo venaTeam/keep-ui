@@ -597,7 +597,9 @@ function WidgetAlertsTableContent({
  * and left free, so a table that fits never scrolls.
  *
  * With `selection` and outside edit mode, the table adds its selection chrome:
- * a 28 px checkbox gutter pinned left, before the pinned icon columns, with a
+ * a 28 px checkbox gutter pinned left, before the pinned icon columns, whose
+ * width the flexible text column gives up when the columns are short of room
+ * (so the gutter never makes a widget scroll), with a
  * select-all-shown header checkbox and a three-state checkbox on each group
  * header; and a zero-width row-actions column pinned right, whose quick-action
  * tray floats over the row's last cells and hides while anything is ticked.
