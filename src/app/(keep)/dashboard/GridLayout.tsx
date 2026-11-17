@@ -3,7 +3,7 @@ import { Responsive, WidthProvider, Layout, Layouts } from "react-grid-layout";
 import GridItemContainer from "./GridItemContainer";
 import { useDashboardEditMode } from "./DashboardEditModeContext";
 import { LayoutItem, WidgetData } from "./types";
-import { GRID_COLS, GRID_COMPACT_TYPE } from "./widget-layout";
+import { GRID_COLS, GRID_COMPACT_TYPE, layoutForDrag } from "./widget-layout";
 import "react-grid-layout/css/styles.css";
 import { MetricsWidget } from "@/utils/hooks/useDashboardMetricWidgets";
 import { Preset } from "@/entities/presets/model/types";
@@ -74,6 +74,62 @@ const GridLayout: React.FC<GridLayoutProps> = ({
     return { lg: layout, md: layout, sm: stacked, xs: stacked, xxs: stacked };
   }, [layout]);
 
+  const dragStartLayout = useRef<Layout[] | null>(null);
+  const lastPointer = useRef<{ x: number; y: number } | null>(null);
+
+  const handleDragStart = useCallback((current: Layout[]) => {
+    dragStartLayout.current = current.map((panel) => ({ ...panel }));
+    lastPointer.current = null;
+  }, []);
+
+  /**
+   * Makes the grid follow a drag from the layout at drag start instead of
+   * from its previous drag step (see `layoutForDrag`). react-grid-layout 1.5
+   * hands onDrag the layout it compacts and keeps next, and onDragStop the
+   * layout it keeps, so each panel's position is rewritten in place there.
+   */
+  const followDragFromStart = useCallback(
+    (working: Layout[], id: string, x: number, y: number) => {
+      const start = dragStartLayout.current;
+      if (!start) {
+        return;
+      }
+      const next = layoutForDrag(start, id, x, y);
+      for (const panel of working) {
+        const placed = next.find((candidate) => candidate.i === panel.i);
+        if (placed) {
+          panel.x = placed.x;
+          panel.y = placed.y;
+        }
+      }
+    },
+    []
+  );
+
+  const handleDrag = useCallback(
+    (working: Layout[], _oldItem: Layout, dragged: Layout) => {
+      lastPointer.current = { x: dragged.x, y: dragged.y };
+      followDragFromStart(working, dragged.i, dragged.x, dragged.y);
+    },
+    [followDragFromStart]
+  );
+
+  /**
+   * The drop lands where the last drag step showed. react-grid-layout has
+   * already compacted the layout it hands onDragStop, which can move the
+   * dragged panel itself, so the pointer is taken from the last drag step
+   * (the library drops at that same spot).
+   */
+  const handleDragStop = useCallback(
+    (working: Layout[], _oldItem: Layout, dragged: Layout) => {
+      const pointer = lastPointer.current ?? { x: dragged.x, y: dragged.y };
+      followDragFromStart(working, dragged.i, pointer.x, pointer.y);
+      dragStartLayout.current = null;
+      lastPointer.current = null;
+    },
+    [followDragFromStart]
+  );
+
   const handleBreakpointChange = useCallback((breakpoint: string) => {
     breakpointRef.current = breakpoint;
     setIsEditableSize(isEditableBreakpoint(breakpoint));
@@ -102,6 +158,9 @@ const GridLayout: React.FC<GridLayoutProps> = ({
         layouts={layouts}
         onLayoutChange={handleLayoutChange}
         onBreakpointChange={handleBreakpointChange}
+        onDragStart={handleDragStart}
+        onDrag={handleDrag}
+        onDragStop={handleDragStop}
         breakpoints={BREAKPOINTS}
         cols={COLS}
         rowHeight={30}

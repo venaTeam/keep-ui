@@ -76,35 +76,97 @@ const positions = (layout: Layout[]) =>
 const hasOverlap = (layout: Layout[]) =>
   layout.some((a, k) => layout.slice(k + 1).some((b) => utils.collides(a, b)));
 
+const move = (layout: Layout[], id: string, x: number, y: number) =>
+  utils.moveElement(layout, item(layout, id), x, y, true, false, GRID_COMPACT_TYPE, COLS, false);
+
 /**
- * Replays a pointer drag the way the grid's drag handler applies it: one
- * move per pointer step, each followed by compaction.
+ * Replays a pointer drag the way react-grid-layout 1.5's drag handlers run
+ * it, calling the grid's onDragStart / onDrag / onDragStop at the same
+ * points: every pointer step moves the panel, hands the layout to onDrag and
+ * then compacts it; the drop moves and compacts, hands the result to
+ * onDragStop, and the library keeps that result.
  */
 const drag = (start: Layout[], id: string, waypoints: [number, number][]) => {
+  renderGrid(true);
+  const grid = mockGridProps.current;
   let layout = utils.compact(utils.cloneLayout(start), GRID_COMPACT_TYPE, COLS);
   let overlapSeen = false;
+  grid.onDragStart?.(layout, item(layout, id), item(layout, id));
   let [fromX, fromY] = [item(layout, id).x, item(layout, id).y];
+  let [lastX, lastY] = [fromX, fromY];
   for (const [toX, toY] of waypoints) {
     for (let step = 1; step <= STEPS_PER_WAYPOINT; step++) {
-      const x = Math.round(fromX + ((toX - fromX) * step) / STEPS_PER_WAYPOINT);
-      const y = Math.round(fromY + ((toY - fromY) * step) / STEPS_PER_WAYPOINT);
-      layout = utils.moveElement(
-        layout,
-        item(layout, id),
-        x,
-        y,
-        true,
-        false,
-        GRID_COMPACT_TYPE,
-        COLS,
-        false
-      );
+      lastX = Math.round(fromX + ((toX - fromX) * step) / STEPS_PER_WAYPOINT);
+      lastY = Math.round(fromY + ((toY - fromY) * step) / STEPS_PER_WAYPOINT);
+      layout = move(layout, id, lastX, lastY);
+      grid.onDrag?.(layout, item(layout, id), item(layout, id));
       layout = utils.compact(layout, GRID_COMPACT_TYPE, COLS);
       overlapSeen = overlapSeen || hasOverlap(layout);
     }
     [fromX, fromY] = [toX, toY];
   }
-  return { layout, overlapSeen };
+  layout = move(layout, id, lastX, lastY);
+  const dropped = item(layout, id);
+  const final = utils.compact(layout, GRID_COMPACT_TYPE, COLS);
+  grid.onDragStop?.(final, dropped, dropped);
+  return { layout: final, overlapSeen: overlapSeen || hasOverlap(final) };
+};
+
+const RealGridLayout = jest.requireActual("react-grid-layout");
+
+/**
+ * Runs a drag through react-grid-layout's own drag handlers (the real grid,
+ * not a replay) wired to the dashboard grid's onDragStart / onDrag /
+ * onDragStop, and returns what the last drag step showed and what the grid
+ * kept after the drop.
+ */
+const dragWithLibrary = (start: Layout[], id: string, steps: [number, number][]) => {
+  renderGrid(true);
+  const { onDragStart, onDrag, onDragStop } = mockGridProps.current;
+  const grid = React.createRef<any>();
+  render(
+    <RealGridLayout
+      ref={grid}
+      layout={start}
+      cols={COLS}
+      rowHeight={30}
+      width={1200}
+      compactType={GRID_COMPACT_TYPE}
+      onDragStart={onDragStart}
+      onDrag={onDrag}
+      onDragStop={onDragStop}
+    >
+      {start.map((panel) => (
+        <div key={panel.i} />
+      ))}
+    </RealGridLayout>
+  );
+  const pointer = { e: new MouseEvent("mousemove"), node: document.createElement("div") };
+  const begin = item(start, id);
+  act(() => grid.current.onDragStart(id, begin.x, begin.y, pointer));
+  let shown: Layout[] = start;
+  for (const [x, y] of steps) {
+    act(() => grid.current.onDrag(id, x, y, pointer));
+    shown = utils.cloneLayout(grid.current.state.layout);
+  }
+  const [lastX, lastY] = steps[steps.length - 1];
+  act(() => grid.current.onDragStop(id, lastX, lastY, pointer));
+  return { shown, dropped: grid.current.state.layout as Layout[] };
+};
+
+const pointerPath = (from: [number, number], waypoints: [number, number][]) => {
+  const steps: [number, number][] = [];
+  let [fromX, fromY] = from;
+  for (const [toX, toY] of waypoints) {
+    for (let step = 1; step <= STEPS_PER_WAYPOINT; step++) {
+      steps.push([
+        Math.round(fromX + ((toX - fromX) * step) / STEPS_PER_WAYPOINT),
+        Math.round(fromY + ((toY - fromY) * step) / STEPS_PER_WAYPOINT),
+      ]);
+    }
+    [fromX, fromY] = [toX, toY];
+  }
+  return steps;
 };
 
 const renderGrid = (isEditMode: boolean) => {
@@ -146,6 +208,43 @@ describe("dashboard grid wiring", () => {
   });
 });
 
+describe("dragging panels with react-grid-layout's own drag handlers", () => {
+  it("drops every panel where the last drag step showed it", () => {
+    const { shown, dropped } = dragWithLibrary(fixture(), "c1", [[7, 6]]);
+
+    expect(positions(dropped)).toEqual(positions(shown));
+  });
+
+  it("drops where the last drag step showed after a full pointer path", () => {
+    const { shown, dropped } = dragWithLibrary(
+      fixture(),
+      "c1",
+      pointerPath([0, 0], [[7, 6]])
+    );
+
+    expect(positions(dropped)).toEqual(positions(shown));
+  });
+
+  it("restores the starting layout when the panel comes back", () => {
+    const start: Layout[] = [
+      { i: "p1", x: 12, y: 0, w: 9, h: 4 },
+      { i: "p2", x: 4, y: 7, w: 7, h: 6 },
+      { i: "p3", x: 4, y: 4, w: 9, h: 3 },
+    ];
+
+    const { dropped } = dragWithLibrary(
+      start,
+      "p3",
+      pointerPath([4, 4], [
+        [0, 4],
+        [4, 4],
+      ])
+    );
+
+    expect(positions(dropped)).toEqual(positions(start));
+  });
+});
+
 describe("dragging panels", () => {
   it("returns every panel to its place when a drag goes out over others and comes back", () => {
     const { layout } = drag(fixture(), "c2", [
@@ -165,11 +264,35 @@ describe("dragging panels", () => {
     }
   });
 
-  it("pushes the panel under a drop just below the dropped panel", () => {
+  it("returns every panel to its place when the dragged panel comes back after another floated up", () => {
+    const start: Layout[] = [
+      { i: "p1", x: 12, y: 0, w: 9, h: 4 },
+      { i: "p2", x: 4, y: 7, w: 7, h: 6 },
+      { i: "p3", x: 4, y: 4, w: 9, h: 3 },
+    ];
+
+    const { layout } = drag(start, "p3", [
+      [0, 4],
+      [4, 4],
+    ]);
+
+    expect(positions(layout)).toEqual(positions(start));
+  });
+
+  it("pushes the panels under a drop just below the dropped panel", () => {
+    const { layout } = drag(fixture(), "c4", [[0, 0]]);
+
+    const dropped = item(layout, "c4");
+    expect(item(layout, "c1").y).toBe(dropped.y + dropped.h);
+    expect(item(layout, "t1").y).toBe(item(layout, "c1").y + item(layout, "c1").h);
+  });
+
+  it("lands below a taller panel when dropped on its lower part", () => {
     const { layout } = drag(fixture(), "c1", [[3, 10]]);
 
-    const dropped = item(layout, "c1");
-    expect(item(layout, "t1").y).toBe(dropped.y + dropped.h);
+    const taller = item(layout, "t1");
+    expect([taller.x, taller.y]).toEqual([0, 5]);
+    expect(item(layout, "c1").y).toBe(taller.y + taller.h);
   });
 
   it("never overlaps panels at any step", () => {
