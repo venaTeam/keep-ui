@@ -1,9 +1,11 @@
 import { AnchorHTMLAttributes, ReactNode, useState } from "react";
 import Link, { LinkProps } from "next/link";
 import { IconType } from "react-icons/lib";
+import { FiCopy } from "react-icons/fi";
 import { Badge, Icon } from "@tremor/react";
 import { usePathname } from "next/navigation";
 import { Trashcan } from "@/components/icons";
+import { Tooltip } from "@/shared/ui";
 import clsx from "clsx";
 import { ShortNumber } from "./ui";
 import type { JSX } from "react";
@@ -15,6 +17,9 @@ type LinkWithIconProps = {
   isBeta?: boolean;
   isDeletable?: boolean;
   onDelete?: () => void;
+  onDuplicate?: () => void;
+  duplicateAriaLabel?: string;
+  duplicateDataCy?: string;
   className?: string;
   testId?: string;
   isExact?: boolean;
@@ -31,6 +36,9 @@ export const LinkWithIcon = ({
   isBeta = false,
   isDeletable = false,
   onDelete,
+  onDuplicate,
+  duplicateAriaLabel,
+  duplicateDataCy,
   className,
   testId,
   isExact = false,
@@ -66,6 +74,24 @@ export const LinkWithIcon = ({
   const onClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (restOfLinkProps.onClick) {
       restOfLinkProps.onClick(e);
+    }
+  };
+
+  const handleDuplicate = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onDuplicate?.();
+  };
+
+  /**
+   * Keeps the "Duplicate" tooltip closed when focus arrives without a visible
+   * focus ring, such as the dialog handing focus back after a mouse close.
+   * The Radix trigger skips its open-on-focus handler once this one prevents
+   * the default.
+   */
+  const handleDuplicateFocus = (e: React.FocusEvent<HTMLButtonElement>) => {
+    if (!e.currentTarget.matches(":focus-visible")) {
+      e.preventDefault();
     }
   };
 
@@ -113,6 +139,20 @@ export const LinkWithIcon = ({
           <Badge color="orange" size="xs" className="ml-1">
             Beta
           </Badge>
+        )}
+        {onDuplicate && (
+          <Tooltip content="Duplicate" asChild>
+            <button
+              type="button"
+              onClick={handleDuplicate}
+              onFocus={handleDuplicateFocus}
+              aria-label={duplicateAriaLabel}
+              data-cy={duplicateDataCy}
+              className="flex items-center text-slate-400 hover:text-orange-500 p-0"
+            >
+              <FiCopy className="text-slate-400 hover:text-orange-500 group-hover:block group-has-[:focus-visible]:block hidden h-4 w-4 mr-1" />
+            </button>
+          </Tooltip>
         )}
         {isDeletable && onDelete && (
           <button
