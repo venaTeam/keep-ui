@@ -519,11 +519,11 @@ describe("WidgetTableSettings", () => {
 
       expect(input).toHaveValue(420);
       expect(input).toHaveAttribute("min", "100");
-      expect(input).toHaveAttribute("max", "800");
+      expect(input).not.toHaveAttribute("max");
       expect(toggle).toHaveAttribute("aria-expanded", "true");
     });
 
-    it("commits a typed width once on Enter, clamped, as the full sizing map", () => {
+    it("commits a typed width once on Enter, as the full sizing map, not capped at the maximum", () => {
       const { state } = renderSettings({ columnSizing: { description: 300 } });
       openSettings();
       const input = openWidth("Alert name");
@@ -539,7 +539,7 @@ describe("WidgetTableSettings", () => {
       expect(state.setColumnSizing).toHaveBeenCalledTimes(1);
       expect(state.setColumnSizing).toHaveBeenCalledWith({
         description: 300,
-        name: 600,
+        name: 9000,
       });
     });
 

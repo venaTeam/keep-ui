@@ -39,7 +39,7 @@ import {
   ColumnBounds,
   getColumnBounds,
   getWidgetColumnLayout,
-  withUnclampedColumn,
+  withUnclampedColumns,
 } from "./widget-column-layout";
 import {
   WidgetColumnWidths,
@@ -221,9 +221,10 @@ function WidgetAlertsTableContent({
       }),
     [columns, visibleColumnOrder, savedSizing, containerWidth, borderWidth]
   );
+  const unclampedIdsKey = JSON.stringify(layout.unclampedColumnIds);
   const layoutColumns = useMemo(
-    () => withUnclampedColumn(columns, layout.unclampedColumnId),
-    [columns, layout.unclampedColumnId]
+    () => withUnclampedColumns(columns, JSON.parse(unclampedIdsKey)),
+    [columns, unclampedIdsKey]
   );
   const columnBounds = useMemo(
     () =>
@@ -406,11 +407,12 @@ function WidgetAlertsTableContent({
  * its column widths are the rendered ones and its Auto-fit measures this table.
  *
  * Once the widget's width is measured, the table is laid out by
- * `getWidgetColumnLayout`: every column renders at exactly its own width, the
- * flexible text column takes any spare width so the table fills the widget,
- * and columns that do not fit scroll sideways. The width the table's
- * collapsed outer borders add (an incident group's colored edge) is measured
- * and left free, so a table that fits never scrolls.
+ * `getWidgetColumnLayout`: every column renders at exactly its own width (a
+ * saved width even past the column's maximum, so widening a column never
+ * narrows it), the flexible text column takes any spare width so the table
+ * fills the widget, and columns that do not fit scroll sideways. The width
+ * the table's collapsed outer borders add (an incident group's colored edge)
+ * is measured and left free, so a table that fits never scrolls.
  *
  * In edit mode the table body is `inert`: none of its links, rows or group
  * headers can be clicked or focused, so nothing in it navigates or reaches the
