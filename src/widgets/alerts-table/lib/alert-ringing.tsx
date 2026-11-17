@@ -66,8 +66,8 @@ const QUIET_ROW: RingingRow = {
 /**
  * Whether an alert's row rings: the table's preset is noisy and the alert is
  * one that makes the preset's alarm sound, i.e. `matchesNoiseBase` from
- * `entities/presets/model/noise.ts`, the same definition `NOISE_BASE_CEL`
- * (the alarm's CEL) is built from.
+ * `entities/presets/model/noise.ts`, which is built from the same values as
+ * `NOISE_BASE_CEL` (the alarm's CEL).
  */
 export function isAlertRinging(
   alert: RingingAlert | null | undefined,

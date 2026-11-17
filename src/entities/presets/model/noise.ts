@@ -6,8 +6,11 @@ const NOISE_BASE = {
 
 /**
  * The CEL condition a noisy preset's alarm sounds on, combined with the
- * preset's own CEL by `PresetsNoise`. Built from the same definition as
- * `matchesNoiseBase`, so the alarm and the ringing rows cannot drift apart.
+ * preset's own CEL by `PresetsNoise`. It is built from the same values
+ * (`NOISE_BASE`) as `matchesNoiseBase`, and the CEL template and the
+ * predicate sit side by side in this file: a changed value changes both, but
+ * adding a clause means editing both. The tests pin the CEL string and the
+ * predicate's truth table.
  * `dismissed` is deliberately absent: a dismissed alert is one whose status
  * is `suppressed`, which `status == 'firing'` already excludes, and the
  * gateway's `dismissed` mapping compares text to boolean and answers 500.
