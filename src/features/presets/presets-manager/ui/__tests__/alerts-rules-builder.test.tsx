@@ -18,14 +18,14 @@ jest.mock("@/features/cel-input/cel-input", () => {
 
   return {
     __esModule: true,
-    default: ({
+    default: function MockCelInput({
       value,
       onValueChange,
       onKeyDown,
       onValidationChange,
       validationContext,
       validateWhileTyping,
-    }: any) => {
+    }: any) {
       const validation = useCelValidation(value, validationContext, {
         validateWhileTyping,
       });
