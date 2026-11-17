@@ -66,13 +66,13 @@ const QUIET_ROW: RingingRow = {
 /**
  * Whether an alert's row rings: the table's preset is noisy and the alert is
  * one that makes the preset's alarm sound, i.e. it matches `NOISE_BASE_CEL`
- * in `features/presets/custom-preset-links/ui/PresetsNoise.tsx`
+ * in `entities/presets/model/noise.ts`
  * (`status == 'firing' && deleted == false && severity == 'critical'`).
- * Keep the two in step. The match is exact and case-sensitive, like the
- * alarm's: the gateway's `POST /alerts/query` sends severity and status as
- * the lowercase words of its enums, never numbers, and the alarm compares
- * the stored lowercase values with `=`. Only `deleted === true` counts as
- * deleted.
+ * Keep the two in step: this file's tests pin that exact string. The match
+ * is exact and case-sensitive, like the alarm's: the gateway's
+ * `POST /alerts/query` sends severity and status as the lowercase words of
+ * its enums, never numbers, and the alarm compares the stored lowercase
+ * values with `=`. Only `deleted === true` counts as deleted.
  */
 export function isAlertRinging(
   alert: RingingAlert | null | undefined,

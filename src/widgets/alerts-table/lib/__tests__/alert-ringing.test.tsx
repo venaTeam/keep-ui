@@ -5,10 +5,17 @@ import {
   isAlertRinging,
   useRingingRows,
 } from "../alert-ringing";
+import { NOISE_BASE_CEL } from "@/entities/presets/model/noise";
 
 const critical = { severity: "critical", status: "firing" };
 
 describe("isAlertRinging", () => {
+  it("mirrors the alarm's NOISE_BASE_CEL: changing the alarm condition requires updating isAlertRinging and this test", () => {
+    expect(NOISE_BASE_CEL).toBe(
+      "status == 'firing' && deleted == false && severity == 'critical'"
+    );
+  });
+
   it("rings a critical firing alert in a noisy preset", () => {
     expect(isAlertRinging(critical, true)).toBe(true);
   });
