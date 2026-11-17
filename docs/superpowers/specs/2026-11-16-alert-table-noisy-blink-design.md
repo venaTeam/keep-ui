@@ -23,7 +23,7 @@ Supersedes the visual part of "Alert Table readability" (PR #108, branch `feat/a
    - the alert is not deleted (`deleted === true` is deleted; absent or false is not);
    - the table's preset is noisy (`preset.is_noisy`).
 
-   The first three are exactly the condition the noisy preset's alarm sounds on: `NOISE_BASE_CEL = "status == 'firing' && deleted == false && severity == 'critical'"` (`src/features/presets/custom-preset-links/ui/PresetsNoise.tsx`). The blink must mark exactly the alerts that make the alarm ring, so the helper's JSDoc names `NOISE_BASE_CEL` to keep the two in step (user decision, 2026-11-16).
+   The first three are exactly the condition the noisy preset's alarm sounds on: `NOISE_BASE_CEL = "status == 'firing' && deleted == false && severity == 'critical'"` (`src/entities/presets/model/noise.ts`). The blink must mark exactly the alerts that make the alarm ring. `NOISE_BASE_CEL` and the JS predicate `matchesNoiseBase` are built from the same values in that file, with the CEL template and the predicate side by side: a changed value changes both, adding a clause means editing both, and the tests pin the CEL string and the predicate's truth table. `PresetsNoise` imports the CEL and `isAlertRinging` uses the predicate (review of #111, 2026-11-17).
 
    The match is exact and case-sensitive, like the alarm's (review of PR #111, 2026-11-16). The gateway's `POST /alerts/query` builds every alert through `AlertDto`, whose validator maps a number to its severity and an unknown word to a default, and serialises both enums as their lowercase values; it never sends a number or another case. The alarm's CEL compares the stored lowercase columns with `=`.
 
