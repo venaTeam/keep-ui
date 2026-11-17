@@ -1,4 +1,4 @@
-import { Preset } from "@/entities/presets/model";
+import { NOISE_BASE_CEL, Preset } from "@/entities/presets/model";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import useSWR from "swr";
@@ -17,13 +17,6 @@ import {
 
 const COUNT_URL = "/alerts/query/count";
 const REFRESH_INTERVAL_MS = 30_000;
-
-// The condition the sound is armed on. `dismissed` is deliberately absent: a
-// dismissed alert is one whose status is `suppressed`, which `status ==
-// 'firing'` already excludes, and the gateway's `dismissed` mapping compares
-// text to boolean and answers 500.
-const NOISE_BASE_CEL =
-  "status == 'firing' && deleted == false && severity == 'critical'";
 
 const getPresetCel = (preset: Preset) =>
   preset.options.find((option) => option.label === "CEL")?.value ?? "";

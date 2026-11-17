@@ -2,6 +2,7 @@ import React from "react";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import DashboardPage from "../[id]/dashboard";
 import { useDashboardEditMode } from "../DashboardEditModeContext";
+import { GRID_COLS, GRID_COMPACT_TYPE } from "../widget-layout";
 
 const mockPost = jest.fn();
 const mockMutate = jest.fn();
@@ -53,13 +54,24 @@ jest.mock("@/shared/ui", () => ({ showErrorToast: jest.fn() }));
 // and lets a test move a panel.
 jest.mock("../GridLayout", () => ({
   __esModule: true,
-  default: function MockGridLayout({ layout, onLayoutChange }: any) {
+  default: function MockGridLayout({
+    layout,
+    onLayoutChange,
+    data,
+    onDelete,
+    onSave,
+  }: any) {
     const isEditMode = useDashboardEditMode();
     return (
       <div data-testid="grid" data-edit-mode={String(isEditMode)}>
         {layout.map((l: any) => (
-          <span key={l.i} data-testid={`pos-${l.i}`}>
+          <span key={l.i} data-testid={`pos-${l.i}`} data-y={l.y}>
             {l.x}
+          </span>
+        ))}
+        {data.map((d: any) => (
+          <span key={d.i} data-testid={`group-by-${d.i}`}>
+            {d.alertTable?.groupBy ?? "none"}
           </span>
         ))}
         <button
@@ -69,6 +81,37 @@ jest.mock("../GridLayout", () => ({
         >
           move-panels
         </button>
+        <button
+          onClick={() =>
+            onLayoutChange(
+              jest
+                .requireActual("react-grid-layout")
+                .utils.synchronizeLayoutWithChildren(
+                  layout,
+                  data.map((d: any) => <div key={d.i} />),
+                  GRID_COLS,
+                  GRID_COMPACT_TYPE,
+                  false
+                )
+            )
+          }
+        >
+          report-shown-layout
+        </button>
+        {["incident", "service"].map((groupBy) => (
+          <button
+            key={groupBy}
+            onClick={() =>
+              onSave({ ...data[0], alertTable: { ...data[0].alertTable, groupBy } })
+            }
+          >
+            {`group-widget-by-${groupBy}`}
+          </button>
+        ))}
+        <button onClick={() => onDelete(data[0].i)}>delete-first</button>
+        <button onClick={() => onSave({ ...data[0], h: data[0].h + 6 })}>
+          grow-first
+        </button>
       </div>
     );
   },
@@ -76,7 +119,11 @@ jest.mock("../GridLayout", () => ({
 
 jest.mock("../WidgetModal", () => ({
   __esModule: true,
-  default: () => <div data-testid="widget-modal" />,
+  default: ({ onAddWidget }: any) => (
+    <div data-testid="widget-modal">
+      <button onClick={() => onAddWidget({ name: "New panel" })}>add-widget</button>
+    </div>
+  ),
 }));
 
 jest.mock("../dashboard-appearance/DashboardSettingsPanel", () => ({
@@ -99,6 +146,8 @@ if (typeof globalThis.structuredClone !== "function") {
 
 const byCy = (cy: string) => document.querySelector(`[data-cy="${cy}"]`);
 const click = (cy: string) => fireEvent.click(byCy(cy)!);
+const positionsOf = (layout: any[]) =>
+  layout.map(({ i, x, y, w, h }) => ({ i, x, y, w, h }));
 
 beforeEach(() => {
   mockId = "Ops";
@@ -192,6 +241,120 @@ describe("dashboard edit mode", () => {
     expect(byCy("dashboard-enter-edit-btn")).toBeInTheDocument();
   });
 
+  it("cancel does not ask when the grid only reports the positions it already shows", () => {
+    mockDashboards = [
+      {
+        ...savedDashboard(),
+        dashboard_config: {
+          layout: [
+            { i: "w1", x: 0, y: 0, w: 3, h: 3 },
+            { i: "w2", x: 0, y: 10, w: 3, h: 3 },
+          ],
+          widget_data: [
+            { i: "w1", x: 0, y: 0, w: 3, h: 3, name: "Panel" },
+            { i: "w2", x: 0, y: 10, w: 3, h: 3, name: "Below a gap" },
+          ],
+        },
+      },
+    ];
+    render(<DashboardPage />);
+    click("dashboard-enter-edit-btn");
+
+    fireEvent.click(screen.getByText("report-shown-layout"));
+    click("dashboard-cancel-edit-btn");
+
+    expect(byCy("dashboard-leave-modal")).toBeNull();
+    expect(byCy("dashboard-enter-edit-btn")).toBeInTheDocument();
+  });
+
+  it("cancel does not ask when a saved panel sits partly outside the grid", () => {
+    mockDashboards = [
+      {
+        ...savedDashboard(),
+        dashboard_config: {
+          layout: [
+            { i: "a", x: 20, y: 0, w: 8, h: 3 },
+            { i: "b", x: 16, y: 3, w: 4, h: 3 },
+          ],
+          widget_data: [
+            { i: "a", x: 20, y: 0, w: 8, h: 3, name: "Wide" },
+            { i: "b", x: 16, y: 3, w: 4, h: 3, name: "Below" },
+          ],
+        },
+      },
+    ];
+    render(<DashboardPage />);
+    click("dashboard-enter-edit-btn");
+
+    fireEvent.click(screen.getByText("report-shown-layout"));
+    click("dashboard-cancel-edit-btn");
+
+    expect(byCy("dashboard-leave-modal")).toBeNull();
+  });
+
+  it("settles the remaining panels after a panel is deleted", () => {
+    mockDashboards = [
+      {
+        ...savedDashboard(),
+        dashboard_config: {
+          layout: [
+            { i: "A", x: 0, y: 0, w: 12, h: 8 },
+            { i: "B", x: 12, y: 0, w: 12, h: 3 },
+            { i: "C", x: 0, y: 8, w: 12, h: 3 },
+          ],
+          widget_data: [
+            { i: "A", x: 0, y: 0, w: 12, h: 8, name: "A" },
+            { i: "B", x: 12, y: 0, w: 12, h: 3, name: "B" },
+            { i: "C", x: 0, y: 8, w: 12, h: 3, name: "C" },
+          ],
+        },
+      },
+    ];
+    render(<DashboardPage />);
+    click("dashboard-enter-edit-btn");
+
+    fireEvent.click(screen.getByText("delete-first"));
+
+    expect(screen.getByTestId("pos-C")).toHaveAttribute("data-y", "0");
+  });
+
+  it("settles the panels below after a panel's height is edited", () => {
+    mockDashboards = [
+      {
+        ...savedDashboard(),
+        dashboard_config: {
+          layout: [
+            { i: "w1", x: 0, y: 0, w: 3, h: 3 },
+            { i: "w2", x: 0, y: 3, w: 3, h: 3 },
+          ],
+          widget_data: [
+            { i: "w1", x: 0, y: 0, w: 3, h: 3, name: "Grows" },
+            { i: "w2", x: 0, y: 3, w: 3, h: 3, name: "Below" },
+          ],
+        },
+      },
+    ];
+    render(<DashboardPage />);
+    click("dashboard-enter-edit-btn");
+
+    fireEvent.click(screen.getByText("grow-first"));
+
+    expect(screen.getByTestId("pos-w2")).toHaveAttribute("data-y", "9");
+  });
+
+  it("adds a new widget below the existing panels", () => {
+    render(<DashboardPage />);
+    click("dashboard-enter-edit-btn");
+    click("dashboard-add-widget-btn");
+
+    fireEvent.click(screen.getByText("add-widget"));
+
+    expect(document.querySelector('[data-testid^="pos-w-"]')).toHaveAttribute(
+      "data-y",
+      "3"
+    );
+  });
+
   it("save persists the changes and returns to view mode", async () => {
     mockPost.mockResolvedValue({});
     render(<DashboardPage />);
@@ -236,6 +399,56 @@ describe("dashboard edit mode", () => {
     rerender(<DashboardPage />);
 
     expect(screen.getByTestId("pos-w1")).toHaveTextContent("5");
+  });
+});
+
+describe("a widget's own settings in edit mode", () => {
+  it("a widget column change is kept on Save and dropped on Cancel, layout unchanged", async () => {
+    mockPost.mockResolvedValue({});
+    render(<DashboardPage />);
+    click("dashboard-enter-edit-btn");
+
+    fireEvent.click(screen.getByText("group-widget-by-incident"));
+    expect(screen.getByTestId("group-by-w1")).toHaveTextContent("incident");
+    expect(screen.queryByTestId("widget-modal")).toBeNull();
+    expect(byCy("dashboard-save-layout-btn")).toBeInTheDocument();
+
+    await act(async () => click("dashboard-save-layout-btn"));
+
+    expect(mockPost).toHaveBeenCalledTimes(1);
+    const saved = mockPost.mock.calls[0][1].dashboard_config;
+    expect(saved.widget_data).toEqual([
+      {
+        i: "w1",
+        x: 0,
+        y: 0,
+        w: 3,
+        h: 3,
+        name: "Panel",
+        alertTable: { groupBy: "incident" },
+      },
+    ]);
+    expect(positionsOf(saved.layout)).toEqual([
+      { i: "w1", x: 0, y: 0, w: 3, h: 3 },
+    ]);
+    await waitFor(() =>
+      expect(byCy("dashboard-enter-edit-btn")).toBeInTheDocument()
+    );
+
+    click("dashboard-enter-edit-btn");
+    fireEvent.click(screen.getByText("group-widget-by-service"));
+    expect(screen.getByTestId("group-by-w1")).toHaveTextContent("service");
+
+    click("dashboard-cancel-edit-btn");
+    expect(byCy("dashboard-leave-modal")).toBeInTheDocument();
+    click("dashboard-leave-continue-btn");
+
+    await waitFor(() =>
+      expect(byCy("dashboard-enter-edit-btn")).toBeInTheDocument()
+    );
+    expect(screen.getByTestId("group-by-w1")).toHaveTextContent("incident");
+    expect(screen.getByTestId("pos-w1")).toHaveTextContent("0");
+    expect(mockPost).toHaveBeenCalledTimes(1);
   });
 });
 
