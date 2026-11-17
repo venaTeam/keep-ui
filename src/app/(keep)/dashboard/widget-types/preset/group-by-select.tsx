@@ -49,10 +49,13 @@ const Option = ({ value, label }: { value: string; label: string }) => (
 
 /**
  * Picks the field a widget's rows are grouped by. It lists None, the shared
- * shortlist, a divider, then every other field under "Any other field…"; typing
- * filters all of them. While the list is open the box shows only the search
- * text, and typing or pasting into the closed box replaces the shown label,
- * so a search never starts with the current label. `onChange` receives null
+ * shortlist, a divider, then the `fieldOptions` outside the shortlist under
+ * "Any other field…"; typing filters all of them. Every option is rendered, so
+ * callers pass a short list (`getGroupByFieldOptions`), never the tenant's
+ * potential fields, which can number in the thousands: the select froze on
+ * them. While the list is open the box shows only the search text, and typing
+ * or pasting into the closed box replaces the shown label, so a search never
+ * starts with the current label. `onChange` receives null
  * for None. Only fields `isGroupable` accepts (every field by default) are
  * listed, shortlist included. A saved field that is no longer among
  * `fieldOptions`, or no longer groupable, stays listed so it remains visible.
