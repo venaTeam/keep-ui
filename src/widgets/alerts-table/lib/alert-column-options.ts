@@ -1,4 +1,5 @@
 import { startCase } from "lodash";
+import type { AlertDto } from "@/entities/alerts/model/types";
 import { COUNT_BY_ALERT_FIELD_OPTIONS } from "@/entities/presets/model/count-by";
 
 /**
@@ -55,6 +56,33 @@ export const GROUP_BY_SHORTLIST: ReadonlyArray<{
   { value: "status", label: "Status" },
 ];
 
+/**
+ * Alert fields the Group rows by select lists after the shortlist, besides the
+ * widget's own columns: `AlertDto` fields whose values repeat across alerts,
+ * so each group gathers several of them. The other `AlertDto` fields are left
+ * out on purpose:
+ * - per-alert unique ids (`id`, `event_id`, `fingerprint`,
+ *   `alert_fingerprint`) and timestamps, which give nearly every alert a group
+ *   of its own;
+ * - URLs and free text (`description`, `note`), which rarely repeat;
+ * - lists (`enriched_fields`; `source` is a list too and sits in the
+ *   shortlist), whose loaded values cannot group rows;
+ * - internal flags such as `pushed` and `deleted`, which say nothing an
+ *   operator groups by;
+ * - severity, a display column with no value to group by.
+ */
+export const GROUPABLE_ALERT_FIELDS: ReadonlyArray<keyof AlertDto> = [
+  "environment",
+  "component",
+  "object",
+  "impact",
+  "group",
+  "providerId",
+  "ticket_status",
+  "ticket_type",
+  "dismiss_mode",
+];
+
 const EXCLUDED_COLUMN_IDS: ReadonlySet<string> = new Set([
   "checkbox",
   "alertMenu",
@@ -83,6 +111,17 @@ export function getAlertColumnOptions(
   return Array.from(new Set([...tableColumnIds, ...extraFields]))
     .filter((id) => !EXCLUDED_COLUMN_IDS.has(id))
     .sort((first, second) => first.localeCompare(second));
+}
+
+/**
+ * Fields the Group rows by select lists after the shortlist: the
+ * `GROUPABLE_ALERT_FIELDS` and the given widget columns, de-duplicated,
+ * without the checkbox, menu and noise columns, sorted alphabetically. The
+ * tenant's potential fields are not offered: that list can hold thousands of
+ * names, and listing them all froze the select.
+ */
+export function getGroupByFieldOptions(columnIds: readonly string[]): string[] {
+  return getAlertColumnOptions(columnIds, GROUPABLE_ALERT_FIELDS);
 }
 
 /**

@@ -13,24 +13,39 @@ import { PresetPanelType, WidgetData } from "../../../types";
 
 jest.mock("../columns-selection", () => ({
   __esModule: true,
-  default: () => <div data-cy="dashboard-widget-form-columns-multiselect" />,
+  default: ({ onChange }: { onChange: (selected: string[]) => void }) => (
+    <div data-cy="dashboard-widget-form-columns-multiselect">
+      <button type="button" onClick={() => onChange(["name", "labels.owner"])}>
+        Pick name and labels.owner
+      </button>
+    </div>
+  ),
 }));
 
+const FEW_POTENTIAL_FIELDS = [
+  "labels.team",
+  "service",
+  "checkbox",
+  "severity",
+  "extraPayload",
+  "last_received",
+  "description",
+  "duplicate_reason",
+  "firing_counter",
+];
+const MANY_POTENTIAL_FIELDS = Array.from(
+  { length: 2500 },
+  (_, index) => `labels.f_${index}`
+);
+let mockPotentialFields = FEW_POTENTIAL_FIELDS;
+
 jest.mock("@/features/filter/hooks", () => ({
-  useFacetPotentialFields: () => ({
-    data: [
-      "labels.team",
-      "service",
-      "checkbox",
-      "severity",
-      "extraPayload",
-      "last_received",
-      "description",
-      "duplicate_reason",
-      "firing_counter",
-    ],
-  }),
+  useFacetPotentialFields: () => ({ data: mockPotentialFields }),
 }));
+
+beforeEach(() => {
+  mockPotentialFields = FEW_POTENTIAL_FIELDS;
+});
 
 const presets = [{ id: "p1", name: "feed" }] as unknown as Preset[];
 
@@ -536,7 +551,17 @@ describe("PresetWidgetForm row grouping", () => {
     expect(screen.getByText("Group rows by")).toBeInTheDocument();
   });
 
-  it("offers the alert facet fields under 'Any other field…'", async () => {
+  const optionTexts = (listbox: HTMLElement) =>
+    within(listbox)
+      .getAllByRole("option")
+      .map((option) => option.textContent);
+
+  const groupRowsByBox = () =>
+    within(groupRowsBy() as HTMLElement).getByRole("combobox", {
+      name: "Group rows by",
+    });
+
+  it("offers the groupable alert fields and the default columns under 'Any other field…'", async () => {
     await renderForm(tableWidget());
 
     const listbox = await openGroupRowsBy();
@@ -544,21 +569,86 @@ describe("PresetWidgetForm row grouping", () => {
     const others = within(listbox).getByRole("group", {
       name: "Any other field…",
     });
-    expect(
-      within(others)
-        .getAllByRole("option")
-        .map((option) => option.textContent)
-    ).toEqual([
+    expect(optionTexts(others)).toEqual([
+      "component",
       "description",
-      "duplicateReason",
-      "firingCounter",
-      "labels.team",
+      "dismiss_mode",
+      "environment",
+      "group",
+      "impact",
       "lastReceived",
+      "object",
+      "providerId",
+      "ticket_status",
+      "ticket_type",
     ]);
   });
 
+  it("lists a bounded set with the selected columns, not the tenant's thousands of potential fields", async () => {
+    mockPotentialFields = MANY_POTENTIAL_FIELDS;
+    await renderForm(
+      tableWidget({ presetColumns: ["name", "labels.team", "last_received"] })
+    );
+
+    fireEvent.change(groupRowsByBox(), { target: { value: "f_1234" } });
+    const searched = await screen.findByRole("listbox");
+    expect(
+      within(searched).queryByRole("option", { name: "labels.f_1234" })
+    ).toBeNull();
+    expect(
+      within(searched).getByText("No matching fields")
+    ).toBeInTheDocument();
+    fireEvent.keyDown(groupRowsByBox(), { key: "Escape" });
+
+    const options = optionTexts(await openGroupRowsBy());
+    expect(options).toEqual([
+      "None",
+      "Incident",
+      "Alert name",
+      "Service",
+      "Host",
+      "Application",
+      "Site",
+      "Assignee",
+      "Source",
+      "Status",
+      "component",
+      "dismiss_mode",
+      "environment",
+      "group",
+      "impact",
+      "labels.team",
+      "lastReceived",
+      "object",
+      "providerId",
+      "ticket_status",
+      "ticket_type",
+    ]);
+    expect(options.length).toBeLessThan(30);
+  });
+
+  it("follows the columns picked in the Columns picker", async () => {
+    await renderForm(tableWidget({ presetColumns: ["name", "labels.team"] }));
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Pick name and labels.owner" })
+    );
+    const listbox = await openGroupRowsBy();
+
+    expect(
+      within(listbox).getByRole("option", { name: "labels.owner" })
+    ).toBeInTheDocument();
+    expect(
+      within(listbox).queryByRole("option", { name: "labels.team" })
+    ).toBeNull();
+  });
+
   it("leaves the ungroupable severity and extraPayload columns out", async () => {
-    await renderForm(tableWidget());
+    await renderForm(
+      tableWidget({
+        presetColumns: ["severity", "extraPayload", "name", "description"],
+      })
+    );
 
     const listbox = await openGroupRowsBy();
 
@@ -573,8 +663,10 @@ describe("PresetWidgetForm row grouping", () => {
     ).toBeInTheDocument();
   });
 
-  it("offers and stores a facet id under the table's column id", async () => {
-    const onChange = await renderForm(tableWidget());
+  it("offers and stores a selected facet id under the table's column id", async () => {
+    const onChange = await renderForm(
+      tableWidget({ presetColumns: ["name", "last_received"] })
+    );
 
     const listbox = await openGroupRowsBy();
     expect(
@@ -591,8 +683,10 @@ describe("PresetWidgetForm row grouping", () => {
     );
   });
 
-  it("maps a facet id to its alert column statically, as the widget reads it", async () => {
-    const onChange = await renderForm(tableWidget());
+  it("maps a selected facet id to its alert column statically, as the widget reads it", async () => {
+    const onChange = await renderForm(
+      tableWidget({ presetColumns: ["name", "duplicate_reason"] })
+    );
 
     const listbox = await openGroupRowsBy();
     expect(
