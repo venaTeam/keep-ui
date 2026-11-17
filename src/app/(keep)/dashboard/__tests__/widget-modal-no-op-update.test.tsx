@@ -15,6 +15,33 @@ jest.mock("@/utils/hooks/useProviders", () => ({
   useProviders: () => ({ data: undefined }),
 }));
 
+jest.mock("@/components/ui/Modal", () => ({
+  __esModule: true,
+  default: ({
+    isOpen,
+    children,
+  }: {
+    isOpen: boolean;
+    children: React.ReactNode;
+  }) => (isOpen ? <div>{children}</div> : null),
+}));
+
+jest.mock("@tremor/react", () => ({
+  ...jest.requireActual("@tremor/react"),
+  Select: () => null,
+  SelectItem: () => null,
+  MultiSelect: () => null,
+  MultiSelectItem: () => null,
+}));
+
+jest.mock("../widget-types/preset/count-by-control", () => ({
+  CountByControl: () => null,
+}));
+
+jest.mock("../widget-types/preset/group-by-select", () => ({
+  GroupBySelect: () => null,
+}));
+
 jest.mock("@/features/filter/hooks", () => ({
   ...jest.requireActual("@/features/filter/hooks"),
   useFacetPotentialFields: () => ({ data: ["service", "labels.team"] }),
