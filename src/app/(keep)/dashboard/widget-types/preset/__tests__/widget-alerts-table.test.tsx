@@ -303,6 +303,76 @@ describe("WidgetAlertsTable", () => {
     );
   });
 
+  describe("a saved snake_case alias resolves the same with or without loaded alerts", () => {
+    const item = {
+      presetColumns: ["name", "firing_counter", "description"],
+      alertTable: {
+        columnRenameMapping: { firingCounter: "Fires" },
+        columnSizing: { firingCounter: 240 },
+        columnOrder: ["firingCounter", "name", "description"],
+        groupBy: "firing_counter",
+      },
+    };
+    const header = (columnId: string) =>
+      screen.getByTestId(`header-cell-${columnId}`);
+    const expectResolved = () => {
+      expect(headerIds()).toEqual(["firingCounter", "name", "description"]);
+      expect(header("firingCounter")).toHaveTextContent("Fires");
+      expect(
+        (header("firingCounter").closest("th") as HTMLElement).style.width
+      ).toBe("240px");
+      expect(screen.getByText("Rows grouped by Fires")).toBeInTheDocument();
+    };
+
+    it("with alerts carrying firingCounter", () => {
+      renderWidget(item, [
+        alertWith({ firingCounter: 3 }),
+        alertWith({ firingCounter: 3 }),
+      ]);
+
+      expectResolved();
+      expect(groupHeaderTexts()).toEqual(["3 2 shown"]);
+    });
+
+    it("after a refresh that loads no alerts", () => {
+      const { rerender } = renderWidget(item, [
+        alertWith({ firingCounter: 3 }),
+      ]);
+      rerender(widget(item, []));
+
+      expectResolved();
+    });
+
+    it("with alerts that lack the field, rendering empty cells", () => {
+      renderWidget(
+        { ...item, alertTable: { ...item.alertTable, groupBy: undefined } },
+        [alertWith(), alertWith()]
+      );
+
+      expect(headerIds()).toEqual(["firingCounter", "name", "description"]);
+      expect(header("firingCounter")).toHaveTextContent("Fires");
+      expect(cellsOf("firingCounter").map((cell) => cell.textContent)).toEqual([
+        "",
+        "",
+      ]);
+    });
+
+    it("keeps a dotted id and a custom snake_case enrichment key as they are", () => {
+      renderWidget(
+        { presetColumns: ["name", "labels.team_name", "my_custom_field"] },
+        [alertWith({ labels: { team_name: "core" }, my_custom_field: "x" })]
+      );
+
+      expect(headerIds()).toEqual([
+        "name",
+        "labels.team_name",
+        "my_custom_field",
+      ]);
+      expect(cellsOf("labels.team_name")[0]).toHaveTextContent("core");
+      expect(cellsOf("my_custom_field")[0]).toHaveTextContent("x");
+    });
+  });
+
   describe("generated column cells", () => {
     const cellText = (columnId: string) =>
       cellsOf(columnId).map((cell) => cell.textContent);

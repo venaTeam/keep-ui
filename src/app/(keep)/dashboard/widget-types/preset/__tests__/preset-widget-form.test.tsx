@@ -552,7 +552,7 @@ describe("PresetWidgetForm row grouping", () => {
     ).toEqual([
       "description",
       "duplicateReason",
-      "firing_counter",
+      "firingCounter",
       "labels.team",
       "lastReceived",
     ]);
@@ -593,7 +593,7 @@ describe("PresetWidgetForm row grouping", () => {
     );
   });
 
-  it("maps a facet id to a known alert key and keeps one only loaded alerts can resolve", async () => {
+  it("maps a facet id to its alert column statically, as the widget reads it", async () => {
     const onChange = await renderForm(tableWidget());
 
     const listbox = await openGroupRowsBy();

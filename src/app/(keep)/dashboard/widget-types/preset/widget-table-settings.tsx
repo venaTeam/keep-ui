@@ -103,10 +103,7 @@ function useFieldOptions(columnIds: string[]): string[] {
     () =>
       getAlertColumnOptions(
         columnIds,
-        resolveFieldIds(
-          [...(data ?? NO_FIELDS), ...COMMON_ENRICHMENT_FIELDS],
-          columnIds
-        )
+        resolveFieldIds([...(data ?? NO_FIELDS), ...COMMON_ENRICHMENT_FIELDS])
       ),
     [columnIds, data]
   );

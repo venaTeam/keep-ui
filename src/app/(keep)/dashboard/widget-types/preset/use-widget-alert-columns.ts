@@ -13,7 +13,6 @@ import {
   WIDGET_PINNED_LEFT,
   WIDGET_STATIC_COLUMN_IDS,
   getGroupByColumnId,
-  getKnownColumnIds,
   getVisibleColumnIds,
 } from "./alert-table-widget-config";
 import { normalizeEmptyGrouping } from "./empty-group-row-model";
@@ -26,10 +25,6 @@ const NO_ALERTS: AlertDto[] = [];
 function useStableIds(ids: string[]): string[] {
   const key = JSON.stringify(ids);
   return useMemo(() => JSON.parse(key) as string[], [key]);
-}
-
-function getFieldKeys(alerts: AlertDto[]): string[] {
-  return Array.from(new Set(alerts.flatMap(Object.keys))).sort();
 }
 
 function getObjectValuedIds(alerts: AlertDto[], ids: string[]): string[] {
@@ -100,9 +95,10 @@ function atMinimumSize(column: ColumnDef<AlertDto>): ColumnDef<AlertDto> {
  * alerts (a list field is one column, not one per item), every visible
  * column, the group-by field and `incident`, so a configured column nobody
  * has still renders (empty). A saved snake_case id resolves to its camelCase
- * form when that is a fixed column, a known alert key or a field of the
- * loaded alerts; the group-by field resolves the same way. The checkbox, menu
- * and noise columns are left out. Empty grouping values share one group. A
+ * form when that is a fixed column, a known alert key or an alert DTO alias
+ * (`WIDGET_ALERT_FIELD_ALIASES`), whatever alerts are loaded; the group-by
+ * field resolves the same way. The checkbox, menu and noise columns are left
+ * out. Empty grouping values share one group. A
  * generated column whose loaded values include a list or an object (such as
  * `enriched_fields`) cannot group rows, since its shared grouping value puts
  * every such alert in one "object" group. A generated column's cell is empty
@@ -127,17 +123,12 @@ export function useWidgetAlertColumns({
   const alertKeys = useStableIds(
     getAdditionalColsToGenerate(alerts ?? NO_ALERTS, { arraysAsLeaves: true })
   );
-  const fieldKeys = useStableIds(getFieldKeys(alerts ?? NO_ALERTS));
-  const knownIds = useMemo(
-    () => getKnownColumnIds([...alertKeys, ...fieldKeys]),
-    [alertKeys, fieldKeys]
-  );
-  const groupBy = getGroupByColumnId(item, knownIds);
+  const groupBy = getGroupByColumnId(item);
   const additionalColsToGenerate = useStableIds(
     Array.from(
       new Set([
         ...alertKeys,
-        ...getVisibleColumnIds(item, knownIds),
+        ...getVisibleColumnIds(item),
         ...(groupBy ? [groupBy] : []),
         "incident",
       ])
