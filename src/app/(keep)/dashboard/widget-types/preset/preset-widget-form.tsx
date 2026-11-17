@@ -18,7 +18,7 @@ import {
   useWatch,
   useFieldArray,
 } from "react-hook-form";
-import { omit } from "lodash";
+import { isEqual, omit } from "lodash";
 import {
   AlertTableWidgetConfig,
   EmptyGroupPosition,
@@ -27,6 +27,7 @@ import {
   PresetPanelType,
 } from "../../types";
 import ColumnsSelection from "./columns-selection";
+import { defaultColumns } from "./constants";
 import { CountByControl } from "./count-by-control";
 import { EmptyGroupPositionControl } from "./empty-group-position-control";
 import { GroupBySelect } from "./group-by-select";
@@ -63,10 +64,26 @@ const getAlertTableConfig = (
   ]);
   if (groupBy) {
     config.groupBy = groupBy;
-    config.emptyGroupPosition = emptyGroupPosition;
+    const savedPosition = saved?.emptyGroupPosition;
+    const effectivePosition = savedPosition ?? DEFAULT_EMPTY_GROUP_POSITION;
+    if (emptyGroupPosition !== effectivePosition) {
+      config.emptyGroupPosition = emptyGroupPosition;
+    } else if (savedPosition !== undefined) {
+      config.emptyGroupPosition = savedPosition;
+    }
   }
   return Object.keys(config).length > 0 ? config : undefined;
 };
+
+const keepUnsetDefault = <T,>(
+  editingItem: Record<string, unknown> | undefined,
+  key: string,
+  value: T,
+  defaultValue: T
+): T | undefined =>
+  editingItem && editingItem[key] === undefined && isEqual(value, defaultValue)
+    ? undefined
+    : value;
 
 function GroupRowsByControl({
   value,
@@ -241,11 +258,31 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
           ...normalizedFormValues.selectedPreset,
           countOfLastAlerts: normalizedFormValues.countOfLastAlerts,
         },
-        presetColumns: normalizedFormValues.presetColumns,
+        presetColumns: keepUnsetDefault(
+          editingItem,
+          "presetColumns",
+          normalizedFormValues.presetColumns,
+          defaultColumns
+        ),
         thresholds: normalizedFormValues.thresholds,
-        presetPanelType: normalizedFormValues.presetPanelType,
-        showFiringOnly: normalizedFormValues.showFiringOnly,
-        customLink: normalizedFormValues.customLink,
+        presetPanelType: keepUnsetDefault(
+          editingItem,
+          "presetPanelType",
+          normalizedFormValues.presetPanelType,
+          PresetPanelType.ALERT_TABLE
+        ),
+        showFiringOnly: keepUnsetDefault(
+          editingItem,
+          "showFiringOnly",
+          normalizedFormValues.showFiringOnly,
+          false
+        ),
+        customLink: keepUnsetDefault(
+          editingItem,
+          "customLink",
+          normalizedFormValues.customLink,
+          ""
+        ),
         countBy: normalizedFormValues.countBy,
         ...(normalizedFormValues.presetPanelType === PresetPanelType.ALERT_TABLE
           ? { alertTable: normalizedFormValues.alertTable }
@@ -253,7 +290,7 @@ export const PresetWidgetForm: React.FC<PresetWidgetFormProps> = ({
       },
       isValid
     );
-  }, [normalizedFormValues, isValid]);
+  }, [normalizedFormValues, isValid, editingItem]);
 
   const handleThresholdBlur = () => {
     const reorderedThreesholds = formValues?.thresholds

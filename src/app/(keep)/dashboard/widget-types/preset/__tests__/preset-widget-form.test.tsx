@@ -407,7 +407,7 @@ describe("PresetWidgetForm row grouping", () => {
       first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING
     );
 
-  it("emits alertTable.groupBy when a group is chosen, keeping other alertTable keys", async () => {
+  it("emits alertTable.groupBy when a group is chosen, keeping other alertTable keys and writing no default position", async () => {
     const onChange = await renderForm(
       tableWidget({ alertTable: { columnOrder: ["name"] } })
     );
@@ -418,7 +418,6 @@ describe("PresetWidgetForm row grouping", () => {
       expect(lastValue(onChange).alertTable).toEqual({
         columnOrder: ["name"],
         groupBy: "incident",
-        emptyGroupPosition: "top",
       })
     );
   });
@@ -588,7 +587,6 @@ describe("PresetWidgetForm row grouping", () => {
     await waitFor(() =>
       expect(lastValue(onChange).alertTable).toEqual({
         groupBy: "lastReceived",
-        emptyGroupPosition: "top",
       })
     );
   });
@@ -607,7 +605,6 @@ describe("PresetWidgetForm row grouping", () => {
     await waitFor(() =>
       expect(lastValue(onChange).alertTable).toEqual({
         groupBy: "duplicateReason",
-        emptyGroupPosition: "top",
       })
     );
   });
@@ -657,7 +654,6 @@ describe("PresetWidgetForm row grouping", () => {
     await waitFor(() =>
       expect(lastValue(onChange).alertTable).toEqual({
         groupBy: "service",
-        emptyGroupPosition: "top",
       })
     );
     expect(lastValue(onChange).countBy).toEqual(countBy);
