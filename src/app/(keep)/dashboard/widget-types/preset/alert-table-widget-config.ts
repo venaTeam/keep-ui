@@ -62,15 +62,12 @@ export const WIDGET_UNGROUPABLE_COLUMN_IDS: readonly string[] = [
 ];
 
 /**
- * Returns the column a widget's saved `groupBy` names, resolved against
- * `knownIds` like a visible column, or undefined when it is not grouped.
+ * Returns the column a widget's saved `groupBy` names, resolved like a
+ * visible column, or undefined when it is not grouped.
  */
-export function getGroupByColumnId(
-  item: WidgetData,
-  knownIds: ReadonlySet<string>
-): string | undefined {
+export function getGroupByColumnId(item: WidgetData): string | undefined {
   const groupBy = item.alertTable?.groupBy;
-  return groupBy ? resolveWidgetColumnId(groupBy, knownIds) : undefined;
+  return groupBy ? resolveWidgetColumnId(groupBy) : undefined;
 }
 
 /** A partial update to a widget's column state. */
@@ -84,53 +81,63 @@ export type WidgetColumnChange = {
 };
 
 /**
- * Returns the ids a saved column id can resolve to: the widget's fixed columns,
- * the alert's known keys (`AlertKnownKeys`, such as `duplicateReason`) and
- * `loadedIds`, the field keys and generated column ids of the loaded alerts.
- * Without `loadedIds` it is what a widget knows before any alert loads.
+ * The camelCase aliases the gateway's alert DTO (`AlertDto` in keep-api-gateway
+ * `src/models/alert.py`) declares for its snake_case fields, which is how the
+ * alerts arrive. The facet list can name these fields in snake_case
+ * (`firing_counter`), so a saved id may use either form.
  */
-export function getKnownColumnIds(
-  loadedIds: Iterable<string> = []
-): ReadonlySet<string> {
-  return new Set<string>([
-    ...WIDGET_STATIC_COLUMN_IDS,
-    ...AlertKnownKeys,
-    ...loadedIds,
-  ]);
-}
+export const WIDGET_ALERT_FIELD_ALIASES: readonly string[] = [
+  "lastReceived",
+  "firingStartTime",
+  "firingStartTimeSinceLastResolved",
+  "firingCounter",
+  "unresolvedCounter",
+  "isFullDuplicate",
+  "isPartialDuplicate",
+  "duplicateReason",
+  "dismissUntil",
+  "providerId",
+  "providerType",
+  "startedAt",
+];
+
+/**
+ * The column ids a saved snake_case id can resolve to: the widget's fixed
+ * columns, the alert's known keys (`AlertKnownKeys`) and
+ * `WIDGET_ALERT_FIELD_ALIASES`. It never depends on the loaded alerts.
+ */
+export const WIDGET_KNOWN_COLUMN_IDS: ReadonlySet<string> = new Set<string>([
+  ...WIDGET_STATIC_COLUMN_IDS,
+  ...AlertKnownKeys,
+  ...WIDGET_ALERT_FIELD_ALIASES,
+]);
 
 /**
  * Maps a saved column id to the id the table uses.
  *
- * An id the table knows is kept. Otherwise an undotted id falls back to its
- * camelCase form when the table knows that, so legacy facet ids such as
- * `last_received` resolve to `lastReceived`. Dotted ids never fall back, because
- * their segments are user-defined label names. An id nothing matches is kept.
+ * An id in `WIDGET_KNOWN_COLUMN_IDS` is kept. Otherwise an undotted id falls
+ * back to its camelCase form when that is in `WIDGET_KNOWN_COLUMN_IDS`, so
+ * facet ids such as `last_received` or `firing_counter` resolve to
+ * `lastReceived` and `firingCounter`. Dotted ids never fall back, because
+ * their segments are user-defined label names. Any other id is kept, so a
+ * custom enrichment key stays as it is. The result depends only on the id,
+ * never on the loaded alerts, so a saved id always names the same column.
  */
-export function resolveWidgetColumnId(
-  id: string,
-  knownIds: ReadonlySet<string>
-): string {
-  if (knownIds.has(id) || id.includes(".")) {
+export function resolveWidgetColumnId(id: string): string {
+  if (WIDGET_KNOWN_COLUMN_IDS.has(id) || id.includes(".")) {
     return id;
   }
   const camelCaseId = camelCase(id);
-  return knownIds.has(camelCaseId) ? camelCaseId : id;
+  return WIDGET_KNOWN_COLUMN_IDS.has(camelCaseId) ? camelCaseId : id;
 }
 
 /**
  * Maps field ids from the facet list (and other extra fields) to the column
- * ids the widget uses, each through `resolveWidgetColumnId` against
- * `getKnownColumnIds(columnIds)`. The ⚙ panel passes the widget's columns;
- * the widget form, which has no loaded alerts, passes none, and the widget
- * resolves what is left when it reads the saved setting.
+ * ids the widget uses, each through `resolveWidgetColumnId`, so the ⚙ panel
+ * and the widget form offer and save the ids the widget reads.
  */
-export function resolveFieldIds(
-  fields: readonly string[],
-  columnIds: Iterable<string> = []
-): string[] {
-  const knownIds = getKnownColumnIds(columnIds);
-  return fields.map((id) => resolveWidgetColumnId(id, knownIds));
+export function resolveFieldIds(fields: readonly string[]): string[] {
+  return fields.map(resolveWidgetColumnId);
 }
 
 /**
@@ -139,13 +146,10 @@ export function resolveFieldIds(
  * Reads `presetColumns`, or the widget defaults when it is unset, resolves each
  * id, drops the excluded columns and keeps the first occurrence of a duplicate.
  */
-export function getVisibleColumnIds(
-  item: WidgetData,
-  knownIds: ReadonlySet<string>
-): string[] {
+export function getVisibleColumnIds(item: WidgetData): string[] {
   const visible = new Set<string>();
   (item.presetColumns ?? defaultColumns).forEach((id) => {
-    const resolved = resolveWidgetColumnId(id, knownIds);
+    const resolved = resolveWidgetColumnId(id);
     if (!WIDGET_EXCLUDED_COLUMNS.includes(resolved)) {
       visible.add(resolved);
     }

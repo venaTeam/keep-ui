@@ -313,6 +313,76 @@ describe("WidgetAlertsTable", () => {
     );
   });
 
+  describe("a saved snake_case alias resolves the same with or without loaded alerts", () => {
+    const item = {
+      presetColumns: ["name", "firing_counter", "description"],
+      alertTable: {
+        columnRenameMapping: { firingCounter: "Fires" },
+        columnSizing: { firingCounter: 240 },
+        columnOrder: ["firingCounter", "name", "description"],
+        groupBy: "firing_counter",
+      },
+    };
+    const header = (columnId: string) =>
+      screen.getByTestId(`header-cell-${columnId}`);
+    const expectResolved = () => {
+      expect(headerIds()).toEqual(["firingCounter", "name", "description"]);
+      expect(header("firingCounter")).toHaveTextContent("Fires");
+      expect(
+        (header("firingCounter").closest("th") as HTMLElement).style.width
+      ).toBe("240px");
+      expect(screen.getByText("Rows grouped by Fires")).toBeInTheDocument();
+    };
+
+    it("with alerts carrying firingCounter", () => {
+      renderWidget(item, [
+        alertWith({ firingCounter: 3 }),
+        alertWith({ firingCounter: 3 }),
+      ]);
+
+      expectResolved();
+      expect(groupHeaderTexts()).toEqual(["3 2 shown"]);
+    });
+
+    it("after a refresh that loads no alerts", () => {
+      const { rerender } = renderWidget(item, [
+        alertWith({ firingCounter: 3 }),
+      ]);
+      rerender(widget(item, []));
+
+      expectResolved();
+    });
+
+    it("with alerts that lack the field, rendering empty cells", () => {
+      renderWidget(
+        { ...item, alertTable: { ...item.alertTable, groupBy: undefined } },
+        [alertWith(), alertWith()]
+      );
+
+      expect(headerIds()).toEqual(["firingCounter", "name", "description"]);
+      expect(header("firingCounter")).toHaveTextContent("Fires");
+      expect(cellsOf("firingCounter").map((cell) => cell.textContent)).toEqual([
+        "",
+        "",
+      ]);
+    });
+
+    it("keeps a dotted id and a custom snake_case enrichment key as they are", () => {
+      renderWidget(
+        { presetColumns: ["name", "labels.team_name", "my_custom_field"] },
+        [alertWith({ labels: { team_name: "core" }, my_custom_field: "x" })]
+      );
+
+      expect(headerIds()).toEqual([
+        "name",
+        "labels.team_name",
+        "my_custom_field",
+      ]);
+      expect(cellsOf("labels.team_name")[0]).toHaveTextContent("core");
+      expect(cellsOf("my_custom_field")[0]).toHaveTextContent("x");
+    });
+  });
+
   describe("generated column cells", () => {
     const cellText = (columnId: string) =>
       cellsOf(columnId).map((cell) => cell.textContent);
@@ -737,6 +807,32 @@ describe("WidgetAlertsTable", () => {
         expect(tableElement().style.width).toBe("1200px");
       });
 
+      it("widening the flex column keeps its saved width exact and scrolls, instead of snapping it narrower", () => {
+        const item = {
+          presetColumns: ["name", "description", "lastReceived"],
+        };
+        observeWidth(1600);
+        const { unmount } = renderWidget(item);
+        expect(renderedWidths()).toEqual({
+          name: 100,
+          description: 1420,
+          lastReceived: 80,
+        });
+        unmount();
+
+        renderWidget({
+          ...item,
+          alertTable: { columnSizing: { description: 1440 } },
+        });
+
+        expect(renderedWidths()).toEqual({
+          name: 100,
+          description: 1440,
+          lastReceived: 80,
+        });
+        expect(tableElement().style.width).toBe("1620px");
+      });
+
       it("lets description fill a very wide widget past its maximum", () => {
         const declared = declaredWidths();
 
@@ -814,6 +910,67 @@ describe("WidgetAlertsTable", () => {
         alertTable: expect.objectContaining({ groupBy: "description" }),
       })
     );
+  });
+
+  describe("a saved groupBy the table cannot group by", () => {
+    const item = {
+      presetColumns: ["name", "description"],
+      alertTable: { groupBy: "enriched_fields" },
+    };
+    const alerts = () => [
+      alertWith({ enriched_fields: ["a"], description: "disk" }),
+      alertWith({ enriched_fields: ["b"], description: "cpu" }),
+    ];
+    const openHeaderMenu = async (columnId: string) => {
+      const cell = screen.getByTestId(`header-cell-${columnId}`);
+      const trigger = within(cell).getByTestId("dropdown-menu-button");
+      fireEvent.mouseDown(trigger);
+      fireEvent.click(trigger);
+      await screen.findByTestId("dropdown-menu-list");
+    };
+    const lastEmitted = (onChange: jest.Mock): WidgetData =>
+      onChange.mock.calls[onChange.mock.calls.length - 1][0];
+
+    const groupByDescription = async () => {
+      const onChange = jest.fn();
+      const data = alerts();
+      const view = renderWidget(item, data, { isEditMode: true, onChange });
+      expect(groupHeaders()).toHaveLength(0);
+
+      await openHeaderMenu("description");
+      fireEvent.click(screen.getByText("Group by"));
+
+      expect(onChange).toHaveBeenCalledTimes(1);
+      const grouped = lastEmitted(onChange);
+      view.rerender(widget(grouped, data, { isEditMode: true, onChange }));
+      return { onChange, grouped, data, view };
+    };
+
+    it("header Group by on another column replaces it, and the table groups by that column", async () => {
+      const { grouped } = await groupByDescription();
+
+      expect(grouped.alertTable?.groupBy).toBe("description");
+      expect(groupHeaderTexts()).toEqual(["disk 1 shown", "cpu 1 shown"]);
+    });
+
+    it("header Ungroup then clears the new grouping", async () => {
+      const { onChange } = await groupByDescription();
+
+      await openHeaderMenu("description");
+      fireEvent.click(screen.getByText("Ungroup"));
+
+      expect(onChange).toHaveBeenCalledTimes(2);
+      expect(lastEmitted(onChange).alertTable?.groupBy).toBeUndefined();
+    });
+
+    it("the grouping chip then clears the new grouping", async () => {
+      const { onChange } = await groupByDescription();
+
+      fireEvent.click(screen.getByRole("button", { name: "Clear grouping" }));
+
+      expect(onChange).toHaveBeenCalledTimes(2);
+      expect(lastEmitted(onChange).alertTable?.groupBy).toBeUndefined();
+    });
   });
 
   it("header Rename starts from the name the header shows", async () => {
@@ -1270,6 +1427,27 @@ describe("WidgetAlertsTable", () => {
       expect(columnIds).not.toContain("firing_counter");
     });
 
+    it("Group rows by replaces a saved groupBy the table cannot group by", async () => {
+      const onChange = jest.fn();
+      renderWithSlot(
+        { alertTable: { groupBy: "enriched_fields" } },
+        { isEditMode: true, onChange },
+        [alertWith({ enriched_fields: ["a"], service: "checkout" })]
+      );
+
+      fireEvent.click(settingsButton() as HTMLElement);
+      fireEvent.click(
+        screen.getByRole("button", { name: "Show Group rows by options" })
+      );
+      const listbox = await screen.findByRole("listbox");
+      fireEvent.mouseDown(
+        within(listbox).getByRole("option", { name: "Service" })
+      );
+
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange.mock.calls[0][0].alertTable.groupBy).toBe("service");
+    });
+
     it("does not offer a list field in Group rows by", async () => {
       renderWithSlot({}, { isEditMode: true, onChange: jest.fn() }, [
         alertWith({ enriched_fields: ["a"], region: "eu" }),
@@ -1388,7 +1566,7 @@ describe("WidgetAlertsTable", () => {
         ).toBeNull();
       });
 
-      it("a typed width writes alertTable.columnSizing, clamped, once per commit", () => {
+      it("a typed width writes alertTable.columnSizing once per commit, not capped at the maximum", () => {
         const onChange = jest.fn();
         renderWithSlot(
           { alertTable: { columnSizing: { description: 300 } } },
@@ -1406,7 +1584,7 @@ describe("WidgetAlertsTable", () => {
         expect(onChange).toHaveBeenCalledTimes(1);
         expect(onChange.mock.calls[0][0].alertTable.columnSizing).toEqual({
           description: 300,
-          name: 600,
+          name: 2500,
         });
       });
 

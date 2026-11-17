@@ -10,6 +10,7 @@ import React, {
 import { createPortal } from "react-dom";
 import {
   ColumnPinningState,
+  GroupingState,
   Table as ReactTable,
   Row,
   RowSelectionState,
@@ -53,7 +54,7 @@ import {
   ColumnBounds,
   getColumnBounds,
   getWidgetColumnLayout,
-  withUnclampedColumn,
+  withUnclampedColumns,
 } from "./widget-column-layout";
 import {
   WidgetColumnWidths,
@@ -237,6 +238,12 @@ function WidgetAlertsTableContent({
       ),
     [state.grouping, columns, isGroupable]
   );
+  const { setGrouping } = state;
+  const setTableGrouping = useCallback(
+    (updater: Updater<GroupingState>) =>
+      setGrouping(functionalUpdate(updater, grouping)),
+    [setGrouping, grouping]
+  );
   const columnPinning = useMemo<ColumnPinningState>(() => {
     const pinnedLeft = WIDGET_PINNED_LEFT.filter((id) =>
       state.visibleColumns.includes(id)
@@ -291,14 +298,15 @@ function WidgetAlertsTableContent({
       chrome,
     ]
   );
+  const unclampedIdsKey = JSON.stringify(layout.unclampedColumnIds);
   const layoutColumns = useMemo(
     () =>
-      withUnclampedColumn(
+      withUnclampedColumns(
         columns,
-        layout.unclampedColumnId,
+        JSON.parse(unclampedIdsKey),
         layout.shrunkColumnId
       ),
-    [columns, layout.unclampedColumnId, layout.shrunkColumnId]
+    [columns, unclampedIdsKey, layout.shrunkColumnId]
   );
   const columnBounds = useMemo(
     () =>
@@ -382,7 +390,7 @@ function WidgetAlertsTableContent({
         : {}),
     },
     onColumnSizingChange: state.setColumnSizing,
-    onGroupingChange: state.setGrouping,
+    onGroupingChange: setTableGrouping,
     enableRowSelection: chrome ? isAlertRow : false,
     onRowSelectionChange: chrome ? onRowSelectionChange : undefined,
     enableSorting: false,
@@ -584,17 +592,20 @@ function WidgetAlertsTableContent({
  * Header controls show only in edit mode with `onChange`, and not on a narrow
  * widget. Rows are plain, not clickable and always at the default density.
  * Expand all / Collapse all reads the groups shown now, so a regrouping or a
- * refresh that drops a collapsed group does not leave it stale.
+ * refresh that drops a collapsed group does not leave it stale. A grouping
+ * change from the table is resolved against the grouping the table shows, so
+ * a saved `groupBy` it cannot use is replaced, not kept.
  * In edit mode with `onChange`, the ⚙ Table settings button is rendered into
  * `settingsSlot` (an element the caller places in its header), at every width;
  * its column widths are the rendered ones and its Auto-fit measures this table.
  *
  * Once the widget's width is measured, the table is laid out by
- * `getWidgetColumnLayout`: every column renders at exactly its own width, the
- * flexible text column takes any spare width so the table fills the widget,
- * and columns that do not fit scroll sideways. The width the table's
- * collapsed outer borders add (an incident group's colored edge) is measured
- * and left free, so a table that fits never scrolls.
+ * `getWidgetColumnLayout`: every column renders at exactly its own width (a
+ * saved width even past the column's maximum, so widening a column never
+ * narrows it), the flexible text column takes any spare width so the table
+ * fills the widget, and columns that do not fit scroll sideways. The width
+ * the table's collapsed outer borders add (an incident group's colored edge)
+ * is measured and left free, so a table that fits never scrolls.
  *
  * With `selection` and outside edit mode, the table adds its selection chrome:
  * a 28 px checkbox gutter pinned left, before the pinned icon columns, whose
