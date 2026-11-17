@@ -54,7 +54,7 @@ jest.mock("@/shared/ui", () => ({ showErrorToast: jest.fn() }));
 // and lets a test move a panel.
 jest.mock("../GridLayout", () => ({
   __esModule: true,
-  default: ({ layout, data, onLayoutChange, onDelete, onSave }: any) => {
+  default: function MockGridLayout({ layout, data, onLayoutChange, onDelete, onSave }: any) {
     const isEditMode = useDashboardEditMode();
     return (
       <div data-testid="grid" data-edit-mode={String(isEditMode)}>

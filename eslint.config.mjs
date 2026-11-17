@@ -21,4 +21,10 @@ export default defineConfig([
       "react/no-danger": "error",
     },
   },
+  {
+    files: ["**/__tests__/**", "**/*.test.{ts,tsx}"],
+    rules: {
+      "@next/next/no-html-link-for-pages": "off",
+    },
+  },
 ]);

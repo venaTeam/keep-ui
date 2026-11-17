@@ -87,9 +87,10 @@ export function AlertMenu({
   const api = useApi();
   const router = useRouter();
   const { data: appConfig } = useConfig();
-  const { data: executions } = appConfig?.KEEP_WF_LIST_EXTENDED_INFO === true
-    ? useWorkflowExecutions()
-    : { data: [] };
+  const { data: executions } = useWorkflowExecutions(
+    undefined,
+    appConfig?.KEEP_WF_LIST_EXTENDED_INFO === true
+  );
   const [rowStyle] = useAlertRowStyle();
   const [viewedAlerts, setViewedAlerts] = useLocalStorage<ViewedAlert[]>(
     `viewed-alerts-${presetName}`,
