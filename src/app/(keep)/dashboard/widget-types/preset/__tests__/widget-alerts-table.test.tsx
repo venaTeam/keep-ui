@@ -727,6 +727,32 @@ describe("WidgetAlertsTable", () => {
         expect(tableElement().style.width).toBe("1200px");
       });
 
+      it("widening the flex column keeps its saved width exact and scrolls, instead of snapping it narrower", () => {
+        const item = {
+          presetColumns: ["name", "description", "lastReceived"],
+        };
+        observeWidth(1600);
+        const { unmount } = renderWidget(item);
+        expect(renderedWidths()).toEqual({
+          name: 100,
+          description: 1420,
+          lastReceived: 80,
+        });
+        unmount();
+
+        renderWidget({
+          ...item,
+          alertTable: { columnSizing: { description: 1440 } },
+        });
+
+        expect(renderedWidths()).toEqual({
+          name: 100,
+          description: 1440,
+          lastReceived: 80,
+        });
+        expect(tableElement().style.width).toBe("1620px");
+      });
+
       it("lets description fill a very wide widget past its maximum", () => {
         const declared = declaredWidths();
 
@@ -1378,7 +1404,7 @@ describe("WidgetAlertsTable", () => {
         ).toBeNull();
       });
 
-      it("a typed width writes alertTable.columnSizing, clamped, once per commit", () => {
+      it("a typed width writes alertTable.columnSizing once per commit, not capped at the maximum", () => {
         const onChange = jest.fn();
         renderWithSlot(
           { alertTable: { columnSizing: { description: 300 } } },
@@ -1396,7 +1422,7 @@ describe("WidgetAlertsTable", () => {
         expect(onChange).toHaveBeenCalledTimes(1);
         expect(onChange.mock.calls[0][0].alertTable.columnSizing).toEqual({
           description: 300,
-          name: 600,
+          name: 2500,
         });
       });
 

@@ -21,8 +21,13 @@ export interface WidgetColumnLayout {
   columnSizing: ColumnSizingState;
   /** The table's width in pixels, or undefined while the widget's width is unknown. */
   tableWidth?: number;
-  /** The flexible column, when its widened width passes its maximum. */
-  unclampedColumnId?: string;
+  /**
+   * The visible columns, in display order, that render wider than their
+   * maximum: a saved width over it, or the flexible column's widened width.
+   * Their maximum must be lifted (`withUnclampedColumns`) for the table to
+   * render them at that width.
+   */
+  unclampedColumnIds: string[];
 }
 
 const FLEX_PREFERENCE = ["description", "name"];
@@ -36,15 +41,17 @@ export function getColumnBounds(column: SizedColumn): ColumnBounds {
 }
 
 /**
- * Returns the width a column renders at, as the table computes it: the saved
- * width, else the column's default size, kept within its bounds.
+ * Returns the width a column renders at in the widget: a saved width, kept at
+ * or above the column's minimum but never capped at its maximum, so a width
+ * someone set stays exact; else the column's default size, kept within its
+ * bounds.
  */
 export function getColumnSize(column: SizedColumn, saved?: number): number {
   const { min, max } = getColumnBounds(column);
-  return Math.min(
-    Math.max(min, saved ?? column.size ?? defaultColumnSizing.size),
-    max
-  );
+  if (saved !== undefined) {
+    return Math.max(min, saved);
+  }
+  return Math.min(Math.max(min, column.size ?? defaultColumnSizing.size), max);
 }
 
 /**
@@ -74,12 +81,14 @@ export function getFlexColumnId(
  * Lays an Alert Table widget's visible columns out in a container
  * `containerWidth` pixels wide.
  *
- * Every column keeps its own width (saved, else default). When they add up to
- * less than the container, the flexible column (`getFlexColumnId`) takes the
+ * Every column keeps its own width (`getColumnSize`: a saved width exactly,
+ * even past the column's maximum, else the default). When they add up to less
+ * than the container, the flexible column (`getFlexColumnId`) takes the
  * difference, past its maximum if need be, and the table is exactly as wide as
  * the container; pinned columns therefore never widen. When they add up to
  * more, the table is as wide as the columns and scrolls. With an unknown
  * width, the saved sizing is returned as is and no table width is set.
+ * `unclampedColumnIds` lists every visible column rendering past its maximum.
  * `visibleOrder` lists the visible column ids in display order; ids with no
  * column in `columns` are skipped.
  */
@@ -94,13 +103,21 @@ export function getWidgetColumnLayout({
   savedSizing: ColumnSizingState;
   containerWidth: number | null;
 }): WidgetColumnLayout {
-  if (containerWidth === null) {
-    return { columnSizing: savedSizing };
-  }
   const byId = new Map(columns.map((column) => [column.id, column]));
   const visibleIds = visibleOrder.filter((id) => byId.has(id));
   const sizeOf = (id: string) =>
     getColumnSize(byId.get(id) as SizedColumn, savedSizing[id]);
+  const unclampedIds = (widthOf: (id: string) => number) =>
+    visibleIds.filter(
+      (id) => widthOf(id) > getColumnBounds(byId.get(id) as SizedColumn).max
+    );
+
+  if (containerWidth === null) {
+    return {
+      columnSizing: savedSizing,
+      unclampedColumnIds: unclampedIds(sizeOf),
+    };
+  }
   const total = visibleIds.reduce((sum, id) => sum + sizeOf(id), 0);
   const spare = containerWidth - total;
   const flexColumnId =
@@ -112,31 +129,36 @@ export function getWidgetColumnLayout({
       : undefined;
 
   if (flexColumnId === undefined) {
-    return { columnSizing: savedSizing, tableWidth: total };
+    return {
+      columnSizing: savedSizing,
+      tableWidth: total,
+      unclampedColumnIds: unclampedIds(sizeOf),
+    };
   }
   const flexSize = sizeOf(flexColumnId) + spare;
-  const { max } = getColumnBounds(byId.get(flexColumnId) as SizedColumn);
   return {
     columnSizing: { ...savedSizing, [flexColumnId]: flexSize },
     tableWidth: containerWidth,
-    unclampedColumnId: flexSize > max ? flexColumnId : undefined,
+    unclampedColumnIds: unclampedIds((id) =>
+      id === flexColumnId ? flexSize : sizeOf(id)
+    ),
   };
 }
 
 /**
- * Returns `columns` with the maximum width of `unclampedColumnId` lifted, so
- * the table renders that column at its full widened width. Returns `columns`
- * itself when no column is unclamped.
+ * Returns `columns` with the maximum width of every column in
+ * `unclampedColumnIds` lifted, so the table renders those columns at their
+ * full width. Returns `columns` itself when no column is unclamped.
  */
-export function withUnclampedColumn<T extends SizedColumn>(
+export function withUnclampedColumns<T extends SizedColumn>(
   columns: T[],
-  unclampedColumnId: string | undefined
+  unclampedColumnIds: readonly string[]
 ): T[] {
-  if (unclampedColumnId === undefined) {
+  if (unclampedColumnIds.length === 0) {
     return columns;
   }
   return columns.map((column) =>
-    column.id === unclampedColumnId
+    column.id !== undefined && unclampedColumnIds.includes(column.id)
       ? { ...column, maxSize: Number.MAX_SAFE_INTEGER }
       : column
   );

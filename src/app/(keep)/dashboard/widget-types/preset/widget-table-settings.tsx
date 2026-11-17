@@ -60,7 +60,11 @@ import { EmptyGroupPositionControl } from "./empty-group-position-control";
 import { GroupBySelect } from "./group-by-select";
 import type { WidgetColumnState } from "./use-widget-column-state";
 
-/** A visible column's current width and the range a width set for it is kept in, in pixels. */
+/**
+ * A visible column's current width and its bounds, in pixels. A width set for
+ * it is kept at or above `min`, but never capped at `max`; Auto-fit stays
+ * within both.
+ */
 export interface WidgetColumnWidth {
   width: number;
   min: number;
@@ -154,10 +158,11 @@ function WidthInput({
   label,
   width,
   min,
-  max,
   onCommit,
-}: WidgetColumnWidth & {
+}: {
   label: string;
+  width: number;
+  min: number;
   onCommit: (width: number) => void;
 }) {
   const [draft, setDraft] = useState<string | null>(null);
@@ -175,7 +180,7 @@ function WidthInput({
     if (text === null || text.trim() === "" || !Number.isFinite(value)) {
       return;
     }
-    onCommit(Math.round(Math.min(Math.max(value, min), max)));
+    onCommit(Math.round(Math.max(value, min)));
   };
 
   return (
@@ -185,7 +190,6 @@ function WidthInput({
       autoFocus
       aria-label={`${label} width`}
       min={min}
-      max={max}
       step={1}
       value={draft ?? String(width)}
       onChange={(event) => edit(event.target.value)}
@@ -246,7 +250,12 @@ function ColumnWidthEditor({
 
   return (
     <div className="mb-0.5 mt-1 flex items-center gap-1.5 pl-6">
-      <WidthInput label={label} {...width} onCommit={save} />
+      <WidthInput
+        label={label}
+        width={width.width}
+        min={width.min}
+        onCommit={save}
+      />
       <span className="text-gray-500">px</span>
       <button
         type="button"
@@ -659,7 +668,8 @@ function SettingsContent({
  * A reorder only moves visible columns, so hidden ones keep their saved
  * places. Each visible, unpinned column also has a width editor, opened from
  * its row one at a time: a pixel input that shows the current width and
- * saves on Enter or blur, kept within the column's bounds; Auto-fit, which
+ * saves on Enter or blur, kept at or above the column's minimum and never
+ * capped at its maximum, so the width renders exactly; Auto-fit, which
  * measures `columnWidths.tableRef`; and, once a width is saved, Reset. A
  * search adds any alert field as a column. It also sets the grouping, where
  * rows with no value go, and resets the widget to the defaults. Every change
