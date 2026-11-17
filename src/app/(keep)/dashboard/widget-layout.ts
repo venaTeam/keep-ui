@@ -1,5 +1,5 @@
 import { createElement } from "react";
-import { utils } from "react-grid-layout";
+import { utils, type Layout } from "react-grid-layout";
 import { LayoutItem, WidgetData } from "./types";
 
 /** Columns of the desktop grid (the lg and md breakpoints). */
@@ -33,6 +33,26 @@ export const compactLayout = (layout: LayoutItem[], widgetIds: string[]): Layout
     GRID_COMPACT_TYPE,
     false
   ) as LayoutItem[];
+
+/**
+ * Where every panel goes while one panel is dragged to (x, y), worked out
+ * from the layout as it was when the drag began, with the grid's own move
+ * and compaction. Earlier drag steps play no part, so the result depends
+ * only on where the panel is now, and dragging it back to its starting spot
+ * gives back the starting layout.
+ */
+export const layoutForDrag = (start: Layout[], id: string, x: number, y: number): Layout[] => {
+  const layout = utils.cloneLayout(start);
+  const dragged = utils.getLayoutItem(layout, id);
+  if (!dragged) {
+    return layout;
+  }
+  return utils.compact(
+    utils.moveElement(layout, dragged, x, y, true, false, GRID_COMPACT_TYPE, GRID_COLS, false),
+    GRID_COMPACT_TYPE,
+    GRID_COLS
+  );
+};
 
 /** The first row below every panel, where a newly added widget goes. */
 export const layoutBottom = (layout: Pick<LayoutItem, "y" | "h">[]): number =>

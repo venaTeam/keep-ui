@@ -3,7 +3,7 @@ import { Responsive, WidthProvider, Layout, Layouts } from "react-grid-layout";
 import GridItemContainer from "./GridItemContainer";
 import { useDashboardEditMode } from "./DashboardEditModeContext";
 import { LayoutItem, WidgetData } from "./types";
-import { GRID_COLS, GRID_COMPACT_TYPE } from "./widget-layout";
+import { GRID_COLS, GRID_COMPACT_TYPE, layoutForDrag } from "./widget-layout";
 import "react-grid-layout/css/styles.css";
 import { MetricsWidget } from "@/utils/hooks/useDashboardMetricWidgets";
 import { Preset } from "@/entities/presets/model/types";
@@ -74,6 +74,44 @@ const GridLayout: React.FC<GridLayoutProps> = ({
     return { lg: layout, md: layout, sm: stacked, xs: stacked, xxs: stacked };
   }, [layout]);
 
+  const dragStartLayout = useRef<Layout[] | null>(null);
+
+  const handleDragStart = useCallback((current: Layout[]) => {
+    dragStartLayout.current = current.map((panel) => ({ ...panel }));
+  }, []);
+
+  /**
+   * Makes the grid follow a drag from the layout at drag start instead of
+   * from its previous drag step (see `layoutForDrag`). react-grid-layout 1.5
+   * hands onDrag the layout it compacts and keeps next, and onDragStop the
+   * layout it keeps, so each panel's position is rewritten in place there.
+   */
+  const followDragFromStart = useCallback(
+    (working: Layout[], _oldItem: Layout, dragged: Layout) => {
+      const start = dragStartLayout.current;
+      if (!start) {
+        return;
+      }
+      const next = layoutForDrag(start, dragged.i, dragged.x, dragged.y);
+      for (const panel of working) {
+        const placed = next.find((candidate) => candidate.i === panel.i);
+        if (placed) {
+          panel.x = placed.x;
+          panel.y = placed.y;
+        }
+      }
+    },
+    []
+  );
+
+  const handleDragStop = useCallback(
+    (working: Layout[], oldItem: Layout, dragged: Layout) => {
+      followDragFromStart(working, oldItem, dragged);
+      dragStartLayout.current = null;
+    },
+    [followDragFromStart]
+  );
+
   const handleBreakpointChange = useCallback((breakpoint: string) => {
     breakpointRef.current = breakpoint;
     setIsEditableSize(isEditableBreakpoint(breakpoint));
@@ -102,6 +140,9 @@ const GridLayout: React.FC<GridLayoutProps> = ({
         layouts={layouts}
         onLayoutChange={handleLayoutChange}
         onBreakpointChange={handleBreakpointChange}
+        onDragStart={handleDragStart}
+        onDrag={followDragFromStart}
+        onDragStop={handleDragStop}
         breakpoints={BREAKPOINTS}
         cols={COLS}
         rowHeight={30}
