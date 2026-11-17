@@ -42,7 +42,6 @@ jobs:
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: npx jest --ci
 
-      - name: Lint (non-blocking until the existing errors are fixed)
+      - name: Lint
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
-        continue-on-error: true
         run: npm run lint
