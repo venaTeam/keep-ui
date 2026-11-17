@@ -6,12 +6,14 @@ import {
   DEFAULT_INCIDENTS_SORTING,
   PaginatedIncidentsDto,
 } from "@/entities/incidents/model/models";
+import { useRevalidateOnDismissalExpiry } from "@/entities/incidents/model";
 import {
   IncidentsQuery,
   useIncidents,
   usePollIncidents,
 } from "@/utils/hooks/useIncidents";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { v4 as uuidv4 } from "uuid";
 
 export interface IncidentsTableDataQuery {
   candidate: boolean | null;
@@ -96,6 +98,17 @@ export const useIncidentsTableData = (query: IncidentsTableDataQuery) => {
 
   const { incidentChangeToken } = usePollIncidents(() => {}, isPaused);
 
+  // Changes whenever the facet counts may have moved: on every server-side
+  // incident change, and when a dismissal lapses on the clock.
+  const [facetsRevalidationToken, setFacetsRevalidationToken] = useState<
+    string | undefined
+  >(undefined);
+  useEffect(() => {
+    if (incidentChangeToken) {
+      setFacetsRevalidationToken(incidentChangeToken);
+    }
+  }, [incidentChangeToken]);
+
   useEffect(() => {
     // When refresh token comes, this code allows polling for certain time and then stops.
     // Will start polling again when new refresh token comes.
@@ -167,6 +180,17 @@ export const useIncidentsTableData = (query: IncidentsTableDataQuery) => {
     true
   );
 
+  // A "dismiss until" lapses on the clock, with no SSE event to announce it.
+  const revalidateOnDismissalExpiry = useCallback(() => {
+    mutateIncidents();
+    setFacetsRevalidationToken(uuidv4());
+  }, [mutateIncidents]);
+  useRevalidateOnDismissalExpiry(
+    paginatedIncidentsFromHook?.items,
+    revalidateOnDismissalExpiry,
+    isPaused
+  );
+
   const { data: defaultIncidents, mutate: refreshDefaultIncidents } =
     useIncidents(
       {
@@ -216,6 +240,7 @@ export const useIncidentsTableData = (query: IncidentsTableDataQuery) => {
     isPredictedLoading,
     facetsCel: mainCelQuery,
     incidentChangeToken,
+    facetsRevalidationToken,
     incidentsError,
   };
 };
