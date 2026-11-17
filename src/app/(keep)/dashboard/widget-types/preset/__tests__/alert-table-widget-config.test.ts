@@ -2,14 +2,17 @@ import { WidgetData } from "../../../types";
 import {
   NARROW_WIDGET_PX,
   WIDGET_EXCLUDED_COLUMNS,
+  WIDGET_ALERT_FIELD_ALIASES,
+  WIDGET_KNOWN_COLUMN_IDS,
   WIDGET_PINNED_LEFT,
   WIDGET_STATIC_COLUMN_IDS,
   applyWidgetColumnChange,
-  getKnownColumnIds,
+  getGroupByColumnId,
   getVisibleColumnIds,
   mergeVisibleColumnOrder,
   normalizeColumnOrder,
   resetWidgetColumns,
+  resolveFieldIds,
   resolveWidgetColumnId,
   toVisibilityState,
   visibleIdsFromVisibilityState,
@@ -40,58 +43,79 @@ describe("constants", () => {
 });
 
 describe("resolveWidgetColumnId", () => {
-  const known = new Set(["name", "lastReceived", "service", "labels.team"]);
-  it("keeps an id the table knows", () =>
-    expect(resolveWidgetColumnId("service", known)).toBe("service"));
-  it("maps a snake_case id to a known camelCase column", () =>
-    expect(resolveWidgetColumnId("last_received", known)).toBe("lastReceived"));
+  it("keeps an id it knows statically", () => {
+    expect(resolveWidgetColumnId("lastReceived")).toBe("lastReceived");
+    expect(resolveWidgetColumnId("firingCounter")).toBe("firingCounter");
+  });
+  it("maps a snake_case id to a fixed column", () =>
+    expect(resolveWidgetColumnId("last_received")).toBe("lastReceived"));
+  it("maps a snake_case id to a known alert key", () => {
+    expect(resolveWidgetColumnId("duplicate_reason")).toBe("duplicateReason");
+    expect(resolveWidgetColumnId("is_duplicate")).toBe("isDuplicate");
+  });
+  it.each([
+    ["last_received", "lastReceived"],
+    ["firing_start_time", "firingStartTime"],
+    [
+      "firing_start_time_since_last_resolved",
+      "firingStartTimeSinceLastResolved",
+    ],
+    ["firing_counter", "firingCounter"],
+    ["unresolved_counter", "unresolvedCounter"],
+    ["is_full_duplicate", "isFullDuplicate"],
+    ["is_partial_duplicate", "isPartialDuplicate"],
+    ["duplicate_reason", "duplicateReason"],
+    ["dismiss_until", "dismissUntil"],
+    ["provider_id", "providerId"],
+    ["provider_type", "providerType"],
+    ["started_at", "startedAt"],
+  ])("maps the alert DTO field %s to its alias %s", (field, alias) =>
+    expect(resolveWidgetColumnId(field)).toBe(alias)
+  );
   it("never camelCases a dotted id", () =>
-    expect(resolveWidgetColumnId("labels.team_name", known)).toBe(
-      "labels.team_name"
-    ));
-  it("keeps an unknown id as-is so it renders an empty column", () =>
-    expect(resolveWidgetColumnId("ticket_id", known)).toBe("ticket_id"));
-  it("keeps a known dotted id", () =>
-    expect(resolveWidgetColumnId("labels.team", known)).toBe("labels.team"));
+    expect(resolveWidgetColumnId("labels.team_name")).toBe("labels.team_name"));
+  it("keeps a custom snake_case enrichment key as it is", () => {
+    expect(resolveWidgetColumnId("ticket_id")).toBe("ticket_id");
+    expect(resolveWidgetColumnId("my_custom_field")).toBe("my_custom_field");
+  });
+  it("keeps a dotted id", () =>
+    expect(resolveWidgetColumnId("labels.team")).toBe("labels.team"));
 });
 
-describe("getKnownColumnIds", () => {
-  it("knows the fixed columns and the alert's known keys without alerts", () => {
-    const known = getKnownColumnIds();
-    WIDGET_STATIC_COLUMN_IDS.forEach((id) => expect(known.has(id)).toBe(true));
-    expect(known.has("duplicateReason")).toBe(true);
-    expect(known.has("isDuplicate")).toBe(true);
-    expect(known.has("firingCounter")).toBe(false);
-  });
-
-  it("adds the given loaded ids", () => {
-    const known = getKnownColumnIds(["firingCounter", "labels.team"]);
-    expect(known.has("firingCounter")).toBe(true);
-    expect(known.has("labels.team")).toBe(true);
-  });
-
-  it("lets a snake_case id resolve to a known alert key", () => {
-    expect(resolveWidgetColumnId("duplicate_reason", getKnownColumnIds())).toBe(
-      "duplicateReason"
+describe("WIDGET_KNOWN_COLUMN_IDS", () => {
+  it("is the fixed columns, the alert's known keys and the DTO aliases", () => {
+    WIDGET_STATIC_COLUMN_IDS.forEach((id) =>
+      expect(WIDGET_KNOWN_COLUMN_IDS.has(id)).toBe(true)
     );
-    expect(resolveWidgetColumnId("is_duplicate", getKnownColumnIds())).toBe(
-      "isDuplicate"
+    WIDGET_ALERT_FIELD_ALIASES.forEach((id) =>
+      expect(WIDGET_KNOWN_COLUMN_IDS.has(id)).toBe(true)
     );
+    expect(WIDGET_KNOWN_COLUMN_IDS.has("isDuplicate")).toBe(true);
+    expect(WIDGET_KNOWN_COLUMN_IDS.has("myCustomField")).toBe(false);
+  });
+});
+
+describe("resolveFieldIds", () => {
+  it("maps facet ids statically, the same for the form and the panel", () =>
+    expect(
+      resolveFieldIds(["firing_counter", "labels.team", "my_custom_field"])
+    ).toEqual(["firingCounter", "labels.team", "my_custom_field"]));
+});
+
+describe("getGroupByColumnId", () => {
+  it("resolves the saved groupBy statically, or is undefined when ungrouped", () => {
+    expect(
+      getGroupByColumnId({
+        alertTable: { groupBy: "firing_counter" },
+      } as WidgetData)
+    ).toBe("firingCounter");
+    expect(getGroupByColumnId({} as WidgetData)).toBeUndefined();
   });
 });
 
 describe("getVisibleColumnIds", () => {
-  const known = new Set([
-    "severity",
-    "status",
-    "source",
-    "name",
-    "description",
-    "lastReceived",
-    "checkbox",
-  ]);
   it("uses the widget defaults when presetColumns is unset", () =>
-    expect(getVisibleColumnIds({} as WidgetData, known)).toEqual([
+    expect(getVisibleColumnIds({} as WidgetData)).toEqual([
       "severity",
       "status",
       "source",
@@ -101,28 +125,25 @@ describe("getVisibleColumnIds", () => {
     ]));
   it("resolves legacy ids and drops excluded ones", () =>
     expect(
-      getVisibleColumnIds(
-        { presetColumns: ["name", "last_received", "checkbox"] } as WidgetData,
-        known
-      )
-    ).toEqual(["name", "lastReceived"]));
+      getVisibleColumnIds({
+        presetColumns: ["name", "last_received", "firing_counter", "checkbox"],
+      } as WidgetData)
+    ).toEqual(["name", "lastReceived", "firingCounter"]));
   it("keeps the first occurrence when a legacy id and its camelCase id both appear", () =>
     expect(
-      getVisibleColumnIds(
-        { presetColumns: ["lastReceived", "name", "last_received"] } as WidgetData,
-        known
-      )
+      getVisibleColumnIds({
+        presetColumns: ["lastReceived", "name", "last_received"],
+      } as WidgetData)
     ).toEqual(["lastReceived", "name"]));
   it("keeps an unknown id so it renders an empty column", () =>
     expect(
-      getVisibleColumnIds(
-        { presetColumns: ["name", "ticket_id"] } as WidgetData,
-        known
-      )
+      getVisibleColumnIds({
+        presetColumns: ["name", "ticket_id"],
+      } as WidgetData)
     ).toEqual(["name", "ticket_id"]));
   it("treats an empty presetColumns list as no visible columns", () =>
     expect(
-      getVisibleColumnIds({ presetColumns: [] } as unknown as WidgetData, known)
+      getVisibleColumnIds({ presetColumns: [] } as unknown as WidgetData)
     ).toEqual([]));
 });
 

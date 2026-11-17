@@ -45,21 +45,17 @@ export interface WidgetColumnState {
 
 function getGrouping(
   item: WidgetData,
-  knownIds: ReadonlySet<string>
+  columnIds: ReadonlySet<string>
 ): GroupingState {
-  const groupBy = getGroupByColumnId(item, knownIds);
-  return groupBy && knownIds.has(groupBy) ? [groupBy] : [];
+  const groupBy = getGroupByColumnId(item);
+  return groupBy && columnIds.has(groupBy) ? [groupBy] : [];
 }
 
 function showsDefaultColumns(
   item: WidgetData,
-  visibleColumns: readonly string[],
-  knownIds: ReadonlySet<string>
+  visibleColumns: readonly string[]
 ): boolean {
-  const defaults = getVisibleColumnIds(
-    { ...item, presetColumns: undefined },
-    knownIds
-  );
+  const defaults = getVisibleColumnIds({ ...item, presetColumns: undefined });
   return (
     visibleColumns.length === defaults.length &&
     defaults.every((id) => visibleColumns.includes(id))
@@ -77,8 +73,9 @@ function resolveUpdater<T>(updater: Updater<T>, current: T): T {
  *
  * Each setting falls back on its own: the order to the shared default columns,
  * the renames and sizing to none, grouping to off and the empty group to the top.
- * Saved visible columns and `groupBy` resolve against `allColumnIds` through
- * `resolveWidgetColumnId`, so a legacy snake_case id reads as its column.
+ * Saved visible columns and `groupBy` resolve through `resolveWidgetColumnId`,
+ * which never depends on the loaded alerts, so a snake_case id such as
+ * `firing_counter` always reads as its column (`firingCounter`).
  * Visible columns the order does not place follow it in their `presetColumns`
  * order, then every other column, so the visible order does not depend on the
  * order the loaded alerts list their fields in.
@@ -112,11 +109,8 @@ export function useWidgetColumnState({
     latestItem.current = item;
   }, [item]);
 
-  const knownIds = useMemo(() => new Set(allColumnIds), [allColumnIds]);
-  const visibleColumns = useMemo(
-    () => getVisibleColumnIds(item, knownIds),
-    [item, knownIds]
-  );
+  const columnIds = useMemo(() => new Set(allColumnIds), [allColumnIds]);
+  const visibleColumns = useMemo(() => getVisibleColumnIds(item), [item]);
   const columnVisibility = useMemo(
     () => toVisibilityState(visibleColumns, allColumnIds),
     [visibleColumns, allColumnIds]
@@ -131,8 +125,8 @@ export function useWidgetColumnState({
     [savedOrder, visibleColumns, allColumnIds]
   );
   const grouping = useMemo(
-    () => getGrouping(item, knownIds),
-    [item, knownIds]
+    () => getGrouping(item, columnIds),
+    [item, columnIds]
   );
 
   const emit = useCallback(
@@ -160,10 +154,10 @@ export function useWidgetColumnState({
       emit({
         visibleColumns: visibleIdsFromVisibilityState(
           next,
-          getVisibleColumnIds(latestItem.current, knownIds)
+          getVisibleColumnIds(latestItem.current)
         ),
       }),
-    [emit, knownIds]
+    [emit]
   );
   const setColumnRenameMapping = useCallback(
     (mapping: Record<string, string>) =>
@@ -184,17 +178,17 @@ export function useWidgetColumnState({
     (updater: Updater<GroupingState>) => {
       const next = resolveUpdater(
         updater,
-        getGrouping(latestItem.current, knownIds)
+        getGrouping(latestItem.current, columnIds)
       );
       const groupBy = next[0] ?? null;
       if (
-        groupBy === (getGroupByColumnId(latestItem.current, knownIds) ?? null)
+        groupBy === (getGroupByColumnId(latestItem.current) ?? null)
       ) {
         return;
       }
       emit({ groupBy });
     },
-    [emit, knownIds]
+    [emit, columnIds]
   );
   const setEmptyGroupPosition = useCallback(
     (position: EmptyGroupPosition) => emit({ emptyGroupPosition: position }),
@@ -219,7 +213,7 @@ export function useWidgetColumnState({
     emptyGroupPosition: item.alertTable?.emptyGroupPosition ?? "top",
     isCustomized:
       Object.keys(item.alertTable ?? {}).length > 0 ||
-      !showsDefaultColumns(item, visibleColumns, knownIds),
+      !showsDefaultColumns(item, visibleColumns),
     canEdit: onChange !== undefined,
     setColumnOrder,
     setColumnVisibility,
