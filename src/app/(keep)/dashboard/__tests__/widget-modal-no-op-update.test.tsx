@@ -15,6 +15,33 @@ jest.mock("@/utils/hooks/useProviders", () => ({
   useProviders: () => ({ data: undefined }),
 }));
 
+jest.mock("@/components/ui/Modal", () => ({
+  __esModule: true,
+  default: ({
+    isOpen,
+    children,
+  }: {
+    isOpen: boolean;
+    children: React.ReactNode;
+  }) => (isOpen ? <div>{children}</div> : null),
+}));
+
+jest.mock("@tremor/react", () => ({
+  ...jest.requireActual("@tremor/react"),
+  Select: () => null,
+  SelectItem: () => null,
+  MultiSelect: () => null,
+  MultiSelectItem: () => null,
+}));
+
+jest.mock("../widget-types/preset/count-by-control", () => ({
+  CountByControl: () => null,
+}));
+
+jest.mock("../widget-types/preset/group-by-select", () => ({
+  GroupBySelect: () => null,
+}));
+
 jest.mock("@/features/filter/hooks", () => ({
   ...jest.requireActual("@/features/filter/hooks"),
   useFacetPotentialFields: () => ({ data: ["service", "labels.team"] }),
@@ -129,6 +156,64 @@ describe("Edit Widget, then Update with no changes", () => {
     [
       "saved before presetColumns, presetPanelType, showFiringOnly and customLink existed",
       olderWidget,
+    ],
+    [
+      "grouped first, then reordered ({groupBy, columnOrder})",
+      {
+        ...formSavedWidget,
+        alertTable: {
+          groupBy: "service",
+          columnOrder: ["service", "name", "description"],
+        },
+      },
+    ],
+    [
+      "grouped first, then resized ({groupBy, columnSizing})",
+      {
+        ...formSavedWidget,
+        alertTable: { groupBy: "service", columnSizing: { name: 240 } },
+      },
+    ],
+    [
+      "grouped first with 'bottom', then renamed ({groupBy, emptyGroupPosition, columnRenameMapping})",
+      {
+        ...formSavedWidget,
+        alertTable: {
+          groupBy: "service",
+          emptyGroupPosition: "bottom",
+          columnRenameMapping: { name: "Alert" },
+        },
+      },
+    ],
+    [
+      "renamed first, then grouped ({columnRenameMapping, groupBy})",
+      {
+        ...formSavedWidget,
+        alertTable: {
+          columnRenameMapping: { name: "Alert" },
+          groupBy: "service",
+        },
+      },
+    ],
+    [
+      "whose saved keys come in another order",
+      {
+        i: "w1",
+        alertTable: { groupBy: "service", columnSizing: { name: 240 } },
+        customLink: "",
+        showFiringOnly: false,
+        presetPanelType: PresetPanelType.ALERT_TABLE,
+        presetColumns: ["name", "description"],
+        thresholds: olderWidget.thresholds,
+        preset: olderWidget.preset,
+        widgetType: WidgetType.PRESET,
+        name: "Feed",
+        x: 0,
+        y: 0,
+        w: 8,
+        h: 6,
+        static: false,
+      } as unknown as WidgetData,
     ],
   ])("leaves a widget %s unchanged", async (_shape, item) => {
     const updated = await submit(renderModal(item));

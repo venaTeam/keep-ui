@@ -18,7 +18,7 @@ import {
   useWatch,
   useFieldArray,
 } from "react-hook-form";
-import { isEqual, omit } from "lodash";
+import { isEqual } from "lodash";
 import {
   AlertTableWidgetConfig,
   EmptyGroupPosition,
@@ -58,19 +58,17 @@ const getAlertTableConfig = (
   groupBy: string | null,
   emptyGroupPosition: EmptyGroupPosition
 ): AlertTableWidgetConfig | undefined => {
-  const config: AlertTableWidgetConfig = omit(saved ?? {}, [
-    "groupBy",
-    "emptyGroupPosition",
-  ]);
+  const config: AlertTableWidgetConfig = { ...saved };
   if (groupBy) {
     config.groupBy = groupBy;
-    const savedPosition = saved?.emptyGroupPosition;
-    const effectivePosition = savedPosition ?? DEFAULT_EMPTY_GROUP_POSITION;
+    const effectivePosition =
+      saved?.emptyGroupPosition ?? DEFAULT_EMPTY_GROUP_POSITION;
     if (emptyGroupPosition !== effectivePosition) {
       config.emptyGroupPosition = emptyGroupPosition;
-    } else if (savedPosition !== undefined) {
-      config.emptyGroupPosition = savedPosition;
     }
+  } else {
+    delete config.groupBy;
+    delete config.emptyGroupPosition;
   }
   return Object.keys(config).length > 0 ? config : undefined;
 };
