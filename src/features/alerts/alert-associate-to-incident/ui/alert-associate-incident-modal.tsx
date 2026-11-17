@@ -12,7 +12,16 @@ import {
 } from "@/entities/incidents/lib/utils";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { Select, showErrorToast } from "@/shared/ui";
-import { DEFAULT_INCIDENTS_CHECKED_OPTIONS } from "@/entities/incidents/model/models";
+import { Status } from "@/entities/incidents/model";
+
+// Every incident an alert can still join. Suppressed counts: the gateway
+// carries the incident's dismissal onto alerts joining it. Deliberately not
+// DEFAULT_INCIDENTS_CHECKED_OPTIONS, which is the incidents list's default view.
+const ASSOCIABLE_INCIDENT_STATUSES = [
+  Status.Firing,
+  Status.Acknowledged,
+  Status.Suppressed,
+];
 
 interface AlertAssociateIncidentModalProps {
   isOpen: boolean;
@@ -30,7 +39,7 @@ export const AlertAssociateIncidentModal = ({
   const [createIncident, setCreateIncident] = useState(false);
   const [isAssociating, setIsAssociating] = useState(false);
 
-  const activeStatusCel = `status in [${DEFAULT_INCIDENTS_CHECKED_OPTIONS.map(
+  const activeStatusCel = `status in [${ASSOCIABLE_INCIDENT_STATUSES.map(
     (status) => `'${status}'`
   ).join(", ")}]`;
 
