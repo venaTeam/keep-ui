@@ -282,6 +282,7 @@ function WidgetAlertsTableContent({
           containerWidth === null
             ? null
             : containerWidth - borderWidth - (chrome ? CHECKBOX_COLUMN_PX : 0),
+        shrinkAllowance: chrome ? CHECKBOX_COLUMN_PX : 0,
       }),
     [
       columns,
@@ -293,8 +294,13 @@ function WidgetAlertsTableContent({
     ]
   );
   const layoutColumns = useMemo(
-    () => withUnclampedColumn(columns, layout.unclampedColumnId),
-    [columns, layout.unclampedColumnId]
+    () =>
+      withUnclampedColumn(
+        columns,
+        layout.unclampedColumnId,
+        layout.shrunkColumnId
+      ),
+    [columns, layout.unclampedColumnId, layout.shrunkColumnId]
   );
   const columnBounds = useMemo(
     () =>

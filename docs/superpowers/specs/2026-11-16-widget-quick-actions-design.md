@@ -71,7 +71,7 @@ Selection works per row, per group (when the widget groups rows, from PR #110) a
 
 ### At rest
 
-Exactly today's widget (as of #110). Nothing new is visible. The table gets one narrow, empty left gutter (28 px) that will hold checkboxes.
+Exactly today's widget (as of #110). Nothing new is visible. The table gets one narrow, empty left gutter (28 px) that will hold checkboxes. The gutter never makes a widget scroll sideways: when the columns are short of room, the flexible text column (description, else name) gives up to the gutter's 28 px, below its minimum if need be, so a widget scrolls only as far as it would without the gutter.
 
 ### Hovering a row: the tray
 

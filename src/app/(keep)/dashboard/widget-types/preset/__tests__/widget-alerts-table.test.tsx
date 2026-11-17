@@ -1841,7 +1841,7 @@ describe("WidgetAlertsTable", () => {
       }
     });
 
-    it("keeps the table exactly as wide as the widget with the gutter", () => {
+    describe("table width with the gutter", () => {
       const widthOf = (columnId: string) =>
         Number.parseFloat(
           (
@@ -1850,16 +1850,53 @@ describe("WidgetAlertsTable", () => {
               .closest("th") as HTMLElement
           ).style.width
         );
+      const tableWidth = () =>
+        (widgetRoot().querySelector("table") as HTMLTableElement).style.width;
+      const totalWidth = () =>
+        headerIds().reduce((sum, id) => sum + widthOf(id), 0);
+      const widthsWithoutGutter = () => {
+        const { unmount } = render(
+          <WidgetAlertsTable item={baseItem} alerts={[a1]} isEditMode={false} />
+        );
+        const widths = {
+          description: widthOf("description"),
+          total: totalWidth(),
+        };
+        unmount();
+        return widths;
+      };
 
-      observeWidth(1200);
-      renderHarness({ alerts: [a1] });
+      it("keeps the table exactly as wide as the widget", () => {
+        observeWidth(1200);
+        renderHarness({ alerts: [a1] });
 
-      expect(
-        (widgetRoot().querySelector("table") as HTMLTableElement).style.width
-      ).toBe("1200px");
-      expect(widthOf("checkbox")).toBe(28);
-      expect(widthOf("alertMenu")).toBe(0);
-      expect(headerIds().reduce((sum, id) => sum + widthOf(id), 0)).toBe(1200);
+        expect(tableWidth()).toBe("1200px");
+        expect(widthOf("checkbox")).toBe(28);
+        expect(widthOf("alertMenu")).toBe(0);
+        expect(totalWidth()).toBe(1200);
+      });
+
+      it("takes the gutter from description so a widget that fits without it never scrolls", () => {
+        const plain = widthsWithoutGutter();
+
+        observeWidth(plain.total);
+        renderHarness({ alerts: [a1] });
+
+        expect(widthOf("checkbox")).toBe(28);
+        expect(widthOf("description")).toBe(plain.description - 28);
+        expect(tableWidth()).toBe(`${plain.total}px`);
+        expect(totalWidth()).toBe(plain.total);
+      });
+
+      it("scrolls no further than the same widget without the gutter", () => {
+        const plain = widthsWithoutGutter();
+
+        observeWidth(plain.total - 10);
+        renderHarness({ alerts: [a1] });
+
+        expect(widthOf("description")).toBe(plain.description - 28);
+        expect(tableWidth()).toBe(`${plain.total}px`);
+      });
     });
   });
 });
