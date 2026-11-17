@@ -54,7 +54,7 @@ jest.mock("@/shared/ui", () => ({ showErrorToast: jest.fn() }));
 // and lets a test move a panel.
 jest.mock("../GridLayout", () => ({
   __esModule: true,
-  default: ({ layout, data, onLayoutChange }: any) => {
+  default: ({ layout, data, onLayoutChange, onDelete, onSave }: any) => {
     const isEditMode = useDashboardEditMode();
     return (
       <div data-testid="grid" data-edit-mode={String(isEditMode)}>
@@ -86,6 +86,10 @@ jest.mock("../GridLayout", () => ({
           }
         >
           report-shown-layout
+        </button>
+        <button onClick={() => onDelete(data[0].i)}>delete-first</button>
+        <button onClick={() => onSave({ ...data[0], h: data[0].h + 6 })}>
+          grow-first
         </button>
       </div>
     );
@@ -263,6 +267,56 @@ describe("dashboard edit mode", () => {
     click("dashboard-cancel-edit-btn");
 
     expect(byCy("dashboard-leave-modal")).toBeNull();
+  });
+
+  it("settles the remaining panels after a panel is deleted", () => {
+    mockDashboards = [
+      {
+        ...savedDashboard(),
+        dashboard_config: {
+          layout: [
+            { i: "A", x: 0, y: 0, w: 12, h: 8 },
+            { i: "B", x: 12, y: 0, w: 12, h: 3 },
+            { i: "C", x: 0, y: 8, w: 12, h: 3 },
+          ],
+          widget_data: [
+            { i: "A", x: 0, y: 0, w: 12, h: 8, name: "A" },
+            { i: "B", x: 12, y: 0, w: 12, h: 3, name: "B" },
+            { i: "C", x: 0, y: 8, w: 12, h: 3, name: "C" },
+          ],
+        },
+      },
+    ];
+    render(<DashboardPage />);
+    click("dashboard-enter-edit-btn");
+
+    fireEvent.click(screen.getByText("delete-first"));
+
+    expect(screen.getByTestId("pos-C")).toHaveAttribute("data-y", "0");
+  });
+
+  it("settles the panels below after a panel's height is edited", () => {
+    mockDashboards = [
+      {
+        ...savedDashboard(),
+        dashboard_config: {
+          layout: [
+            { i: "w1", x: 0, y: 0, w: 3, h: 3 },
+            { i: "w2", x: 0, y: 3, w: 3, h: 3 },
+          ],
+          widget_data: [
+            { i: "w1", x: 0, y: 0, w: 3, h: 3, name: "Grows" },
+            { i: "w2", x: 0, y: 3, w: 3, h: 3, name: "Below" },
+          ],
+        },
+      },
+    ];
+    render(<DashboardPage />);
+    click("dashboard-enter-edit-btn");
+
+    fireEvent.click(screen.getByText("grow-first"));
+
+    expect(screen.getByTestId("pos-w2")).toHaveAttribute("data-y", "9");
   });
 
   it("adds a new widget below the existing panels", () => {
