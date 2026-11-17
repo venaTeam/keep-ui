@@ -10,7 +10,10 @@ import React, {
 import { createPortal } from "react-dom";
 import {
   ColumnPinningState,
+  GroupingState,
   Table as ReactTable,
+  Updater,
+  functionalUpdate,
   getCoreRowModel,
   getGroupedRowModel,
   useReactTable,
@@ -181,6 +184,12 @@ function WidgetAlertsTableContent({
       ),
     [state.grouping, columns, isGroupable]
   );
+  const { setGrouping } = state;
+  const setTableGrouping = useCallback(
+    (updater: Updater<GroupingState>) =>
+      setGrouping(functionalUpdate(updater, grouping)),
+    [setGrouping, grouping]
+  );
   const columnPinning = useMemo<ColumnPinningState>(
     () => ({
       left: WIDGET_PINNED_LEFT.filter((id) => state.visibleColumns.includes(id)),
@@ -246,7 +255,7 @@ function WidgetAlertsTableContent({
       columnPinning,
     },
     onColumnSizingChange: state.setColumnSizing,
-    onGroupingChange: state.setGrouping,
+    onGroupingChange: setTableGrouping,
     enableSorting: false,
     manualSorting: true,
     enableGrouping: true,
@@ -397,7 +406,9 @@ function WidgetAlertsTableContent({
  * Header controls show only in edit mode with `onChange`, and not on a narrow
  * widget. Rows are plain, not clickable and always at the default density.
  * Expand all / Collapse all reads the groups shown now, so a regrouping or a
- * refresh that drops a collapsed group does not leave it stale.
+ * refresh that drops a collapsed group does not leave it stale. A grouping
+ * change from the table is resolved against the grouping the table shows, so
+ * a saved `groupBy` it cannot use is replaced, not kept.
  * In a noisy preset (`presetNoisy`), critical firing rows ring as on the
  * presets page: a pulsing overlay outlined in red behind every cell, pinned
  * cells included over their opaque tint, and a collapsed group's header rings

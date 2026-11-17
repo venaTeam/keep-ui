@@ -833,6 +833,67 @@ describe("WidgetAlertsTable", () => {
     );
   });
 
+  describe("a saved groupBy the table cannot group by", () => {
+    const item = {
+      presetColumns: ["name", "description"],
+      alertTable: { groupBy: "enriched_fields" },
+    };
+    const alerts = () => [
+      alertWith({ enriched_fields: ["a"], description: "disk" }),
+      alertWith({ enriched_fields: ["b"], description: "cpu" }),
+    ];
+    const openHeaderMenu = async (columnId: string) => {
+      const cell = screen.getByTestId(`header-cell-${columnId}`);
+      const trigger = within(cell).getByTestId("dropdown-menu-button");
+      fireEvent.mouseDown(trigger);
+      fireEvent.click(trigger);
+      await screen.findByTestId("dropdown-menu-list");
+    };
+    const lastEmitted = (onChange: jest.Mock): WidgetData =>
+      onChange.mock.calls[onChange.mock.calls.length - 1][0];
+
+    const groupByDescription = async () => {
+      const onChange = jest.fn();
+      const data = alerts();
+      const view = renderWidget(item, data, { isEditMode: true, onChange });
+      expect(groupHeaders()).toHaveLength(0);
+
+      await openHeaderMenu("description");
+      fireEvent.click(screen.getByText("Group by"));
+
+      expect(onChange).toHaveBeenCalledTimes(1);
+      const grouped = lastEmitted(onChange);
+      view.rerender(widget(grouped, data, { isEditMode: true, onChange }));
+      return { onChange, grouped, data, view };
+    };
+
+    it("header Group by on another column replaces it, and the table groups by that column", async () => {
+      const { grouped } = await groupByDescription();
+
+      expect(grouped.alertTable?.groupBy).toBe("description");
+      expect(groupHeaderTexts()).toEqual(["disk 1 shown", "cpu 1 shown"]);
+    });
+
+    it("header Ungroup then clears the new grouping", async () => {
+      const { onChange } = await groupByDescription();
+
+      await openHeaderMenu("description");
+      fireEvent.click(screen.getByText("Ungroup"));
+
+      expect(onChange).toHaveBeenCalledTimes(2);
+      expect(lastEmitted(onChange).alertTable?.groupBy).toBeUndefined();
+    });
+
+    it("the grouping chip then clears the new grouping", async () => {
+      const { onChange } = await groupByDescription();
+
+      fireEvent.click(screen.getByRole("button", { name: "Clear grouping" }));
+
+      expect(onChange).toHaveBeenCalledTimes(2);
+      expect(lastEmitted(onChange).alertTable?.groupBy).toBeUndefined();
+    });
+  });
+
   it("header Rename starts from the name the header shows", async () => {
     renderWidget(
       { presetColumns: ["name", "node_name"] },
@@ -1285,6 +1346,27 @@ describe("WidgetAlertsTable", () => {
 
       expect(columnIds).toContain("firingCounter");
       expect(columnIds).not.toContain("firing_counter");
+    });
+
+    it("Group rows by replaces a saved groupBy the table cannot group by", async () => {
+      const onChange = jest.fn();
+      renderWithSlot(
+        { alertTable: { groupBy: "enriched_fields" } },
+        { isEditMode: true, onChange },
+        [alertWith({ enriched_fields: ["a"], service: "checkout" })]
+      );
+
+      fireEvent.click(settingsButton() as HTMLElement);
+      fireEvent.click(
+        screen.getByRole("button", { name: "Show Group rows by options" })
+      );
+      const listbox = await screen.findByRole("listbox");
+      fireEvent.mouseDown(
+        within(listbox).getByRole("option", { name: "Service" })
+      );
+
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange.mock.calls[0][0].alertTable.groupBy).toBe("service");
     });
 
     it("does not offer a list field in Group rows by", async () => {
