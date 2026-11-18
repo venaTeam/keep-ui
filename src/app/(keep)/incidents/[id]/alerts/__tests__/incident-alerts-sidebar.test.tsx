@@ -19,6 +19,9 @@ jest.mock('@/utils/hooks/useIncidents', () => ({
 }));
 
 jest.mock('@/entities/incidents/model', () => ({
+  // The real enums (Status) are needed: the dismiss modal this page imports
+  // reads them at module load.
+  ...jest.requireActual('@/entities/incidents/model'),
   useIncidentActions: jest.fn(() => ({
     unlinkAlertsFromIncident: jest.fn(),
   })),
