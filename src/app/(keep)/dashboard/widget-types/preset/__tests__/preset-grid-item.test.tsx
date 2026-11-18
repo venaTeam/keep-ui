@@ -13,9 +13,14 @@ jest.mock("../widget-alert-count-panel", () => ({
   },
 }));
 
+const mockTablePanel = jest.fn();
+
 jest.mock("../preset-alert-table-panel", () => ({
   __esModule: true,
-  default: () => <div data-testid="table-panel" />,
+  default: (props: unknown) => {
+    mockTablePanel(props);
+    return <div data-testid="table-panel" />;
+  },
 }));
 
 jest.mock("@/utils/hooks/useDashboardPresets", () => ({
@@ -40,7 +45,10 @@ const buildItem = (overrides: Partial<WidgetData>) =>
     ...overrides,
   }) as unknown as WidgetData;
 
-beforeEach(() => mockCountPanel.mockClear());
+beforeEach(() => {
+  mockCountPanel.mockClear();
+  mockTablePanel.mockClear();
+});
 
 describe("PresetGridItem", () => {
   it("passes countBy to the counter tile", () => {
@@ -69,5 +77,19 @@ describe("PresetGridItem", () => {
 
     expect(screen.getByTestId("table-panel")).toBeInTheDocument();
     expect(mockCountPanel).not.toHaveBeenCalled();
+  });
+
+  it("passes onSave to the table panel", () => {
+    const onSave = jest.fn();
+    render(
+      <PresetGridItem
+        item={buildItem({ presetPanelType: PresetPanelType.ALERT_TABLE })}
+        onSave={onSave}
+      />
+    );
+
+    expect(mockTablePanel).toHaveBeenCalledWith(
+      expect.objectContaining({ onSave })
+    );
   });
 });

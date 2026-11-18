@@ -33,7 +33,11 @@ import {
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast } from "@/shared/ui";
 import { describeInvalidImageError } from "../widget-types/image/image-widget-validation";
-import { applyEditedItemToLayout } from "../widget-layout";
+import {
+  applyEditedItemToLayout,
+  compactLayout,
+  layoutBottom,
+} from "../widget-layout";
 import "../styles.css";
 import { Preset } from "@/entities/presets/model/types";
 import { recordAction, recordPageLoad, recordError } from "@/utils/metrics";
@@ -122,8 +126,16 @@ const DashboardPage = () => {
     }
 
     const config = dashboard.dashboard_config ?? {};
-    setLayout(Array.isArray(config.layout) ? config.layout : []);
-    setWidgetData(Array.isArray(config.widget_data) ? config.widget_data : []);
+    const savedWidgets: WidgetData[] = Array.isArray(config.widget_data)
+      ? config.widget_data
+      : [];
+    setLayout(
+      compactLayout(
+        Array.isArray(config.layout) ? config.layout : [],
+        savedWidgets.map((widget) => widget.i)
+      )
+    );
+    setWidgetData(savedWidgets);
     setDashboardName(dashboard.dashboard_name);
     setAppearance(clampAppearance(config.appearance));
   }, [id, dashboards, isLoading]);
@@ -150,7 +162,7 @@ const DashboardPage = () => {
     const newItem: LayoutItem = {
       i: uniqueId,
       x: 0,
-      y: 0,
+      y: layoutBottom(layout),
       w: 3,
       h: 3,
       minW: 2,
@@ -161,8 +173,9 @@ const DashboardPage = () => {
       ...newItem,
       ...widget,
     };
-    setLayout((prevLayout) => [...prevLayout, newWidget]);
-    setWidgetData((prevData) => [...prevData, newWidget]);
+    const nextWidgets = [...widgetData, newWidget];
+    setLayout(compactLayout([...layout, newItem], nextWidgets.map((item) => item.i)));
+    setWidgetData(nextWidgets);
   };
 
   const handleEditWidget = (id: string, update?: WidgetData) => {
@@ -179,13 +192,19 @@ const DashboardPage = () => {
     setWidgetData((prevData) =>
       prevData.map((item) => (item.i === updatedItem.i ? updatedItem : item))
     );
-    setLayout((prevLayout) => applyEditedItemToLayout(prevLayout, updatedItem));
+    setLayout((prevLayout) =>
+      compactLayout(
+        applyEditedItemToLayout(prevLayout, updatedItem),
+        widgetData.map((item) => item.i)
+      )
+    );
     closeModal();
   };
 
   const handleDeleteWidget = (id: string) => {
-    setLayout(layout.filter((item) => item.i !== id));
-    setWidgetData(widgetData.filter((item) => item.i !== id));
+    const remaining = widgetData.filter((item) => item.i !== id);
+    setLayout(compactLayout(layout, remaining.map((item) => item.i)));
+    setWidgetData(remaining);
   };
 
   const handleLayoutChange = (newLayout: LayoutItem[]) => {

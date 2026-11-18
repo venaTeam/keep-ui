@@ -8,21 +8,29 @@ import { startCase } from "lodash";
 export type ColumnRenameMapping = Record<string, string>;
 
 /**
- * Column rename submenu component for dropdown menu
+ * Column rename submenu component for dropdown menu.
+ *
+ * `getOriginalColumnName` gives a column's name before any rename; without it
+ * the name is built from the column id (capitalized, `.` and `_` as spaces).
  */
 export const ColumnRenameSubMenu = ({
   columnId,
   columnRenameMapping,
   setColumnRenameMapping,
   DropdownMenu,
+  getOriginalColumnName,
 }: {
   columnId: string;
   columnRenameMapping: ColumnRenameMapping;
   setColumnRenameMapping: (mapping: ColumnRenameMapping) => void;
   DropdownMenu: any;
+  getOriginalColumnName?: (columnId: string) => string;
 }) => {
   // Get original column name from the column ID (capitalize and replace underscores)
   const getOriginalName = () => {
+    if (getOriginalColumnName) {
+      return getOriginalColumnName(columnId);
+    }
     return columnId
       .split(/[._]/)
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
@@ -127,13 +135,16 @@ export const ColumnRenameSubMenu = ({
 };
 
 /**
- * Create column rename menu items for dropdown menu
+ * Create column rename menu items for dropdown menu.
+ *
+ * `getOriginalColumnName` is passed to `ColumnRenameSubMenu`.
  */
 export const createColumnRenameMenuItems = (
   columnId: string,
   columnRenameMapping: ColumnRenameMapping,
   setColumnRenameMapping: (mapping: ColumnRenameMapping) => void,
-  DropdownMenu: any
+  DropdownMenu: any,
+  getOriginalColumnName?: (columnId: string) => string
 ) => {
   const hasCustomName = !!columnRenameMapping[columnId];
 
@@ -144,6 +155,7 @@ export const createColumnRenameMenuItems = (
         columnRenameMapping={columnRenameMapping}
         setColumnRenameMapping={setColumnRenameMapping}
         DropdownMenu={DropdownMenu}
+        getOriginalColumnName={getOriginalColumnName}
       />
       {hasCustomName && (
         <DropdownMenu.Item

@@ -9,6 +9,7 @@ import {
   DEFAULT_COLS,
   DEFAULT_COLS_VISIBILITY,
 } from "@/widgets/alerts-table/lib/alert-table-utils";
+import { COMMON_ENRICHMENT_FIELDS } from "@/widgets/alerts-table/lib/alert-column-options";
 
 interface AlertColumnsSelectProps {
   table: Table<AlertDto>;
@@ -72,41 +73,6 @@ export default function ColumnSelection({
       prevColumnVisibilityRef.current = columnVisibility;
     }
   }, [columnVisibility, presetName]);
-
-  // Common enrichment fields that should always be available for selection
-  const COMMON_ENRICHMENT_FIELDS = [
-    'ticket_id',
-    'ticket_url',
-    'ticket_type',
-    'ticket_status',
-    'environment',
-    'service',
-    'region',
-    'cluster',
-    'namespace',
-    'pod',
-    'container',
-    'host',
-    'instance',
-    'application',
-    'component',
-    'object',
-    'site',
-    'impact',
-    'team',
-    'owner',
-    'runbook_url',
-    'alert_rule_url',
-    'dashboard_url',
-    'logs_url',
-    'metrics_url',
-    'impacted_customer_name',
-    'severity_override',
-    'priority',
-    'escalation_policy',
-    'on_call_engineer',
-    'alert_enrichment',
-  ];
 
   const columnsOptions = [
     // Include columns from table data

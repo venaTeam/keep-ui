@@ -1,227 +1,433 @@
-import React, { useEffect, useMemo } from "react";
-import { WidgetData, WidgetType } from "../../types";
-import { usePresetAlertsCount } from "@/features/presets/custom-preset-links";
-import { useDashboardPreset } from "@/utils/hooks/useDashboardPresets";
-import { Button, Icon } from "@tremor/react";
-import { FireIcon } from "@heroicons/react/24/outline";
-import { DynamicImageProviderIcon } from "@/components/ui";
-import { getStatusColor, getStatusIcon } from "@/shared/lib/status-utils";
-import { getColumnValue } from "./get-column-value";
-import { SeverityBorderIcon, UISeverity } from "@/shared/ui";
-import { severityMapping } from "@/entities/alerts/model";
-import * as Tooltip from "@radix-ui/react-tooltip";
-import Skeleton from "react-loading-skeleton";
-import "react-loading-skeleton/dist/skeleton.css";
-import { useRouter } from "next/navigation";
-import TimeAgo from "react-timeago";
-import { useSearchParams } from "next/navigation";
-import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
-import { ColumnRenameMapping } from "@/widgets/alerts-table/ui/alert-table-column-rename";
-import { DEFAULT_COLS } from "@/widgets/alerts-table/lib/alert-table-utils";
-import { ColumnOrderState } from "@tanstack/table-core";
-import { startCase } from "lodash";
-import { defaultColumns } from "./constants";
+import React, {
+  CSSProperties,
+  RefObject,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { createPortal } from "react-dom";
+import {
+  ColumnPinningState,
+  GroupingState,
+  Table as ReactTable,
+  Updater,
+  functionalUpdate,
+  getCoreRowModel,
+  getGroupedRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
+import { Table } from "@tremor/react";
+import { XMarkIcon } from "@heroicons/react/20/solid";
+import type { AlertDto } from "@/entities/alerts/model/types";
+import { RowStyleOverrideProvider } from "@/entities/alerts/model/useAlertRowStyle";
+import AlertsTableHeaders from "@/widgets/alerts-table/ui/alert-table-headers";
+import { AlertsTableBody } from "@/widgets/alerts-table/ui/alerts-table-body";
+import { getColumnLabel } from "@/widgets/alerts-table/lib/alert-column-options";
+import { useGroupExpansion } from "@/utils/hooks/useGroupExpansion";
+import { WidgetData } from "../../types";
+import {
+  NARROW_WIDGET_PX,
+  WIDGET_PINNED_LEFT,
+  mergeVisibleColumnOrder,
+} from "./alert-table-widget-config";
+import {
+  isGroupableColumn,
+  withEmptyGroupPosition,
+} from "./empty-group-row-model";
+import { useWidgetAlertColumns } from "./use-widget-alert-columns";
+import { useWidgetColumnState } from "./use-widget-column-state";
+import {
+  ColumnBounds,
+  getColumnBounds,
+  getWidgetColumnLayout,
+  withUnclampedColumns,
+} from "./widget-column-layout";
+import {
+  WidgetColumnWidths,
+  WidgetTableSettings,
+} from "./widget-table-settings";
 
 interface WidgetAlertsTableProps {
-  presetName: string;
-  alerts?: any[];
-  columns?: string[];
+  item: WidgetData;
+  alerts?: AlertDto[];
   background?: string;
+  isEditMode: boolean;
+  onChange?: (item: WidgetData) => void;
+  settingsSlot?: HTMLElement | null;
 }
 
-const WidgetAlertsTable: React.FC<WidgetAlertsTableProps> = ({
-  presetName,
-  alerts,
-  columns,
-  background,
-}) => {
-  const columnsGapClass = "pr-3";
-  const borderClass = "border-b";
+const NO_ALERTS: AlertDto[] = [];
+const NO_THEME: Record<string, string> = {};
+const NO_FORMATS = {};
+const SKELETON_ROWS = 5;
+const OPAQUE_CELL_CLASSES =
+  "[&_th]:[background:var(--widget-opaque-bg)] [&_td.sticky]:[background:var(--widget-opaque-bg)] [&_th.sticky]:z-40 [&_td.sticky]:z-10";
+const COMPACT_GROUP_HEADER_CLASSES = "[&_td.group-header-cell]:py-1";
+const BORDER_TOLERANCE_PX = 0.01;
 
-  const [columnRenameMapping] = useLocalStorage<ColumnRenameMapping>(
-    `column-rename-mapping-${presetName}`,
-    {}
-  );
+function noop() {}
 
-  const [presetOrderedColumns] = useLocalStorage<ColumnOrderState>(
-    `column-order-${presetName}`,
-    DEFAULT_COLS
-  );
+function useElementWidth(ref: RefObject<HTMLElement | null>): number | null {
+  const [width, setWidth] = useState<number | null>(null);
 
-  const columnsMeta: { [key: string]: any } = useMemo(
-    () => ({
-      severity: {
-        gridColumnTemplate: "min-content",
-        renderHeader: () => <div className="min-w-1"></div>,
-        renderValue: (alert: any) => (
-          <SeverityBorderIcon
-            severity={
-              (severityMapping[Number(alert.severity)] ||
-                alert.severity) as UISeverity
-            }
-          />
-        ),
-      },
-      status: {
-        gridColumnTemplate: "min-content",
-        renderHeader: () => <div className="min-w-4"></div>,
-        renderValue: (alert: any) => (
-          <Icon
-            icon={getStatusIcon(alert.status, alert.isNoisy)}
-            size="sm"
-            color={getStatusColor(alert.status)}
-            className="!p-0"
-          />
-        ),
-      },
-      source: {
-        gridColumnTemplate: "min-content",
-        renderHeader: () => <div className="min-w-4"></div>,
-        renderValue: (alert: any) => (
-          <DynamicImageProviderIcon
-            className="inline-block min-w-4 min-h-4"
-            alt={(alert as any).providerType}
-            height={16}
-            width={16}
-            title={(alert as any).providerType}
-            providerType={(alert as any).providerType}
-            src={`/icons/${(alert as any).providerType}-icon.png`}
-          />
-        ),
-      },
-      name: {
-        gridColumnTemplate: "minmax(100px, 1fr)",
-        renderValue: (alert: any) => (
-          <div title={alert.name} className="truncate overflow-hidden text-ellipsis select-text">
-            {alert.name}
-          </div>
-        ),
-      },
-      description: {
-        gridColumnTemplate: "minmax(100px, 1fr)",
-        renderValue: (alert: any) => (
-          <div title={alert.description} className="truncate overflow-hidden text-ellipsis select-text">
-            {alert.description}
-          </div>
-        ),
-      },
-      lastReceived: {
-        gridColumnTemplate: "min-content",
-        renderValue: (alert: any) => <TimeAgo date={alert.lastReceived} />,
-      },
-    }),
-    [columnRenameMapping]
-  );
-
-  const orderedColumns = useMemo(() => {
-    const presetColumns: string[] = columns || defaultColumns;
-    const indexed: { [key: string]: number } = (
-      presetOrderedColumns || defaultColumns
-    ).reduce((prev, curr, index) => ({ ...prev, [curr]: index }), {});
-
-    return presetColumns.slice().sort((firstColum, secondColumn) => {
-      const indexOfFirst = indexed[firstColum] || 0;
-      const indexOfSecond = indexed[secondColumn] || 0;
-      return indexOfFirst - indexOfSecond;
-    });
-  }, [columns, presetOrderedColumns]);
-
-  function renderHeaders() {
-    return orderedColumns?.map((column, index) => {
-      const columnMeta = columnsMeta[column];
-      let columnHeaderValue;
-      if (columnMeta?.renderHeader) {
-        columnHeaderValue = columnMeta.renderHeader();
-      } else {
-        columnHeaderValue = (
-          <div className="max-w-32 truncate">
-            {columnRenameMapping[column] || startCase(column)}
-          </div>
-        );
+  useEffect(() => {
+    const element = ref.current;
+    if (!element || typeof ResizeObserver === "undefined") {
+      return;
+    }
+    const observer = new ResizeObserver((entries) => {
+      const measured = entries[0]?.contentRect.width;
+      if (measured !== undefined) {
+        setWidth(Math.floor(measured));
       }
-
-      return (
-        <div
-          key={column}
-          className={`flex h-6 items-center whitespace-nowrap text-xs font-bold ${borderClass} ${index < orderedColumns.length - 1 ? columnsGapClass : ""}`}
-        >
-          {columnHeaderValue}
-        </div>
-      );
     });
-  }
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [ref]);
 
-  function renderTableBody() {
-    const alertsToRender = alerts || Array.from({ length: 5 }).fill(undefined);
+  return width;
+}
 
-    return alertsToRender
-      ?.map((alert, alertIndex) => {
-        return orderedColumns?.map((column, index) => {
-          const columnMeta = columnsMeta[column];
-          let columnValue;
-          if (!alert) {
-            columnValue = <Skeleton containerClassName="w-full" />;
-          } else if (columnMeta?.renderValue) {
-            columnValue = columnMeta.renderValue(alert);
-          } else {
-            columnValue = (
-              <div className="truncate overflow-hidden text-ellipsis select-text">{getColumnValue(alert, column)}</div>
-            );
-          }
-          const _columnsGapClass =
-            index < orderedColumns.length - 1 ? columnsGapClass : "";
-          const _borderClass =
-            alertIndex < alertsToRender.length - 1 ? borderClass : "";
+function useCollapsedBorderWidth(
+  tableRef: RefObject<HTMLTableElement | null>
+): number {
+  const [borderWidth, setBorderWidth] = useState(0);
 
-          return (
-            <div
-              key={`${column}-${alertIndex}`}
-              title={alert?.[column]}
-              className={`min-h-7 text-xs flex min-w-0 items-center overflow-hidden whitespace-nowrap select-text ${_borderClass} ${_columnsGapClass}`}
-            >
-              {columnValue}
-            </div>
-          );
-        });
-      })
-      .flat();
-  }
+  useEffect(() => {
+    const table = tableRef.current;
+    if (!table || typeof ResizeObserver === "undefined") {
+      return;
+    }
+    const observer = new ResizeObserver(() => {
+      const cells = Array.from(table.tHead?.rows[0]?.cells ?? []);
+      if (cells.length === 0) {
+        return;
+      }
+      const cellsWidth = cells.reduce(
+        (sum, cell) => sum + cell.getBoundingClientRect().width,
+        0
+      );
+      const overhang = table.getBoundingClientRect().width - cellsWidth;
+      setBorderWidth(Math.max(0, Math.ceil(overhang - BORDER_TOLERANCE_PX)));
+    });
+    observer.observe(table);
+    return () => observer.disconnect();
+  }, [tableRef]);
 
-  const gridTemplateColumns = useMemo(
+  return borderWidth;
+}
+
+function getColumnWidths(
+  table: ReactTable<AlertDto>,
+  bounds: ReadonlyMap<string, ColumnBounds>,
+  tableRef: RefObject<HTMLElement | null>
+): WidgetColumnWidths {
+  return {
+    columns: Object.fromEntries(
+      table.getVisibleLeafColumns().map((column) => [
+        column.id,
+        {
+          width: column.getSize(),
+          ...(bounds.get(column.id) ?? getColumnBounds(column.columnDef)),
+        },
+      ])
+    ),
+    tableRef,
+  };
+}
+
+function WidgetAlertsTableContent({
+  item,
+  alerts,
+  background,
+  isEditMode,
+  onChange,
+  settingsSlot,
+}: WidgetAlertsTableProps) {
+  const widgetKey = `dashboard-widget-${item.i}`;
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const a11yContainerRef = useRef<HTMLDivElement>(null);
+  const tableRef = useRef<HTMLTableElement>(null);
+  const containerWidth = useElementWidth(wrapperRef);
+  const borderWidth = useCollapsedBorderWidth(tableRef);
+  const isNarrow = containerWidth !== null && containerWidth < NARROW_WIDGET_PX;
+
+  const { columns, allColumnIds } = useWidgetAlertColumns({
+    item,
+    alerts,
+    presetName: widgetKey,
+  });
+  const state = useWidgetColumnState({ item, allColumnIds, onChange });
+  const groupExpansion = useGroupExpansion(true);
+
+  const ungroupableColumnIds = useMemo(
     () =>
-      orderedColumns
-        ?.map((column) => {
-          const columnMeta = columnsMeta[column];
-          let gridColumnTemplate = "auto";
-
-          if (columnMeta?.gridColumnTemplate) {
-            gridColumnTemplate = columnMeta.gridColumnTemplate;
-          } else {
-            // Default sizing for arbitrary columns
-            gridColumnTemplate = "minmax(auto, 1fr)";
-          }
-
-          return gridColumnTemplate;
-        })
-        .join(" "),
-    [orderedColumns, columnsMeta]
+      new Set(
+        columns
+          .filter((column) => !isGroupableColumn(column))
+          .map((column) => column.id as string)
+      ),
+    [columns]
   );
+  const isGroupable = useCallback(
+    (columnId: string) => !ungroupableColumnIds.has(columnId),
+    [ungroupableColumnIds]
+  );
+  const grouping = useMemo(
+    () =>
+      state.grouping.filter(
+        (id) => isGroupable(id) && columns.some((column) => column.id === id)
+      ),
+    [state.grouping, columns, isGroupable]
+  );
+  const { setGrouping } = state;
+  const setTableGrouping = useCallback(
+    (updater: Updater<GroupingState>) =>
+      setGrouping(functionalUpdate(updater, grouping)),
+    [setGrouping, grouping]
+  );
+  const columnPinning = useMemo<ColumnPinningState>(
+    () => ({
+      left: WIDGET_PINNED_LEFT.filter((id) => state.visibleColumns.includes(id)),
+      right: [],
+    }),
+    [state.visibleColumns]
+  );
+
+  const emptyGroupPosition = useRef(state.emptyGroupPosition);
+  emptyGroupPosition.current = state.emptyGroupPosition;
+  const groupedRowModel = useMemo(
+    () =>
+      withEmptyGroupPosition<AlertDto>(
+        getGroupedRowModel(),
+        () => emptyGroupPosition.current
+      ),
+    []
+  );
+
+  const {
+    columnOrder: fullColumnOrder,
+    columnVisibility,
+    columnSizing: savedSizing,
+    setColumnOrder,
+  } = state;
+  const visibleColumnOrder = useMemo(
+    () => fullColumnOrder.filter((id) => columnVisibility[id]),
+    [fullColumnOrder, columnVisibility]
+  );
+  const layout = useMemo(
+    () =>
+      getWidgetColumnLayout({
+        columns,
+        visibleOrder: visibleColumnOrder,
+        savedSizing,
+        containerWidth:
+          containerWidth === null ? null : containerWidth - borderWidth,
+      }),
+    [columns, visibleColumnOrder, savedSizing, containerWidth, borderWidth]
+  );
+  const unclampedIdsKey = JSON.stringify(layout.unclampedColumnIds);
+  const layoutColumns = useMemo(
+    () => withUnclampedColumns(columns, JSON.parse(unclampedIdsKey)),
+    [columns, unclampedIdsKey]
+  );
+  const columnBounds = useMemo(
+    () =>
+      new Map(
+        columns.map((column) => [column.id as string, getColumnBounds(column)])
+      ),
+    [columns]
+  );
+
+  const table = useReactTable({
+    data: alerts ?? NO_ALERTS,
+    columns: layoutColumns,
+    getRowId: (row) => row.fingerprint,
+    state: {
+      columnOrder: state.columnOrder,
+      columnVisibility: state.columnVisibility,
+      columnSizing: layout.columnSizing,
+      grouping,
+      columnPinning,
+    },
+    onColumnSizingChange: state.setColumnSizing,
+    onGroupingChange: setTableGrouping,
+    enableSorting: false,
+    manualSorting: true,
+    enableGrouping: true,
+    groupedColumnMode: false,
+    columnResizeMode: "onEnd",
+    autoResetAll: false,
+    getCoreRowModel: getCoreRowModel(),
+    getGroupedRowModel: groupedRowModel,
+  });
+
+  const setVisibleColumnOrder = useCallback(
+    (order: string[]) =>
+      setColumnOrder(mergeVisibleColumnOrder(fullColumnOrder, order)),
+    [fullColumnOrder, setColumnOrder]
+  );
+
+  const renames = state.columnRenameMapping;
+  const labelOf = useCallback(
+    (columnId: string) => getColumnLabel(columnId, renames),
+    [renames]
+  );
+
+  const groupedBy = grouping[0];
+  const allShownGroupsExpanded = table
+    .getRowModel()
+    .rows.filter((row) => row.getIsGrouped())
+    .every((row) => groupExpansion.isGroupExpanded(row.id));
+  const opaqueBackground = background
+    ? `linear-gradient(${background}, ${background}), #fff`
+    : "#fff";
 
   return (
-    <div
-      style={{ background }}
-      className="bg-opacity-25 max-w-full overflow-x-auto border rounded-md"
-      data-cy="dashboard-widget-alerts-table"
-    >
+    <div className="flex flex-col gap-1">
+      {groupedBy && (
+        <div
+          className="flex items-center gap-2 text-xs"
+          data-cy="dashboard-widget-alerts-table-toolbar"
+        >
+          <span
+            className="inline-flex items-center gap-1 rounded-full border border-orange-300 bg-orange-50 px-2 py-0.5 text-orange-800"
+            data-cy="dashboard-widget-alerts-table-grouping"
+          >
+            Rows grouped by {labelOf(groupedBy)}
+            {isEditMode && state.canEdit && (
+              <button
+                type="button"
+                aria-label="Clear grouping"
+                className="text-orange-700 hover:text-orange-900"
+                onClick={() => state.setGrouping([])}
+              >
+                <XMarkIcon className="h-3 w-3" />
+              </button>
+            )}
+          </span>
+          <button
+            type="button"
+            className="text-orange-700 hover:underline"
+            onClick={
+              allShownGroupsExpanded
+                ? groupExpansion.collapseAll
+                : groupExpansion.expandAll
+            }
+          >
+            {allShownGroupsExpanded ? "Collapse all" : "Expand all"}
+          </button>
+        </div>
+      )}
       <div
-        style={{ gridTemplateColumns }}
-        className="grid min-w-fit px-2"
+        ref={wrapperRef}
+        style={
+          {
+            background,
+            "--widget-opaque-bg": opaqueBackground,
+          } as CSSProperties
+        }
+        className={`isolate max-w-full overflow-x-auto border rounded-md text-xs ${OPAQUE_CELL_CLASSES} ${COMPACT_GROUP_HEADER_CLASSES}`}
+        data-cy="dashboard-widget-alerts-table"
       >
-        {renderHeaders()}
-        {renderTableBody()}
+        <Table
+          ref={tableRef}
+          style={
+            layout.tableWidth === undefined
+              ? undefined
+              : { width: layout.tableWidth }
+          }
+          className="[&>table]:table-fixed [&>table]:w-full [&>table]:text-xs"
+        >
+          <AlertsTableHeaders
+            columns={layoutColumns}
+            table={table}
+            presetName={widgetKey}
+            a11yContainerRef={a11yContainerRef}
+            columnTimeFormats={NO_FORMATS}
+            setColumnTimeFormats={noop}
+            columnListFormats={NO_FORMATS}
+            setColumnListFormats={noop}
+            columnOrder={visibleColumnOrder}
+            setColumnOrder={setVisibleColumnOrder}
+            columnVisibility={state.columnVisibility}
+            setColumnVisibility={state.setColumnVisibility}
+            columnRenameMapping={renames}
+            setColumnRenameMapping={state.setColumnRenameMapping}
+            interactive={isEditMode && !!onChange && !isNarrow}
+            showSortItems={false}
+            showFormatItems={false}
+            getOriginalColumnName={getColumnLabel}
+          />
+          <AlertsTableBody
+            table={table}
+            showSkeleton={!alerts}
+            pageSize={SKELETON_ROWS}
+            theme={NO_THEME}
+            lastViewedAlert={null}
+            presetName={widgetKey}
+            groupExpansionState={groupExpansion}
+            rowAppearance="plain"
+            selectable={false}
+            showIncidentDetails
+            linksDisabled={isEditMode}
+            getColumnLabel={labelOf}
+            inert={isEditMode}
+          />
+        </Table>
+        <div ref={a11yContainerRef} className="sr-only" />
       </div>
+      {isEditMode &&
+        state.canEdit &&
+        settingsSlot &&
+        createPortal(
+          <WidgetTableSettings
+            state={state}
+            columnIds={allColumnIds}
+            columnWidths={getColumnWidths(table, columnBounds, tableRef)}
+            isGroupable={isGroupable}
+          />,
+          settingsSlot
+        )}
     </div>
   );
-};
+}
 
-export default WidgetAlertsTable;
+/**
+ * The dashboard Alert Table widget: the widget's loaded alerts rendered with the
+ * presets-page table parts, using the columns, order, names, widths and grouping
+ * saved on the widget.
+ *
+ * Header controls show only in edit mode with `onChange`, and not on a narrow
+ * widget. Rows are plain, not clickable and always at the default density.
+ * Expand all / Collapse all reads the groups shown now, so a regrouping or a
+ * refresh that drops a collapsed group does not leave it stale. A grouping
+ * change from the table is resolved against the grouping the table shows, so
+ * a saved `groupBy` it cannot use is replaced, not kept.
+ * In edit mode with `onChange`, the ⚙ Table settings button is rendered into
+ * `settingsSlot` (an element the caller places in its header), at every width;
+ * its column widths are the rendered ones and its Auto-fit measures this table.
+ *
+ * Once the widget's width is measured, the table is laid out by
+ * `getWidgetColumnLayout`: every column renders at exactly its own width (a
+ * saved width even past the column's maximum, so widening a column never
+ * narrows it), the flexible text column takes any spare width so the table
+ * fills the widget, and columns that do not fit scroll sideways. The width
+ * the table's collapsed outer borders add (an incident group's colored edge)
+ * is measured and left free, so a table that fits never scrolls.
+ *
+ * In edit mode the table body is `inert`: none of its links, rows or group
+ * headers can be clicked or focused, so nothing in it navigates or reaches the
+ * dashboard's leave guard as a link click. The headers, the grouping chip,
+ * Expand all / Collapse all and the ⚙ panel (in `settingsSlot`) sit outside it
+ * and keep working; a single group can't be toggled while editing.
+ */
+export default function WidgetAlertsTable(props: WidgetAlertsTableProps) {
+  return (
+    <RowStyleOverrideProvider value="default">
+      <WidgetAlertsTableContent {...props} />
+    </RowStyleOverrideProvider>
+  );
+}

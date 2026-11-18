@@ -100,4 +100,19 @@ describe("stripForeignTypeFields", () => {
     expect(result).not.toHaveProperty("customLink");
     expect(result).not.toHaveProperty("countBy");
   });
+
+  it("keeps alertTable only for preset widgets", () => {
+    const configured = {
+      ...presetWidget,
+      alertTable: { groupBy: "incident", columnOrder: ["name"] },
+    } as unknown as WidgetData;
+
+    expect(stripForeignTypeFields(configured, WidgetType.PRESET)).toHaveProperty(
+      "alertTable",
+      configured.alertTable
+    );
+    expect(stripForeignTypeFields(configured, WidgetType.HTML)).not.toHaveProperty(
+      "alertTable"
+    );
+  });
 });
