@@ -63,11 +63,14 @@ describe("QuickActionTray", () => {
     ]);
   });
 
-  it("hides Link for an alert in a live incident", () => {
+  it("offers Link for an alert already in a live incident", () => {
     render(<QuickActionTray alert={inIncident} onOpen={onOpen} />);
-    expect(
-      screen.queryByRole("button", { name: /Link to incident/ })
-    ).toBeNull();
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: `Link to incident: ${inIncident.name}`,
+      })
+    );
+    expect(onOpen).toHaveBeenCalledWith("link-incident", [inIncident], null);
   });
 
   it("hides Dismiss for a suppressed alert", () => {

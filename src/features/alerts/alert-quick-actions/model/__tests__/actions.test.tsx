@@ -63,7 +63,7 @@ describe("ALERT_QUICK_ACTIONS", () => {
       ALERT_QUICK_ACTIONS.map((a) => [a.label, a.partialLabel(3), a.bulk])
     ).toEqual([
       ["Change Status", "Change Status", true],
-      ["Link to incident", "Link 3 to incident", true],
+      ["Link to incident", "Link to incident", true],
       ["Dismiss", "Dismiss 3", true],
     ]));
 
@@ -77,7 +77,7 @@ describe("ALERT_QUICK_ACTIONS", () => {
       )
     ).toBe(true));
 
-  it("offers Link only without a live incident", () => {
+  it("offers Link for every alert, even one already in a live incident", () => {
     const link = getQuickAction("link-incident")!;
     expect(link.appliesTo(alert({}))).toBe(true);
     expect(
@@ -86,7 +86,7 @@ describe("ALERT_QUICK_ACTIONS", () => {
           incident_dto: [{ id: "i", is_candidate: false, status: "firing" }],
         })
       )
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it("hides Dismiss for suppressed alerts", () => {

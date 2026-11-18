@@ -23,7 +23,7 @@ Entry points on the widget's rows that open the presets page's own dialogs, for 
 |---|---|---|---|
 | Change Status | ✓ | ✓ | `AlertChangeStatusModal` (status picker, "Keeping/Disposing on new alerts", note) |
 | Dismiss | ✓ | ✓ | `AlertDismissModal` (Dismiss Forever / Dismiss Until, comment required, "Keeping/Disposing on new alerts") |
-| Link to incident (alerts with no live incident only) | ✓ | ✓ | `AlertAssociateIncidentModal` (pick an active incident or create a new one) |
+| Link to incident (every alert, as on the presets page) | ✓ | ✓ | `AlertAssociateIncidentModal` (pick an active incident or create a new one) |
 
 Selection works per row, per group (when the widget groups rows, from PR #110) and for all rows shown.
 
@@ -82,7 +82,7 @@ A small floating tray appears at the right end of the hovered row, over the last
 ```
 
 - Labels and icons match the presets page's row menu ("Change Status", "Dismiss"). For linking, the presets page says "Correlate Incident" (row menu) and "Associate with incident" (bulk bar); the widget uses "Link to incident", as in the approved mock.
-- Buttons show only when they apply to that alert (registry `appliesTo`): Change Status always; Link to incident only when the alert has no live incident (definition below); Dismiss unless the alert is already suppressed.
+- Buttons show only when they apply to that alert (registry `appliesTo`): Change Status always; Link to incident always, like the presets page's Correlate Incident (changed 2026-11-18, below); Dismiss unless the alert is already suppressed.
 - The tray also appears when anything in the row has keyboard focus.
 - A click opens the action's dialog for that one alert. While the dialog is open the row stays highlighted.
 - When a dialog opened with the mouse closes, by any means, Esc included, its button loses the focus the dialog hands back, so the tray hides once the pointer leaves the row. A dialog opened from the keyboard returns focus to its button as usual. Strip buttons behave the same way.
@@ -106,7 +106,7 @@ While anything is ticked, the widget's "Alerts count: showing N out of M · Go t
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
-- An action shows when at least one ticked alert passes its `appliesTo`, and opens its dialog for the ticked alerts that pass. When some ticked alerts are left out, the button says how many go in ("Link 3 to incident", "Dismiss 2"), since the dialogs themselves do not report skipped alerts.
+- An action shows when at least one ticked alert passes its `appliesTo`, and opens its dialog for the ticked alerts that pass. When some ticked alerts are left out, the button says how many go in ("Dismiss 2"), since the dialogs themselves do not report skipped alerts.
 - Clear unticks everything. A successful dialog also clears the selection. Either way the count line comes back. Cancelling a dialog keeps the selection.
 - Esc with no dialog open clears the selection. (Inside a dialog, Esc behaves as the dialog does today.)
 
@@ -120,7 +120,7 @@ Each action opens the presets page's dialog component as is, with the same props
 
 Every rule, default, validation, request and success or error toast is the dialog's own. The widget only adds what happens after success (below).
 
-**"No live incident"** (my call) uses the same rule as the widget's "+ N alerts not in an incident" count line on dev (gateway `src/repositories/alerts.py`, the missing-count query): an alert counts as having an incident only if it is linked to a visible incident that is neither a candidate nor deleted. `incident_dto` on the alert lists every link, including deleted and candidate incidents, so the client must apply this rule rather than test `incident_dto.length`. #110's "No incident" group uses the raw links and can differ for alerts whose only incident was deleted; that is #110's to align, noted for its owner.
+**Link to incident applies to every alert** (changed 2026-11-18 after QA). The first version offered it only for alerts with no live incident (the "+ N alerts not in an incident" rule). The presets page offers Correlate Incident on every alert, so an alert can be linked to several incidents there; the widget now behaves the same.
 
 ### After a dialog succeeds
 
@@ -153,7 +153,7 @@ Order in the registry is the order on screen. The three entries this round: Chan
 ## Where the code goes
 
 - **New feature module** `src/features/alerts/alert-quick-actions/` (FSD feature layer, so the presets page could adopt it later):
-  - `model/` — the registry with its three entries (each a thin adapter over the existing dialog), the "no live incident" rule, and a hook that refreshes every alerts query on the page after a success.
+  - `model/` — the registry with its three entries (each a thin adapter over the existing dialog) and a hook that refreshes every alerts query on the page after a success.
   - `ui/` — the row tray, the selection strip, and a dialog host that renders the open action's `Dialog`.
   - `index.ts` barrel.
 - **Widget wiring** in `src/app/(keep)/dashboard/widget-types/preset/`:
@@ -168,8 +168,8 @@ Order in the registry is the order on screen. The three entries this round: Chan
 
 ## Testing
 
-- Jest/RTL unit tests for the registry entries: `appliesTo` (including the "no live incident" rule against deleted and candidate incidents), and that each adapter passes the right props to its dialog (single alert vs array, preset name, success callback).
-- Component tests for the widget: tray appears on hover/focus and hides in selection mode; header and group checkboxes (none/some/all); shift-click range across groups; selection pruned when a refreshed list drops a row; strip replaces the count line and shows "Link 3 to incident" when some ticked alerts are skipped; Cancel keeps the selection, success clears it and refreshes; Esc clears the selection; nothing actionable in edit mode.
+- Jest/RTL unit tests for the registry entries: `appliesTo` (Link to incident also for an alert already in a live incident), and that each adapter passes the right props to its dialog (single alert vs array, preset name, success callback).
+- Component tests for the widget: tray appears on hover/focus and hides in selection mode; header and group checkboxes (none/some/all); shift-click range across groups; selection pruned when a refreshed list drops a row; strip replaces the count line and shows "Dismiss 2" when some ticked alerts are skipped, and "Link to incident" with every ticked alert; Cancel keeps the selection, success clears it and refreshes; Esc clears the selection; nothing actionable in edit mode.
 - Guard: no diff in the three dialog folders against the base branch.
 - Browser check on a local stack (noauth, keep-workflows `WATCHER=true`): change one alert's status from the tray and several from the strip; dismiss forever and until a time, in a preset that hides suppressed alerts and in one that does not; link the "No incident" group to an existing and to a new incident; with exactly one critical firing alert across the dashboard's noisy presets, acknowledging it stops the sound; the presets page's dialogs and table behave as before.
 - Gates: `npm run typecheck`, `npm run lint`, the touched jest suites. The sanity suite's alert checks (change status, dismiss, incidents) must stay green.
@@ -179,11 +179,14 @@ Order in the registry is the order on screen. The three entries this round: Chan
 Decided by the user (2026-11-16):
 - Option C's entry points over A's ⋯ menu.
 - Bulk selection, kept invisible until used.
-- Group selection, and Link to incident for alerts with no incident.
+- Group selection, and Link to incident for alerts with no incident (changed 2026-11-18, below).
 - This set of actions only, built so more can be added on demand.
 - No Undo.
 - Every action opens the presets page's dialog exactly; no one-click actions, no new forms, existing logic and defaults, no backend change.
 - Production runs the keep-workflows watcher.
+
+Changed by the user (2026-11-18, after QA):
+- Link to incident applies to every alert, like the presets page's Correlate Incident. The "no live incident" rule is dropped.
 
 My calls, open to change:
 - The tray and strip say "Change Status" (one button, as on the presets page) rather than separate Ack / Resolve buttons. Separate buttons would need the dialog to accept a pre-picked status, which is a change to the dialog.
@@ -193,7 +196,6 @@ My calls, open to change:
 - Dismiss is hidden for already-suppressed alerts (Restore is a later entry).
 - The strip button shows a count when some ticked alerts are left out.
 - Esc clears the selection when no dialog is open.
-- "No live incident" follows the count-by "not in an incident" rule.
 - No drag-to-select in the widget.
 
 ## Left to the builder

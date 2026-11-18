@@ -6,7 +6,6 @@ import {
   DismissDialog,
   LinkIncidentDialog,
 } from "../ui/action-dialogs";
-import { hasLiveIncident } from "./has-live-incident";
 import { WidgetAlertAction } from "./types";
 
 /** The Alert Table widget's quick actions, in screen order. */
@@ -23,9 +22,9 @@ export const ALERT_QUICK_ACTIONS: readonly WidgetAlertAction[] = [
   {
     id: "link-incident",
     label: "Link to incident",
-    partialLabel: (count) => `Link ${count} to incident`,
+    partialLabel: () => "Link to incident",
     icon: LinkIcon,
-    appliesTo: (alert) => !hasLiveIncident(alert),
+    appliesTo: () => true,
     bulk: true,
     Dialog: LinkIncidentDialog,
   },

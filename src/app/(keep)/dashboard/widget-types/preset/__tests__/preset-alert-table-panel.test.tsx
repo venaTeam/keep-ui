@@ -581,12 +581,13 @@ describe("PresetAlertTablePanel quick actions", () => {
       incident_dto: [{ id: "i1", is_candidate: false, status: "firing" }],
     }) as unknown as AlertDto;
 
+  const asSuppressed = (base: AlertDto) =>
+    ({ ...base, status: Status.Suppressed }) as AlertDto;
+
   const a1 = alert("a1");
   const a2 = alert("a2");
   const noInc = alert("no-inc");
   const inInc = withIncident(alert("in-inc"));
-  const noInc1 = alert("n1");
-  const noInc2 = alert("n2");
   const item = buildItem();
   const preset = { id: "p1", name: "feed" } as unknown as Preset;
 
@@ -713,16 +714,29 @@ describe("PresetAlertTablePanel quick actions", () => {
   });
 
   it("opens the dialog with the strip's eligible alerts", () => {
+    renderWithAlerts([a1, asSuppressed(a2)]);
+    tick({ [a1.fingerprint]: true, [a2.fingerprint]: true });
+
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss 1" }));
+
+    expect(mockHostProps!.open).toEqual({
+      actionId: "dismiss",
+      alerts: [a1],
+    });
+    expect(mockHostProps!.presetName).toBe("feed");
+  });
+
+  it("links every ticked alert, including those already in an incident", () => {
     renderWithAlerts([noInc, inInc]);
     tick({ [noInc.fingerprint]: true, [inInc.fingerprint]: true });
 
-    fireEvent.click(screen.getByRole("button", { name: "Link 1 to incident" }));
+    expect(screen.queryByRole("button", { name: /^Link \d/ })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Link to incident" }));
 
     expect(mockHostProps!.open).toEqual({
       actionId: "link-incident",
-      alerts: [noInc],
+      alerts: [noInc, inInc],
     });
-    expect(mockHostProps!.presetName).toBe("feed");
   });
 
   it("keeps the selection when the dialog is cancelled", () => {
@@ -929,16 +943,14 @@ describe("PresetAlertTablePanel quick actions", () => {
   });
 
   it("recomputes eligibility from refreshed alerts", () => {
-    const { rerender } = renderWithAlerts([noInc1, noInc2]);
-    tick({ [noInc1.fingerprint]: true, [noInc2.fingerprint]: true });
-    expect(
-      screen.getByRole("button", { name: "Link to incident" })
-    ).toBeInTheDocument();
+    const { rerender } = renderWithAlerts([a1, a2]);
+    tick({ [a1.fingerprint]: true, [a2.fingerprint]: true });
+    expect(screen.getByRole("button", { name: "Dismiss" })).toBeInTheDocument();
 
-    rerenderWithAlerts(rerender, [withIncident(noInc1), noInc2]);
+    rerenderWithAlerts(rerender, [asSuppressed(a1), a2]);
 
     expect(
-      screen.getByRole("button", { name: "Link 1 to incident" })
+      screen.getByRole("button", { name: "Dismiss 1" })
     ).toBeInTheDocument();
   });
 });
