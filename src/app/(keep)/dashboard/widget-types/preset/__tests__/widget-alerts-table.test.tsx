@@ -1920,6 +1920,22 @@ describe("WidgetAlertsTable", () => {
       ]);
     });
 
+    it("offers Link to incident on a row already in an incident", () => {
+      renderHarness({ alerts: [inInc1] });
+
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: `Link to incident: ${inInc1.name}`,
+        })
+      );
+
+      expect(onOpenAction).toHaveBeenCalledWith(
+        "link-incident",
+        [inInc1],
+        null
+      );
+    });
+
     it("pins the gutter left and the tray column right", () => {
       renderHarness({ alerts: [a1] });
 

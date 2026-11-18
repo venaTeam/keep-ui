@@ -69,15 +69,32 @@ describe("SelectionStrip", () => {
   it("says how many go in when some are skipped, and opens with only those", () => {
     render(
       <SelectionStrip
-        alerts={[noInc1, noInc2, noInc3, inIncident]}
+        alerts={[noInc1, suppressed, noInc2, noInc3]}
         onOpen={onOpen}
         onClear={onClear}
       />
     );
-    fireEvent.click(screen.getByRole("button", { name: "Link 3 to incident" }));
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss 3" }));
+    expect(onOpen).toHaveBeenCalledWith(
+      "dismiss",
+      [noInc1, noInc2, noInc3],
+      null
+    );
+  });
+
+  it("links every ticked alert, including those already in an incident", () => {
+    render(
+      <SelectionStrip
+        alerts={[noInc1, inIncident, noInc2, noInc3]}
+        onOpen={onOpen}
+        onClear={onClear}
+      />
+    );
+    expect(screen.queryByRole("button", { name: /^Link \d/ })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Link to incident" }));
     expect(onOpen).toHaveBeenCalledWith(
       "link-incident",
-      [noInc1, noInc2, noInc3],
+      [noInc1, inIncident, noInc2, noInc3],
       null
     );
   });
