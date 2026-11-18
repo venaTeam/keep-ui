@@ -127,11 +127,14 @@ export class AlertsApi extends HttpClient {
   }
 
   dismiss(fingerprint: string, mode: DismissMode, until?: string): Promise<void> {
+    // Same body as the UI's dismiss modal: the dismiss columns only. Suppression is
+    // derived from them on read; sending status "suppressed" as well would store it
+    // as the alert's own status, and the alert would stay suppressed after a
+    // dismiss-until lapses.
     const enrichments: Record<string, unknown> =
       mode === "permanent"
-        ? { status: "suppressed", dismiss_mode: "permanent", dismissed: true }
+        ? { dismiss_mode: "permanent" }
         : {
-            status: "suppressed",
             dismiss_mode: "dismiss_until",
             dismissed_until: until ?? new Date(Date.now() + 3_600_000).toISOString(),
           };
