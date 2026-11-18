@@ -9,8 +9,13 @@ import {
   getRowClassName,
   getCellClassName,
 } from "@/widgets/alerts-table/lib/alert-table-utils";
+import {
+  RowAppearance,
+  applyRowAppearance,
+} from "@/widgets/alerts-table/lib/row-appearance";
 import { useExpandedRows } from "@/utils/hooks/useExpandedRows";
 import { useGroupExpansion } from "@/utils/hooks/useGroupExpansion";
+import { useRingingRows } from "@/widgets/alerts-table/lib/alert-ringing";
 import clsx from "clsx";
 import "react-loading-skeleton/dist/skeleton.css";
 import { SelectableGroup } from "react-selectable-fast";
@@ -21,10 +26,28 @@ interface Props {
   showSkeleton: boolean;
   pageSize?: number;
   theme: { [key: string]: string };
-  onRowClick: (alert: AlertDto) => void;
+  onRowClick?: (alert: AlertDto) => void;
   lastViewedAlert: string | null;
   presetName: string;
   groupExpansionState?: ReturnType<typeof useGroupExpansion>;
+  presetNoisy?: boolean;
+  rowAppearance?: RowAppearance;
+  /**
+   * Shows the selection checkbox on group header rows when the table has a
+   * `checkbox` column. Defaults to true.
+   */
+  selectable?: boolean;
+  /**
+   * Wraps rows in the mouse drag-to-select group. Defaults to the value of
+   * `selectable`, so the presets page keeps drag-select.
+   */
+  dragSelectable?: boolean;
+  /** Extra class names for the group header rows' selection checkbox. */
+  groupCheckboxClassName?: string;
+  showIncidentDetails?: boolean;
+  linksDisabled?: boolean;
+  getColumnLabel?: (columnId: string) => string;
+  inert?: boolean;
 }
 
 export function AlertsTableBody({
@@ -36,8 +59,19 @@ export function AlertsTableBody({
   presetName,
   pageSize,
   groupExpansionState,
+  presetNoisy = false,
+  rowAppearance = "default",
+  selectable = true,
+  dragSelectable,
+  groupCheckboxClassName,
+  showIncidentDetails = false,
+  linksDisabled = false,
+  getColumnLabel,
+  inert,
 }: Props) {
+  const dragSelect = dragSelectable ?? selectable;
   const [rowStyle] = useAlertRowStyle();
+  const ringingRow = useRingingRows(presetNoisy);
   const { isRowExpanded } = useExpandedRows(presetName);
 
   // Use provided groupExpansionState or create a local one
@@ -88,6 +122,10 @@ export function AlertsTableBody({
   };
 
   const handleRowClick = (e: React.MouseEvent, alert: AlertDto) => {
+    if (!onRowClick) {
+      return;
+    }
+
     // Only prevent clicks on specific interactive elements
     const target = e.target as HTMLElement;
     const clickableElements = target.closest(
@@ -110,31 +148,37 @@ export function AlertsTableBody({
 
   if (showSkeleton) {
     return (
-      <TableBody data-cy="alerts-table-body">
+      <TableBody data-cy="alerts-table-body" inert={inert}>
         {Array.from({ length: pageSize || 20 }).map((_, index) => (
           <TableRow
             key={index}
             data-cy="alerts-row-skeleton"
-            className={getRowClassName(
-              { id: index.toString(), original: {} as AlertDto },
-              theme,
-              lastViewedAlert,
-              rowStyle
+            className={applyRowAppearance(
+              getRowClassName(
+                { id: index.toString(), original: {} as AlertDto },
+                theme,
+                lastViewedAlert,
+                rowStyle
+              ),
+              rowAppearance
             )}
           >
-            {Array.from({ length: 7 }).map((_, cellIndex) => (
+            {table.getVisibleLeafColumns().map((_, cellIndex) => (
               <TableCell
                 key={cellIndex}
-                className={getCellClassName(
-                  {
-                    column: {
-                      id: cellIndex.toString(),
-                      columnDef: { meta: { tdClassName: "" } },
+                className={applyRowAppearance(
+                  getCellClassName(
+                    {
+                      column: {
+                        id: cellIndex.toString(),
+                        columnDef: { meta: { tdClassName: "" } },
+                      },
                     },
-                  },
-                  "",
-                  rowStyle,
-                  false
+                    "",
+                    rowStyle,
+                    false
+                  ),
+                  rowAppearance
                 )}
               >
                 <div className="h-4 bg-gray-200 rounded animate-pulse mx-0.5" />
@@ -151,8 +195,181 @@ export function AlertsTableBody({
   // And in order to mitigate this issue, we append the rowIndex to the key for duplicated keys
   const visitedIds = new Set<string>();
 
+  const rows = table.getExpandedRowModel().rows.map((row, rowIndex) => {
+    let renderingKey = row.id;
+
+    if (visitedIds.has(renderingKey)) {
+      renderingKey = `${renderingKey}-${rowIndex}`;
+    } else {
+      visitedIds.add(renderingKey);
+    }
+
+    if (row.getIsGrouped()) {
+      return (
+        <GroupedRow
+          key={renderingKey}
+          row={row}
+          table={table}
+          theme={theme}
+          onRowClick={handleRowClick}
+          lastViewedAlert={lastViewedAlert}
+          rowStyle={rowStyle}
+          isExpanded={isGroupExpanded(row.id)}
+          onToggleExpanded={toggleGroup}
+          onGroupInitialized={initializeGroup}
+          showIncidentDetails={showIncidentDetails}
+          linksDisabled={linksDisabled}
+          getColumnLabel={getColumnLabel}
+          rowAppearance={rowAppearance}
+          selectable={selectable}
+          presetNoisy={presetNoisy}
+          checkboxClassName={groupCheckboxClassName}
+        />
+      );
+    }
+
+    const isLastViewed = row.original.fingerprint === lastViewedAlert;
+    const expanded = isRowExpanded(row.original.fingerprint);
+    const ringing = ringingRow(row.original);
+
+    const rowClassName = applyRowAppearance(
+      clsx(
+        "group/row",
+        // Using tailwind classes for expanded rows instead of a custom class
+        expanded ? "!h-auto min-h-12" : null,
+        getRowClassName(row, theme, lastViewedAlert, rowStyle, expanded)
+      ),
+      rowAppearance
+    );
+
+    const cells = row.getVisibleCells().map((cell, cellIndex, visibleCells) => {
+      const { style, className } = getCommonPinningStylesAndClassNames(
+        cell.column
+      );
+      const ringingCell = ringing.cellProps(cellIndex, visibleCells.length);
+
+      const isNameCell = cell.column.id === "name";
+      const isDescriptionCell = cell.column.id === "description";
+      const isSourceCell = cell.column.id === "source";
+      const expanded = isRowExpanded(row.original.fingerprint);
+
+      return (
+        <TableCell
+          key={cell.id}
+          ref={ringingCell.ref}
+          data-column-id={cell.column.id}
+          data-cy={`alerts-cell-${cell.column.id}`}
+          className={clsx(
+            applyRowAppearance(
+              clsx(
+                getCellClassName(
+                  cell,
+                  className,
+                  rowStyle,
+                  isLastViewed,
+                  expanded
+                ),
+                // Force padding when expanded but not for source column
+                expanded && !isSourceCell ? "!p-2" : null,
+                // Source cell needs specific treatment when expanded
+                expanded && isSourceCell
+                  ? "!p-1 !w-8 !min-w-8 !max-w-8"
+                  : null,
+                // Name cell specific classes when expanded
+                expanded && isNameCell
+                  ? "!max-w-[180px] w-[180px] !overflow-hidden"
+                  : null,
+                // Description cell specific classes when expanded
+                expanded && isDescriptionCell
+                  ? "!whitespace-pre-wrap !break-words w-auto"
+                  : null
+              ),
+              rowAppearance
+            ),
+            ringingCell.className
+          )}
+          style={{
+            ...style,
+            ...ringingCell.style,
+            // For source cells, enforce fixed width always
+            ...(isSourceCell
+              ? {
+                width: "32px",
+                minWidth: "32px",
+                maxWidth: "32px",
+                padding: 0,
+              }
+              : {}),
+            // For name cells when expanded, use strict fixed width
+            ...(expanded && isNameCell
+              ? {
+                width: "180px",
+                maxWidth: "180px",
+                minWidth: "180px",
+                overflow: "hidden",
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+              }
+              : {}),
+            // For description cells when expanded
+            ...(expanded && isDescriptionCell
+              ? {
+                width: "auto",
+                minWidth: "200px",
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+                overflow: "visible",
+              }
+              : {}),
+          }}
+        >
+          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+          {cellIndex === 0 && ringing.reason}
+        </TableCell>
+      );
+    });
+
+    if (!dragSelect) {
+      return (
+        <TableRow
+          key={renderingKey}
+          className={rowClassName}
+          onClick={(e) => handleRowClick(e, row.original)}
+          data-cy="alerts-row"
+          data-cy-id={row.original.fingerprint}
+          {...ringing.rowProps}
+        >
+          {cells}
+        </TableRow>
+      );
+    }
+
+    return (
+      <SelectableRow
+        key={renderingKey}
+        className={rowClassName}
+        onClick={(e) => handleRowClick(e, row.original)}
+        isSelected={row.getIsSelected()}
+        data-row-id={row.id}
+        data-cy="alerts-row"
+        data-cy-id={row.original.fingerprint}
+        {...ringing.rowProps}
+      >
+        {cells}
+      </SelectableRow>
+    );
+  });
+
+  if (!dragSelect) {
+    return (
+      <TableBody data-cy="alerts-table-body" inert={inert}>
+        {rows}
+      </TableBody>
+    );
+  }
+
   return (
-    <TableBody data-cy="alerts-table-body">
+    <TableBody data-cy="alerts-table-body" inert={inert}>
       {/* @ts-ignore */}
       <SelectableGroup
         ref={selectableGroupRef}
@@ -165,131 +382,7 @@ export function AlertsTableBody({
         ignoreList={['.select-text', '.prevent-row-click', 'button', 'a', 'input']}
         onSelectionFinish={handleSelectionFinish}
       >
-        {table.getExpandedRowModel().rows.map((row, rowIndex) => {
-          let renderingKey = row.id;
-
-          if (visitedIds.has(renderingKey)) {
-            renderingKey = `${renderingKey}-${rowIndex}`;
-          } else {
-            visitedIds.add(renderingKey);
-          }
-
-          if (row.getIsGrouped()) {
-            return (
-              <GroupedRow
-                key={renderingKey}
-                row={row}
-                table={table}
-                theme={theme}
-                onRowClick={handleRowClick}
-                lastViewedAlert={lastViewedAlert}
-                rowStyle={rowStyle}
-                isExpanded={isGroupExpanded(row.id)}
-                onToggleExpanded={toggleGroup}
-                onGroupInitialized={initializeGroup}
-              />
-            );
-          }
-
-          const isLastViewed = row.original.fingerprint === lastViewedAlert;
-          const expanded = isRowExpanded(row.original.fingerprint);
-
-          return (
-            <SelectableRow
-              key={renderingKey}
-              className={clsx(
-                "group/row",
-                // Using tailwind classes for expanded rows instead of a custom class
-                expanded ? "!h-auto min-h-12" : null,
-                getRowClassName(row, theme, lastViewedAlert, rowStyle, expanded)
-              )}
-              onClick={(e) => handleRowClick(e, row.original)}
-              isSelected={row.getIsSelected()}
-              data-row-id={row.id}
-              data-cy="alerts-row"
-              data-cy-id={row.original.fingerprint}
-            >
-              {row.getVisibleCells().map((cell) => {
-                const { style, className } = getCommonPinningStylesAndClassNames(
-                  cell.column,
-                  table.getState().columnPinning.left?.length,
-                  table.getState().columnPinning.right?.length
-                );
-
-                const isNameCell = cell.column.id === "name";
-                const isDescriptionCell = cell.column.id === "description";
-                const isSourceCell = cell.column.id === "source";
-                const expanded = isRowExpanded(row.original.fingerprint);
-
-                return (
-                  <TableCell
-                    key={cell.id}
-                    data-column-id={cell.column.id}
-                    data-cy={`alerts-cell-${cell.column.id}`}
-                    className={clsx(
-                      getCellClassName(
-                        cell,
-                        className,
-                        rowStyle,
-                        isLastViewed,
-                        expanded
-                      ),
-                      // Force padding when expanded but not for source column
-                      expanded && !isSourceCell ? "!p-2" : null,
-                      // Source cell needs specific treatment when expanded
-                      expanded && isSourceCell
-                        ? "!p-1 !w-8 !min-w-8 !max-w-8"
-                        : null,
-                      // Name cell specific classes when expanded
-                      expanded && isNameCell
-                        ? "!max-w-[180px] w-[180px] !overflow-hidden"
-                        : null,
-                      // Description cell specific classes when expanded
-                      expanded && isDescriptionCell
-                        ? "!whitespace-pre-wrap !break-words w-auto"
-                        : null
-                    )}
-                    style={{
-                      ...style,
-                      // For source cells, enforce fixed width always
-                      ...(isSourceCell
-                        ? {
-                          width: "32px",
-                          minWidth: "32px",
-                          maxWidth: "32px",
-                          padding: 0,
-                        }
-                        : {}),
-                      // For name cells when expanded, use strict fixed width
-                      ...(expanded && isNameCell
-                        ? {
-                          width: "180px",
-                          maxWidth: "180px",
-                          minWidth: "180px",
-                          overflow: "hidden",
-                          whiteSpace: "pre-wrap",
-                          wordBreak: "break-word",
-                        }
-                        : {}),
-                      // For description cells when expanded
-                      ...(expanded && isDescriptionCell
-                        ? {
-                          width: "auto",
-                          minWidth: "200px",
-                          whiteSpace: "pre-wrap",
-                          wordBreak: "break-word",
-                          overflow: "visible",
-                        }
-                        : {}),
-                    }}
-                  >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                );
-              })}
-            </SelectableRow>
-          );
-        })}
+        {rows}
       </SelectableGroup>
     </TableBody>
   );

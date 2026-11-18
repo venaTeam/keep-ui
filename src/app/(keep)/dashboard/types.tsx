@@ -79,6 +79,17 @@ export interface IncidentTableWidgetConfig {
   externalLink?: IncidentTableExternalLink;
 }
 
+export type EmptyGroupPosition = "top" | "bottom";
+
+/** Per-widget Alert Table settings. Every key is optional; an absent key means "fall back". */
+export interface AlertTableWidgetConfig {
+  columnOrder?: string[];
+  columnRenameMapping?: Record<string, string>;
+  columnSizing?: Record<string, number>;
+  groupBy?: string | null;
+  emptyGroupPosition?: EmptyGroupPosition;
+}
+
 export enum PresetPanelType {
   ALERT_TABLE = "ALERT_TABLE",
   ALERT_COUNT_PANEL = "ALERT_COUNT_PANEL",
@@ -99,6 +110,8 @@ export interface WidgetData extends LayoutItem {
   showFiringOnly?: boolean;
   customLink?: string;
   countBy?: CountBy;
+  presetColumns?: string[];
+  alertTable?: AlertTableWidgetConfig;
   image?: ImageWidgetConfig;
   html?: HtmlWidgetConfig;
   grafanaPanel?: GrafanaPanelWidgetConfig;

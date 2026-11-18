@@ -15,6 +15,7 @@ export const ACTION_LABELS = [
   "dismiss_alert",
   "create_incident",
   "create_dashboard",
+  "duplicate_dashboard",
   "add_note",
 ] as const;
 

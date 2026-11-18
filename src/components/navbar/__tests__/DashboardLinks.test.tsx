@@ -28,14 +28,40 @@ jest.mock("../DashboardLink", () => ({
   DashboardLink: ({
     dashboard,
     deleteDashboard,
+    duplicateDashboard,
   }: {
     dashboard: { id: string; dashboard_name: string };
     deleteDashboard: (id: string) => void;
+    duplicateDashboard: (id: string) => void;
   }) => (
-    <button onClick={() => deleteDashboard(dashboard.id)}>
-      delete {dashboard.dashboard_name}
-    </button>
+    <>
+      <button onClick={() => deleteDashboard(dashboard.id)}>
+        delete {dashboard.dashboard_name}
+      </button>
+      <button onClick={() => duplicateDashboard(dashboard.id)}>
+        duplicate {dashboard.dashboard_name}
+      </button>
+    </>
   ),
+}));
+
+type MockModalProps = {
+  source: { id: string; dashboard_name: string } | null;
+  existingNames: string[];
+  onClose: () => void;
+};
+let mockModalProps: MockModalProps | null = null;
+
+jest.mock("@/features/dashboard-duplicate", () => ({
+  DuplicateDashboardModal: (props: MockModalProps) => {
+    mockModalProps = props;
+    return props.source ? (
+      <>
+        <div>dialog for {props.source.dashboard_name}</div>
+        <button onClick={props.onClose}>close dialog</button>
+      </>
+    ) : null;
+  },
 }));
 
 const deleteFrom = async (path: string, name: string) => {
@@ -47,6 +73,7 @@ const deleteFrom = async (path: string, name: string) => {
 };
 
 beforeEach(() => {
+  mockModalProps = null;
   mockPush.mockReset();
   mockDelete.mockReset().mockResolvedValue({});
   jest.spyOn(window, "confirm").mockReturnValue(true);
@@ -89,5 +116,45 @@ describe("DashboardLinks delete", () => {
     fireEvent.click(screen.getByText("delete Ops"));
     expect(mockDelete).not.toHaveBeenCalled();
     expect(mockPush).not.toHaveBeenCalled();
+  });
+});
+
+describe("DashboardLinks duplicate", () => {
+  it("opens the duplicate dialog for the clicked dashboard", () => {
+    mockDashboards = [
+      { id: "d1", dashboard_name: "Ops" },
+      { id: "d2", dashboard_name: "Infra" },
+    ];
+    render(<DashboardLinks />);
+    expect(screen.queryByText(/dialog for/)).toBeNull();
+    fireEvent.click(screen.getByText("duplicate Ops"));
+    expect(screen.getByText("dialog for Ops")).toBeInTheDocument();
+  });
+
+  it("passes every dashboard name as existing names", () => {
+    mockDashboards = [
+      { id: "d1", dashboard_name: "Ops" },
+      { id: "d2", dashboard_name: "Infra" },
+    ];
+    render(<DashboardLinks />);
+    expect(mockModalProps?.existingNames).toEqual(["Ops", "Infra"]);
+  });
+
+  it("keeps the clicked dashboard while the list revalidates", () => {
+    mockDashboards = [{ id: "d1", dashboard_name: "Ops" }];
+    const { rerender } = render(<DashboardLinks />);
+    fireEvent.click(screen.getByText("duplicate Ops"));
+    const opened = mockModalProps?.source;
+    mockDashboards = [{ id: "d1", dashboard_name: "Ops" }];
+    rerender(<DashboardLinks />);
+    expect(mockModalProps?.source).toBe(opened);
+  });
+
+  it("closes the dialog when it asks to close", () => {
+    mockDashboards = [{ id: "d1", dashboard_name: "Ops" }];
+    render(<DashboardLinks />);
+    fireEvent.click(screen.getByText("duplicate Ops"));
+    fireEvent.click(screen.getByText("close dialog"));
+    expect(screen.queryByText(/dialog for/)).toBeNull();
   });
 });
