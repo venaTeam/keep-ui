@@ -268,11 +268,8 @@ export default function IncidentAlerts({ incident }: Props) {
           data-cy-id={row.id}
         >
           {row.getVisibleCells().map((cell, index) => {
-            const { style, className } = getCommonPinningStylesAndClassNames(
-              cell.column,
-              table.getState().columnPinning.left?.length,
-              table.getState().columnPinning.right?.length
-            );
+            const { style, className } =
+              getCommonPinningStylesAndClassNames(cell.column);
             return (
               <TableCell
                 key={`cell-${cell.id}-${index}`}
@@ -315,11 +312,7 @@ export default function IncidentAlerts({ incident }: Props) {
               >
                 {headerGroup.headers.map((header, index) => {
                   const { style, className } =
-                    getCommonPinningStylesAndClassNames(
-                      header.column,
-                      table.getState().columnPinning.left?.length,
-                      table.getState().columnPinning.right?.length
-                    );
+                    getCommonPinningStylesAndClassNames(header.column);
                   return (
                     <TableHeaderCell
                       key={`header-${header.id}-${index}`}

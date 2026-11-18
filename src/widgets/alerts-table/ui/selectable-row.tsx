@@ -11,6 +11,7 @@ interface Props {
     onMouseEnter?: () => void;
     "data-cy"?: string;
     "data-cy-id"?: string;
+    "data-ringing"?: "true";
 }
 
 const Row = ({
@@ -24,6 +25,7 @@ const Row = ({
     isSelected,
     "data-cy": dataCy,
     "data-cy-id": dataCyId,
+    "data-ringing": dataRinging,
 }: Props & TSelectableItemProps) => {
     return (
         <TableRow
@@ -38,6 +40,10 @@ const Row = ({
             onMouseEnter={onMouseEnter}
             data-cy={dataCy}
             data-cy-id={dataCyId}
+            data-ringing={dataRinging}
+            data-selection={
+                isSelected ? "selected" : isSelecting ? "selecting" : undefined
+            }
         >
             {children}
         </TableRow>

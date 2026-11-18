@@ -21,11 +21,8 @@ export function IncidentAlertsTableBodySkeleton({
         .map((_, index) => (
           <TableRow key={`row-${index}`} data-cy="incidents-alerts-skeleton-row">
             {table.getVisibleFlatColumns().map((column) => {
-              const { style, className } = getCommonPinningStylesAndClassNames(
-                column,
-                table.getState().columnPinning.left?.length,
-                table.getState().columnPinning.right?.length
-              );
+              const { style, className } =
+                getCommonPinningStylesAndClassNames(column);
               return (
                 <TableCell
                   key={`cell-${column.id}-${index}`}

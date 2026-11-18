@@ -15,10 +15,15 @@ import {
 } from "../alert-table-widget-config";
 import { AlertDto, Severity, Status } from "@/entities/alerts/model/types";
 import { useAlertTableCols } from "@/widgets/alerts-table/lib/alert-table-utils";
-import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import {
+  RowSelectionState,
+  getCoreRowModel,
+  useReactTable,
+} from "@tanstack/react-table";
 import { isGroupableColumn } from "../empty-group-row-model";
 import { useWidgetAlertColumns } from "../use-widget-alert-columns";
 import { useConfig } from "@/utils/hooks/useConfig";
+import { RINGING_REASON } from "@/widgets/alerts-table/lib/alert-ringing";
 
 const mockUsePresetColumnState = jest.fn();
 const mockGetAutofitColumnWidth = jest.fn();
@@ -76,6 +81,12 @@ jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: jest.fn() }),
   useSearchParams: () => new URLSearchParams(),
   usePathname: () => "/dashboard/atw",
+}));
+
+jest.mock("@/features/alerts/alert-quick-actions/ui/action-dialogs", () => ({
+  ChangeStatusDialog: () => null,
+  LinkIncidentDialog: () => null,
+  DismissDialog: () => null,
 }));
 
 const baseItem: WidgetData = {
@@ -1718,7 +1729,19 @@ describe("WidgetAlertsTable", () => {
   it("stacks pinned header cells above the resize edges and drop indicator of scrolled columns", () => {
     renderWidget();
 
-    expect(widgetRoot()).toHaveClass("[&_th.sticky]:z-40");
+    const pinnedHeader = screen
+      .getByTestId("header-cell-severity")
+      .closest("th") as HTMLElement;
+    expect(pinnedHeader).toHaveClass("sticky");
+    expect(pinnedHeader.style.zIndex).toBe("1");
+    expect(widgetRoot()).toHaveClass("[&_th.sticky]:!z-40");
+  });
+
+  it("gives every pinned cell, header and body, the same z-index so DOM order decides among them", () => {
+    renderWidget();
+
+    expect(widgetRoot()).toHaveClass("[&_th.sticky]:!z-40", "[&_td.sticky]:!z-40");
+    expect(cellsOf("severity")[0]).toHaveClass("sticky");
   });
 
   it("never reads the preset's per-user column state", () => {
@@ -1740,5 +1763,695 @@ describe("WidgetAlertsTable", () => {
 
     expect(headerIds()).toEqual(["description", "name"]);
     expect(bodyRows()).toHaveLength(2);
+  });
+
+  describe("quick actions", () => {
+    const onOpenAction = jest.fn();
+    const onRowSelectionChange = jest.fn();
+
+    const a1 = alertWith();
+    const a2 = alertWith();
+    const a3 = alertWith();
+    const noInc1 = unlinkedAlert();
+    const noInc2 = unlinkedAlert();
+    const inInc1 = linkedAlert("i1", "Checkout degraded");
+    const inInc2 = linkedAlert("i1", "Checkout degraded");
+    const otherInc1 = linkedAlert("i2", "Payments down");
+
+    type HarnessOptions = {
+      alerts?: AlertDto[];
+      groupBy?: string;
+      isEditMode?: boolean;
+      onChange?: (item: WidgetData) => void;
+      settingsSlot?: HTMLElement;
+      initial?: RowSelectionState;
+      openFingerprint?: string | null;
+    };
+
+    function Harness({
+      alerts = [a1],
+      groupBy,
+      isEditMode = false,
+      onChange,
+      settingsSlot,
+      initial = {},
+      openFingerprint = null,
+    }: HarnessOptions) {
+      const [rowSelection, setRowSelection] =
+        React.useState<RowSelectionState>(initial);
+      return (
+        <>
+          <button type="button" onClick={() => setRowSelection({})}>
+            Clear selection
+          </button>
+          <WidgetAlertsTable
+            item={{
+              ...baseItem,
+              ...(groupBy
+                ? { alertTable: { groupBy, emptyGroupPosition: "top" } }
+                : {}),
+            }}
+            alerts={alerts}
+            isEditMode={isEditMode}
+            onChange={onChange}
+            settingsSlot={settingsSlot}
+            selection={{
+              rowSelection,
+              onRowSelectionChange: (next) => {
+                onRowSelectionChange(next);
+                setRowSelection(next);
+              },
+              onOpenAction,
+              openFingerprint,
+            }}
+          />
+        </>
+      );
+    }
+
+    const renderHarness = (options: HarnessOptions = {}) =>
+      render(<Harness {...options} />);
+
+    const lastSelection = (): RowSelectionState =>
+      onRowSelectionChange.mock.calls.at(-1)?.[0];
+
+    const checkboxFor = (alert: AlertDto) =>
+      screen.getByRole("checkbox", { name: `Select ${alert.name}` });
+
+    const rowFor = (alert: AlertDto) =>
+      document.querySelector(
+        `[data-cy="alerts-row"][data-cy-id="${alert.fingerprint}"]`
+      ) as HTMLElement;
+
+    const fingerprints = (...alerts: AlertDto[]) =>
+      alerts.map((alert) => alert.fingerprint).sort();
+
+    const selectedIds = () => Object.keys(lastSelection()).sort();
+
+    beforeEach(() => {
+      onOpenAction.mockReset();
+      onRowSelectionChange.mockReset();
+    });
+
+    it("adds no gutter, tray or row selection without selection props", () => {
+      render(
+        <WidgetAlertsTable item={baseItem} alerts={[a1]} isEditMode={false} />
+      );
+
+      expect(screen.queryByRole("checkbox")).toBeNull();
+      expect(document.querySelector('[data-column-id="alertMenu"]')).toBeNull();
+      expect(widgetRoot()).not.toHaveClass("quick-actions-table");
+    });
+
+    it("adds nothing actionable in edit mode even with selection props", () => {
+      renderHarness({ isEditMode: true });
+
+      expect(screen.queryByRole("checkbox")).toBeNull();
+      expect(screen.queryByRole("button", { name: /^Dismiss:/ })).toBeNull();
+      expect(widgetRoot()).not.toHaveClass("quick-actions-table");
+    });
+
+    it("renders a row checkbox and the row's tray", () => {
+      renderHarness({ alerts: [a1] });
+
+      expect(checkboxFor(a1)).toBeInTheDocument();
+      expect(checkboxFor(a1)).toHaveClass("quick-reveal", "quick-pick");
+      expect(checkboxFor(a1)).toHaveAttribute("data-cy", "widget-row-checkbox");
+      expect(
+        screen.getByRole("checkbox", { name: "Select all shown alerts" })
+      ).toHaveAttribute("data-cy", "widget-select-all");
+      expect(
+        screen.getByRole("button", { name: `Change Status: ${a1.name}` })
+      ).toBeInTheDocument();
+      expect(widgetRoot()).toHaveClass("quick-actions-table");
+      expect(widgetRoot()).not.toHaveAttribute("data-selecting");
+    });
+
+    const trayButtons = (alert: AlertDto) =>
+      Array.from(
+        rowFor(alert).querySelectorAll<HTMLButtonElement>(
+          '[data-cy^="widget-quick-action-"]'
+        )
+      );
+
+    it("shows icon-only tray buttons on a widget under 640px", () => {
+      observeWidth(600);
+      renderHarness({ alerts: [a1] });
+
+      expect(trayButtons(a1)).toHaveLength(3);
+      expect(trayButtons(a1).map((button) => button.textContent)).toEqual([
+        "",
+        "",
+        "",
+      ]);
+      expect(
+        screen.getByRole("button", { name: `Change Status: ${a1.name}` })
+      ).toHaveAttribute("title", "Change Status");
+    });
+
+    it("shows labelled tray buttons on a wide widget", () => {
+      observeWidth(900);
+      renderHarness({ alerts: [a1] });
+
+      expect(trayButtons(a1).map((button) => button.textContent)).toEqual([
+        "Change Status",
+        "Link to incident",
+        "Dismiss",
+      ]);
+    });
+
+    it("offers Link to incident on a row already in an incident", () => {
+      renderHarness({ alerts: [inInc1] });
+
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: `Link to incident: ${inInc1.name}`,
+        })
+      );
+
+      expect(onOpenAction).toHaveBeenCalledWith(
+        "link-incident",
+        [inInc1],
+        null
+      );
+    });
+
+    it("pins the gutter left and the tray column right", () => {
+      renderHarness({ alerts: [a1] });
+
+      expect(headerIds()[0]).toBe("checkbox");
+      expect(headerIds().at(-1)).toBe("alertMenu");
+      expect(cellsOf("checkbox")[0]).toHaveClass("sticky");
+      expect(cellsOf("alertMenu")[0]).toHaveClass("sticky", "overflow-visible");
+    });
+
+    it("opens an action for one row from its tray", () => {
+      renderHarness({ alerts: [a1] });
+
+      fireEvent.click(
+        screen.getByRole("button", { name: `Dismiss: ${a1.name}` })
+      );
+
+      expect(onOpenAction).toHaveBeenCalledWith("dismiss", [a1], null);
+    });
+
+    it("ticks a row by fingerprint and hides every tray while selecting", () => {
+      renderHarness({ alerts: [a1, a2] });
+
+      fireEvent.click(checkboxFor(a1));
+
+      expect(lastSelection()).toEqual({ [a1.fingerprint]: true });
+      expect(checkboxFor(a1)).toBeChecked();
+      expect(
+        screen.queryByRole("button", { name: /^Change Status:/ })
+      ).toBeNull();
+      expect(widgetRoot()).toHaveAttribute("data-selecting");
+    });
+
+    it("unticking the last row leaves an empty selection with no false values", () => {
+      renderHarness({ alerts: [a1, a2] });
+
+      fireEvent.click(checkboxFor(a1));
+      fireEvent.click(checkboxFor(a1));
+
+      expect(lastSelection()).toEqual({});
+      expect(widgetRoot()).not.toHaveAttribute("data-selecting");
+      expect(
+        screen.getByRole("button", { name: `Change Status: ${a1.name}` })
+      ).toBeInTheDocument();
+    });
+
+    it("selects all shown rows from the header", () => {
+      renderHarness({ alerts: [a1, a2, a3] });
+
+      fireEvent.click(
+        screen.getByRole("checkbox", { name: "Select all shown alerts" })
+      );
+
+      expect(selectedIds()).toEqual(fingerprints(a1, a2, a3));
+      expect(
+        Object.values(lastSelection()).every((value) => value === true)
+      ).toBe(true);
+    });
+
+    it("selects only alert rows from the header when grouped", () => {
+      renderHarness({ alerts: [noInc1, inInc1], groupBy: "incident" });
+
+      fireEvent.click(
+        screen.getByRole("checkbox", { name: "Select all shown alerts" })
+      );
+
+      expect(selectedIds()).toEqual(fingerprints(noInc1, inInc1));
+    });
+
+    it("shift-click ticks the range in display order across groups", () => {
+      renderHarness({
+        alerts: [noInc1, noInc2, inInc1, inInc2],
+        groupBy: "incident",
+      });
+      expect(groupHeaderTexts()[0]).toMatch(/^No incident/);
+
+      fireEvent.click(checkboxFor(noInc1));
+      fireEvent.click(checkboxFor(inInc1), { shiftKey: true });
+
+      expect(selectedIds()).toEqual(fingerprints(noInc1, noInc2, inInc1));
+    });
+
+    it("shift-click unticks the range when the clicked row is ticked", () => {
+      renderHarness({
+        alerts: [a1, a2, a3],
+        initial: {
+          [a1.fingerprint]: true,
+          [a2.fingerprint]: true,
+          [a3.fingerprint]: true,
+        },
+      });
+
+      fireEvent.click(checkboxFor(a1));
+      fireEvent.click(checkboxFor(a2), { shiftKey: true });
+
+      expect(lastSelection()).toEqual({ [a3.fingerprint]: true });
+    });
+
+    it("shift-click after Clear ticks only the clicked row", () => {
+      renderHarness({ alerts: [a1, a2, a3] });
+
+      fireEvent.click(checkboxFor(a1));
+      fireEvent.click(screen.getByRole("button", { name: "Clear selection" }));
+      expect(checkboxFor(a1)).not.toBeChecked();
+      fireEvent.click(checkboxFor(a3), { shiftKey: true });
+
+      expect(lastSelection()).toEqual({ [a3.fingerprint]: true });
+    });
+
+    it("shift-click skips rows of a collapsed group", () => {
+      renderHarness({
+        alerts: [noInc1, inInc1, inInc2, otherInc1],
+        groupBy: "incident",
+      });
+      expect(groupHeaderTexts()[1]).toContain("Checkout degraded");
+
+      fireEvent.click(groupHeader("Checkout degraded"));
+      fireEvent.click(checkboxFor(noInc1));
+      fireEvent.click(checkboxFor(otherInc1), { shiftKey: true });
+
+      expect(selectedIds()).toEqual(fingerprints(noInc1, otherInc1));
+    });
+
+    it("ticks every row of a group from its header checkbox, also when collapsed", () => {
+      renderHarness({ alerts: [noInc1, noInc2, inInc1], groupBy: "incident" });
+      const header = groupHeader("No incident");
+
+      fireEvent.click(header);
+      expect(rowFor(noInc1)).toBeNull();
+      fireEvent.click(within(header).getByRole("checkbox"));
+
+      expect(selectedIds()).toEqual(fingerprints(noInc1, noInc2));
+    });
+
+    it("unticks every row of a fully ticked group from its header checkbox", () => {
+      renderHarness({
+        alerts: [noInc1, noInc2, inInc1],
+        groupBy: "incident",
+        initial: {
+          [noInc1.fingerprint]: true,
+          [noInc2.fingerprint]: true,
+          [inInc1.fingerprint]: true,
+        },
+      });
+      const groupCheckbox = within(groupHeader("No incident")).getByRole(
+        "checkbox"
+      );
+      expect(groupCheckbox).toBeChecked();
+      expect(groupCheckbox).toHaveClass("quick-reveal");
+
+      fireEvent.click(groupCheckbox);
+
+      expect(lastSelection()).toEqual({ [inInc1.fingerprint]: true });
+    });
+
+    it("ticks the rest of a partially ticked group from its header checkbox", () => {
+      renderHarness({
+        alerts: [noInc1, noInc2, inInc1],
+        groupBy: "incident",
+        initial: { [noInc1.fingerprint]: true },
+      });
+
+      fireEvent.click(within(groupHeader("No incident")).getByRole("checkbox"));
+
+      expect(selectedIds()).toEqual(fingerprints(noInc1, noInc2));
+    });
+
+    it("shows the group checkbox as some-selected when part of the group is ticked", () => {
+      renderHarness({
+        alerts: [noInc1, noInc2],
+        groupBy: "incident",
+        initial: { [noInc1.fingerprint]: true },
+      });
+
+      expect(
+        (
+          within(groupHeader("No incident")).getByRole(
+            "checkbox"
+          ) as HTMLInputElement
+        ).indeterminate
+      ).toBe(true);
+    });
+
+    it("marks the row whose dialog is open", () => {
+      renderHarness({ alerts: [a1, a2], openFingerprint: a1.fingerprint });
+
+      expect(rowFor(a1).querySelector("[data-quick-open]")).not.toBeNull();
+      expect(rowFor(a2).querySelector("[data-quick-open]")).toBeNull();
+    });
+
+    it("does not save chrome columns or show them in the ⚙ panel", () => {
+      const slot = document.createElement("div");
+      document.body.appendChild(slot);
+      const onChange = jest.fn();
+      try {
+        renderHarness({
+          alerts: [alertWith({ service: "checkout" })],
+          isEditMode: true,
+          onChange,
+          settingsSlot: slot,
+        });
+
+        expect(headerIds()).not.toContain("checkbox");
+        expect(headerIds()).not.toContain("alertMenu");
+        fireEvent.click(
+          slot.querySelector(
+            '[data-cy="dashboard-widget-table-settings-btn"]'
+          ) as HTMLElement
+        );
+        const columnIds = Array.from(
+          document.querySelectorAll("[data-table-settings-column]")
+        ).map((row) => row.getAttribute("data-table-settings-column"));
+        expect(columnIds).toContain("description");
+        expect(columnIds).not.toContain("checkbox");
+        expect(columnIds).not.toContain("alertMenu");
+
+        fireEvent.click(screen.getByRole("checkbox", { name: "Description" }));
+
+        expect(onChange).toHaveBeenCalledTimes(1);
+        const saved = JSON.stringify(onChange.mock.calls[0][0]);
+        expect(saved).not.toContain('"checkbox"');
+        expect(saved).not.toContain('"alertMenu"');
+      } finally {
+        slot.remove();
+      }
+    });
+
+    describe("table width with the gutter", () => {
+      const widthOf = (columnId: string) =>
+        Number.parseFloat(
+          (
+            screen
+              .getByTestId(`header-cell-${columnId}`)
+              .closest("th") as HTMLElement
+          ).style.width
+        );
+      const tableWidth = () =>
+        (widgetRoot().querySelector("table") as HTMLTableElement).style.width;
+      const totalWidth = () =>
+        headerIds().reduce((sum, id) => sum + widthOf(id), 0);
+      const widthsWithoutGutter = () => {
+        const { unmount } = render(
+          <WidgetAlertsTable item={baseItem} alerts={[a1]} isEditMode={false} />
+        );
+        const widths = {
+          description: widthOf("description"),
+          total: totalWidth(),
+        };
+        unmount();
+        return widths;
+      };
+
+      it("keeps the table exactly as wide as the widget", () => {
+        observeWidth(1200);
+        renderHarness({ alerts: [a1] });
+
+        expect(tableWidth()).toBe("1200px");
+        expect(widthOf("checkbox")).toBe(28);
+        expect(widthOf("alertMenu")).toBe(0);
+        expect(totalWidth()).toBe(1200);
+      });
+
+      it("takes the gutter from description so a widget that fits without it never scrolls", () => {
+        const plain = widthsWithoutGutter();
+
+        observeWidth(plain.total);
+        renderHarness({ alerts: [a1] });
+
+        expect(widthOf("checkbox")).toBe(28);
+        expect(widthOf("description")).toBe(plain.description - 28);
+        expect(tableWidth()).toBe(`${plain.total}px`);
+        expect(totalWidth()).toBe(plain.total);
+      });
+
+      it("scrolls no further than the same widget without the gutter", () => {
+        const plain = widthsWithoutGutter();
+
+        observeWidth(plain.total - 10);
+        renderHarness({ alerts: [a1] });
+
+        expect(widthOf("description")).toBe(plain.description - 28);
+        expect(tableWidth()).toBe(`${plain.total}px`);
+      });
+    });
+  });
+});
+
+describe("WidgetAlertsTable ringing rows", () => {
+  beforeEach(() => {
+    Object.defineProperty(HTMLElement.prototype, "getAnimations", {
+      configurable: true,
+      value: () => [],
+    });
+  });
+
+  afterEach(() => {
+    delete (HTMLElement.prototype as Partial<HTMLElement>).getAnimations;
+  });
+
+  const PULSE = "motion-safe:before:animate-ringing-pulse";
+  const OVERLAY = [
+    "isolate",
+    "before:absolute",
+    "before:inset-0",
+    "before:-z-10",
+    "before:pointer-events-none",
+    "before:border-y-2",
+    "before:bg-[color:var(--blink-row-tint)]",
+    PULSE,
+  ];
+
+  const ringingAlerts = () => [
+    alertWith({ severity: Severity.Critical, service: "checkout" }),
+    alertWith({ severity: 5, service: "checkout" }),
+    alertWith({ severity: "CRITICAL", status: "FIRING", service: "checkout" }),
+    alertWith({ severity: Severity.Critical, status: Status.Resolved }),
+    alertWith({ severity: Severity.High, service: "checkout" }),
+    alertWith({ severity: Severity.Critical, deleted: true }),
+  ];
+
+  const renderRinging = (
+    presetNoisy: boolean | undefined,
+    overrides: Partial<WidgetData> = {},
+    { isEditMode = false }: { isEditMode?: boolean } = {}
+  ) => {
+    const alerts = ringingAlerts();
+    render(
+      <WidgetAlertsTable
+        item={{
+          ...baseItem,
+          presetColumns: ["severity", "status", "source", "name"],
+          ...overrides,
+        }}
+        alerts={alerts}
+        background="rgb(16, 185, 129, 0.1)"
+        presetNoisy={presetNoisy}
+        isEditMode={isEditMode}
+        onChange={isEditMode ? jest.fn() : undefined}
+      />
+    );
+    return alerts;
+  };
+
+  const rowOf = (alert: AlertDto) =>
+    document.querySelector(
+      `[data-cy="alerts-row"][data-cy-id="${alert.fingerprint}"]`
+    ) as HTMLElement;
+
+  const cellsOfRow = (alert: AlertDto) =>
+    Array.from(rowOf(alert).querySelectorAll("td"));
+
+  const expectQuiet = (alert: AlertDto) => {
+    const row = rowOf(alert);
+    expect(row).toBeInTheDocument();
+    expect(row).not.toHaveAttribute("data-ringing");
+    expect(within(row).queryByText(RINGING_REASON)).toBeNull();
+    cellsOfRow(alert).forEach((cell) => {
+      expect(cell).not.toHaveClass(PULSE);
+      expect(cell.style.getPropertyValue("--blink-row-tint")).toBe("");
+    });
+  };
+
+  it("puts the pulse on an overlay behind every cell of a critical firing plain row", () => {
+    const [critical] = renderRinging(true);
+    const row = rowOf(critical);
+    const cells = cellsOfRow(critical);
+
+    expect(row).toHaveAttribute("data-ringing", "true");
+    expect(row).not.toHaveClass("cursor-pointer");
+    expect(row.getAttribute("style")).toBeNull();
+    expect(cells).toHaveLength(4);
+    cells.forEach((cell) => {
+      expect(cell).toHaveClass(...OVERLAY);
+      expect(cell.style.getPropertyValue("--blink-row-tint")).not.toBe("");
+      expect(cell.style.getPropertyValue("--blink-row-edge")).not.toBe("");
+    });
+    expect(cells[0]).toHaveClass("before:border-l-2");
+    expect(cells[cells.length - 1]).toHaveClass("before:border-r-2");
+    cells.slice(1, -1).forEach((cell) => {
+      expect(cell).not.toHaveClass("before:border-l-2");
+      expect(cell).not.toHaveClass("before:border-r-2");
+    });
+    expect(cells[0].firstElementChild).not.toHaveTextContent(RINGING_REASON);
+    expect(cells[0].lastElementChild).toHaveTextContent(RINGING_REASON);
+    expect(cells[0].lastElementChild).toHaveClass("sr-only", "select-none");
+    expect(screen.getAllByText(RINGING_REASON)).toHaveLength(1);
+  });
+
+  it("lets the outline reach both sides of the widget, which has no side padding", () => {
+    const [critical] = renderRinging(true);
+    const cells = cellsOfRow(critical);
+
+    expect(widgetRoot().className).not.toMatch(/(^|\s)p[xlr]?-/);
+    expect(rowOf(critical).firstElementChild).toBe(cells[0]);
+    expect(rowOf(critical).lastElementChild).toBe(cells[cells.length - 1]);
+  });
+
+  it("leaves resolved, non-critical, numeric and upper-case rows as they were", () => {
+    const [, numeric, upperCase, resolved, high] = renderRinging(true);
+
+    [numeric, upperCase, resolved, high].forEach(expectQuiet);
+  });
+
+  it("does not ring a deleted critical firing alert", () => {
+    const [, , , , , deleted] = renderRinging(true);
+
+    expectQuiet(deleted);
+    expect(screen.getAllByText(RINGING_REASON)).toHaveLength(1);
+  });
+
+  it.each([false, undefined])(
+    "rings nothing when the preset's noisy flag is %s",
+    (presetNoisy) => {
+      renderRinging(presetNoisy);
+
+      expect(document.querySelector("[data-ringing]")).toBeNull();
+      expect(
+        document.querySelector(".motion-safe\\:before\\:animate-ringing-pulse")
+      ).toBeNull();
+      expect(screen.queryByText(RINGING_REASON)).toBeNull();
+    }
+  );
+
+  it("rings the child rows of a grouped widget while its group headers stay quiet", () => {
+    const [critical, numeric, , , high] = renderRinging(true, {
+      alertTable: { groupBy: "service" },
+    });
+
+    expect(groupHeaders().length).toBeGreaterThan(1);
+    groupHeaders().forEach((header) =>
+      expect(header).not.toHaveAttribute("data-ringing")
+    );
+    expect(rowOf(critical)).toHaveAttribute("data-ringing", "true");
+    cellsOfRow(critical).forEach((cell) => expect(cell).toHaveClass(...OVERLAY));
+    expectQuiet(numeric);
+    expectQuiet(high);
+  });
+
+  it("rings a collapsed group's header while one of its alerts would, and only that group's", () => {
+    renderRinging(true, { alertTable: { groupBy: "service" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Collapse all" }));
+
+    expect(bodyRows()).toHaveLength(0);
+    const checkout = groupHeader("checkout");
+    const headerCell = checkout.querySelector("td") as HTMLElement;
+    expect(checkout).toHaveAttribute("data-ringing", "true");
+    expect(headerCell).toHaveClass(
+      ...OVERLAY,
+      "before:border-l-2",
+      "before:border-r-2"
+    );
+    expect(within(checkout).getByText(RINGING_REASON)).toHaveClass("sr-only");
+    groupHeaders()
+      .filter((header) => header !== checkout)
+      .forEach((header) => {
+        expect(header).not.toHaveAttribute("data-ringing");
+        expect(within(header).queryByText(RINGING_REASON)).toBeNull();
+      });
+  });
+
+  it("keeps the opaque tint on a ringing row's pinned cells, under the overlay", () => {
+    const [critical] = renderRinging(true);
+
+    expect(widgetRoot()).toHaveClass(
+      "[&_td.sticky]:[background:var(--widget-opaque-bg)]"
+    );
+    expect(widgetRoot().className).not.toContain("[data-ringing]");
+    const pinned = cellsOfRow(critical).slice(0, 3);
+    pinned.forEach((cell) => {
+      expect(cell).toHaveClass("sticky", ...OVERLAY);
+      expect(cell).not.toHaveClass("!bg-inherit");
+    });
+  });
+
+  describe("pulse sync", () => {
+    const synced: Element[] = [];
+
+    beforeEach(() => {
+      synced.length = 0;
+      Object.defineProperty(HTMLElement.prototype, "getAnimations", {
+        configurable: true,
+        value: function (this: HTMLElement) {
+          const element = this;
+          return [
+            {
+              effect: { target: element, pseudoElement: "::before" },
+              set startTime(value: number) {
+                if (value === 0) {
+                  synced.push(element);
+                }
+              },
+            },
+          ];
+        },
+      });
+    });
+
+    it.each([false, true])(
+      "starts every ringing cell's pulse at the page's time zero (edit mode: %s)",
+      (isEditMode) => {
+        const [critical, numeric, , , high, deleted] = renderRinging(
+          true,
+          {},
+          { isEditMode }
+        );
+
+        expect(
+          widgetRoot().querySelector("tbody")!.hasAttribute("inert")
+        ).toBe(isEditMode);
+        expect(synced).toEqual(expect.arrayContaining(cellsOfRow(critical)));
+        [numeric, high, deleted].forEach((alert) =>
+          cellsOfRow(alert).forEach((cell) =>
+            expect(synced).not.toContain(cell)
+          )
+        );
+      }
+    );
   });
 });

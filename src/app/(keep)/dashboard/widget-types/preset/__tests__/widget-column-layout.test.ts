@@ -28,13 +28,15 @@ const DEFAULT_TOTAL = 2 + 36 + 44 + 100 + 100 + 80;
 const layout = (
   containerWidth: number | null,
   savedSizing: Record<string, number> = {},
-  visibleOrder: string[] = DEFAULT_ORDER
+  visibleOrder: string[] = DEFAULT_ORDER,
+  shrinkAllowance?: number
 ) =>
   getWidgetColumnLayout({
     columns: COLUMNS,
     visibleOrder,
     savedSizing,
     containerWidth,
+    shrinkAllowance,
   });
 
 describe("getColumnSize", () => {
@@ -267,6 +269,68 @@ describe("getWidgetColumnLayout", () => {
       expect(renderedWidth(result, "description")).toBe(1600 - 100 - 80);
     });
   });
+
+  describe("with a shrink allowance", () => {
+    it("lets the flexible column give up width below its minimum so the table fits", () => {
+      const result = layout(DEFAULT_TOTAL - 20, {}, DEFAULT_ORDER, 28);
+
+      expect(result.columnSizing).toEqual({ description: 80 });
+      expect(result.tableWidth).toBe(DEFAULT_TOTAL - 20);
+      expect(result.shrunkColumnId).toBe("description");
+      expect(result.unclampedColumnIds).toEqual([]);
+    });
+
+    it("a squeezed flexible column given a saved width goes back to its minimum, at most the allowance wider, and the table still fits", () => {
+      const squeezed = layout(DEFAULT_TOTAL - 20, {}, DEFAULT_ORDER, 28);
+      const dragged = layout(
+        DEFAULT_TOTAL - 20,
+        { description: 76 },
+        DEFAULT_ORDER,
+        28
+      );
+
+      const before = squeezed.columnSizing.description;
+      const after = getColumnSize(COLUMNS[4], dragged.columnSizing.description);
+      expect(before).toBe(80);
+      expect(after).toBe(100);
+      expect(after - before).toBeLessThanOrEqual(28);
+      expect(dragged.shrunkColumnId).toBe("name");
+      expect(dragged.columnSizing.name).toBe(80);
+      expect(dragged.tableWidth).toBe(DEFAULT_TOTAL - 20);
+    });
+
+    it("gives up no more than the allowance and overflows by the rest", () => {
+      const result = layout(DEFAULT_TOTAL - 40, {}, DEFAULT_ORDER, 28);
+
+      expect(result.columnSizing).toEqual({ description: 72 });
+      expect(result.tableWidth).toBe(DEFAULT_TOTAL - 28);
+    });
+
+    it("never shrinks the flexible column under the table's default minimum", () => {
+      const result = getWidgetColumnLayout({
+        columns: [
+          { id: "status", size: 36, minSize: 36, maxSize: 36 },
+          { id: "tag", size: 30, minSize: 30 },
+        ],
+        visibleOrder: ["status", "tag"],
+        savedSizing: {},
+        containerWidth: 36 + 30 - 28,
+        shrinkAllowance: 28,
+      });
+
+      expect(result.columnSizing).toEqual({ tag: 20 });
+      expect(result.tableWidth).toBe(36 + 20);
+    });
+
+    it("changes nothing when the columns fit", () => {
+      expect(layout(DEFAULT_TOTAL + 500, {}, DEFAULT_ORDER, 28)).toEqual(
+        layout(DEFAULT_TOTAL + 500)
+      );
+      expect(layout(DEFAULT_TOTAL, {}, DEFAULT_ORDER, 28)).toEqual(
+        layout(DEFAULT_TOTAL)
+      );
+    });
+  });
 });
 
 describe("withUnclampedColumns", () => {
@@ -289,5 +353,17 @@ describe("withUnclampedColumns", () => {
     expect(
       result.filter((column) => !lifted.includes(column.id as string))
     ).toEqual(COLUMNS.filter((column) => !lifted.includes(column.id)));
+  });
+
+  it("lowers only the shrunk column's minimum to the table's default", () => {
+    const result = withUnclampedColumns(COLUMNS, [], "description");
+
+    expect(result.find((column) => column.id === "description")).toEqual({
+      ...COLUMNS[4],
+      minSize: 20,
+    });
+    expect(result.filter((column) => column.id !== "description")).toEqual(
+      COLUMNS.filter((column) => column.id !== "description")
+    );
   });
 });

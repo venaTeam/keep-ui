@@ -112,6 +112,8 @@ interface Props {
   presetName: string;
   presetId?: string;
   counterShowsFiringOnly?: boolean;
+  /** Whether the preset is noisy; its critical firing rows then ring. */
+  presetNoisy?: boolean;
   presetTabs?: PresetTab[];
   isRefreshAllowed?: boolean;
   isMenuColDisplayed?: boolean;
@@ -139,6 +141,7 @@ export function AlertTableServerSide({
   presetName,
   presetId,
   counterShowsFiringOnly = false,
+  presetNoisy = false,
   facetsCel,
   facetsPanelRefreshToken,
   isRefreshAllowed = true,
@@ -806,6 +809,7 @@ export function AlertTableServerSide({
           onRowClick={handleRowClick}
           presetName={presetName}
           groupExpansionState={groupExpansionState}
+          presetNoisy={presetNoisy}
           getColumnLabel={getGroupColumnLabel}
         />
       </Table>
