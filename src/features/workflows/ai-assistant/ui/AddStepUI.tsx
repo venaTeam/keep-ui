@@ -51,7 +51,7 @@ export const AddStepUI = ({
         className="text-orange-500 hover:underline"
         onClick={selectNode}
       >
-        "{nodeId}"
+        {`"${nodeId}"`}
       </a>
     );
   };
