@@ -6,12 +6,26 @@ import {
   DEFAULT_INCIDENTS_SORTING,
   PaginatedIncidentsDto,
 } from "@/entities/incidents/model/models";
+import { useRevalidateOnDismissalExpiry } from "@/entities/incidents/model";
 import {
   IncidentsQuery,
   useIncidents,
   usePollIncidents,
 } from "@/utils/hooks/useIncidents";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { v4 as uuidv4 } from "uuid";
+
+// The incident with the earliest live "dismiss until", whatever the list shows.
+// The default view filters to firing + acknowledged, so suppressed incidents are
+// usually not on screen, yet the list still has to refresh when one lapses.
+const NEXT_DISMISSAL_EXPIRY_QUERY: IncidentsQuery = {
+  candidate: false,
+  predicted: null,
+  limit: 1,
+  offset: 0,
+  sorting: { id: "dismissed_until", desc: false },
+  cel: "status == 'suppressed' && dismiss_mode == 'dismiss_until'",
+};
 
 export interface IncidentsTableDataQuery {
   candidate: boolean | null;
@@ -96,6 +110,17 @@ export const useIncidentsTableData = (query: IncidentsTableDataQuery) => {
 
   const { incidentChangeToken } = usePollIncidents(() => {}, isPaused);
 
+  // Changes whenever the facet counts may have moved: on every server-side
+  // incident change, and when a dismissal lapses on the clock.
+  const [facetsRevalidationToken, setFacetsRevalidationToken] = useState<
+    string | undefined
+  >(undefined);
+  useEffect(() => {
+    if (incidentChangeToken) {
+      setFacetsRevalidationToken(incidentChangeToken);
+    }
+  }, [incidentChangeToken]);
+
   useEffect(() => {
     // When refresh token comes, this code allows polling for certain time and then stops.
     // Will start polling again when new refresh token comes.
@@ -167,6 +192,35 @@ export const useIncidentsTableData = (query: IncidentsTableDataQuery) => {
     true
   );
 
+  const { data: nextDismissalExpiry, mutate: refreshNextDismissalExpiry } =
+    useIncidents(NEXT_DISMISSAL_EXPIRY_QUERY, { revalidateOnFocus: false });
+  useEffect(() => {
+    // A dismissal made elsewhere (another tab, the API) arrives as an SSE
+    // incident change; the one made here already refreshes every list query.
+    if (incidentChangeToken) {
+      refreshNextDismissalExpiry();
+    }
+  }, [incidentChangeToken, refreshNextDismissalExpiry]);
+
+  // A "dismiss until" lapses on the clock, with no SSE event to announce it.
+  const revalidateOnDismissalExpiry = useCallback(() => {
+    mutateIncidents();
+    refreshNextDismissalExpiry();
+    setFacetsRevalidationToken(uuidv4());
+  }, [mutateIncidents, refreshNextDismissalExpiry]);
+  const incidentsWithDeadlines = useMemo(
+    () => [
+      ...(paginatedIncidentsFromHook?.items ?? []),
+      ...(nextDismissalExpiry?.items ?? []),
+    ],
+    [paginatedIncidentsFromHook, nextDismissalExpiry]
+  );
+  useRevalidateOnDismissalExpiry(
+    incidentsWithDeadlines,
+    revalidateOnDismissalExpiry,
+    isPaused
+  );
+
   const { data: defaultIncidents, mutate: refreshDefaultIncidents } =
     useIncidents(
       {
@@ -216,6 +270,7 @@ export const useIncidentsTableData = (query: IncidentsTableDataQuery) => {
     isPredictedLoading,
     facetsCel: mainCelQuery,
     incidentChangeToken,
+    facetsRevalidationToken,
     incidentsError,
   };
 };

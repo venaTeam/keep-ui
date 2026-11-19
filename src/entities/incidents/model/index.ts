@@ -7,3 +7,4 @@ export type {
   IncidentsMetaDto,
 } from "./models";
 export { useIncidentActions } from "./useIncidentActions";
+export { useRevalidateOnDismissalExpiry } from "./useRevalidateOnDismissalExpiry";

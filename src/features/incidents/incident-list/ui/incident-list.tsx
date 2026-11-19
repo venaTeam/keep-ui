@@ -116,6 +116,7 @@ export function IncidentList({
     predictedIncidents,
     isPredictedLoading,
     facetsCel,
+    facetsRevalidationToken,
   } = useIncidentsTableData({
     candidate: null,
     predicted: null,
@@ -133,9 +134,6 @@ export function IncidentList({
   const [clearFiltersToken, setClearFiltersToken] = useState<string | null>(
     null
   );
-  const [filterRevalidationToken, setFilterRevalidationToken] = useState<
-    string | undefined
-  >(undefined);
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
   const { data: config } = useConfig();
 
@@ -390,7 +388,7 @@ export function IncidentList({
                     onCelChange={setFilterCel}
                     onCollapse={() => setIsFacetsCollapsed(true)}
                     expandToken={facetsExpandToken}
-                    revalidationToken={filterRevalidationToken}
+                    revalidationToken={facetsRevalidationToken}
                   />
                 </div>
                 <div className="flex flex-col gap-5 flex-1 min-w-0">
