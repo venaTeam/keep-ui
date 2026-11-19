@@ -15,6 +15,7 @@ test.describe("[check:05] create-incident", () => {
   test("creates an incident through the UI and it persists in the backend + list", async ({
     incidents,
     api,
+    page,
   }) => {
     const stamp = Date.now();
     const incidentName = `sanity-incident-${stamp}`;
@@ -59,5 +60,17 @@ test.describe("[check:05] create-incident", () => {
     // Re-navigate (not a bare reload) until the new row renders; this also
     // recovers from the dev-mode client-side crash a reload can hit.
     await incidents.gotoAndExpectRow(incidentName);
+
+    // Incident alerts reuse the Hossted column outside the main feed tables.
+    // Rendering a real button here guards against a missing TooltipProvider.
+    const tooltipErrors: string[] = [];
+    page.on("pageerror", (error) => {
+      if (error.message.includes("TooltipProvider")) {
+        tooltipErrors.push(error.message);
+      }
+    });
+    await page.goto(`/incidents/${created.id}/alerts`);
+    await expect(page.getByRole("button", { name: "Hossted Icon" }).first()).toBeVisible();
+    expect(tooltipErrors).toEqual([]);
   });
 });
