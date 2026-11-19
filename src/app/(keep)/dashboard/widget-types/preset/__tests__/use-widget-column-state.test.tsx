@@ -750,6 +750,31 @@ describe("useWidgetColumnState", () => {
       expect(result.current.state.columnListFormats).toEqual({ tags: "count" });
     });
 
+    it("setColumnListFormats equal to the saved map emits nothing", () => {
+      const { result, onChange } = renderEditedWidget({
+        ...baseItem,
+        alertTable: { columnListFormats: { tags: "count" } },
+      });
+      act(() =>
+        result.current.state.setColumnListFormats({
+          tags: "count",
+          labels: "badges",
+        })
+      );
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
+    it("setting every list column back to Badges removes columnListFormats", () => {
+      const { result, onChange } = renderEditedWidget({
+        ...baseItem,
+        alertTable: { columnListFormats: { tags: "count" } },
+      });
+      act(() => result.current.state.setColumnListFormats({ tags: "badges" }));
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange.mock.calls[0][0]).not.toHaveProperty("alertTable");
+      expect(result.current.state.columnListFormats).toEqual({});
+    });
+
     it("a saved row style alone marks the widget customized", () => {
       const { result } = renderEditedWidget({
         ...baseItem,

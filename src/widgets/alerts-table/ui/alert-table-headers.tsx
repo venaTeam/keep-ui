@@ -24,6 +24,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
+  Column,
   ColumnDef,
   ColumnOrderState,
   VisibilityState,
@@ -92,6 +93,7 @@ interface DraggableHeaderCellProps {
   interactive: boolean;
   showSortItems: boolean;
   showFormatItems: boolean;
+  canFormatAsList: (column: Column<AlertDto>) => boolean;
   getOriginalColumnName?: (columnId: string) => string;
 }
 
@@ -116,6 +118,7 @@ const DraggableHeaderCell = ({
   interactive,
   showSortItems,
   showFormatItems,
+  canFormatAsList,
   getOriginalColumnName,
 }: DraggableHeaderCellProps) => {
   const { column, getResizeHandler } = header;
@@ -382,7 +385,7 @@ const DraggableHeaderCell = ({
                     setColumnTimeFormats,
                     DropdownMenu
                   )}
-                {isListColumn(column) &&
+                {canFormatAsList(column) &&
                   createListFormatMenuItems(
                     column.id,
                     columnListFormats,
@@ -554,6 +557,12 @@ interface Props {
   interactive?: boolean;
   showSortItems?: boolean;
   showFormatItems?: boolean;
+  /**
+   * Whether a column's header menu offers Format list, when format items are
+   * shown. Defaults to `isListColumn`: the column's first row holds a non-empty
+   * array or a JSON-string list.
+   */
+  canFormatAsList?: (column: Column<AlertDto>) => boolean;
   getOriginalColumnName?: (columnId: string) => string;
 }
 
@@ -575,6 +584,7 @@ export default function AlertsTableHeaders({
   interactive = true,
   showSortItems = true,
   showFormatItems = true,
+  canFormatAsList = isListColumn,
   getOriginalColumnName,
 }: Props) {
   const sensors = useSensors(
@@ -702,6 +712,7 @@ export default function AlertsTableHeaders({
                     interactive={interactive}
                     showSortItems={showSortItems}
                     showFormatItems={showFormatItems}
+                    canFormatAsList={canFormatAsList}
                     getOriginalColumnName={getOriginalColumnName}
                     dropIndicatorSide={
                       dropTarget?.columnId === header.column.id

@@ -7,6 +7,7 @@ import {
   screen,
   within,
 } from "@testing-library/react";
+import { format } from "date-fns";
 import WidgetAlertsTable from "../widget-alerts-table";
 import { WidgetData, WidgetType } from "../../../types";
 import {
@@ -1314,6 +1315,8 @@ describe("WidgetAlertsTable", () => {
   });
 
   describe("column formats", () => {
+    const savedDate = format(new Date("2026-10-01T10:00:00Z"), "PP");
+    const exactly = (text: string) => new RegExp(`^${text}$`);
     const openHeaderMenu = async (columnId: string) => {
       const cell = screen.getByTestId(`header-cell-${columnId}`);
       const trigger = within(cell).getByTestId("dropdown-menu-button");
@@ -1328,6 +1331,13 @@ describe("WidgetAlertsTable", () => {
       fireEvent.mouseMove(formatTime);
       fireEvent.click(await screen.findByText(label));
     };
+    const pickListFormat = async (columnId: string, label: string) => {
+      await openHeaderMenu(columnId);
+      const formatList = screen.getByText("Format list");
+      fireEvent.pointerEnter(formatList);
+      fireEvent.mouseMove(formatList);
+      fireEvent.click(await screen.findByText(label));
+    };
 
     it("a saved time format renders in that format", () => {
       renderWidget({
@@ -1337,7 +1347,9 @@ describe("WidgetAlertsTable", () => {
 
       const cells = cellsOf("lastReceived");
       expect(cells).toHaveLength(2);
-      cells.forEach((cell) => expect(cell).toHaveTextContent(/^Oct 1, 2026$/));
+      cells.forEach((cell) =>
+        expect(cell).toHaveTextContent(exactly(savedDate))
+      );
     });
 
     it("Format time in the edit-mode header menu saves the column's format", async () => {
@@ -1387,6 +1399,53 @@ describe("WidgetAlertsTable", () => {
       );
     });
 
+    it("Format list in the edit-mode header menu saves the column's format", async () => {
+      const onChange = jest.fn();
+      const tags = JSON.stringify(["a", "b", "c"]);
+      renderWidget(
+        { presetColumns: ["name", "tags"] },
+        [alertWith({ tags }), alertWith({ tags })],
+        { isEditMode: true, onChange }
+      );
+
+      await pickListFormat("tags", "Count only (show number of items)");
+
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange.mock.calls[0][0].alertTable.columnListFormats).toEqual({
+        tags: "count",
+      });
+    });
+
+    it("choosing Badges on an unformatted list column saves nothing", async () => {
+      const onChange = jest.fn();
+      const tags = JSON.stringify(["a", "b", "c"]);
+      renderWidget(
+        { presetColumns: ["name", "tags"] },
+        [alertWith({ tags }), alertWith({ tags })],
+        { isEditMode: true, onChange }
+      );
+
+      await pickListFormat("tags", "Badges (colored items with details)");
+
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
+    it("an array-valued column's header menu offers no Format list", async () => {
+      renderWidget(
+        { presetColumns: ["name", "enriched_fields"] },
+        [
+          alertWith({ enriched_fields: ["a", "b"] }),
+          alertWith({ enriched_fields: ["a", "b"] }),
+        ],
+        { isEditMode: true, onChange: jest.fn() }
+      );
+
+      await openHeaderMenu("enriched_fields");
+
+      expect(screen.getByText(/rename column/i)).toBeInTheDocument();
+      expect(screen.queryByText("Format list")).toBeNull();
+    });
+
     it("a saved format on a missing generated date renders an empty cell", () => {
       expect(() =>
         renderWidget(
@@ -1420,7 +1479,7 @@ describe("WidgetAlertsTable", () => {
       expect(bodyRows()).toHaveLength(2);
       bodyRows().forEach((row) => expect(row).toHaveClass("h-12"));
       cellsOf("lastReceived").forEach((cell) =>
-        expect(cell).toHaveTextContent(/^Oct 1, 2026$/)
+        expect(cell).toHaveTextContent(exactly(savedDate))
       );
       expect(screen.queryAllByTestId("dropdown-menu-button")).toHaveLength(0);
     });

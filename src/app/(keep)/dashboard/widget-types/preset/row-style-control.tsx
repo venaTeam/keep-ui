@@ -34,9 +34,10 @@ interface RowStyleControlProps {
  * ⚙ panel.
  *
  * It is a radio group named by its title, of native radios sharing one name,
- * with the checked option's hint below it. The title renders as `titleAs` (a
- * `p` by default) with `titleClassName`. A passed `data-cy` goes on the root
- * and, suffixed with `-default` or `-relaxed`, on each radio.
+ * with the checked option's hint below it as the group's description. The
+ * title renders as `titleAs` (a `p` by default) with `titleClassName`. A
+ * passed `data-cy` goes on the root and, suffixed with `-default` or
+ * `-relaxed`, on each radio.
  */
 export function RowStyleControl({
   value,
@@ -47,6 +48,7 @@ export function RowStyleControl({
 }: RowStyleControlProps) {
   const name = useId();
   const titleId = useId();
+  const hintId = useId();
   const hint = ROW_STYLES.find((option) => option.value === value)?.hint;
 
   return (
@@ -54,7 +56,12 @@ export function RowStyleControl({
       <Title id={titleId} className={titleClassName}>
         {TITLE}
       </Title>
-      <div role="radiogroup" aria-labelledby={titleId} className="flex gap-3">
+      <div
+        role="radiogroup"
+        aria-labelledby={titleId}
+        aria-describedby={hint ? hintId : undefined}
+        className="flex gap-3"
+      >
         {ROW_STYLES.map((option) => (
           <label
             key={option.value}
@@ -73,7 +80,11 @@ export function RowStyleControl({
           </label>
         ))}
       </div>
-      {hint && <p className="mt-1 text-[11px] text-gray-500">{hint}</p>}
+      {hint && (
+        <p id={hintId} className="mt-1 text-[11px] text-gray-500">
+          {hint}
+        </p>
+      )}
     </div>
   );
 }

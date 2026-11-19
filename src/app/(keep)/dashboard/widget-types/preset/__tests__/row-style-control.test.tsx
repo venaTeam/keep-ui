@@ -21,6 +21,9 @@ describe("RowStyleControl", () => {
     expect(
       screen.queryByText("Long text wraps onto up to 3 lines. Fewer rows fit.")
     ).toBeNull();
+    expect(group).toHaveAccessibleDescription(
+      "One line per row. Fits the most alerts."
+    );
 
     fireEvent.click(screen.getByRole("radio", { name: "Relaxed" }));
 
@@ -38,6 +41,11 @@ describe("RowStyleControl", () => {
     expect(
       screen.queryByText("One line per row. Fits the most alerts.")
     ).toBeNull();
+    expect(
+      screen.getByRole("radiogroup", { name: "Rows" })
+    ).toHaveAccessibleDescription(
+      "Long text wraps onto up to 3 lines. Fewer rows fit."
+    );
   });
 
   it("puts a passed data-cy on its root and, suffixed, on each radio, and renders its title with the passed element", () => {
