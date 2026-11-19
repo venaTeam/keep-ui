@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { IncidentDto, Status } from "./models";
+import { parseDeadline } from "../lib/dismissal-deadline";
+
+export { parseDeadline };
 
 // setTimeout fires immediately for anything longer than 2^31-1 ms (~24.8 days).
 const MAX_TIMEOUT_MS = 2 ** 31 - 1;
@@ -12,15 +15,6 @@ const EXPIRY_GRACE_MS = 1000;
 const RETRY_BASE_MS = 5000;
 const RETRY_MAX_MS = 60_000;
 export const MAX_RETRIES = 6;
-
-/**
- * A dismissal deadline as epoch ms. The gateway sends ISO 8601; a value without
- * a timezone (some databases return one) is UTC, not the browser's local time.
- */
-export function parseDeadline(value: string): number {
-  const hasZone = /(Z|[+-]\d{2}:?\d{2})$/i.test(value.trim());
-  return Date.parse(hasZone ? value : `${value}Z`);
-}
 
 /** The earliest `dismissed_until` among incidents that still read suppressed. */
 export function getNextDismissalExpiry(incidents: IncidentDto[]): number | null {

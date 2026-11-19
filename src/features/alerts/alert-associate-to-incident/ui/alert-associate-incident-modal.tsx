@@ -9,10 +9,11 @@ import { AlertDto } from "@/entities/alerts/model";
 import {
   getIncidentName,
   getIncidentNameWithCreationTime,
+  getIncidentSuppressionLabel,
 } from "@/entities/incidents/lib/utils";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { Select, showErrorToast } from "@/shared/ui";
-import { Status } from "@/entities/incidents/model";
+import { IncidentDto, Status } from "@/entities/incidents/model";
 
 // Every incident an alert can still join. Suppressed counts: the gateway
 // carries the incident's dismissal onto alerts joining it. Deliberately not
@@ -22,6 +23,13 @@ const ASSOCIABLE_INCIDENT_STATUSES = [
   Status.Acknowledged,
   Status.Suppressed,
 ];
+
+// Picking a suppressed incident suppresses the alerts too (the gateway copies
+// its dismissal onto them), so say so in the option rather than look active.
+function withSuppression(label: string, incident: IncidentDto) {
+  const suppression = getIncidentSuppressionLabel(incident);
+  return suppression ? `${label} — ${suppression}` : label;
+}
 
 interface AlertAssociateIncidentModalProps {
   isOpen: boolean;
@@ -152,7 +160,10 @@ export const AlertAssociateIncidentModal = ({
             selectedIncidentInstance
               ? {
                 value: selectedIncident,
-                label: getIncidentName(selectedIncidentInstance),
+                label: withSuppression(
+                  getIncidentName(selectedIncidentInstance),
+                  selectedIncidentInstance
+                ),
               }
               : null
           }
@@ -161,7 +172,10 @@ export const AlertAssociateIncidentModal = ({
           }
           options={incidents.items?.map((incident) => ({
             value: incident.id,
-            label: getIncidentNameWithCreationTime(incident),
+            label: withSuppression(
+              getIncidentNameWithCreationTime(incident),
+              incident
+            ),
           }))}
         />
         <Divider />
