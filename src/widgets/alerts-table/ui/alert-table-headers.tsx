@@ -373,7 +373,7 @@ const DraggableHeaderCell = ({
                 />
               </>
             )}
-            {showFormatItems && column.getCanSort() && (
+            {showFormatItems && (column.getCanSort() || !showSortItems) && (
               <>
                 {isDateTimeColumn(column.id) &&
                   createTimeFormatMenuItems(

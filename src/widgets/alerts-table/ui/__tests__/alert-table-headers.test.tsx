@@ -156,6 +156,25 @@ describe("AlertsTableHeaders", () => {
     expect(screen.getByText(/rename column/i)).toBeInTheDocument();
   });
 
+  it("with sorting disabled and sort items hidden, a date column offers Format time", async () => {
+    renderHeaders({
+      columnIds: ["lastReceived", "name"],
+      enableSorting: false,
+      showSortItems: false,
+    });
+    await openMenuFor("lastReceived");
+    expect(screen.getByText("Format time")).toBeInTheDocument();
+  });
+
+  it("with sorting disabled and the default props, there is no Format time, as on the presets page", async () => {
+    renderHeaders({
+      columnIds: ["lastReceived", "name"],
+      enableSorting: false,
+    });
+    await openMenuFor("lastReceived");
+    expect(screen.queryByText("Format time")).toBeNull();
+  });
+
   it("Move right is disabled only on the last column when there is no alertMenu column", async () => {
     renderHeaders({});
     await openMenuFor("description");

@@ -93,15 +93,12 @@ interface WidgetAlertsTableProps {
 
 const NO_ALERTS: AlertDto[] = [];
 const NO_THEME: Record<string, string> = {};
-const NO_FORMATS = {};
 const SKELETON_ROWS = 5;
 const OPAQUE_CELL_CLASSES =
   "[&_th]:[background:var(--widget-opaque-bg)] [&_td.sticky]:[background:var(--widget-opaque-bg)] [&_th.sticky]:!z-40 [&_td.sticky]:!z-40";
 const COMPACT_GROUP_HEADER_CLASSES = "[&_td.group-header-cell]:py-1";
 const TABLE_FEATURES = [GROUP_ROW_SELECTION];
 const BORDER_TOLERANCE_PX = 0.01;
-
-function noop() {}
 
 function isAlertRow(row: Row<AlertDto>): boolean {
   return !row.getIsGrouped();
@@ -377,6 +374,12 @@ function WidgetAlertsTableContent({
     [chromeSelection]
   );
 
+  const { columnTimeFormats, columnListFormats } = state;
+  const tableMeta = useMemo(
+    () => ({ columnTimeFormats, columnListFormats }),
+    [columnTimeFormats, columnListFormats]
+  );
+
   const table = useReactTable({
     _features: TABLE_FEATURES,
     data: alerts ?? NO_ALERTS,
@@ -404,6 +407,7 @@ function WidgetAlertsTableContent({
     autoResetAll: false,
     getCoreRowModel: getCoreRowModel(),
     getGroupedRowModel: groupedRowModel,
+    meta: tableMeta,
   });
 
   const { isGroupExpanded } = groupExpansion;
@@ -535,10 +539,10 @@ function WidgetAlertsTableContent({
               table={table}
               presetName={widgetKey}
               a11yContainerRef={a11yContainerRef}
-              columnTimeFormats={NO_FORMATS}
-              setColumnTimeFormats={noop}
-              columnListFormats={NO_FORMATS}
-              setColumnListFormats={noop}
+              columnTimeFormats={columnTimeFormats}
+              setColumnTimeFormats={state.setColumnTimeFormats}
+              columnListFormats={columnListFormats}
+              setColumnListFormats={state.setColumnListFormats}
               columnOrder={visibleColumnOrder}
               setColumnOrder={setVisibleColumnOrder}
               columnVisibility={state.columnVisibility}
@@ -547,7 +551,7 @@ function WidgetAlertsTableContent({
               setColumnRenameMapping={state.setColumnRenameMapping}
               interactive={isEditMode && !!onChange && !isNarrow}
               showSortItems={false}
-              showFormatItems={false}
+              showFormatItems={isEditMode}
               getOriginalColumnName={getColumnLabel}
             />
             <AlertsTableBody
@@ -596,7 +600,9 @@ function WidgetAlertsTableContent({
  * Header controls show only in edit mode with `onChange`, and not on a narrow
  * widget. Rows are plain and not clickable, at the widget's saved row style
  * (Compact unless saved Relaxed), whatever row style the viewer chose on the
- * presets page.
+ * presets page. Date and list columns render in the widget's saved formats.
+ * In edit mode, the header menu offers Format time on date columns and Format
+ * list on list columns.
  * Expand all / Collapse all reads the groups shown now, so a regrouping or a
  * refresh that drops a collapsed group does not leave it stale. A grouping
  * change from the table is resolved against the grouping the table shows, so

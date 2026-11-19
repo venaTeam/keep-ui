@@ -1313,6 +1313,128 @@ describe("WidgetAlertsTable", () => {
     });
   });
 
+  describe("column formats", () => {
+    const openHeaderMenu = async (columnId: string) => {
+      const cell = screen.getByTestId(`header-cell-${columnId}`);
+      const trigger = within(cell).getByTestId("dropdown-menu-button");
+      fireEvent.mouseDown(trigger);
+      fireEvent.click(trigger);
+      await screen.findByTestId("dropdown-menu-list");
+    };
+    const pickTimeFormat = async (columnId: string, label: string) => {
+      await openHeaderMenu(columnId);
+      const formatTime = screen.getByText("Format time");
+      fireEvent.pointerEnter(formatTime);
+      fireEvent.mouseMove(formatTime);
+      fireEvent.click(await screen.findByText(label));
+    };
+
+    it("a saved time format renders in that format", () => {
+      renderWidget({
+        presetColumns: ["name", "lastReceived"],
+        alertTable: { columnTimeFormats: { lastReceived: "date" } },
+      });
+
+      const cells = cellsOf("lastReceived");
+      expect(cells).toHaveLength(2);
+      cells.forEach((cell) => expect(cell).toHaveTextContent(/^Oct 1, 2026$/));
+    });
+
+    it("Format time in the edit-mode header menu saves the column's format", async () => {
+      const onChange = jest.fn();
+      renderWidget({ presetColumns: ["name", "lastReceived"] }, undefined, {
+        isEditMode: true,
+        onChange,
+      });
+
+      await pickTimeFormat(
+        "lastReceived",
+        "Relative format (e.g. Today at 12:30 PM)"
+      );
+
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange.mock.calls[0][0].alertTable.columnTimeFormats).toEqual({
+        lastReceived: "relative",
+      });
+    });
+
+    it("choosing Time ago on an unformatted column saves nothing", async () => {
+      const onChange = jest.fn();
+      renderWidget({ presetColumns: ["name", "lastReceived"] }, undefined, {
+        isEditMode: true,
+        onChange,
+      });
+
+      await pickTimeFormat("lastReceived", "Time ago (e.g. 5 minutes ago)");
+
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
+    it("a saved list format renders in that format", () => {
+      const tags = JSON.stringify(["a", "b", "c"]);
+      renderWidget(
+        {
+          presetColumns: ["name", "tags"],
+          alertTable: { columnListFormats: { tags: "count" } },
+        },
+        [alertWith({ tags }), alertWith({ tags })]
+      );
+
+      const cells = cellsOf("tags");
+      expect(cells).toHaveLength(2);
+      cells.forEach((cell) =>
+        expect(within(cell as HTMLElement).getByText("3")).toBeInTheDocument()
+      );
+    });
+
+    it("a saved format on a missing generated date renders an empty cell", () => {
+      expect(() =>
+        renderWidget(
+          {
+            presetColumns: ["name", "firingStartTime"],
+            alertTable: { columnTimeFormats: { firingStartTime: "iso" } },
+          },
+          [alertWith({ firingStartTime: undefined })]
+        )
+      ).not.toThrow();
+
+      const cells = cellsOf("firingStartTime");
+      expect(cells).toHaveLength(1);
+      expect(cells[0].textContent).toBe("");
+    });
+
+    it("a narrow widget applies saved Relaxed and formats with no header menu", () => {
+      observeWidth(300);
+      renderWidget(
+        {
+          presetColumns: ["name", "lastReceived"],
+          alertTable: {
+            rowStyle: "relaxed",
+            columnTimeFormats: { lastReceived: "date" },
+          },
+        },
+        undefined,
+        { isEditMode: true, onChange: jest.fn() }
+      );
+
+      expect(bodyRows()).toHaveLength(2);
+      bodyRows().forEach((row) => expect(row).toHaveClass("h-12"));
+      cellsOf("lastReceived").forEach((cell) =>
+        expect(cell).toHaveTextContent(/^Oct 1, 2026$/)
+      );
+      expect(screen.queryAllByTestId("dropdown-menu-button")).toHaveLength(0);
+    });
+
+    it("view mode offers no header menu", () => {
+      renderWidget({
+        presetColumns: ["name", "lastReceived"],
+        alertTable: { columnTimeFormats: { lastReceived: "date" } },
+      });
+
+      expect(screen.queryAllByTestId("dropdown-menu-button")).toHaveLength(0);
+    });
+  });
+
   it("does not read the preset's expanded rows", () => {
     const alerts = [alertWith()];
     localStorage.setItem(
