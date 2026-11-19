@@ -18,6 +18,14 @@ const turbopackAliases =
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: false,
+  // @hossted/keep-integration reads these directly off process.env in its
+  // browser bundle (it targets Vite's `define`/webpack's DefinePlugin, not
+  // Next's NEXT_PUBLIC_ convention) — the `env` key inlines them the same way.
+  env: {
+    HOSSTED_PROXY_URL: process.env.HOSSTED_PROXY_URL,
+    HOSSTED_DASHBOARD_URL: process.env.HOSSTED_DASHBOARD_URL,
+    HOSSTED_TOAST_DISABLED: process.env.HOSSTED_TOAST_DISABLED,
+  },
   devIndicators: {
     position: "bottom-right",
   },
