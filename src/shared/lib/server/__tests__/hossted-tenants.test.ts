@@ -1,7 +1,22 @@
 /**
  * @jest-environment node
  */
+import fs from "fs";
+import path from "path";
 import { isHosstedEnabledForTenant } from "../hossted-tenants";
+
+describe("shipped default", () => {
+  it("leaves HOSSTED_ENABLED_TENANTS empty in the committed .env, which the standalone image ships", () => {
+    const envFile = fs.readFileSync(
+      path.join(__dirname, "../../../../../.env"),
+      "utf8"
+    );
+    const line = envFile
+      .split("\n")
+      .find((entry) => entry.startsWith("HOSSTED_ENABLED_TENANTS="));
+    expect(line).toBe("HOSSTED_ENABLED_TENANTS=");
+  });
+});
 
 describe("isHosstedEnabledForTenant", () => {
   let saved: string | undefined;
