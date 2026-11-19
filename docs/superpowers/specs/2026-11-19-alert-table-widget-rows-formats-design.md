@@ -12,7 +12,7 @@ Every setting is saved per widget in dashboard edit mode with Save and is the sa
 
 1. **Rows: Compact / Relaxed.** ⚙ Table settings gets a "Rows" section below "Group rows by" (and below "Rows with no value" when shown). It has two radios and a one-line hint. Relaxed is exactly the presets page's Relaxed: rows go from 32 px to at least 48 px with more padding, and name, description and text cells wrap to up to 3 lines.
 2. **Format time.** In edit mode, the column header menu gets "Format time ▸" on the date columns the presets page already recognises (`lastReceived`, `createdAt`, `updatedAt`, `firingStartTime`, `firingStartTimeSinceLastResolved`). It offers the same options: Time ago, ISO, Local, Relative, Date only.
-3. **Format list.** The same menu gets "Format list ▸" on columns whose values are lists, with the same options: Text, Badges, Comma-separated, Pills, Count only, First item only.
+3. **Format list.** The same menu gets "Format list ▸" on columns whose values are JSON-string lists, with the same options: Text, Badges, Comma-separated, Pills, Count only, First item only. Array-valued columns (such as `enriched_fields`) render as values in the widget, so they get no Format list (decided after the whole-branch review).
 
 **Left out:**
 - Theme (row colours by severity): the widget's rows are see-through on purpose (`rowAppearance="plain"`), so the dashboard background and the noisy blink show.
