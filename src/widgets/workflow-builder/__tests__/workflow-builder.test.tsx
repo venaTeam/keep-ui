@@ -184,11 +184,14 @@ jest.mock("@/entities/workflows", () => ({
 const mockConfig: InternalConfig = {
   API_URL: "http://localhost:8000",
   API_URL_CLIENT: "http://localhost:8000",
+  WORKFLOWS_API_URL: "http://localhost:8082",
   AUTH_TYPE: "test",
   SSE_DISABLED: false,
 
   READ_ONLY: false,
   OPEN_AI_API_KEY_SET: false,
+  KEEP_AI_FEATURES_DISABLED: false,
+  AI_FEATURES_ENABLED: false,
   NOISY_ALERTS_ENABLED: false,
   KEEP_DOCS_URL: "https://docs.keephq.dev",
   KEEP_CONTACT_US_URL: "https://docs.keephq.dev/slack",

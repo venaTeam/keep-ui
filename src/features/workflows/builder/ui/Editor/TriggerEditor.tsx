@@ -26,6 +26,7 @@ export function TriggerEditor() {
   } = useWorkflowStore();
 
   const { data: config } = useConfig();
+  const { data: alertFields } = useFacetPotentialFields("alerts");
 
   const docsUrl = config?.KEEP_DOCS_URL || "https://docs.keep.dev";
 
@@ -84,8 +85,6 @@ export function TriggerEditor() {
   const error = validationErrors?.[selectedTriggerKey];
 
   const renderTriggerContent = () => {
-    const { data: alertFields } = useFacetPotentialFields("alerts");
-
     switch (selectedTriggerKey) {
       case "manual":
         return (
