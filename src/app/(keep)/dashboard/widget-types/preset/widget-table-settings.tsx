@@ -59,6 +59,7 @@ import {
 } from "./alert-table-widget-config";
 import { EmptyGroupPositionControl } from "./empty-group-position-control";
 import { GroupBySelect } from "./group-by-select";
+import { RowStyleControl } from "./row-style-control";
 import type { WidgetColumnState } from "./use-widget-column-state";
 
 /**
@@ -644,6 +645,13 @@ function SettingsContent({
           titleClassName={SECTION_TITLE_CLASS}
         />
       )}
+      <RowStyleControl
+        value={state.rowStyle}
+        onChange={state.setRowStyle}
+        titleAs="h5"
+        titleClassName={SECTION_TITLE_CLASS}
+        data-cy="dashboard-widget-table-settings-row-style"
+      />
       <div className="mt-3 flex items-center gap-2 border-t border-gray-200 pt-2">
         {state.isCustomized && (
           <span className="text-gray-500">Customized for this widget</span>
@@ -674,8 +682,9 @@ function SettingsContent({
  * capped at its maximum, so the width renders exactly; Auto-fit, which
  * measures `columnWidths.tableRef`; and, once a width is saved, Reset. A
  * search adds any alert field as a column. It also sets the grouping, where
- * rows with no value go, and resets the widget to the defaults. Every change
- * goes straight to `state`; a width change passes the whole sizing map.
+ * rows with no value go and the row style (Compact or Relaxed), and resets the
+ * widget to the defaults. Every change goes straight to `state`; a width
+ * change passes the whole sizing map.
  *
  * `columnIds` are the columns the widget can show. The search offers them and
  * every potential alert field; the grouping options are only the shortlist,

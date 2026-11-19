@@ -42,6 +42,7 @@ import {
   NARROW_WIDGET_PX,
   QUICK_TRAY_COMPACT_PX,
   WIDGET_PINNED_LEFT,
+  getWidgetRowStyle,
   mergeVisibleColumnOrder,
 } from "./alert-table-widget-config";
 import {
@@ -593,7 +594,9 @@ function WidgetAlertsTableContent({
  * saved on the widget.
  *
  * Header controls show only in edit mode with `onChange`, and not on a narrow
- * widget. Rows are plain, not clickable and always at the default density.
+ * widget. Rows are plain and not clickable, at the widget's saved row style
+ * (Compact unless saved Relaxed), whatever row style the viewer chose on the
+ * presets page.
  * Expand all / Collapse all reads the groups shown now, so a regrouping or a
  * refresh that drops a collapsed group does not leave it stale. A grouping
  * change from the table is resolved against the grouping the table shows, so
@@ -636,7 +639,7 @@ function WidgetAlertsTableContent({
  */
 export default function WidgetAlertsTable(props: WidgetAlertsTableProps) {
   return (
-    <RowStyleOverrideProvider value="default">
+    <RowStyleOverrideProvider value={getWidgetRowStyle(props.item)}>
       <WidgetAlertsTableContent {...props} />
     </RowStyleOverrideProvider>
   );

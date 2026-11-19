@@ -1277,6 +1277,42 @@ describe("WidgetAlertsTable", () => {
     });
   });
 
+  it("a widget saved Relaxed renders relaxed rows whatever the viewer's row style", () => {
+    localStorage.setItem(
+      "keephq-alert-table-row-style",
+      JSON.stringify("default")
+    );
+
+    renderWidget({
+      presetColumns: ["name", "description"],
+      alertTable: { rowStyle: "relaxed" },
+    });
+
+    expect(bodyRows()).toHaveLength(2);
+    bodyRows().forEach((row) => {
+      expect(row).toHaveClass("h-12");
+      expect(row).not.toHaveClass("h-8");
+    });
+    expect(cellsOf("description")).toHaveLength(2);
+    cellsOf("description").forEach((cell) => {
+      expect(cell.querySelector(".line-clamp-3")).not.toBeNull();
+      expect(cell.querySelector(".line-clamp-1")).toBeNull();
+    });
+  });
+
+  it("an unknown saved row style renders compact rows", () => {
+    renderWidget({
+      presetColumns: ["name", "description"],
+      alertTable: { rowStyle: "comfortable" as never },
+    });
+
+    expect(bodyRows()).toHaveLength(2);
+    bodyRows().forEach((row) => {
+      expect(row).toHaveClass("h-8");
+      expect(row).not.toHaveClass("h-12");
+    });
+  });
+
   it("does not read the preset's expanded rows", () => {
     const alerts = [alertWith()];
     localStorage.setItem(
@@ -1410,6 +1446,41 @@ describe("WidgetAlertsTable", () => {
 
       expect(onChange).toHaveBeenCalledTimes(1);
       expect(onChange.mock.calls[0][0].presetColumns).toEqual(["name"]);
+    });
+
+    it("choosing Relaxed in the panel saves the row style and the table turns relaxed", () => {
+      const onChange = jest.fn();
+      const alerts = [alertWith(), alertWith()];
+      const { rerender } = renderWithSlot(
+        { presetColumns: ["name", "description"] },
+        { isEditMode: true, onChange },
+        alerts
+      );
+      bodyRows().forEach((row) => expect(row).toHaveClass("h-8"));
+
+      fireEvent.click(settingsButton() as HTMLElement);
+      fireEvent.click(screen.getByRole("radio", { name: "Relaxed" }));
+
+      expect(onChange).toHaveBeenCalledTimes(1);
+      const relaxed: WidgetData = onChange.mock.calls[0][0];
+      expect(relaxed.alertTable).toEqual({ rowStyle: "relaxed" });
+      expect(relaxed.presetColumns).toEqual(["name", "description"]);
+
+      rerender(
+        <WidgetAlertsTable
+          item={relaxed}
+          alerts={alerts}
+          isEditMode
+          onChange={onChange}
+          settingsSlot={slot}
+        />
+      );
+
+      expect(bodyRows()).toHaveLength(2);
+      bodyRows().forEach((row) => {
+        expect(row).toHaveClass("h-12");
+        expect(row).not.toHaveClass("h-8");
+      });
     });
 
     it("a saved snake_case groupBy adds no empty column beside the real one", () => {
