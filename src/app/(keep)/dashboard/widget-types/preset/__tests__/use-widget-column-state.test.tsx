@@ -627,6 +627,138 @@ describe("useWidgetColumnState", () => {
     });
   });
 
+  describe("row style and formats", () => {
+    const renderEditedWidget = (initial: WidgetData = baseItem) => {
+      const onChange = jest.fn();
+      const rendered = renderHook(() => {
+        const [item, setItem] = useState<WidgetData>(initial);
+        const state = useWidgetColumnState({
+          item,
+          allColumnIds: ["name", "lastReceived", "tags"],
+          onChange: (next) => {
+            onChange(next);
+            setItem(next);
+          },
+        });
+        return { item, state };
+      });
+      return { ...rendered, onChange };
+    };
+
+    it("rowStyle is default when unset or unknown", () => {
+      expect(renderEditedWidget().result.current.state.rowStyle).toBe(
+        "default"
+      );
+      const unknown = renderEditedWidget({
+        ...baseItem,
+        alertTable: { rowStyle: "comfortable" as never },
+      });
+      expect(unknown.result.current.state.rowStyle).toBe("default");
+    });
+
+    it("setRowStyle('relaxed') then setRowStyle('default') leaves the widget as it was", () => {
+      const { result, onChange } = renderEditedWidget();
+      act(() => result.current.state.setRowStyle("relaxed"));
+      expect(onChange.mock.calls[0][0].alertTable).toEqual({
+        rowStyle: "relaxed",
+      });
+      expect(result.current.state.rowStyle).toBe("relaxed");
+      act(() => result.current.state.setRowStyle("default"));
+      expect(onChange).toHaveBeenCalledTimes(2);
+      expect(onChange.mock.calls[1][0].alertTable).toBeUndefined();
+      expect(result.current.state.rowStyle).toBe("default");
+      expect(result.current.state.isCustomized).toBe(false);
+      expect(result.current.item).toEqual(baseItem);
+    });
+
+    it("setRowStyle with the style in effect emits nothing", () => {
+      const untouched = renderEditedWidget();
+      act(() => untouched.result.current.state.setRowStyle("default"));
+      expect(untouched.onChange).not.toHaveBeenCalled();
+
+      const relaxed = renderEditedWidget({
+        ...baseItem,
+        alertTable: { rowStyle: "relaxed" },
+      });
+      act(() => relaxed.result.current.state.setRowStyle("relaxed"));
+      expect(relaxed.onChange).not.toHaveBeenCalled();
+    });
+
+    it("a second setRowStyle in the same tick compares against the first", () => {
+      const { result, onChange } = renderEditedWidget();
+      act(() => {
+        result.current.state.setRowStyle("relaxed");
+        result.current.state.setRowStyle("relaxed");
+      });
+      expect(onChange).toHaveBeenCalledTimes(1);
+    });
+
+    it("setColumnTimeFormats stores only non-default entries", () => {
+      const { result, onChange } = renderEditedWidget();
+      act(() =>
+        result.current.state.setColumnTimeFormats({
+          lastReceived: "relative",
+          firingStartTime: "timeago",
+        })
+      );
+      expect(onChange.mock.calls[0][0].alertTable.columnTimeFormats).toEqual({
+        lastReceived: "relative",
+      });
+      expect(result.current.state.columnTimeFormats).toEqual({
+        lastReceived: "relative",
+      });
+    });
+
+    it("setting every column back to Time ago removes columnTimeFormats", () => {
+      const { result, onChange } = renderEditedWidget({
+        ...baseItem,
+        alertTable: { columnTimeFormats: { lastReceived: "iso" } },
+      });
+      act(() =>
+        result.current.state.setColumnTimeFormats({ lastReceived: "timeago" })
+      );
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange.mock.calls[0][0]).not.toHaveProperty("alertTable");
+      expect(result.current.state.columnTimeFormats).toEqual({});
+    });
+
+    it("setColumnTimeFormats equal to the saved map emits nothing", () => {
+      const { result, onChange } = renderEditedWidget({
+        ...baseItem,
+        alertTable: { columnTimeFormats: { lastReceived: "iso" } },
+      });
+      act(() =>
+        result.current.state.setColumnTimeFormats({
+          lastReceived: "iso",
+          firingStartTime: "timeago",
+        })
+      );
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
+    it("setColumnListFormats stores only non-badges entries", () => {
+      const { result, onChange } = renderEditedWidget();
+      act(() =>
+        result.current.state.setColumnListFormats({
+          tags: "count",
+          labels: "badges",
+        })
+      );
+      expect(onChange.mock.calls[0][0].alertTable.columnListFormats).toEqual({
+        tags: "count",
+      });
+      expect(result.current.state.columnListFormats).toEqual({ tags: "count" });
+    });
+
+    it("a saved row style alone marks the widget customized", () => {
+      const { result } = renderEditedWidget({
+        ...baseItem,
+        alertTable: { rowStyle: "relaxed" },
+      });
+      expect(result.current.state.isCustomized).toBe(true);
+    });
+  });
+
   describe("order of visible columns outside the default order", () => {
     it("follows presetColumns whatever order the alert fields come in", () => {
       const item = {
