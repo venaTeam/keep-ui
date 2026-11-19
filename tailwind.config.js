@@ -110,6 +110,18 @@ module.exports = {
         "tremor-metric": ["1.875rem", { lineHeight: "2.25rem" }],
       },
       keyframes: {
+        missingBlink: {
+          "0%, 55%, 100%": {
+            backgroundColor: "var(--blink-strong)",
+            borderColor: "var(--blink-strong-border)",
+            color: "var(--blink-strong-text)",
+          },
+          "62%, 93%": {
+            backgroundColor: "var(--blink-soft)",
+            borderColor: "var(--blink-soft-border)",
+            color: "var(--blink-soft-text)",
+          },
+        },
         hide: {
           from: { opacity: "1" },
           to: { opacity: "0" },
@@ -157,6 +169,7 @@ module.exports = {
         drawerSlideLeftAndFade:
           "drawerSlideLeftAndFade 150ms cubic-bezier(0.16, 1, 0.3, 1)",
         drawerSlideRightAndFade: "drawerSlideRightAndFade 150ms ease-in",
+        "missing-blink": "missingBlink 1.2s ease-in-out infinite",
       },
     },
   },

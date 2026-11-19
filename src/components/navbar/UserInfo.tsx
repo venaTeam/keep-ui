@@ -11,6 +11,7 @@ import { useFloating } from "@floating-ui/react";
 import { Subtitle } from "@tremor/react";
 import UserAvatar from "./UserAvatar";
 import { useSignOut } from "@/shared/lib/hooks/useSignOut";
+import { confirmNavigation } from "@/shared/lib/navigation-guard";
 import { FaSlack } from "react-icons/fa";
 import { ThemeControl } from "@/shared/ui";
 import { HiOutlineDocumentText } from "react-icons/hi2";
@@ -78,7 +79,7 @@ const UserDropdown = ({ session }: UserDropdownProps) => {
                 as="button"
                 className="ui-active:bg-orange-400 ui-active:text-white ui-not-active:text-gray-900 group flex w-full items-center rounded-md px-2 py-2 text-sm"
                 data-cy="nav-user-menu-item-signout"
-                onClick={async () => {
+                onClick={() => confirmNavigation(async () => {
                   if (configData?.AUTH_TYPE === AuthType.KEYCLOAK) {
                     try {
                       await fetch(`${configData?.KEYCLOAK_ISSUER}/protocol/openid-connect/logout`,
@@ -100,7 +101,7 @@ const UserDropdown = ({ session }: UserDropdownProps) => {
                   } else {
                     signOut();
                   }
-                }}
+                })}
               >
                 Sign out
               </Menu.Item>

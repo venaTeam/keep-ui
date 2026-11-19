@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import { Responsive, WidthProvider, Layout, Layouts } from "react-grid-layout";
 import GridItemContainer from "./GridItemContainer";
+import { useDashboardEditMode } from "./DashboardEditModeContext";
 import { LayoutItem, WidgetData } from "./types";
 import "react-grid-layout/css/styles.css";
 import { MetricsWidget } from "@/utils/hooks/useDashboardMetricWidgets";
@@ -63,7 +64,9 @@ const GridLayout: React.FC<GridLayoutProps> = ({
   density,
 }) => {
   const breakpointRef = useRef<string>("lg");
-  const [isEditable, setIsEditable] = useState(true);
+  const [isEditableSize, setIsEditableSize] = useState(true);
+  const isEditMode = useDashboardEditMode();
+  const isEditable = isEditableSize && isEditMode;
 
   const layouts = useMemo<Layouts>(() => {
     const stacked = buildStackedLayout(layout);
@@ -72,23 +75,23 @@ const GridLayout: React.FC<GridLayoutProps> = ({
 
   const handleBreakpointChange = useCallback((breakpoint: string) => {
     breakpointRef.current = breakpoint;
-    setIsEditable(isEditableBreakpoint(breakpoint));
+    setIsEditableSize(isEditableBreakpoint(breakpoint));
   }, []);
 
   const handleLayoutChange = useCallback(
     (currentLayout: Layout[]) => {
 
-      if (!isEditableBreakpoint(breakpointRef.current)) {
+      if (!isEditMode || !isEditableBreakpoint(breakpointRef.current)) {
         return;
       }
 
       const updatedLayout = currentLayout.map((item) => ({
         ...item,
-        static: item.static ?? false, 
+        static: item.static ?? false,
       }));
       onLayoutChange(updatedLayout as LayoutItem[]);
     },
-    [onLayoutChange]
+    [onLayoutChange, isEditMode]
   );
 
   return (
