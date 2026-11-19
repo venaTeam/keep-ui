@@ -27,19 +27,27 @@ test.describe("[check:10] create-dashboard", () => {
     await expect(dashboard.root).toBeVisible();
     await expect(dashboard.name).toHaveText(dashboardName);
 
-    // Save persists the (empty-layout) dashboard via POST /dashboard. The save
-    // handler depends on the page's data layer being ready, which can lag the
-    // first render in dev — so re-click Save until the dashboard is persisted
-    // (backend assert) rather than clicking once and hoping.
+    // A new dashboard opens in edit mode. Save persists the (empty-layout)
+    // dashboard via POST /dashboard. The save handler depends on the page's
+    // data layer being ready, which can lag the first render in dev — so
+    // re-click Save until the dashboard is persisted (backend assert) rather
+    // than clicking once and hoping. A successful save leaves edit mode and
+    // hides Save, so only click it while it is still shown.
     await expect(dashboard.saveButton).toBeVisible();
     await expect(async () => {
-      await dashboard.saveButton.click();
+      if (await dashboard.saveButton.isVisible()) {
+        await dashboard.saveButton.click();
+      }
       const names = (await api.dashboards.getDashboards()).map((d: any) => d.dashboard_name);
       expect(names).toContain(dashboardName);
     }).toPass({ timeout: 30_000, intervals: [1_500, 3_000, 5_000] });
 
     // --- UI assert: the dashboard renders and is navigable ----------------
     await expect(dashboard.name).toHaveText(dashboardName);
+
+    // Saving returns to view mode: the pencil is back, Save is gone.
+    await expect(dashboard.enterEditButton).toBeVisible();
+    await expect(dashboard.saveButton).toBeHidden();
 
     // Sidebar link for the saved dashboard (DashboardLink renders the name).
     await expect(dashboard.navLink(dashboardName).first()).toBeVisible();

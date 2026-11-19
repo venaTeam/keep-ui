@@ -79,13 +79,14 @@ export function usePresetActions() {
     [api, mutatePresetsList, mutateTags]
   );
 
+  // Resolves to whether the preset was deleted (false if cancelled or failed).
   const deletePreset = useCallback(
-    async (presetId: string, presetName: string) => {
+    async (presetId: string, presetName: string): Promise<boolean> => {
       const isDeleteConfirmed = confirm(
         `You are about to delete preset ${presetName}. Are you sure?`
       );
       if (!isDeleteConfirmed) {
-        return;
+        return false;
       }
       try {
         const response = await api.delete(`/preset/${presetId}`);
@@ -94,8 +95,10 @@ export function usePresetActions() {
         setLocalDynamicPresets((oldOrder) =>
           oldOrder.filter((p) => p.id !== presetId)
         );
+        return true;
       } catch (error) {
         showErrorToast(error, `Error deleting preset ${presetName}`);
+        return false;
       }
     },
     [api, mutatePresetsList, setLocalDynamicPresets]

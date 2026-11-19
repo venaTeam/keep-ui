@@ -50,6 +50,11 @@ async function assertNoAuth(gateway: string, apiKey: string): Promise<void> {
 
 export default async function globalSetup(_config: FullConfig): Promise<void> {
   await waitForHealthy(`${env.gateway}/healthcheck`);
+  // Alerts are sent to keep-ingestion (the gateway has no POST /alerts/event
+  // since the ingestion split). The sanity-check deploy script does not start
+  // it yet: run it on INGESTION_URL (default :8083) with
+  // KEEP_INGESTION_API_KEY equal to KEEP_API_KEY.
+  await waitForHealthy(`${env.ingestion}/healthcheck`);
   await waitForHealthy(`${env.workflows}/healthcheck`);
   await waitForHealthy(env.uiBaseUrl);
   await assertNoAuth(env.gateway, env.apiKey);

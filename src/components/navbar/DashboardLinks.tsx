@@ -16,6 +16,7 @@ import { IoChevronUp } from "react-icons/io5";
 import clsx from "clsx";
 import { useDashboards } from "utils/hooks/useDashboards";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { confirmNavigation } from "@/shared/lib/navigation-guard";
 import { PlusIcon } from "@radix-ui/react-icons";
 import { DashboardLink } from "./DashboardLink";
 
@@ -41,24 +42,41 @@ export const DashboardLinks = () => {
     }
   };
 
-  const deleteDashboard = async (id: string) => {
+  // Ask about the delete before the unsaved-changes warning, so cancelling the
+  // delete never discards edits. Only deleting the open dashboard leaves it.
+  const deleteDashboard = (id: string) => {
     const isDeleteConfirmed = confirm(
       "You are about to delete this dashboard. Are you sure?"
     );
-    if (isDeleteConfirmed) {
-      try {
-        await api.delete(`/dashboard/${id}`);
-        mutate(
-          dashboards.filter((dashboard) => dashboard.id !== id),
-          false
-        );
-        // now redirect to the first dashboard
+    if (!isDeleteConfirmed) {
+      return;
+    }
+    const deleted = dashboards.find((dashboard) => dashboard.id === id);
+    const isOpen =
+      !!deleted &&
+      decodeURIComponent(pathname) === `/dashboard/${deleted.dashboard_name}`;
+    if (isOpen) {
+      confirmNavigation(() => deleteDashboardConfirmed(id, true));
+    } else {
+      deleteDashboardConfirmed(id, false);
+    }
+  };
+
+  const deleteDashboardConfirmed = async (id: string, redirect: boolean) => {
+    try {
+      await api.delete(`/dashboard/${id}`);
+      const remaining = dashboards.filter((dashboard) => dashboard.id !== id);
+      mutate(remaining, false);
+      // now redirect to the first dashboard, or the feed if none is left
+      if (redirect) {
         router.push(
-          `/dashboard/${encodeURIComponent(dashboards[0].dashboard_name)}`
+          remaining[0]
+            ? `/dashboard/${encodeURIComponent(remaining[0].dashboard_name)}`
+            : "/alerts/feed"
         );
-      } catch (error) {
-        console.error("Error deleting dashboard:", error);
       }
+    } catch (error) {
+      console.error("Error deleting dashboard:", error);
     }
   };
 
@@ -78,7 +96,9 @@ export const DashboardLinks = () => {
 
   const handleCreateDashboard = () => {
     const uniqueName = generateUniqueName("My Dashboard");
-    router.push(`/dashboard/${encodeURIComponent(uniqueName)}`);
+    confirmNavigation(() =>
+      router.push(`/dashboard/${encodeURIComponent(uniqueName)}`)
+    );
   };
 
   return (
