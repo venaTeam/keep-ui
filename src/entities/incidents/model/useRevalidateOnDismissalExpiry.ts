@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { IncidentDto, Status } from "./models";
 
 // setTimeout fires immediately for anything longer than 2^31-1 ms (~24.8 days).
@@ -7,22 +7,23 @@ const MAX_TIMEOUT_MS = 2 ** 31 - 1;
 // a dismissal is live by its own clock.
 const EXPIRY_GRACE_MS = 1000;
 // A deadline already behind us that still reads suppressed means the browser's
-// clock runs ahead of the gateway's. Keep asking until the gateway agrees.
-const RETRY_MS = 5000;
+// clock runs ahead of the gateway's. Ask again, backing off, a bounded number of
+// times: 5s, 10s, 20s, 40s, then 60s.
+const RETRY_BASE_MS = 5000;
+const RETRY_MAX_MS = 60_000;
+export const MAX_RETRIES = 6;
 
 /**
- * Milliseconds until the list should be refetched to pick up the earliest
- * time-boxed dismissal lapsing, or null when nothing on screen will lapse.
- *
- * A "dismiss until" incident reads suppressed only while `dismissed_until` is
- * in the future. The gateway derives that on every read and nothing rewrites
- * the row at the deadline, so no SSE event announces it — the client has to
- * know when to ask again.
+ * A dismissal deadline as epoch ms. The gateway sends ISO 8601; a value without
+ * a timezone (some databases return one) is UTC, not the browser's local time.
  */
-export function getDismissalExpiryDelay(
-  incidents: IncidentDto[],
-  now: number
-): number | null {
+export function parseDeadline(value: string): number {
+  const hasZone = /(Z|[+-]\d{2}:?\d{2})$/i.test(value.trim());
+  return Date.parse(hasZone ? value : `${value}Z`);
+}
+
+/** The earliest `dismissed_until` among incidents that still read suppressed. */
+export function getNextDismissalExpiry(incidents: IncidentDto[]): number | null {
   let nextDeadline: number | null = null;
   for (const incident of incidents) {
     if (
@@ -32,7 +33,7 @@ export function getDismissalExpiryDelay(
     ) {
       continue;
     }
-    const deadline = Date.parse(incident.dismissed_until);
+    const deadline = parseDeadline(incident.dismissed_until);
     if (Number.isNaN(deadline)) {
       continue;
     }
@@ -40,14 +41,35 @@ export function getDismissalExpiryDelay(
       nextDeadline = deadline;
     }
   }
+  return nextDeadline;
+}
 
+/**
+ * Milliseconds until the list should be refetched to pick up the earliest
+ * time-boxed dismissal lapsing, or null when there is nothing to wait for.
+ * `retries` counts refetches already made after that deadline passed.
+ *
+ * A "dismiss until" incident reads suppressed only while `dismissed_until` is
+ * in the future. The gateway derives that on every read and nothing rewrites
+ * the row at the deadline, so no SSE event announces it — the client has to
+ * know when to ask again.
+ */
+export function getDismissalExpiryDelay(
+  incidents: IncidentDto[],
+  now: number,
+  retries: number = 0
+): number | null {
+  const nextDeadline = getNextDismissalExpiry(incidents);
   if (nextDeadline === null) {
     return null;
   }
-  if (nextDeadline <= now) {
-    return RETRY_MS;
+  if (nextDeadline > now) {
+    return Math.min(nextDeadline - now + EXPIRY_GRACE_MS, MAX_TIMEOUT_MS);
   }
-  return Math.min(nextDeadline - now + EXPIRY_GRACE_MS, MAX_TIMEOUT_MS);
+  if (retries >= MAX_RETRIES) {
+    return null;
+  }
+  return Math.min(RETRY_BASE_MS * 2 ** retries, RETRY_MAX_MS);
 }
 
 /**
@@ -62,16 +84,35 @@ export function useRevalidateOnDismissalExpiry(
   // Bumped on every firing so the timer re-arms even when the refetch comes
   // back with data identical to what we already had.
   const [tick, setTick] = useState(0);
+  // Refetches made after the current earliest deadline passed; starts over
+  // whenever that deadline changes.
+  const retries = useRef<{ deadline: number | null; count: number }>({
+    deadline: null,
+    count: 0,
+  });
 
   useEffect(() => {
     if (paused || !incidents) {
       return;
     }
-    const delay = getDismissalExpiryDelay(incidents, Date.now());
+    const now = Date.now();
+    const nextDeadline = getNextDismissalExpiry(incidents);
+    if (nextDeadline !== retries.current.deadline) {
+      retries.current = { deadline: nextDeadline, count: 0 };
+    }
+    const lapsed = nextDeadline !== null && nextDeadline <= now;
+    const delay = getDismissalExpiryDelay(
+      incidents,
+      now,
+      retries.current.count
+    );
     if (delay === null) {
       return;
     }
     const timeout = setTimeout(() => {
+      if (lapsed) {
+        retries.current.count += 1;
+      }
       revalidate();
       setTick((value) => value + 1);
     }, delay);
