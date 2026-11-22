@@ -5,22 +5,32 @@ import type {
   Updater,
   VisibilityState,
 } from "@tanstack/react-table";
+import { isEqual } from "lodash";
+import type { RowStyle } from "@/entities/alerts/model/useAlertRowStyle";
 import { DEFAULT_COLS } from "@/widgets/alerts-table/lib/alert-table-utils";
+import type { TimeFormatOption } from "@/widgets/alerts-table/lib/alert-table-time-format";
+import type { ListFormatOption } from "@/widgets/alerts-table/lib/alert-table-list-format";
 import type { WidgetData } from "../../types";
 import {
+  DEFAULT_LIST_FORMAT,
+  DEFAULT_TIME_FORMAT,
   EmptyGroupPosition,
   WidgetColumnChange,
   applyWidgetColumnChange,
   getGroupByColumnId,
   getVisibleColumnIds,
+  getWidgetRowStyle,
   normalizeColumnOrder,
   resetWidgetColumns,
   toVisibilityState,
   visibleIdsFromVisibilityState,
+  withoutDefaultFormats,
 } from "./alert-table-widget-config";
 
 const NO_RENAMES: Record<string, string> = {};
 const NO_SIZING: ColumnSizingState = {};
+const NO_TIME_FORMATS: Record<string, TimeFormatOption> = {};
+const NO_LIST_FORMATS: Record<string, ListFormatOption> = {};
 
 /** The column settings of one Alert Table widget, with the setters that change them. */
 export interface WidgetColumnState {
@@ -31,6 +41,9 @@ export interface WidgetColumnState {
   columnSizing: ColumnSizingState;
   grouping: GroupingState;
   emptyGroupPosition: EmptyGroupPosition;
+  rowStyle: RowStyle;
+  columnTimeFormats: Record<string, TimeFormatOption>;
+  columnListFormats: Record<string, ListFormatOption>;
   isCustomized: boolean;
   canEdit: boolean;
   setColumnOrder(order: string[]): void;
@@ -40,6 +53,9 @@ export interface WidgetColumnState {
   setColumnSizing(updater: Updater<ColumnSizingState>): void;
   setGrouping(updater: Updater<GroupingState>): void;
   setEmptyGroupPosition(position: EmptyGroupPosition): void;
+  setRowStyle(style: RowStyle): void;
+  setColumnTimeFormats(formats: Record<string, TimeFormatOption>): void;
+  setColumnListFormats(formats: Record<string, ListFormatOption>): void;
   reset(): void;
 }
 
@@ -72,7 +88,8 @@ function resolveUpdater<T>(updater: Updater<T>, current: T): T {
  * Reads and writes the column settings stored on an Alert Table widget.
  *
  * Each setting falls back on its own: the order to the shared default columns,
- * the renames and sizing to none, grouping to off and the empty group to the top.
+ * the renames, sizing and column formats to none, grouping to off, the empty
+ * group to the top and the row style to Compact (`"default"`).
  * Saved visible columns and `groupBy` resolve through `resolveWidgetColumnId`,
  * which never depends on the loaded alerts, so a snake_case id such as
  * `firing_counter` always reads as its column (`firingCounter`).
@@ -90,9 +107,12 @@ function resolveUpdater<T>(updater: Updater<T>, current: T): T {
  * they emitted, so several calls in one tick compose. A grouping equal to the
  * saved one, once resolved, emits nothing, so neither clearing an ungrouped
  * widget nor choosing the column a saved snake_case `groupBy` resolves to marks
- * it customized. Without `onChange` the setters do nothing and `canEdit` is
- * false. Pass a memoized `allColumnIds` to keep the setters stable between
- * renders.
+ * it customized. Defaults are never stored: `setRowStyle("default")` clears
+ * `rowStyle`, and the format setters drop the columns set to Time ago or Badges
+ * (`withoutDefaultFormats`). A row style or format map equal to the one in
+ * effect on the latest widget, read the same way, emits nothing. Without
+ * `onChange` the setters do nothing and `canEdit` is false. Pass a memoized
+ * `allColumnIds` to keep the setters stable between renders.
  */
 export function useWidgetColumnState({
   item,
@@ -194,6 +214,39 @@ export function useWidgetColumnState({
     (position: EmptyGroupPosition) => emit({ emptyGroupPosition: position }),
     [emit]
   );
+  const setRowStyle = useCallback(
+    (style: RowStyle) => {
+      if (style === getWidgetRowStyle(latestItem.current)) {
+        return;
+      }
+      emit({ rowStyle: style === "relaxed" ? "relaxed" : null });
+    },
+    [emit]
+  );
+  const setColumnTimeFormats = useCallback(
+    (formats: Record<string, TimeFormatOption>) => {
+      const next = withoutDefaultFormats(formats, DEFAULT_TIME_FORMAT);
+      const saved =
+        latestItem.current.alertTable?.columnTimeFormats ?? NO_TIME_FORMATS;
+      if (isEqual(next, saved)) {
+        return;
+      }
+      emit({ columnTimeFormats: next });
+    },
+    [emit]
+  );
+  const setColumnListFormats = useCallback(
+    (formats: Record<string, ListFormatOption>) => {
+      const next = withoutDefaultFormats(formats, DEFAULT_LIST_FORMAT);
+      const saved =
+        latestItem.current.alertTable?.columnListFormats ?? NO_LIST_FORMATS;
+      if (isEqual(next, saved)) {
+        return;
+      }
+      emit({ columnListFormats: next });
+    },
+    [emit]
+  );
   const reset = useCallback(() => {
     if (!onChange) {
       return;
@@ -211,6 +264,9 @@ export function useWidgetColumnState({
     columnSizing: item.alertTable?.columnSizing ?? NO_SIZING,
     grouping,
     emptyGroupPosition: item.alertTable?.emptyGroupPosition ?? "top",
+    rowStyle: getWidgetRowStyle(item),
+    columnTimeFormats: item.alertTable?.columnTimeFormats ?? NO_TIME_FORMATS,
+    columnListFormats: item.alertTable?.columnListFormats ?? NO_LIST_FORMATS,
     isCustomized:
       Object.keys(item.alertTable ?? {}).length > 0 ||
       !showsDefaultColumns(item, visibleColumns),
@@ -222,6 +278,9 @@ export function useWidgetColumnState({
     setColumnSizing,
     setGrouping,
     setEmptyGroupPosition,
+    setRowStyle,
+    setColumnTimeFormats,
+    setColumnListFormats,
     reset,
   };
 }
