@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   DndContext,
   useSensor,
@@ -14,10 +15,11 @@ import { Subtitle, Button, Badge, Text } from "@tremor/react";
 import { Disclosure } from "@headlessui/react";
 import { IoChevronUp } from "react-icons/io5";
 import clsx from "clsx";
-import { useDashboards } from "utils/hooks/useDashboards";
+import { Dashboard, useDashboards } from "utils/hooks/useDashboards";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { confirmNavigation } from "@/shared/lib/navigation-guard";
 import { PlusIcon } from "@radix-ui/react-icons";
+import { DuplicateDashboardModal } from "@/features/dashboard-duplicate";
 import { DashboardLink } from "./DashboardLink";
 
 export const DashboardLinks = () => {
@@ -25,6 +27,9 @@ export const DashboardLinks = () => {
   const api = useApi();
   const router = useRouter();
   const pathname = usePathname();
+  const [duplicateSource, setDuplicateSource] = useState<Dashboard | null>(
+    null
+  );
 
   const sensors = useSensors(useSensor(PointerSensor), useSensor(TouchSensor));
 
@@ -78,6 +83,10 @@ export const DashboardLinks = () => {
     } catch (error) {
       console.error("Error deleting dashboard:", error);
     }
+  };
+
+  const duplicateDashboard = (id: string) => {
+    setDuplicateSource(dashboards.find((d) => d.id === id) ?? null);
   };
 
   const generateUniqueName = (baseName: string): string => {
@@ -146,6 +155,7 @@ export const DashboardLinks = () => {
                   dashboard={dashboard}
                   pathname={pathname}
                   deleteDashboard={deleteDashboard}
+                  duplicateDashboard={duplicateDashboard}
                   titleClassName="max-w-[150px] overflow-hidden overflow-ellipsis"
                 />
               ))
@@ -169,6 +179,11 @@ export const DashboardLinks = () => {
           Add Dashboard
         </Button>
       </Disclosure.Panel>
+      <DuplicateDashboardModal
+        source={duplicateSource}
+        existingNames={dashboards.map((d) => d.dashboard_name)}
+        onClose={() => setDuplicateSource(null)}
+      />
     </Disclosure>
   );
 };
