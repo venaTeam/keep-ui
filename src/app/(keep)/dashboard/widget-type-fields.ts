@@ -9,6 +9,7 @@ const TYPE_FIELDS: Record<WidgetType, readonly string[]> = {
     "showFiringOnly",
     "customLink",
     "countBy",
+    "alertTable",
   ],
   [WidgetType.METRIC]: ["metric"],
   [WidgetType.GENERICS_METRICS]: ["genericMetrics"],

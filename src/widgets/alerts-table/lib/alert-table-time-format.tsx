@@ -26,7 +26,7 @@ export const formatDateTime = (
 
   switch (formatOption) {
     case "timeago":
-      return <TimeAgo date={date} />;
+      return <TimeAgo date={date.getTime()} />;
 
     case "iso":
       return date.toISOString();
@@ -41,7 +41,7 @@ export const formatDateTime = (
       return format(date, "PP"); // Format like "Mar 1, 2023"
 
     default:
-      return <TimeAgo date={date} />;
+      return <TimeAgo date={date.getTime()} />;
   }
 };
 

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { startCase } from "lodash";
 import { Table, Card, Button, Badge } from "@tremor/react";
 import { AlertsTableBody } from "@/widgets/alerts-table/ui/alerts-table-body";
 import {
@@ -581,6 +582,11 @@ export function AlertTableServerSide({
     ]
   );
 
+  const getGroupColumnLabel = useCallback(
+    (columnId: string) => columnRenameMapping[columnId] || startCase(columnId),
+    [columnRenameMapping]
+  );
+
   const handleColumnVisibilityChange = useCallback(
     (newVisibility: VisibilityState) => {
       if (useBackend) {
@@ -800,6 +806,7 @@ export function AlertTableServerSide({
           onRowClick={handleRowClick}
           presetName={presetName}
           groupExpansionState={groupExpansionState}
+          getColumnLabel={getGroupColumnLabel}
         />
       </Table>
     );

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Preset } from "@/entities/presets/model/types";
 import {
   usePresetAlertCount,
@@ -20,12 +20,14 @@ import WidgetAlertsTable from "./widget-alerts-table";
 import { useSyncedAnimation } from "./use-synced-animation";
 import { getBlinkColor, getBlinkStyle } from "./blink-palette";
 import { WidgetData, WidgetType } from "../../types";
+import { useDashboardEditMode } from "../../DashboardEditModeContext";
 
 interface PresetAlertTablePanelProps {
   item: WidgetData;
   preset?: Preset;
   filterCel: string;
   dashboardName?: string;
+  onSave?: (item: WidgetData) => void;
 }
 
 const getCountOfLastAlerts = (item: WidgetData) =>
@@ -57,8 +59,11 @@ const PresetAlertTablePanel: React.FC<PresetAlertTablePanelProps> = ({
   preset,
   filterCel,
   dashboardName,
+  onSave,
 }) => {
   const router = useRouter();
+  const isEditMode = useDashboardEditMode();
+  const [settingsSlot, setSettingsSlot] = useState<HTMLDivElement | null>(null);
   const countOfLastAlerts = getCountOfLastAlerts(item);
   const {
     alerts,
@@ -254,12 +259,14 @@ const PresetAlertTablePanel: React.FC<PresetAlertTablePanelProps> = ({
           {renderMissingLine()}
           {renderAlertsCountText()}
         </div>
-        <div className="flex items-center">
+        <div className="flex items-center gap-1.5">
+          {isEditMode && <div ref={setSettingsSlot} className="contents" />}
           <Button
             color="orange"
             variant="secondary"
             size="xs"
             onClick={handleGoToPresetClick}
+            disabled={isEditMode}
             data-cy="dashboard-widget-preset-go-to-btn"
           >
             Go to preset
@@ -268,9 +275,11 @@ const PresetAlertTablePanel: React.FC<PresetAlertTablePanelProps> = ({
       </div>
       {countOfLastAlerts > 0 && (
         <WidgetAlertsTable
-          presetName={preset?.name as string}
+          item={item}
+          isEditMode={isEditMode}
+          onChange={isEditMode ? onSave : undefined}
+          settingsSlot={settingsSlot}
           alerts={isLoading ? undefined : alerts}
-          columns={(item as any)?.presetColumns}
           background={
             isLoading || (countBy && isGroupLoading)
               ? undefined
