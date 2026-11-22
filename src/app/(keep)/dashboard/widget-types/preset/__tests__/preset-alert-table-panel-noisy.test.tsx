@@ -6,6 +6,12 @@ import { PresetPanelType, WidgetData, WidgetType } from "../../../types";
 
 let mockTablePresetNoisy: boolean | undefined;
 
+jest.mock("@/features/alerts/alert-quick-actions/ui/action-dialogs", () => ({
+  ChangeStatusDialog: () => null,
+  LinkIncidentDialog: () => null,
+  DismissDialog: () => null,
+}));
+
 jest.mock("@/features/presets/custom-preset-links", () => ({
   usePresetAlertsCount: () => ({ alerts: [], totalCount: 3, isLoading: false }),
   usePresetAlertCount: () => ({

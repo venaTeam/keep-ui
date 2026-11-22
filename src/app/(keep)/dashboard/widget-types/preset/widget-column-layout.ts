@@ -28,6 +28,8 @@ export interface WidgetColumnLayout {
    * render them at that width.
    */
   unclampedColumnIds: string[];
+  /** The flexible column, when it gives up width below its minimum so the table needs less room. */
+  shrunkColumnId?: string;
 }
 
 const FLEX_PREFERENCE = ["description", "name"];
@@ -86,22 +88,27 @@ export function getFlexColumnId(
  * than the container, the flexible column (`getFlexColumnId`) takes the
  * difference, past its maximum if need be, and the table is exactly as wide as
  * the container; pinned columns therefore never widen. When they add up to
- * more, the table is as wide as the columns and scrolls. With an unknown
- * width, the saved sizing is returned as is and no table width is set.
- * `unclampedColumnIds` lists every visible column rendering past its maximum.
- * `visibleOrder` lists the visible column ids in display order; ids with no
- * column in `columns` are skipped.
+ * more, the flexible column first gives up to `shrinkAllowance` pixels, below
+ * its minimum if need be but never under the table's default minimum, and the
+ * table scrolls by whatever is still missing. Callers pass the width of chrome
+ * they place beside the columns, so that chrome never makes a widget scroll
+ * that fits without it. With an unknown width, the saved sizing is returned as
+ * is and no table width is set. `unclampedColumnIds` lists every visible
+ * column rendering past its maximum. `visibleOrder` lists the visible column
+ * ids in display order; ids with no column in `columns` are skipped.
  */
 export function getWidgetColumnLayout({
   columns,
   visibleOrder,
   savedSizing,
   containerWidth,
+  shrinkAllowance = 0,
 }: {
   columns: readonly SizedColumn[];
   visibleOrder: readonly string[];
   savedSizing: ColumnSizingState;
   containerWidth: number | null;
+  shrinkAllowance?: number;
 }): WidgetColumnLayout {
   const byId = new Map(columns.map((column) => [column.id, column]));
   const visibleIds = visibleOrder.filter((id) => byId.has(id));
@@ -121,7 +128,7 @@ export function getWidgetColumnLayout({
   const total = visibleIds.reduce((sum, id) => sum + sizeOf(id), 0);
   const spare = containerWidth - total;
   const flexColumnId =
-    spare > 0
+    spare > 0 || (spare < 0 && shrinkAllowance > 0)
       ? getFlexColumnId(
           visibleIds.filter((id) => !WIDGET_PINNED_LEFT.includes(id)),
           savedSizing
@@ -135,31 +142,49 @@ export function getWidgetColumnLayout({
       unclampedColumnIds: unclampedIds(sizeOf),
     };
   }
-  const flexSize = sizeOf(flexColumnId) + spare;
+  const ownSize = sizeOf(flexColumnId);
+  const flexSize =
+    spare > 0
+      ? ownSize + spare
+      : ownSize -
+        Math.min(
+          -spare,
+          shrinkAllowance,
+          Math.max(0, ownSize - defaultColumnSizing.minSize)
+        );
+  const { min } = getColumnBounds(byId.get(flexColumnId) as SizedColumn);
   return {
     columnSizing: { ...savedSizing, [flexColumnId]: flexSize },
-    tableWidth: containerWidth,
+    tableWidth: total - ownSize + flexSize,
     unclampedColumnIds: unclampedIds((id) =>
       id === flexColumnId ? flexSize : sizeOf(id)
     ),
+    shrunkColumnId: flexSize < min ? flexColumnId : undefined,
   };
 }
 
 /**
- * Returns `columns` with the maximum width of every column in
- * `unclampedColumnIds` lifted, so the table renders those columns at their
- * full width. Returns `columns` itself when no column is unclamped.
+ * Returns `columns` with the bounds the layout passed lifted, so the table
+ * renders each column at its laid-out width: the maximum of every column in
+ * `unclampedColumnIds`, and the minimum of `shrunkColumnId` down to the
+ * table's default minimum, below which the layout never shrinks it. Returns
+ * `columns` itself when no bound is lifted.
  */
 export function withUnclampedColumns<T extends SizedColumn>(
   columns: T[],
-  unclampedColumnIds: readonly string[]
+  unclampedColumnIds: readonly string[],
+  shrunkColumnId?: string
 ): T[] {
-  if (unclampedColumnIds.length === 0) {
+  if (unclampedColumnIds.length === 0 && shrunkColumnId === undefined) {
     return columns;
   }
-  return columns.map((column) =>
-    column.id !== undefined && unclampedColumnIds.includes(column.id)
-      ? { ...column, maxSize: Number.MAX_SAFE_INTEGER }
-      : column
-  );
+  return columns.map((column) => {
+    if (column.id !== undefined && unclampedColumnIds.includes(column.id)) {
+      return { ...column, maxSize: Number.MAX_SAFE_INTEGER };
+    }
+    if (column.id === shrunkColumnId) {
+      return { ...column, minSize: defaultColumnSizing.minSize };
+    }
+    return column;
+  });
 }

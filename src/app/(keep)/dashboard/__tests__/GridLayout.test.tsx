@@ -7,6 +7,12 @@ import { GRID_COLS, GRID_COMPACT_TYPE, layoutBottom } from "../widget-layout";
 
 const mockGridProps: { current: Record<string, any> } = { current: {} };
 
+jest.mock("@/features/alerts/alert-quick-actions/ui/action-dialogs", () => ({
+  ChangeStatusDialog: () => null,
+  LinkIncidentDialog: () => null,
+  DismissDialog: () => null,
+}));
+
 jest.mock("react-grid-layout", () => {
   const actual = jest.requireActual("react-grid-layout");
   return {

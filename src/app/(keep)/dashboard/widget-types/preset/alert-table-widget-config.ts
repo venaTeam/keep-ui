@@ -28,6 +28,13 @@ export const WIDGET_PINNED_LEFT: readonly string[] = [
 export const NARROW_WIDGET_PX = 320;
 
 /**
+ * Widget width in pixels below which the rows' quick-action trays show icons
+ * only; the labelled tray is about 316 px wide and would cover most of a
+ * narrower row.
+ */
+export const QUICK_TRAY_COMPACT_PX = 640;
+
+/**
  * Minimum widths, in pixels, the widget uses instead of the presets-page ones,
  * so a default-size widget fits its default columns.
  */
