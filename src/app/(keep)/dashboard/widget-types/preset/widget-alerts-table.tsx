@@ -9,7 +9,6 @@ import React, {
 } from "react";
 import { createPortal } from "react-dom";
 import {
-  Column,
   ColumnPinningState,
   GroupingState,
   Table as ReactTable,
@@ -37,14 +36,12 @@ import { RowStyleOverrideProvider } from "@/entities/alerts/model/useAlertRowSty
 import AlertsTableHeaders from "@/widgets/alerts-table/ui/alert-table-headers";
 import { AlertsTableBody } from "@/widgets/alerts-table/ui/alerts-table-body";
 import { getColumnLabel } from "@/widgets/alerts-table/lib/alert-column-options";
-import { isList } from "@/widgets/alerts-table/lib/alert-table-list-format";
 import { useGroupExpansion } from "@/utils/hooks/useGroupExpansion";
 import { WidgetData } from "../../types";
 import {
   NARROW_WIDGET_PX,
   QUICK_TRAY_COMPACT_PX,
   WIDGET_PINNED_LEFT,
-  getWidgetRowStyle,
   mergeVisibleColumnOrder,
 } from "./alert-table-widget-config";
 import {
@@ -95,6 +92,7 @@ interface WidgetAlertsTableProps {
 
 const NO_ALERTS: AlertDto[] = [];
 const NO_THEME: Record<string, string> = {};
+const NO_FORMATS = {};
 const SKELETON_ROWS = 5;
 const OPAQUE_CELL_CLASSES =
   "[&_th]:[background:var(--widget-opaque-bg)] [&_td.sticky]:[background:var(--widget-opaque-bg)] [&_th.sticky]:!z-40 [&_td.sticky]:!z-40";
@@ -102,17 +100,10 @@ const COMPACT_GROUP_HEADER_CLASSES = "[&_td.group-header-cell]:py-1";
 const TABLE_FEATURES = [GROUP_ROW_SELECTION];
 const BORDER_TOLERANCE_PX = 0.01;
 
+function noop() {}
+
 function isAlertRow(row: Row<AlertDto>): boolean {
   return !row.getIsGrouped();
-}
-
-/**
- * Whether the widget offers Format list on a column: only when its first row
- * holds a JSON-string list, because the widget's array-valued columns render
- * as values, not lists, so a list format would not apply to them.
- */
-function isJsonStringListColumn(column: Column<AlertDto>): boolean {
-  return isList(column.getFacetedRowModel().rows[0]?.getValue(column.id));
 }
 
 /** Ids of the alert rows in display order, leaving out the rows of collapsed groups. */
@@ -385,12 +376,6 @@ function WidgetAlertsTableContent({
     [chromeSelection]
   );
 
-  const { columnTimeFormats, columnListFormats } = state;
-  const tableMeta = useMemo(
-    () => ({ columnTimeFormats, columnListFormats }),
-    [columnTimeFormats, columnListFormats]
-  );
-
   const table = useReactTable({
     _features: TABLE_FEATURES,
     data: alerts ?? NO_ALERTS,
@@ -418,7 +403,6 @@ function WidgetAlertsTableContent({
     autoResetAll: false,
     getCoreRowModel: getCoreRowModel(),
     getGroupedRowModel: groupedRowModel,
-    meta: tableMeta,
   });
 
   const { isGroupExpanded } = groupExpansion;
@@ -550,10 +534,10 @@ function WidgetAlertsTableContent({
               table={table}
               presetName={widgetKey}
               a11yContainerRef={a11yContainerRef}
-              columnTimeFormats={columnTimeFormats}
-              setColumnTimeFormats={state.setColumnTimeFormats}
-              columnListFormats={columnListFormats}
-              setColumnListFormats={state.setColumnListFormats}
+              columnTimeFormats={NO_FORMATS}
+              setColumnTimeFormats={noop}
+              columnListFormats={NO_FORMATS}
+              setColumnListFormats={noop}
               columnOrder={visibleColumnOrder}
               setColumnOrder={setVisibleColumnOrder}
               columnVisibility={state.columnVisibility}
@@ -562,8 +546,7 @@ function WidgetAlertsTableContent({
               setColumnRenameMapping={state.setColumnRenameMapping}
               interactive={isEditMode && !!onChange && !isNarrow}
               showSortItems={false}
-              showFormatItems={isEditMode}
-              canFormatAsList={isJsonStringListColumn}
+              showFormatItems={false}
               getOriginalColumnName={getColumnLabel}
             />
             <AlertsTableBody
@@ -610,12 +593,7 @@ function WidgetAlertsTableContent({
  * saved on the widget.
  *
  * Header controls show only in edit mode with `onChange`, and not on a narrow
- * widget. Rows are plain and not clickable, at the widget's saved row style
- * (Compact unless saved Relaxed), whatever row style the viewer chose on the
- * presets page. Date and list columns render in the widget's saved formats.
- * In edit mode, the header menu offers Format time on date columns and Format
- * list on columns whose values are JSON-string lists; an array-valued column
- * renders its values, not a list, so it is not offered there.
+ * widget. Rows are plain, not clickable and always at the default density.
  * Expand all / Collapse all reads the groups shown now, so a regrouping or a
  * refresh that drops a collapsed group does not leave it stale. A grouping
  * change from the table is resolved against the grouping the table shows, so
@@ -658,7 +636,7 @@ function WidgetAlertsTableContent({
  */
 export default function WidgetAlertsTable(props: WidgetAlertsTableProps) {
   return (
-    <RowStyleOverrideProvider value={getWidgetRowStyle(props.item)}>
+    <RowStyleOverrideProvider value="default">
       <WidgetAlertsTableContent {...props} />
     </RowStyleOverrideProvider>
   );

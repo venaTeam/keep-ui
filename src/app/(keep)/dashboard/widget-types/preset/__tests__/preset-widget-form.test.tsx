@@ -437,29 +437,6 @@ describe("PresetWidgetForm row grouping", () => {
     );
   });
 
-  it("choosing a group keeps the saved row style and formats", async () => {
-    const onChange = await renderForm(
-      tableWidget({
-        alertTable: {
-          rowStyle: "relaxed",
-          columnTimeFormats: { lastReceived: "date" },
-          columnListFormats: { tags: "count" },
-        },
-      })
-    );
-
-    await chooseGroupBy("Incident");
-
-    await waitFor(() =>
-      expect(lastValue(onChange).alertTable).toEqual({
-        rowStyle: "relaxed",
-        columnTimeFormats: { lastReceived: "date" },
-        columnListFormats: { tags: "count" },
-        groupBy: "incident",
-      })
-    );
-  });
-
   it("removes the grouping keys when None is chosen and keeps the rest", async () => {
     const onChange = await renderForm(
       tableWidget({

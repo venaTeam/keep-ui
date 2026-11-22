@@ -65,9 +65,6 @@ const makeState = (
     columnSizing: {},
     grouping: [],
     emptyGroupPosition: "top",
-    rowStyle: "default",
-    columnTimeFormats: {},
-    columnListFormats: {},
     isCustomized: false,
     canEdit: true,
     setColumnOrder: jest.fn(),
@@ -77,9 +74,6 @@ const makeState = (
     setColumnSizing: jest.fn(),
     setGrouping: jest.fn(),
     setEmptyGroupPosition: jest.fn(),
-    setRowStyle: jest.fn(),
-    setColumnTimeFormats: jest.fn(),
-    setColumnListFormats: jest.fn(),
     reset: jest.fn(),
     ...overrides,
   };
@@ -487,55 +481,6 @@ describe("WidgetTableSettings", () => {
 
     expect(grouped.state.setEmptyGroupPosition).toHaveBeenCalledWith("bottom");
     expect(state.setEmptyGroupPosition).not.toHaveBeenCalled();
-  });
-
-  describe("Rows", () => {
-    const follows = (first: Element, second: Element) =>
-      !!(
-        first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING
-      );
-
-    const rowsGroup = () => screen.getByRole("radiogroup", { name: "Rows" });
-
-    it("Rows sits after Group rows by and reflects state.rowStyle", () => {
-      const { unmount } = renderSettings({ grouping: ["service"] });
-      const opened = openSettings();
-
-      const groupRowsBy = within(opened).getByText("Group rows by");
-      const rowsWithNoValue = within(opened).getByRole("radiogroup", {
-        name: "Rows with no value",
-      });
-      const reset = within(opened).getByRole("button", {
-        name: "Reset to defaults",
-      });
-      expect(follows(groupRowsBy, rowsGroup())).toBe(true);
-      expect(follows(rowsWithNoValue, rowsGroup())).toBe(true);
-      expect(follows(rowsGroup(), reset)).toBe(true);
-      expect(within(opened).getByText("Rows").tagName).toBe("H5");
-      expect(
-        opened.querySelector(
-          '[data-cy="dashboard-widget-table-settings-row-style"]'
-        )
-      ).toContainElement(rowsGroup());
-      expect(screen.getByRole("radio", { name: "Compact" })).toBeChecked();
-      unmount();
-
-      renderSettings({ rowStyle: "relaxed" });
-      openSettings();
-
-      expect(screen.getByRole("radio", { name: "Relaxed" })).toBeChecked();
-      expect(screen.getByRole("radio", { name: "Compact" })).not.toBeChecked();
-    });
-
-    it("choosing Relaxed calls setRowStyle('relaxed')", () => {
-      const { state } = renderSettings();
-      openSettings();
-
-      fireEvent.click(screen.getByRole("radio", { name: "Relaxed" }));
-
-      expect(state.setRowStyle).toHaveBeenCalledTimes(1);
-      expect(state.setRowStyle).toHaveBeenCalledWith("relaxed");
-    });
   });
 
   it("Reset to defaults calls reset and is disabled when not customized", () => {
