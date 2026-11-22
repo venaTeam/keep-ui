@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { isHosstedEnabledForTenant } from "@/shared/lib/server/hossted-tenants";
 import http from "http";
 import https from "https";
 
@@ -129,6 +130,13 @@ export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session) {
     return errorResponse("Unauthorized", 401);
+  }
+
+  if (!isHosstedEnabledForTenant(session.tenantId)) {
+    console.warn("Hossted request rejected: tenant not enabled", {
+      tenantId: session.tenantId,
+    });
+    return errorResponse("Hossted is not enabled for this tenant", 403);
   }
 
   const id = req.nextUrl.searchParams.get("id");

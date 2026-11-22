@@ -59,6 +59,12 @@ export interface InternalConfig {
   HOSSTED_DASHBOARD_URL: string | undefined;
   HOSSTED_TOAST_DISABLED: boolean;
   /**
+   * Whether Hossted is enabled for the signed-in user's tenant. getConfig()
+   * defaults it to false; the root layout sets it per session from
+   * HOSSTED_ENABLED_TENANTS, so the tenant list never reaches the browser.
+   */
+  HOSSTED_ENABLED: boolean;
+  /**
    * Grafana origins (scheme://host[:port]) whose panels dashboard Grafana
    * Panel widgets may frame. Empty disables the Grafana Panel widget type.
    */
