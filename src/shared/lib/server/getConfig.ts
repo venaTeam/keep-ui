@@ -101,6 +101,7 @@ export function getConfig(): InternalConfig {
     HOSSTED_API_TOKEN: process.env.HOSSTED_API_TOKEN,
     HOSSTED_DASHBOARD_URL: process.env.HOSSTED_DASHBOARD_URL,
     HOSSTED_TOAST_DISABLED: process.env.HOSSTED_TOAST_DISABLED === "true",
+    HOSSTED_ENABLED: false,
     GRAFANA_EMBED_ALLOWED_ORIGINS: parseOriginListEnv(
       process.env.KEEP_GRAFANA_EMBED_ALLOWED_ORIGINS
     ),

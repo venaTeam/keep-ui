@@ -214,6 +214,7 @@ const mockConfig: InternalConfig = {
   HOSSTED_API_TOKEN: undefined,
   HOSSTED_DASHBOARD_URL: undefined,
   HOSSTED_TOAST_DISABLED: false,
+  HOSSTED_ENABLED: false,
 };
 
 jest.mock("@/utils/hooks/useConfig", () => ({
