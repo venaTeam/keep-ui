@@ -20,7 +20,7 @@ jest.mock("@/auth", () => ({ auth: jest.fn() }));
 
 const mockedAuth = auth as unknown as jest.Mock;
 
-const FAKE_SESSION = { user: { email: "test@example.com" }, tenantId: "keep" };
+const FAKE_SESSION = { user: { email: "test@example.com" } };
 const UPSTREAM_TOKEN = "upstream-token";
 
 type Seen = { url: string; authorization?: string; body: string };
@@ -91,7 +91,6 @@ beforeEach(() => {
     ...originalEnv,
     HOSSTED_UPSTREAM_URL: upstreamUrl,
     HOSSTED_UPSTREAM_TOKEN: UPSTREAM_TOKEN,
-    HOSSTED_ENABLED_TENANTS: "keep",
   };
   jest.spyOn(console, "error").mockImplementation(() => {});
 });
@@ -109,59 +108,6 @@ describe("POST /api/hossted", () => {
 
     expect(res.status).toBe(401);
     expect(seen).toHaveLength(0);
-  });
-
-  it("returns 403 for a tenant not on the allowlist and never calls upstream", async () => {
-    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
-    mockedAuth.mockResolvedValue({ ...FAKE_SESSION, tenantId: "tenant-b" });
-
-    const res = await POST(proxyReq("fp-1"));
-
-    expect(res.status).toBe(403);
-    expect(await res.json()).toEqual({
-      error: "Hossted is not enabled for this tenant",
-    });
-    expect(seen).toHaveLength(0);
-    expect(warn).toHaveBeenCalledWith(expect.any(String), {
-      tenantId: "tenant-b",
-    });
-  });
-
-  it("returns 403 when the allowlist is unset", async () => {
-    jest.spyOn(console, "warn").mockImplementation(() => {});
-    delete process.env.HOSSTED_ENABLED_TENANTS;
-
-    const res = await POST(proxyReq("fp-1"));
-
-    expect(res.status).toBe(403);
-    expect(seen).toHaveLength(0);
-  });
-
-  it("returns 403 for a session without a tenant id", async () => {
-    jest.spyOn(console, "warn").mockImplementation(() => {});
-    mockedAuth.mockResolvedValue({ user: { email: "test@example.com" } });
-
-    const res = await POST(proxyReq("fp-1"));
-
-    expect(res.status).toBe(403);
-  });
-
-  it("returns 401 before 403 when there is no session", async () => {
-    delete process.env.HOSSTED_ENABLED_TENANTS;
-    mockedAuth.mockResolvedValue(null);
-
-    const res = await POST(proxyReq("fp-1"));
-
-    expect(res.status).toBe(401);
-  });
-
-  it("returns 403 before validating the request", async () => {
-    jest.spyOn(console, "warn").mockImplementation(() => {});
-    mockedAuth.mockResolvedValue({ ...FAKE_SESSION, tenantId: "tenant-b" });
-
-    const res = await POST(proxyReq(null));
-
-    expect(res.status).toBe(403);
   });
 
   it("returns 400 when id is missing", async () => {

@@ -14,7 +14,7 @@ import { AlertName } from "@/entities/alerts/ui";
 import AlertAssignee from "../ui/alert-assignee";
 import AlertExtraPayload from "../ui/alert-extra-payload";
 import { AlertMenu } from "@/features/alerts/alert-menu";
-import { buildHosstedColumns } from "./hossted-column";
+import { HosstedButton } from "@hossted/keep-integration";
 import { isSameDay, isValid, isWithinInterval } from "date-fns";
 import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
 import { getNestedValue } from "@/shared/lib/object-utils";
@@ -255,7 +255,6 @@ export const useAlertTableCols = (
   const { data: configData } = useConfig();
   // check if noisy alerts are enabled
   const noisyAlertsEnabled = configData?.NOISY_ALERTS_ENABLED;
-  const hosstedEnabled = configData?.HOSSTED_ENABLED === true;
   const [columnRenameMapping] = useLocalStorage<ColumnRenameMapping>(
     `column-rename-mapping-${presetName}`,
     {}
@@ -733,7 +732,20 @@ export const useAlertTableCols = (
           />
         ),
       }),
-      ...buildHosstedColumns(hosstedEnabled),
+      columnHelper.display({
+        id: "hossted",
+        header: "Hossted",
+        minSize: 100,
+        cell: (context) => (
+          <HosstedButton
+            request={{
+              fingerprint: context.row.original.fingerprint,
+              payload: context.row.original,
+            }}
+            disableHosstedSidePanel
+          />
+        ),
+      }),
       ...filteredAndGeneratedCols,
       ...extraColumns,
       ...((isMenuDisplayed
@@ -768,7 +780,6 @@ export const useAlertTableCols = (
     isCheckboxDisplayed,
     isMenuDisplayed,
     noisyAlertsEnabled,
-    hosstedEnabled,
     presetNoisy,
     presetName,
     rowStyle,
