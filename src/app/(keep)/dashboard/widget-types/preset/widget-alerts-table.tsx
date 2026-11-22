@@ -51,6 +51,7 @@ import {
 
 interface WidgetAlertsTableProps {
   item: WidgetData;
+  presetNoisy?: boolean;
   alerts?: AlertDto[];
   background?: string;
   isEditMode: boolean;
@@ -63,7 +64,7 @@ const NO_THEME: Record<string, string> = {};
 const NO_FORMATS = {};
 const SKELETON_ROWS = 5;
 const OPAQUE_CELL_CLASSES =
-  "[&_th]:[background:var(--widget-opaque-bg)] [&_td.sticky]:[background:var(--widget-opaque-bg)] [&_th.sticky]:z-40 [&_td.sticky]:z-10";
+  "[&_th]:[background:var(--widget-opaque-bg)] [&_td.sticky]:[background:var(--widget-opaque-bg)] [&_th.sticky]:!z-40 [&_td.sticky]:!z-40";
 const COMPACT_GROUP_HEADER_CLASSES = "[&_td.group-header-cell]:py-1";
 const BORDER_TOLERANCE_PX = 0.01;
 
@@ -140,6 +141,7 @@ function getColumnWidths(
 
 function WidgetAlertsTableContent({
   item,
+  presetNoisy,
   alerts,
   background,
   isEditMode,
@@ -369,6 +371,7 @@ function WidgetAlertsTableContent({
             lastViewedAlert={null}
             presetName={widgetKey}
             groupExpansionState={groupExpansion}
+            presetNoisy={presetNoisy}
             rowAppearance="plain"
             selectable={false}
             showIncidentDetails
@@ -406,6 +409,10 @@ function WidgetAlertsTableContent({
  * refresh that drops a collapsed group does not leave it stale. A grouping
  * change from the table is resolved against the grouping the table shows, so
  * a saved `groupBy` it cannot use is replaced, not kept.
+ * In a noisy preset (`presetNoisy`), critical firing rows ring as on the
+ * presets page: a pulsing overlay outlined in red behind every cell, pinned
+ * cells included over their opaque tint, and a collapsed group's header rings
+ * while one of its alerts would. The rows keep ringing in edit mode.
  * In edit mode with `onChange`, the ⚙ Table settings button is rendered into
  * `settingsSlot` (an element the caller places in its header), at every width;
  * its column widths are the rendered ones and its Auto-fit measures this table.
