@@ -19,7 +19,6 @@ import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
-import { buildTimeRangeCel } from "./time-range-cel";
 import { useSyncedAnimation } from "./use-synced-animation";
 import { getBlinkColor, getBlinkStyle } from "./blink-palette";
 
@@ -49,10 +48,14 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
   countBy,
 }) => {
   const searchParams = useSearchParams();
-  const timeRangeCel = useMemo(
-    () => buildTimeRangeCel(searchParams.get("time_stamp")),
-    [searchParams]
-  );
+  const timeRangeCel = useMemo(() => {
+    const timeRangeSearchParam = searchParams.get("time_stamp");
+    if (timeRangeSearchParam) {
+      const parsedTimeRange = JSON.parse(timeRangeSearchParam);
+      return `lastReceived >= "${parsedTimeRange.start}" && lastReceived <= "${parsedTimeRange.end}"`;
+    }
+    return "";
+  }, [searchParams]);
 
   const isEditMode = useDashboardEditMode();
   const presets = useDashboardPreset();
