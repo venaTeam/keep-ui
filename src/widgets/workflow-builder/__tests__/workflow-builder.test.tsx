@@ -210,11 +210,6 @@ const mockConfig: InternalConfig = {
   HIDE_NAVBAR_AI_PLUGINS: false,
   KEEP_TICKETING_ENABLED: false,
   KEEP_WF_LIST_EXTENDED_INFO: false,
-  HOSSTED_PROXY_URL: undefined,
-  HOSSTED_API_TOKEN: undefined,
-  HOSSTED_DASHBOARD_URL: undefined,
-  HOSSTED_TOAST_DISABLED: false,
-  HOSSTED_ENABLED: false,
 };
 
 jest.mock("@/utils/hooks/useConfig", () => ({

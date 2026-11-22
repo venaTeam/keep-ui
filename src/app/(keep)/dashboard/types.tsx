@@ -1,8 +1,6 @@
 import { MetricsWidget } from "@/utils/hooks/useDashboardMetricWidgets";
 import { Preset } from "@/entities/presets/model/types";
 import { CountBy } from "@/entities/presets/model/count-by";
-import type { TimeFormatOption } from "@/widgets/alerts-table/lib/alert-table-time-format";
-import type { ListFormatOption } from "@/widgets/alerts-table/lib/alert-table-list-format";
 
 export interface LayoutItem {
   i: string;
@@ -83,22 +81,13 @@ export interface IncidentTableWidgetConfig {
 
 export type EmptyGroupPosition = "top" | "bottom";
 
-/**
- * Per-widget Alert Table settings. Every key is optional; an absent key means
- * "fall back". Defaults are never stored: Compact rows are an absent
- * `rowStyle`, `columnTimeFormats` holds only the columns not set to Time ago,
- * `columnListFormats` only those not set to Badges, and an empty map is left
- * out.
- */
+/** Per-widget Alert Table settings. Every key is optional; an absent key means "fall back". */
 export interface AlertTableWidgetConfig {
   columnOrder?: string[];
   columnRenameMapping?: Record<string, string>;
   columnSizing?: Record<string, number>;
   groupBy?: string | null;
   emptyGroupPosition?: EmptyGroupPosition;
-  rowStyle?: "relaxed" | null;
-  columnTimeFormats?: Record<string, TimeFormatOption>;
-  columnListFormats?: Record<string, ListFormatOption>;
 }
 
 export enum PresetPanelType {

@@ -1,9 +1,6 @@
 import { camelCase } from "lodash";
 import type { VisibilityState } from "@tanstack/react-table";
 import { AlertKnownKeys } from "@/entities/alerts/model/types";
-import type { RowStyle } from "@/entities/alerts/model/useAlertRowStyle";
-import type { TimeFormatOption } from "@/widgets/alerts-table/lib/alert-table-time-format";
-import type { ListFormatOption } from "@/widgets/alerts-table/lib/alert-table-list-format";
 import type {
   AlertTableWidgetConfig,
   EmptyGroupPosition,
@@ -81,40 +78,7 @@ export type WidgetColumnChange = {
   columnSizing?: Record<string, number>;
   groupBy?: string | null;
   emptyGroupPosition?: EmptyGroupPosition;
-  rowStyle?: "relaxed" | null;
-  columnTimeFormats?: Record<string, TimeFormatOption>;
-  columnListFormats?: Record<string, ListFormatOption>;
 };
-
-/** The time format a column without a saved entry uses, so it is never stored. */
-export const DEFAULT_TIME_FORMAT: TimeFormatOption = "timeago";
-
-/** The list format a column without a saved entry uses, so it is never stored. */
-export const DEFAULT_LIST_FORMAT: ListFormatOption = "badges";
-
-/**
- * Returns a copy of a column format map without the entries that are empty or
- * equal to `defaultFormat`, so only the columns set to another format are saved.
- */
-export function withoutDefaultFormats<T extends string>(
-  formats: Record<string, T>,
-  defaultFormat: T
-): Record<string, T> {
-  return Object.fromEntries(
-    Object.entries(formats).filter(
-      ([, format]) => format && format !== defaultFormat
-    )
-  ) as Record<string, T>;
-}
-
-/**
- * Returns the row style a widget shows: `"relaxed"` only when its saved
- * `rowStyle` is `"relaxed"`, otherwise Compact (`"default"`), including for a
- * missing, null or unknown value.
- */
-export function getWidgetRowStyle(item: WidgetData): RowStyle {
-  return item.alertTable?.rowStyle === "relaxed" ? "relaxed" : "default";
-}
 
 /**
  * The camelCase aliases the gateway's alert DTO (`AlertDto` in keep-api-gateway
@@ -290,10 +254,8 @@ function compactAlertTable(
  * merged into `alertTable`, keeping the keys the change does not mention.
  * Settings that end up null, empty or unset are removed, so are the empty
  * group's position when the grouping is cleared and `alertTable` itself when
- * nothing is left in it. Defaults are never stored: Compact rows are passed as
- * `rowStyle: null`, and the format maps arrive without their default entries
- * (see `withoutDefaultFormats`), so an empty map is removed. Undoing a change
- * therefore leaves the widget as if it had never been customized.
+ * nothing is left in it. Undoing a change therefore leaves the widget as if it
+ * had never been customized.
  */
 export function applyWidgetColumnChange(
   item: WidgetData,

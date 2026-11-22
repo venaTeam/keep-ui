@@ -27,7 +27,6 @@ import { FormattedContent } from "@/shared/ui/FormattedContent/FormattedContent"
 import { IncidentDto } from "@/entities/incidents/model";
 import { DOCS_CLIPBOARD_COPY_ERROR_PATH } from "@/shared/constants";
 import CollapsibleIncidentsList from "./alert-sidebar-incidents";
-import { AlertSidebarHossted } from "./alert-sidebar-hossted";
 
 type AlertSidebarProps = {
   isOpen: boolean;
@@ -290,7 +289,6 @@ export const AlertSidebar = ({
                     <CollapsibleIncidentsList incidents={alert.incident_dto} />
                   </div>
                 )}
-                <AlertSidebarHossted alert={alert} />
                 <AlertTimeline
                   key={auditData ? auditData.length : 1}
                   alert={alert}
@@ -298,6 +296,7 @@ export const AlertSidebar = ({
                   isLoading={isLoading}
                   onRefresh={handleRefresh}
                 />
+
               </div>
             )}
           </Dialog.Panel>
