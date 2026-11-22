@@ -319,9 +319,6 @@ export const useAlertTableCols = (
               value instanceof Date
                 ? value
                 : new Date(value as string | number);
-            if (value === null || value === undefined || !isValid(date)) {
-              return "";
-            }
             const isoString = date.toISOString();
             // Get the format from column format settings or use default
             const formatOption =
