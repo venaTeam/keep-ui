@@ -125,8 +125,18 @@ export function getGroupByFieldOptions(columnIds: readonly string[]): string[] {
 }
 
 /**
- * Display label of a column: its rename when one is set, else the shortlist
- * label, else the id in start case (`labels.team` reads "Labels Team").
+ * Column labels that differ from the id in start case. The Count and Group
+ * rows by wording is kept out: it calls `node_name` "Host", which clashed with
+ * the separate `host` field, so columns use the presets page's names.
+ */
+const COLUMN_LABELS: ReadonlyMap<string, string> = new Map([
+  ["name", "Alert name"],
+]);
+
+/**
+ * Display label of a column: its rename when one is set, else its entry in
+ * `COLUMN_LABELS`, else the id in start case (`labels.team` reads "Labels
+ * Team", `node_name` reads "Node Name").
  */
 export function getColumnLabel(
   columnId: string,
@@ -140,5 +150,5 @@ export function getColumnLabel(
   if (typeof renamed === "string" && renamed !== "") {
     return renamed;
   }
-  return GROUP_BY_SHORTLIST_LABELS.get(columnId) ?? startCase(columnId);
+  return COLUMN_LABELS.get(columnId) ?? startCase(columnId);
 }

@@ -977,15 +977,15 @@ describe("WidgetAlertsTable", () => {
 
   it("header Rename starts from the name the header shows", async () => {
     renderWidget(
-      { presetColumns: ["name", "node_name"] },
-      [alertWith({ node_name: "db-1" })],
+      { presetColumns: ["name", "description"] },
+      [alertWith()],
       { isEditMode: true, onChange: jest.fn() }
     );
     expect(
-      within(screen.getByTestId("header-cell-node_name")).getByText("Host")
+      within(screen.getByTestId("header-cell-name")).getByText("Alert name")
     ).toBeInTheDocument();
 
-    const cell = screen.getByTestId("header-cell-node_name");
+    const cell = screen.getByTestId("header-cell-name");
     const trigger = within(cell).getByTestId("dropdown-menu-button");
     fireEvent.mouseDown(trigger);
     fireEvent.click(trigger);
@@ -994,8 +994,23 @@ describe("WidgetAlertsTable", () => {
     fireEvent.pointerEnter(rename);
     fireEvent.mouseMove(rename);
 
-    expect(await screen.findByDisplayValue("Host")).toBeInTheDocument();
-    expect(screen.queryByDisplayValue("Node Name")).toBeNull();
+    expect(await screen.findByDisplayValue("Alert name")).toBeInTheDocument();
+    expect(screen.queryByDisplayValue("Name")).toBeNull();
+  });
+
+  it("labels node_name and host columns differently", () => {
+    renderWidget({ presetColumns: ["name", "node_name", "host"] }, [
+      alertWith({ node_name: "db-1" }),
+    ]);
+    expect(
+      within(screen.getByTestId("header-cell-node_name")).getByText(
+        "Node Name"
+      )
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId("header-cell-host")).getByText("Host")
+    ).toBeInTheDocument();
+    expect(screen.getByText("db-1")).toBeInTheDocument();
   });
 
   it("Move left on description puts it before name, skipping hidden columns", async () => {
