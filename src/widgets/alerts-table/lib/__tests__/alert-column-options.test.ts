@@ -7,6 +7,7 @@ import {
   getColumnLabel,
   getGroupByFieldOptions,
   matchesSearch,
+  searchFields,
 } from "../alert-column-options";
 
 describe("getAlertColumnOptions", () => {
@@ -187,4 +188,40 @@ describe("matchesSearch", () => {
     expect(matchesSearch("service", "")).toBe(true);
     expect(matchesSearch("service", "host")).toBe(false);
   });
+});
+
+describe("searchFields", () => {
+  const NODE_NAME_FIELDS = [
+    "labels.Node_Name",
+    "labels.Node_name",
+    "labels.node_Name",
+    "labels.node_name",
+    "labels.node_name.keyword",
+    "node_name",
+  ];
+
+  it("lists top-level fields before nested ones", () =>
+    expect(searchFields(NODE_NAME_FIELDS, "node_name")[0]).toBe("node_name"));
+
+  it("drops a .keyword copy of a listed field", () =>
+    expect(searchFields(NODE_NAME_FIELDS, "node_name")).toEqual([
+      "node_name",
+      "labels.Node_Name",
+      "labels.Node_name",
+      "labels.node_Name",
+      "labels.node_name",
+    ]));
+
+  it("keeps a .keyword field whose base field is not listed", () =>
+    expect(searchFields(["labels.host.keyword"], "host")).toEqual([
+      "labels.host.keyword",
+    ]));
+
+  it("matches the label as well as the id", () =>
+    expect(searchFields(["node_name", "lastReceived"], "node name")).toEqual([
+      "node_name",
+    ]));
+
+  it("ignores case", () =>
+    expect(searchFields(["ticket_url"], "TICKET")).toEqual(["ticket_url"]));
 });

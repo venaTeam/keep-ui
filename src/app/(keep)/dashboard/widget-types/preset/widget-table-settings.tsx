@@ -50,7 +50,7 @@ import {
   getAlertColumnOptions,
   getColumnLabel,
   getGroupByFieldOptions,
-  matchesSearch,
+  searchFields,
 } from "@/widgets/alerts-table/lib/alert-column-options";
 import {
   WIDGET_PINNED_LEFT,
@@ -549,10 +549,16 @@ function AddColumnSearch({
   const [query, setQuery] = useState("");
   const search = query.trim();
   const results = search
-    ? fieldOptions.filter(
-        (id) => !state.columnVisibility[id] && matchesSearch(id, search)
+    ? searchFields(
+        fieldOptions.filter((id) => !state.columnVisibility[id]),
+        search
       )
     : [];
+  const labelCounts = new Map<string, number>();
+  results.forEach((id) => {
+    const label = getColumnLabel(id);
+    labelCounts.set(label, (labelCounts.get(label) ?? 0) + 1);
+  });
 
   const add = (id: string) => {
     state.setVisibleColumns([...state.visibleColumns, id]);
@@ -585,7 +591,10 @@ function AddColumnSearch({
                 className="block w-full truncate px-2 py-1 text-left hover:bg-orange-50 focus:bg-orange-50 focus:outline-none"
                 onClick={() => add(id)}
               >
-                {id}
+                {getColumnLabel(id)}
+                {labelCounts.get(getColumnLabel(id))! > 1 && (
+                  <span className="ml-1 text-gray-400">{id}</span>
+                )}
               </button>
             </li>
           ))}

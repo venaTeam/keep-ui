@@ -414,7 +414,7 @@ describe("WidgetTableSettings", () => {
     fireEvent.change(screen.getByRole("searchbox", { name: "Find a field" }), {
       target: { value: "region" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "labels.region" }));
+    fireEvent.click(screen.getByRole("button", { name: "Labels Region" }));
 
     expect(state.setVisibleColumns).toHaveBeenCalledWith([
       ...VISIBLE,
@@ -439,16 +439,16 @@ describe("WidgetTableSettings", () => {
 
     expect(results).toEqual(
       expect.arrayContaining([
-        "labels.team",
-        "environment",
-        "lastReceived",
-        "assignee",
-        "ticket_type",
+        "Labels Team",
+        "Environment",
+        "Last Received",
+        "Assignee",
+        "Ticket Type",
       ])
     );
-    expect(results).not.toContain("name");
-    expect(results).not.toContain("description");
-    expect(results).not.toContain("severity");
+    expect(results).not.toContain("Alert name");
+    expect(results).not.toContain("Description");
+    expect(results).not.toContain("Severity");
 
     fireEvent.change(search, { target: { value: "checkbox" } });
     expect(screen.getByText("No matching fields")).toBeInTheDocument();
@@ -462,11 +462,37 @@ describe("WidgetTableSettings", () => {
     fireEvent.change(screen.getByRole("searchbox", { name: "Find a field" }), {
       target: { value: "f_1234" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "labels.f_1234" }));
+    fireEvent.click(screen.getByRole("button", { name: "Labels F 1234" }));
 
     expect(state.setVisibleColumns).toHaveBeenCalledWith([
       ...VISIBLE,
       "labels.f_1234",
+    ]);
+  });
+
+  it("search lists node_name first, by its label, and tells label variants apart by id", () => {
+    mockPotentialFields = [
+      "labels.Node_name",
+      "labels.node_name",
+      "labels.node_name.keyword",
+      "node_name",
+    ];
+    renderSettings();
+    openSettings();
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Find a field" }), {
+      target: { value: "node_name" },
+    });
+    const results = within(
+      screen.getByRole("list", { name: "Matching fields" })
+    )
+      .getAllByRole("button")
+      .map((button) => button.textContent);
+
+    expect(results).toEqual([
+      "Node Name",
+      "Labels Node Namelabels.node_name",
+      "Labels Node Namelabels.Node_name",
     ]);
   });
 

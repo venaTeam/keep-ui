@@ -99,6 +99,34 @@ export function matchesSearch(text: string, query: string): boolean {
   return text.toLowerCase().includes(query.toLowerCase());
 }
 
+const KEYWORD_SUFFIX = ".keyword";
+
+/**
+ * Fields whose id or label contains `query`, ignoring case, for the Find a
+ * field list. A `<field>.keyword` id is left out when `<field>` is listed too,
+ * since it is a copy of the same value. Top-level fields come before nested
+ * ones such as `labels.*`; the given order is kept otherwise.
+ */
+export function searchFields(
+  fieldIds: readonly string[],
+  query: string
+): string[] {
+  const listed = new Set(fieldIds);
+  const isTopLevel = (id: string) => !id.includes(".");
+  return fieldIds
+    .filter(
+      (id) =>
+        !(
+          id.endsWith(KEYWORD_SUFFIX) &&
+          listed.has(id.slice(0, -KEYWORD_SUFFIX.length))
+        ) &&
+        (matchesSearch(id, query) || matchesSearch(getColumnLabel(id), query))
+    )
+    .sort(
+      (first, second) => Number(isTopLevel(second)) - Number(isTopLevel(first))
+    );
+}
+
 /**
  * Column ids a user can add, show or group by: the table's columns plus the
  * extra fields, de-duplicated, without the checkbox, menu and noise columns,
