@@ -158,13 +158,14 @@ describe("AlertsTableBody ringing rows", () => {
     const cells = cellsOf(row);
 
     expect(row).toHaveAttribute("data-ringing", "true");
-    expect(row.getAttribute("style")).toBeNull();
+    expect(row.style.getPropertyValue("--blink-row-tint")).not.toBe("");
+    expect(row.style.getPropertyValue("--blink-row-edge")).not.toBe("");
     expect(row.className).not.toMatch(/blink|pulse/);
     expect(within(row).getByText(RINGING_REASON)).toHaveClass("sr-only");
     cells.forEach((cell) => {
       expect(cell).toHaveClass(...OVERLAY);
       expect(cell).not.toHaveClass("!bg-inherit");
-      expect(cell.style.getPropertyValue("--blink-row-tint")).not.toBe("");
+      expect(cell.style.getPropertyValue("--blink-row-tint")).toBe("");
     });
     expect(cells[0]).toHaveClass("before:border-l-2");
     expect(cells[cells.length - 1]).toHaveClass("before:border-r-2");
@@ -302,7 +303,7 @@ describe("AlertsTableBody ringing rows", () => {
       "before:border-l-2",
       "before:border-r-2"
     );
-    expect(headerCell.style.getPropertyValue("--blink-row-tint")).not.toBe("");
+    expect(header().style.getPropertyValue("--blink-row-tint")).not.toBe("");
     expect(headerCell.lastElementChild).toHaveTextContent(RINGING_REASON);
     expect(headerCell.lastElementChild).toHaveClass("sr-only", "select-none");
 
@@ -331,21 +332,24 @@ describe("AlertsTableBody ringing rows", () => {
     expect(header.querySelector("td")?.getAttribute("style")).toBeNull();
   });
 
-  it("starts the pulse of every ringing cell at the page's time zero", async () => {
+  it("starts the pulse of every ringing cell and of the row's edge at the page's time zero", async () => {
     const synced: Element[] = [];
+    const syncedEdges: Element[] = [];
     Object.defineProperty(HTMLElement.prototype, "getAnimations", {
       configurable: true,
       value: function (this: HTMLElement) {
         const element = this;
-        return [
-          {
-            effect: { target: element, pseudoElement: "::before" },
-            set startTime(value: number) {
-              if (value === 0) {
-                synced.push(element);
-              }
-            },
+        const animation = (pseudoElement: string, into: Element[]) => ({
+          effect: { target: element, pseudoElement },
+          set startTime(value: number) {
+            if (value === 0) {
+              into.push(element);
+            }
           },
+        });
+        return [
+          animation("::before", synced),
+          animation("::after", syncedEdges),
         ];
       },
     });
@@ -354,15 +358,19 @@ describe("AlertsTableBody ringing rows", () => {
     expect(synced).toEqual(
       expect.arrayContaining(cellsOf(rowOf(container, "ring")))
     );
+    expect(syncedEdges).toContain(rowOf(container, "ring"));
     cellsOf(rowOf(container, "high")).forEach((cell) =>
       expect(synced).not.toContain(cell)
+    );
+    expect(syncedEdges).not.toContain(rowOf(container, "high"));
+    expect(syncedEdges.filter((element) => element.tagName === "TD")).toEqual(
+      []
     );
   });
 });
 
 describe("AlertsTableBody shared edges between ringing rows", () => {
   const JOINED = "tr[data-ringing] + tr[data-ringing] > td";
-  const DROP_TOP = "[tr[data-ringing]+tr[data-ringing]>&]:before:border-t-0";
   const run = [
     alert("ring-a", "critical", "firing"),
     alert("ring-b", "critical", "firing"),
@@ -374,18 +382,13 @@ describe("AlertsTableBody shared edges between ringing rows", () => {
   const joined = (row: HTMLElement) =>
     cellsOf(row).every((cell) => cell.matches(JOINED));
 
-  it("leaves one edge between adjacent ringing rows: the lower row drops its top edge", async () => {
+  it("joins adjacent ringing rows, so the row rule drops the lower row's top edge", async () => {
     const { container } = await renderHarness({ data: run, presetNoisy: true });
     const [a, b, c] = ["ring-a", "ring-b", "ring-c"].map((fp) =>
       rowOf(container, fp)
     );
 
     expect(a.nextElementSibling).toBe(b);
-    [a, b, c].forEach((row) =>
-      cellsOf(row).forEach((cell) =>
-        expect(cell).toHaveClass("before:border-y-2", DROP_TOP)
-      )
-    );
     expect(joined(b)).toBe(true);
     expect(joined(a)).toBe(false);
     expect(joined(c)).toBe(false);
@@ -429,9 +432,6 @@ describe("AlertsTableBody shared edges between ringing rows", () => {
     });
     expect(joined(groupHeaderOf(container, "api"))).toBe(false);
     expect(joined(groupHeaderOf(container, "db"))).toBe(true);
-    expect(groupHeaderOf(container, "db").querySelector("td")).toHaveClass(
-      DROP_TOP
-    );
   });
 
   it("lets a quiet collapsed group header break the run, so the next ringing header keeps its top edge", async () => {

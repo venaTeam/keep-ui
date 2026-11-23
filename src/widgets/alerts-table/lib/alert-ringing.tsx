@@ -13,8 +13,7 @@ export const RINGING_REASON = "Ringing: critical, firing, noisy preset";
 const RINGING_CELL_CLASS_NAME = clsx(
   "isolate [&:not(.sticky)]:relative",
   "before:pointer-events-none before:absolute before:inset-0 before:-z-10",
-  "before:border-y-2 before:border-[color:var(--blink-row-edge)] before:bg-[color:var(--blink-row-tint)]",
-  "[tr[data-ringing]+tr[data-ringing]>&]:before:border-t-0",
+  "before:border-[color:var(--blink-row-edge)] before:bg-[color:var(--blink-row-tint)]",
   "[tr.group:hover>&]:before:bg-transparent [tr[data-selection]>&]:before:bg-transparent",
   "motion-safe:before:animate-ringing-pulse"
 );
@@ -31,24 +30,18 @@ type RingingAlert = {
 
 type RingingCellProps = {
   className?: string;
-  style?: CSSProperties;
   ref?: (element: HTMLElement | null) => void;
 };
 
 /** How one row renders: quiet, which is exactly as before, or ringing. */
 export type RingingRow = {
-  /** For the row element: `data-ringing="true"` when the row rings. */
-  rowProps: { "data-ringing"?: "true" };
   /**
-   * For the cell at `index` of the row's `count` cells. Pass `belowRingingRow`
-   * where rows are not `<tr>` siblings (the widget's grid) and the row above
-   * rings, so the two share one edge.
+   * For the row element: `data-ringing="true"` and the row colors when the
+   * row rings.
    */
-  cellProps: (
-    index: number,
-    count: number,
-    belowRingingRow?: boolean
-  ) => RingingCellProps;
+  rowProps: { "data-ringing"?: "true"; style?: CSSProperties };
+  /** For the cell at `index` of the row's `count` cells. */
+  cellProps: (index: number, count: number) => RingingCellProps;
   /**
    * The visually hidden, unselectable reason, to render after the content of
    * the row's first cell so it is neither the element column autofit measures
@@ -82,13 +75,16 @@ export function isAlertRinging(
  * alerts (it rings when any of them does), renders.
  *
  * A ringing cell keeps its own background (hover, last viewed, selection) and
- * gets an overlay behind its content: a 10% tint of the blink red with a solid
- * red edge on the top and bottom, and on the left of the first cell and the
- * right of the last, so the cells read as one row. Where two ringing rows
- * touch, the lower one drops its top edge, so one 2px line separates them: by
- * `<tr data-ringing>` adjacency in a table, by `belowRingingRow` elsewhere.
- * Only the overlay's opacity pulses, in step with the page's other blinks;
- * under reduced motion it holds still. The tint is off, and only the edge
+ * gets an overlay behind its content: a 10% tint of the blink red, with a
+ * solid red edge on the left of the first cell and the right of the last. The
+ * top and bottom edges belong to the row: `tr[data-ringing]` in `globals.css`
+ * draws them once across the whole row, above the cells, so they stay one
+ * straight line at fractional zoom, where a pinned cell is drawn on its own
+ * layer and per-cell edges stepped at its border. Where two ringing rows
+ * touch, the lower one drops its top edge, so one 2px line separates them.
+ * The row carries the colors, which its cells inherit. Only the overlays'
+ * opacity pulses, in step with the page's other blinks; under reduced motion
+ * they hold still. The tint is off, and only the edge
  * pulses, while the cell's `<tr>` is hovered (`tr.group:hover`, the same row
  * hover that sets the cells' orange background) or is selected or being
  * drag-selected (`tr[data-selection]`, set by `SelectableRow`), because over
@@ -96,7 +92,15 @@ export function isAlertRinging(
  * A cell that is not sticky is made `relative` to hold the overlay.
  */
 export function useRingingRows(presetNoisy: boolean) {
-  const syncPulse = useSyncedAnimation(presetNoisy, "::before");
+  const syncCellPulse = useSyncedAnimation(presetNoisy, "::before");
+  const syncEdgePulse = useSyncedAnimation(presetNoisy, "::after");
+  const syncPulse = useCallback(
+    (cell: HTMLElement | null) => {
+      syncCellPulse(cell);
+      syncEdgePulse(cell?.parentElement ?? null);
+    },
+    [syncCellPulse, syncEdgePulse]
+  );
 
   return useCallback(
     (alerts: RingingAlert | RingingAlert[]): RingingRow => {
@@ -107,15 +111,13 @@ export function useRingingRows(presetNoisy: boolean) {
         return QUIET_ROW;
       }
       return {
-        rowProps: { "data-ringing": "true" },
-        cellProps: (index, count, belowRingingRow = false) => ({
+        rowProps: { "data-ringing": "true", style: RINGING_STYLE },
+        cellProps: (index, count) => ({
           className: clsx(
             RINGING_CELL_CLASS_NAME,
             index === 0 && "before:border-l-2",
-            index === count - 1 && "before:border-r-2",
-            belowRingingRow && "before:border-t-0"
+            index === count - 1 && "before:border-r-2"
           ),
-          style: RINGING_STYLE,
           ref: syncPulse,
         }),
         reason: REASON,
