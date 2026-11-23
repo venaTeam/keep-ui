@@ -8,6 +8,7 @@ WORKDIR /app
 
 # Install dependencies based on the preferred package manager
 COPY package.json package-lock.json ./
+COPY vendor ./vendor
 RUN npm ci  --noproxy registry.npmjs.org --maxsockets 1
 
 
