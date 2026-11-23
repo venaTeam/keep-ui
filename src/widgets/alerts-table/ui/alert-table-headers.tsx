@@ -298,7 +298,8 @@ const DraggableHeaderCell = ({
           <button
             type="button"
             className={clsx(
-              "flex-none flex items-center cursor-grab active:cursor-grabbing touch-none",
+              "absolute inset-y-0 left-0 z-10 flex items-center bg-orange-100",
+              "cursor-grab active:cursor-grabbing touch-none",
               "text-gray-400 hover:text-gray-600 dark:hover:text-gray-200",
               "opacity-0 group-hover:opacity-100 transition-opacity"
             )}

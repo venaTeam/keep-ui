@@ -129,6 +129,14 @@ describe("AlertsTableHeaders", () => {
     expect(screen.getByText("Remove column")).toBeInTheDocument();
   });
 
+  it("the drag handle overlays the header so the label starts where the cells' text does", () => {
+    renderHeaders({});
+    expect(screen.getByTestId("drag-handle-name")).toHaveClass(
+      "absolute",
+      "left-0"
+    );
+  });
+
   it("interactive=false renders no drag handle, resize edge or menu", () => {
     renderHeaders({ interactive: false });
     const cell = screen.getByTestId("header-cell-name");
