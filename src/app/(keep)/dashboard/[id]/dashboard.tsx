@@ -17,6 +17,9 @@ import {
   DEFAULT_APPEARANCE,
 } from "../dashboard-appearance/dashboard-appearance-validation";
 import { DashboardSettingsPanel } from "../dashboard-appearance/DashboardSettingsPanel";
+import { DashboardTypographyProvider } from "../dashboard-appearance/DashboardTypographyContext";
+import { clampWidgetOverride } from "../dashboard-appearance/widget-typography";
+import "../dashboard-appearance/widget-typography.css";
 import { FiEdit2, FiSave, FiSliders } from "react-icons/fi";
 import { DashboardEditModeProvider } from "../DashboardEditModeContext";
 import { DashboardEditState } from "../dashboard-edit-state";
@@ -126,9 +129,16 @@ const DashboardPage = () => {
     }
 
     const config = dashboard.dashboard_config ?? {};
-    const savedWidgets: WidgetData[] = Array.isArray(config.widget_data)
-      ? config.widget_data
-      : [];
+    const savedWidgets: WidgetData[] = (
+      Array.isArray(config.widget_data) ? config.widget_data : []
+    ).map((widget: WidgetData) => {
+      if (!("typography" in widget)) {
+        return widget;
+      }
+      const { typography, ...rest } = widget;
+      const override = clampWidgetOverride(typography);
+      return override ? { ...rest, typography: override } : rest;
+    });
     setLayout(
       compactLayout(
         Array.isArray(config.layout) ? config.layout : [],
@@ -407,6 +417,7 @@ const DashboardPage = () => {
                 : undefined
             }
           >
+            <DashboardTypographyProvider value={appearance.typography}>
             <GridLayout
               layout={layout}
               onLayoutChange={handleLayoutChange}
@@ -418,6 +429,7 @@ const DashboardPage = () => {
               metrics={allMetricWidgets}
               density={appearance.density}
             />
+            </DashboardTypographyProvider>
           </Card>
         )}
         {isModalOpen && (
@@ -429,6 +441,7 @@ const DashboardPage = () => {
             presets={allPresets}
             editingItem={editingItem}
             metricWidgets={allMetricWidgets}
+            dashboardTypography={appearance.typography}
           />
         )}
         {isSettingsOpen && (
