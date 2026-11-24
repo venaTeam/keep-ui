@@ -175,10 +175,7 @@ export default function IncidentsTable({
       id: "status",
       header: "Status",
       cell: ({ row }) => (
-        <IncidentChangeStatusSelect
-          incidentId={row.original.id}
-          value={row.original.status}
-        />
+        <IncidentChangeStatusSelect incident={row.original} />
       ),
     }),
     columnHelper.display({

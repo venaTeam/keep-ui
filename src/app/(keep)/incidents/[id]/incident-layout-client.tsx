@@ -1,7 +1,11 @@
 "use client";
 
-import { ReactNode } from "react";
-import { IncidentDto } from "@/entities/incidents/model";
+import { ReactNode, useCallback, useMemo } from "react";
+import { useSWRConfig } from "swr";
+import {
+  IncidentDto,
+  useRevalidateOnDismissalExpiry,
+} from "@/entities/incidents/model";
 import { IncidentChatClientPage } from "./chat/page.client";
 import { useIncident } from "@/utils/hooks/useIncidents";
 import { IncidentHeader } from "./incident-header";
@@ -20,6 +24,24 @@ export function IncidentLayoutClient({
   const { data: incident, mutate } = useIncident(initialIncident.id, {
     fallbackData: initialIncident,
   });
+
+  // A "dismiss until" lapses on the clock, with no SSE event to announce it.
+  // The alerts dismissed along with the incident lapse at the same moment.
+  const { mutate: globalMutate } = useSWRConfig();
+  const incidentId = initialIncident.id;
+  const revalidateIncident = useCallback(() => {
+    mutate();
+    globalMutate(
+      (key) =>
+        typeof key === "string" &&
+        key.startsWith(`/incidents/${incidentId}/alerts`)
+    );
+  }, [mutate, globalMutate, incidentId]);
+  const incidents = useMemo(
+    () => (incident ? [incident] : undefined),
+    [incident]
+  );
+  useRevalidateOnDismissalExpiry(incidents, revalidateIncident);
 
   if (!incident) {
     return null;

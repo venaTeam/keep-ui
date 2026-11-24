@@ -2,6 +2,7 @@
 
 import {
   useIncidentActions,
+  Status,
   type IncidentDto,
 } from "@/entities/incidents/model";
 import { Badge, Button, Icon, Subtitle } from "@tremor/react";
@@ -20,6 +21,9 @@ import { CopilotKit } from "@copilotkit/react-core";
 import { TbInfoCircle, TbTopologyStar3 } from "react-icons/tb";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { TicketingIncidentOptions } from "./ticketing-incident-options";
+import { SilencedDoorbellNotification } from "@/components/icons";
+import { BellIcon } from "@heroicons/react/24/outline";
+import { DismissModal } from "@/features/alerts/dismiss-alert";
 
 export function IncidentHeader({
   incident: initialIncidentData,
@@ -41,6 +45,11 @@ export function IncidentHeader({
 
   const [runWorkflowModalIncident, setRunWorkflowModalIncident] =
     useState<IncidentDto | null>();
+
+  const [dismissModalIncident, setDismissModalIncident] =
+    useState<IncidentDto | null>(null);
+
+  const isDismissed = incident.status === Status.Suppressed;
 
   const handleCloseForm = () => {
     setIsFormOpen(false);
@@ -102,6 +111,21 @@ export function IncidentHeader({
                 }}
               >
                 Run Workflow
+              </Button>
+              <Button
+                color={isDismissed ? "orange" : "red"}
+                size="xs"
+                variant="secondary"
+                className="!py-0.5 mr-2"
+                icon={isDismissed ? BellIcon : SilencedDoorbellNotification}
+                data-cy="incidents-action-dismiss-btn"
+                onClick={(e: React.MouseEvent) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setDismissModalIncident(incident);
+                }}
+              >
+                {isDismissed ? "Restore" : "Dismiss"}
               </Button>
               <Button
                 color="orange"
@@ -198,6 +222,10 @@ export function IncidentHeader({
       <ManualRunWorkflowModal
         incident={runWorkflowModalIncident}
         onClose={() => setRunWorkflowModalIncident(null)}
+      />
+      <DismissModal
+        incident={dismissModalIncident}
+        handleClose={() => setDismissModalIncident(null)}
       />
     </CopilotKit>
   );
