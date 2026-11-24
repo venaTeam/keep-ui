@@ -12,31 +12,64 @@ function horizontalPadding(element: Element): number {
   );
 }
 
-/** The header label of a column in `container`, or null when it isn't rendered. */
-function getHeaderLabel(container: HTMLElement, columnId: string) {
+/** The header of a column in `container`, or null when it isn't rendered. */
+function getHeader(container: HTMLElement, columnId: string) {
   return container.querySelector<HTMLElement>(
-    `[data-cy="alerts-header-${columnId}"] button > span`
+    `[data-cy="alerts-header-${columnId}"]`
   );
 }
 
+/** The label of a column header: the text span of its sort button. */
+function getHeaderLabel(header: HTMLElement | null) {
+  return header?.querySelector<HTMLElement>("button > span") ?? null;
+}
+
 /**
- * Width, in whole pixels, a column needs to show its header label untruncated
- * at the current text size: the label's full text width plus the horizontal
- * padding of its button and header cell. Null when the header isn't rendered.
+ * Width, in pixels, of a header's in-flow controls besides its label button,
+ * such as the edit-mode column menu; absolutely positioned ones (the drag and
+ * resize handles) take no room.
+ */
+function getHeaderChromeWidth(header: HTMLElement, labelButton: Element): number {
+  return Array.from(header.children).reduce((width, child) => {
+    if (child === labelButton) {
+      return width;
+    }
+    const { position } = window.getComputedStyle(child);
+    if (position === "absolute" || position === "fixed") {
+      return width;
+    }
+    return width + child.getBoundingClientRect().width;
+  }, 0);
+}
+
+/**
+ * Width, in whole pixels, a column needs to show its header untruncated at
+ * the current text size, with whatever header controls the current mode
+ * shows: the label's full text width, the padding of its button, the other
+ * in-flow header controls (`getHeaderChromeWidth`) and the padding of the
+ * header and its cell, rounded up, plus 1px because `scrollWidth` rounds a
+ * sub-pixel text width to the nearest pixel. Null when the header isn't
+ * rendered.
  */
 function measureHeaderFitWidth(
   container: HTMLElement,
   columnId: string
 ): number | null {
-  const label = getHeaderLabel(container, columnId);
-  const cell = label?.closest("th");
-  if (!label || !cell || !label.parentElement) {
+  const header = getHeader(container, columnId);
+  const label = getHeaderLabel(header);
+  const labelButton = label?.parentElement;
+  const cell = header?.closest("th");
+  if (!header || !label || !labelButton || !cell) {
     return null;
   }
-  return Math.ceil(
-    label.scrollWidth +
-      horizontalPadding(label.parentElement) +
-      horizontalPadding(cell)
+  return (
+    Math.ceil(
+      label.scrollWidth +
+        horizontalPadding(labelButton) +
+        getHeaderChromeWidth(header, labelButton) +
+        horizontalPadding(header) +
+        horizontalPadding(cell)
+    ) + 1
   );
 }
 
@@ -54,14 +87,17 @@ function isSameFits(first: HeaderFits, second: HeaderFits): boolean {
  * wide enough for its header at the current text size: its default size, or
  * the header's measured fit (`measureHeaderFitWidth`) when that is wider, its
  * maximum lifted to match. Headers are measured before paint, again whenever
- * the visible link columns change, and whenever a link header label resizes,
- * as it does when the text scale or root font size changes. A saved width
- * still wins, since the layout only falls back to `size` without one.
+ * the visible link columns or `headersInteractive` (the edit-mode header
+ * controls) change, and whenever a link
+ * header label resizes, as it does when the text scale or root font size
+ * changes. A saved width still wins, since the layout only falls back to
+ * `size` without one.
  */
 export function useFittedLinkColumns<T extends SizedColumn>(
   columns: T[],
   visibleColumnIds: readonly string[],
-  tableRef: RefObject<HTMLElement | null>
+  tableRef: RefObject<HTMLElement | null>,
+  headersInteractive: boolean
 ): T[] {
   const [fits, setFits] = useState<HeaderFits>({});
   const linkIdsKey = visibleColumnIds.filter(isLinkIconColumn).join(",");
@@ -84,7 +120,7 @@ export function useFittedLinkColumns<T extends SizedColumn>(
     };
     measure();
     const labels = linkIds
-      .map((id) => getHeaderLabel(table, id))
+      .map((id) => getHeaderLabel(getHeader(table, id)))
       .filter((label): label is HTMLElement => label !== null);
     if (typeof ResizeObserver === "undefined" || labels.length === 0) {
       return;
@@ -92,7 +128,7 @@ export function useFittedLinkColumns<T extends SizedColumn>(
     const observer = new ResizeObserver(measure);
     labels.forEach((label) => observer.observe(label));
     return () => observer.disconnect();
-  }, [tableRef, linkIdsKey]);
+  }, [tableRef, linkIdsKey, headersInteractive]);
 
   return useMemo(
     () =>

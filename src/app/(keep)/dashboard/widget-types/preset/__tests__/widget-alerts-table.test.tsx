@@ -795,11 +795,13 @@ describe("WidgetAlertsTable", () => {
         jest.restoreAllMocks();
       });
 
-      it("opens a link column wide enough for its header label plus padding, past 72px", () => {
+      it("opens a link column at its header label plus padding and 1px, past 72px", () => {
         mockRunbookLabelWidth(104);
         renderWidget({ presetColumns });
 
-        expect(widthOf("runbook_url")).toBe(`${104 + JSDOM_BUTTON_PADDING_PX}px`);
+        expect(widthOf("runbook_url")).toBe(
+          `${104 + JSDOM_BUTTON_PADDING_PX + 1}px`
+        );
         expect(widthOf("alert_rule_url")).toBe("72px");
       });
 
@@ -808,6 +810,32 @@ describe("WidgetAlertsTable", () => {
         renderWidget({ presetColumns });
 
         expect(widthOf("runbook_url")).toBe("72px");
+      });
+
+      it("makes room for the header's edit-mode menu", () => {
+        const MENU_WIDTH = 37;
+        mockRunbookLabelWidth(104);
+        const original = HTMLElement.prototype.getBoundingClientRect;
+        jest
+          .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+          .mockImplementation(function (this: HTMLElement) {
+            const header = this.parentElement;
+            const isRunbookMenu =
+              header?.dataset.cy === "alerts-header-runbook_url" &&
+              !this.querySelector("span") &&
+              !this.dataset.testid?.startsWith("drag-handle-");
+            return isRunbookMenu
+              ? ({ width: MENU_WIDTH, height: 16, top: 0, left: 0, right: MENU_WIDTH, bottom: 16 } as DOMRect)
+              : original.call(this);
+          });
+        renderWidget({ presetColumns }, undefined, {
+          isEditMode: true,
+          onChange: jest.fn(),
+        });
+
+        expect(widthOf("runbook_url")).toBe(
+          `${104 + JSDOM_BUTTON_PADDING_PX + MENU_WIDTH + 1}px`
+        );
       });
 
       it("keeps a saved width", () => {
@@ -2259,11 +2287,34 @@ describe("WidgetAlertsTable", () => {
       const rect = (top: number, bottom: number) =>
         ({ top, bottom, left: 0, right: 600, width: 600, height: bottom - top }) as DOMRect;
 
-      const renderClipped = (clipBottom: number) => {
-        renderHarness({ alerts: [a1, a2] });
-        const container = widgetRoot();
-        container.style.overflowY = "auto";
-        container.getBoundingClientRect = () => rect(0, clipBottom);
+      const clipWith = (
+        element: HTMLElement,
+        top: number,
+        bottom: number,
+        overflows: boolean
+      ) => {
+        element.style.overflowY = "auto";
+        element.getBoundingClientRect = () => rect(top, bottom);
+        Object.defineProperty(element, "clientHeight", {
+          configurable: true,
+          value: bottom - top,
+        });
+        Object.defineProperty(element, "scrollHeight", {
+          configurable: true,
+          value: bottom - top + (overflows ? 40 : 0),
+        });
+      };
+
+      const renderInCard = ({
+        cardTop = 0,
+        cardBottom = 400,
+        innerBottom = 400,
+        innerOverflows = false,
+      } = {}) => {
+        const view = renderHarness({ alerts: [a1, a2] });
+        view.container.setAttribute("data-cy", "dashboard-widget-preset");
+        clipWith(view.container, cardTop, cardBottom, false);
+        clipWith(widgetRoot(), 0, innerBottom, innerOverflows);
         rowFor(a1).getBoundingClientRect = () => rect(40, 72);
         rowFor(a2).getBoundingClientRect = () => rect(72, 104);
         [a1, a2].forEach((alert) => {
@@ -2274,32 +2325,92 @@ describe("WidgetAlertsTable", () => {
         rowFor(alert).dispatchEvent(new MouseEvent("pointerenter"));
 
       it("hangs the tray from the row's bottom edge, at its right end", () => {
-        renderClipped(400);
+        renderInCard();
 
         enter(a1);
 
         const tray = trayOf(a1)!;
         expect(tray).toHaveAttribute("data-placement", "below");
-        expect(tray).toHaveClass("absolute", "right-1", "top-full");
+        expect(tray).toHaveClass("absolute", "right-1");
         expect(tray.closest("td")).toHaveAttribute("data-column-id", "alertMenu");
       });
 
-      it("flips above the last row when hanging below would be clipped", () => {
-        renderClipped(120);
+      it("flips above the last visible row when the widget card clips, past a scroller that doesn't", () => {
+        renderInCard({ cardBottom: 120, innerBottom: 400 });
 
         enter(a1);
         enter(a2);
 
         expect(trayOf(a1)).toHaveAttribute("data-placement", "below");
         expect(trayOf(a2)).toHaveAttribute("data-placement", "above");
-        expect(trayOf(a2)).toHaveClass(
-          "data-[placement=above]:top-auto",
-          "data-[placement=above]:bottom-full"
-        );
+      });
+
+      it("flips above when an inner scroller that overflows clips the row", () => {
+        renderInCard({ cardBottom: 400, innerBottom: 120, innerOverflows: true });
+
+        enter(a2);
+
+        expect(trayOf(a2)).toHaveAttribute("data-placement", "above");
+      });
+
+      it("ignores an inner scroller that doesn't overflow", () => {
+        renderInCard({ cardBottom: 400, innerBottom: 120, innerOverflows: false });
+
+        enter(a2);
+
+        expect(trayOf(a2)).toHaveAttribute("data-placement", "below");
+      });
+
+      it("sits inside the row when neither below nor above fits, as in a 1-row widget", () => {
+        renderInCard({ cardTop: 60, cardBottom: 120 });
+
+        enter(a2);
+
+        expect(trayOf(a2)).toHaveAttribute("data-placement", "inside");
+      });
+
+      describe("beside trailing link columns", () => {
+        const linkAlert = alertWith({
+          alert_rule_url: "https://grafana-olly.com/alerting/grafana/x/view",
+          runbook_url: "https://wiki.ops.internal/runbooks/x",
+        });
+        const widthOfCells = (widths: Record<string, number>) =>
+          rowFor(linkAlert)
+            .querySelectorAll<HTMLElement>("td[data-column-id]")
+            .forEach((cell) => {
+              const width = widths[cell.dataset.columnId!] ?? 100;
+              cell.getBoundingClientRect = () =>
+                ({ ...rect(40, 72), width }) as DOMRect;
+            });
+
+        it("ends the tab where the trailing link columns start", () => {
+          renderHarness({
+            alerts: [linkAlert],
+            presetColumns: ["name", "alert_rule_url", "runbook_url"],
+          });
+          widthOfCells({ alert_rule_url: 72, runbook_url: 96 });
+
+          rowFor(linkAlert).dispatchEvent(new MouseEvent("pointerenter"));
+
+          expect(trayOf(linkAlert)!.style.right).toBe("168px");
+        });
+
+        it("keeps the tab at the row's right end without trailing link columns", () => {
+          renderHarness({
+            alerts: [linkAlert],
+            presetColumns: ["name", "alert_rule_url", "runbook_url", "service"],
+          });
+          widthOfCells({ alert_rule_url: 72, runbook_url: 96 });
+
+          rowFor(linkAlert).dispatchEvent(new MouseEvent("pointerenter"));
+
+          expect(trayOf(linkAlert)!.style.right).toBe("");
+          expect(trayOf(linkAlert)).toHaveClass("right-1");
+        });
       });
 
       it("decides on pointerenter itself, before anything renders", () => {
-        renderClipped(120);
+        renderInCard({ cardBottom: 120 });
         const tray = trayOf(a2)!;
 
         expect(tray).not.toHaveAttribute("data-placement");
@@ -2308,7 +2419,7 @@ describe("WidgetAlertsTable", () => {
       });
 
       it("places the tray by the same rule on keyboard focus", () => {
-        renderClipped(120);
+        renderInCard({ cardBottom: 120 });
 
         act(() => {
           checkboxFor(a2).focus();

@@ -41,18 +41,14 @@ describe("QuickActionTray", () => {
     expect(container.firstElementChild).toHaveClass(QUICK_TRAY_CLASS);
   });
 
-  it("hangs below its anchor, and above it when data-placement is above", () => {
+  it("leaves its vertical edge, outline and tint to the widget's tab styles", () => {
     const { container } = render(
       <QuickActionTray alert={firingNoIncident} onOpen={onOpen} />
     );
-    expect(container.firstElementChild).toHaveClass(
-      "absolute",
-      "right-1",
-      "top-full",
-      "data-[placement=above]:top-auto",
-      "data-[placement=above]:bottom-full"
-    );
-    expect(container.firstElementChild).not.toHaveAttribute("style");
+    const tray = container.firstElementChild as HTMLElement;
+    expect(tray).toHaveClass("absolute", "right-1");
+    expect(tray.className).not.toMatch(/shadow|bg-white|rounded|border|top-|bottom-/);
+    expect(tray).not.toHaveAttribute("style");
   });
 
   it("hands its root, with the tray class, to ref", () => {

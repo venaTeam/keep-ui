@@ -221,6 +221,7 @@ function WidgetAlertsTableContent({
   const isNarrow = containerWidth !== null && containerWidth < NARROW_WIDGET_PX;
   const isTrayCompact =
     containerWidth !== null && containerWidth < QUICK_TRAY_COMPACT_PX;
+  const headersInteractive = isEditMode && !!onChange && !isNarrow;
 
   const { columns, allColumnIds } = useWidgetAlertColumns({
     item,
@@ -292,7 +293,8 @@ function WidgetAlertsTableContent({
   const sizedColumns = useFittedLinkColumns(
     columns,
     visibleColumnOrder,
-    tableRef
+    tableRef,
+    headersInteractive
   );
   const layout = useMemo(
     () =>
@@ -569,7 +571,7 @@ function WidgetAlertsTableContent({
               setColumnVisibility={state.setColumnVisibility}
               columnRenameMapping={renames}
               setColumnRenameMapping={state.setColumnRenameMapping}
-              interactive={isEditMode && !!onChange && !isNarrow}
+              interactive={headersInteractive}
               showSortItems={false}
               showFormatItems={isEditMode}
               canFormatAsList={isJsonStringListColumn}

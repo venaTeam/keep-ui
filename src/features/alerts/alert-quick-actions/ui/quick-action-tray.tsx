@@ -15,9 +15,9 @@ interface QuickActionTrayProps {
 
 /**
  * A widget row's floating tray of the quick actions that apply to its alert;
- * `compact` shows icons only. It hangs from the bottom edge of its positioned
- * anchor at the anchor's right end, or from its top edge when the tray
- * carries `data-placement="above"`.
+ * `compact` shows icons only. It sits at its positioned anchor's right end;
+ * the widget's quick-action styles hang it below the anchor, or above it
+ * with `data-placement="above"`, drawn as a tab of the row.
  */
 export function QuickActionTray({
   alert,
@@ -30,8 +30,7 @@ export function QuickActionTray({
       ref={ref}
       className={clsx(
         QUICK_TRAY_CLASS,
-        "absolute right-1 top-full z-20 flex gap-0.5 rounded-md border bg-white p-0.5 shadow-sm",
-        "data-[placement=above]:top-auto data-[placement=above]:bottom-full"
+        "absolute right-1 z-20 flex gap-0.5 p-0.5"
       )}
     >
       {ALERT_QUICK_ACTIONS.filter((action) => action.appliesTo(alert)).map(
