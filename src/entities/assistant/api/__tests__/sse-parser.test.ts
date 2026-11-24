@@ -45,11 +45,11 @@ const malformed = {
 };
 
 describe("the vendored contract", () => {
-  it("is keep-assistant's golden fixture, byte for byte", () => {
+  it("is the gateway's golden fixture, byte for byte", () => {
     const bytes = readFileSync(
       path.join(__dirname, "../../__fixtures__/assistant_stream.json")
     );
-    // The git blob id of the fixture in keep-assistant
+    // The git blob id of the fixture in keep-api-gateway
     const blobId = createHash("sha1")
       .update(`blob ${bytes.length}\0`)
       .update(bytes)

@@ -1,6 +1,5 @@
 import { InternalConfig } from "@/types/internal-config";
 import { getApiURL } from "@/utils/apiUrl";
-import { getAssistantApiUrl } from "@/utils/assistantApiUrl";
 import {
   AuthType,
   MULTI_TENANT,
@@ -62,10 +61,8 @@ export function getConfig(): InternalConfig {
         (!!process.env.OPEN_AI_API_KEY || !!process.env.OPENAI_API_KEY) &&
         process.env.KEEP_AI_FEATURES_DISABLED?.toLowerCase() !== "true"
       ),
-    // Never true without a service to talk to
     KEEP_ASSISTANT_ENABLED:
-      process.env.KEEP_ASSISTANT_ENABLED?.toLowerCase() === "true" &&
-      !!getAssistantApiUrl(),
+      process.env.KEEP_ASSISTANT_ENABLED?.toLowerCase() === "true",
     // NOISY ALERTS DISABLED BY DEFAULT TO SPARE SPACE ON THE TABLE
     NOISY_ALERTS_ENABLED: process.env.NOISY_ALERTS_ENABLED === "true",
     // The URL of the documentation site

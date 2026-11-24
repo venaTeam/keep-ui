@@ -5,7 +5,7 @@ import {
   MAX_SELECTED_FINGERPRINTS,
 } from "../model/types";
 
-// keep-assistant refuses the whole message over one of these
+// The gateway refuses the whole message over one of these
 const CONTROL_CHARACTER = /[\u0000-\u001f\u007f-\u009f]/;
 const LONE_SURROGATES = /\p{Surrogate}/gu;
 

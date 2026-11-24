@@ -60,7 +60,7 @@ export async function toChatError(
 }
 
 /**
- * What keep-assistant said, for an error of either client. Null means the
+ * What the gateway said, for an error of either client. Null means the
  * outcome is unknown (no JSON answer): refetch to find out.
  */
 export function getAssistantError(error: unknown): AssistantError | null {

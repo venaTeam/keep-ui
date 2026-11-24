@@ -396,22 +396,27 @@ describe("a refused message", () => {
     expect(recordError).toHaveBeenCalledWith("assistant_message", status);
   });
 
-  it("reads the middleware's 503", async () => {
-    const message = "Keep Assistant is not configured";
+  it("reads the 503 of an assistant that is not configured", async () => {
+    const { body, status } = golden.errors.llm_not_configured;
+    fetchMock.mockResolvedValue(Response.json(body, { status }));
+    const { error } = await start().settled;
+    expect(getAssistantError(error)).toMatchObject({
+      code: "llm_not_configured",
+      message: body.errors[0].message,
+      status: 503,
+    });
+  });
+
+  // The routes do not exist while the gateway's own flag is off
+  it("reads the 404 of a gateway without the assistant", async () => {
     fetchMock.mockResolvedValue(
-      Response.json(
-        {
-          errors: [{ field: null, code: "assistant_not_configured", message }],
-          detail: message,
-        },
-        { status: 503 }
-      )
+      Response.json({ detail: "Not Found" }, { status: 404 })
     );
     const { error } = await start().settled;
     expect(getAssistantError(error)).toMatchObject({
-      code: "assistant_not_configured",
-      message,
-      status: 503,
+      code: null,
+      message: "Not Found",
+      status: 404,
     });
   });
 });

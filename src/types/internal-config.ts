@@ -23,7 +23,7 @@ export interface InternalConfig {
   OPEN_AI_API_KEY_SET: boolean;
   KEEP_AI_FEATURES_DISABLED: boolean;
   AI_FEATURES_ENABLED: boolean;
-  // Keep Assistant panel. The service URL itself stays on the server.
+  // Keep Assistant panel
   KEEP_ASSISTANT_ENABLED: boolean;
   // NOISY ALERTS ENABLED
   NOISY_ALERTS_ENABLED: boolean;

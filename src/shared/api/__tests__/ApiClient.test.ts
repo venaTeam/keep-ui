@@ -27,7 +27,6 @@ describe("ApiClient headers", () => {
 });
 
 describe("ApiClient assistant routing", () => {
-  const ASSISTANT_URL = "http://assistant.internal:8080";
   const GATEWAY_URL = "http://gateway.internal:8080";
   const session = { accessToken: "real-token" } as any;
   const originalFetch = global.fetch;
@@ -54,7 +53,6 @@ describe("ApiClient assistant routing", () => {
     jest.replaceProperty(process, "env", {
       ...process.env,
       API_URL: GATEWAY_URL,
-      ASSISTANT_API_URL: ASSISTANT_URL,
     });
   });
 
@@ -73,11 +71,27 @@ describe("ApiClient assistant routing", () => {
     expect(requestedUrl()).toBe("/backend/assistant/conversations/c1");
   });
 
-  it("goes straight to ASSISTANT_API_URL on the server", async () => {
-    await createClient({ server: true }).get("/assistant/conversations/c1");
+  it.each(["production", "development"])(
+    "goes straight to API_URL on a %s server, without any other setting",
+    async (NODE_ENV) => {
+      Object.assign(process.env, { NODE_ENV });
 
-    expect(requestedUrl()).toBe(`${ASSISTANT_URL}/assistant/conversations/c1`);
-  });
+      await createClient({ server: true }).get("/assistant/conversations/c1");
+
+      expect(requestedUrl()).toBe(`${GATEWAY_URL}/assistant/conversations/c1`);
+    }
+  );
+
+  it.each([true, false])(
+    "sends the session's token (server: %s)",
+    async (server) => {
+      await createClient({ server }).post("/assistant/drafts/d1/confirm");
+
+      expect(fetchMock.mock.calls[0][1].headers).toMatchObject({
+        Authorization: "Bearer real-token",
+      });
+    }
+  );
 
   it.each([
     [true, `${GATEWAY_URL}/assistantx`],
@@ -91,27 +105,6 @@ describe("ApiClient assistant routing", () => {
     await client.get("/assistantx");
 
     expect(requestedUrl()).toBe(expected);
-  });
-
-  it("refuses on a production server without ASSISTANT_API_URL", async () => {
-    delete process.env.ASSISTANT_API_URL;
-    Object.assign(process.env, { NODE_ENV: "production" });
-
-    await expect(
-      createClient({ server: true }).get("/assistant/conversations/c1")
-    ).rejects.toMatchObject({ statusCode: 503 });
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it("uses the local service on a development server without ASSISTANT_API_URL", async () => {
-    delete process.env.ASSISTANT_API_URL;
-    Object.assign(process.env, { NODE_ENV: "development" });
-
-    await createClient({ server: true }).get("/assistant/conversations/c1");
-
-    expect(requestedUrl()).toBe(
-      "http://localhost:8086/assistant/conversations/c1"
-    );
   });
 
   describe("in read-only mode", () => {

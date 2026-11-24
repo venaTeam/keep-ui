@@ -4,7 +4,6 @@ import { KeepApiError, KeepApiReadOnlyError } from "./KeepApiError";
 import { clearAssistantStorage } from "@/shared/lib/assistant-storage";
 import { getApiUrlFromConfig } from "@/shared/lib/getApiUrlFromConfig";
 import { getApiURL } from "@/utils/apiUrl";
-import { getAssistantApiUrl } from "@/utils/assistantApiUrl";
 import * as Sentry from "@sentry/nextjs";
 import { signOut as signOutClient } from "next-auth/react";
 import { GuestSession } from "@/types/auth";
@@ -174,30 +173,13 @@ export class ApiClient {
       }
     }
 
-    // Route /assistant/* to keep-assistant
-    if (url === "/assistant" || url.startsWith("/assistant/")) {
-      if (this.isServer) {
-        const assistantApiUrl = getAssistantApiUrl();
-        if (!assistantApiUrl) {
-          const message = "Keep Assistant is not configured";
-          throw new KeepApiError(
-            message,
-            url,
-            "Set ASSISTANT_API_URL on the server.",
-            {
-              errors: [
-                { field: null, code: "assistant_not_configured", message },
-              ],
-              detail: message,
-            },
-            503
-          );
-        }
-        apiUrl = assistantApiUrl;
-      } else {
-        // The /backend middleware proxy rewrites to ASSISTANT_API_URL
-        apiUrl = "/backend";
-      }
+    // On the client, /assistant/* always goes through the /backend middleware
+    // proxy, the same way as the chat stream
+    if (
+      !this.isServer &&
+      (url === "/assistant" || url.startsWith("/assistant/"))
+    ) {
+      apiUrl = "/backend";
     }
 
     const fullUrl = apiUrl + url;

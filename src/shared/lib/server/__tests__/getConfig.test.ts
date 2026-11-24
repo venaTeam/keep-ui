@@ -1,12 +1,13 @@
 /**
  * @jest-environment node
  */
+import { isAssistantEnabled } from "@/shared/lib/assistant-flag";
 import { getConfig } from "../getConfig";
 
 const setEnv = (env: Record<string, string | undefined>) => {
   const next: Record<string, string | undefined> = { ...process.env };
   delete next.KEEP_ASSISTANT_ENABLED;
-  delete next.ASSISTANT_API_URL;
+  delete next.KEEP_AI_FEATURES_DISABLED;
   jest.replaceProperty(process, "env", {
     ...next,
     ...env,
@@ -14,35 +15,35 @@ const setEnv = (env: Record<string, string | undefined>) => {
 };
 
 describe("getConfig KEEP_ASSISTANT_ENABLED", () => {
-  const url = "http://assistant.internal:8080";
-
   afterEach(() => {
     jest.restoreAllMocks();
   });
 
   it.each([
-    ["production", "true", url, true],
-    ["production", "TRUE", url, true],
-    ["production", "true", undefined, false],
-    ["production", "true", "", false],
-    ["production", "false", url, false],
-    ["production", "1", url, false],
-    ["production", undefined, url, false],
-    ["development", "true", url, true],
-    ["development", "true", undefined, true],
-    ["development", undefined, undefined, false],
+    ["production", "true", true],
+    ["production", "TRUE", true],
+    ["production", "false", false],
+    ["production", "1", false],
+    ["production", "", false],
+    ["production", undefined, false],
+    ["development", "true", true],
+    ["development", undefined, false],
   ])(
-    "NODE_ENV=%s, flag=%s, url=%s gives %s",
-    (NODE_ENV, KEEP_ASSISTANT_ENABLED, ASSISTANT_API_URL, expected) => {
-      setEnv({ NODE_ENV, KEEP_ASSISTANT_ENABLED, ASSISTANT_API_URL });
+    "NODE_ENV=%s, flag=%s gives %s, without any other setting",
+    (NODE_ENV, KEEP_ASSISTANT_ENABLED, expected) => {
+      setEnv({ NODE_ENV, KEEP_ASSISTANT_ENABLED });
 
       expect(getConfig().KEEP_ASSISTANT_ENABLED).toBe(expected);
+      expect(isAssistantEnabled(getConfig())).toBe(expected);
     }
   );
 
-  it("never puts the service URL in the config sent to the browser", () => {
-    setEnv({ KEEP_ASSISTANT_ENABLED: "true", ASSISTANT_API_URL: url });
+  it.each(["true", "TRUE"])(
+    "is hidden with KEEP_AI_FEATURES_DISABLED=%s",
+    (KEEP_AI_FEATURES_DISABLED) => {
+      setEnv({ KEEP_ASSISTANT_ENABLED: "true", KEEP_AI_FEATURES_DISABLED });
 
-    expect(JSON.stringify(getConfig())).not.toContain(url);
-  });
+      expect(isAssistantEnabled(getConfig())).toBe(false);
+    }
+  );
 });

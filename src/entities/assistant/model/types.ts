@@ -1,6 +1,7 @@
 /**
- * The keep-assistant API contract. Mirrors keep-assistant `src/models/api/*`,
- * pinned on both sides by the vendored `__fixtures__/assistant_stream.json`.
+ * The contract of the gateway's `/assistant/*` routes. Mirrors the models in
+ * keep-api-gateway `src/services/assistant/`, pinned on both sides by the
+ * vendored `__fixtures__/assistant_stream.json`.
  */
 
 export const STREAM_EVENT_NAMES = [
@@ -251,7 +252,7 @@ export type StreamEvent =
       data: { message_id: string | null; finish_reason: FinishReason };
     };
 
-/** The body of every keep-assistant error, and of the middleware's 503. */
+/** The body of every error of the assistant routes. */
 export interface AssistantErrorBody {
   errors: { field: string | null; code: string; message: string }[];
   detail: string;
@@ -259,7 +260,7 @@ export interface AssistantErrorBody {
   draft?: DraftView;
 }
 
-// Request limits. keep-assistant answers 400 beyond them.
+// Request limits. The gateway answers 400 beyond them.
 export const MAX_MESSAGE_CHARS = 4000;
 export const MAX_PAGE_CHARS = 200;
 export const MAX_SELECTED_FINGERPRINTS = 200;
