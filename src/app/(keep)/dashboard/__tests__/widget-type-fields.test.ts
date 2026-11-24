@@ -115,4 +115,13 @@ describe("stripForeignTypeFields", () => {
       "alertTable"
     );
   });
+
+  it("keeps the typography override when the widget type changes", () => {
+    const typography = { font: "inter", size: "lg", title: "normal" } as const;
+    const result = stripForeignTypeFields(
+      { ...presetWidget, typography } as WidgetData,
+      WidgetType.HTML
+    );
+    expect(result.typography).toEqual(typography);
+  });
 });

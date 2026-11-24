@@ -16,6 +16,8 @@ import { HtmlWidgetForm } from "./widget-types/html/html-widget-form";
 import { GrafanaPanelWidgetForm } from "./widget-types/grafana-panel/grafana-panel-widget-form";
 import { useGrafanaEmbedPolicy } from "./widget-types/grafana-panel/grafana-panel-grid-item";
 import { IncidentTableWidgetForm } from "./widget-types/incident-table/incident-table-widget-form";
+import { WidgetTypographySection } from "./dashboard-appearance/WidgetTypographySection";
+import type { WidgetTypography } from "./dashboard-appearance/widget-typography";
 
 interface WidgetForm {
   widgetName: string;
@@ -30,6 +32,7 @@ interface WidgetModalProps {
   presets: Preset[];
   editingItem?: WidgetData | null;
   metricWidgets: MetricsWidget[];
+  dashboardTypography?: WidgetTypography;
 }
 
 const WidgetModal: React.FC<WidgetModalProps> = ({
@@ -40,7 +43,11 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
   presets,
   editingItem,
   metricWidgets,
+  dashboardTypography,
 }) => {
+  const [typography, setTypography] = useState<WidgetTypography | undefined>(
+    editingItem?.typography
+  );
   const [innerFormState, setInnerFormState] = useState<{
     isValid: boolean;
     formValue: any;
@@ -76,6 +83,10 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
     control,
     name: "widgetType",
   });
+  const watchedName = useWatch({
+    control,
+    name: "widgetName",
+  });
 
   useEffect(() => {
     if (widgetType === WidgetType.SERVICE_NOW) {
@@ -107,13 +118,20 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
         widgetType: data.widgetType || WidgetType.PRESET, // backwards compatibility
         ...innerFormState.formValue,
       };
+      if (typography) {
+        updatedWidget.typography = typography;
+      } else {
+        delete updatedWidget.typography;
+      }
       onEditWidget(updatedWidget);
     } else {
       onAddWidget({
         name: data.widgetName,
         widgetType: data.widgetType || WidgetType.PRESET, // backwards compatibility
         ...innerFormState.formValue,
+        ...(typography ? { typography } : {}),
       });
+      setTypography(undefined);
       reset({
         widgetName: "",
         widgetType: WidgetType.PRESET,
@@ -268,6 +286,13 @@ const WidgetModal: React.FC<WidgetModalProps> = ({
             }
           />
         )}
+        <WidgetTypographySection
+          value={typography}
+          dashboard={dashboardTypography}
+          widgetType={widgetType}
+          widgetName={watchedName}
+          onChange={setTypography}
+        />
         <Button
           color="orange"
           type="submit"
