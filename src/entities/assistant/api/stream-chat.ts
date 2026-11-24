@@ -1,5 +1,6 @@
 import { signOut as signOutClient } from "next-auth/react";
 import type { ApiClient } from "@/shared/api";
+import { clearAssistantStorage } from "@/shared/lib/assistant-storage";
 import { recordAction, recordError } from "@/utils/metrics";
 import { ChatRequest, StreamEvent } from "../model/types";
 import { toChatError } from "./assistant-error";
@@ -97,6 +98,7 @@ export async function streamChat({
     if (!response.ok) {
       recordError("assistant_message", response.status);
       if (response.status === 401) {
+        clearAssistantStorage();
         await signOutClient();
       }
       throw await Promise.race([toChatError(response, CHAT_URL), aborted]);

@@ -1,6 +1,7 @@
 import { InternalConfig } from "@/types/internal-config";
 import { Session } from "next-auth";
 import { KeepApiError, KeepApiReadOnlyError } from "./KeepApiError";
+import { clearAssistantStorage } from "@/shared/lib/assistant-storage";
 import { getApiUrlFromConfig } from "@/shared/lib/getApiUrlFromConfig";
 import { getApiURL } from "@/utils/apiUrl";
 import { getAssistantApiUrl } from "@/utils/assistantApiUrl";
@@ -82,6 +83,7 @@ export class ApiClient {
         if (response.status === 401) {
           // on server, middleware will handle the sign out
           if (!this.isServer) {
+            clearAssistantStorage();
             await signOutClient();
           }
           throw new KeepApiError(

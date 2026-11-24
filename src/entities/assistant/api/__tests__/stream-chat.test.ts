@@ -3,6 +3,7 @@
  */
 import { signOut } from "next-auth/react";
 import { KeepApiError } from "@/shared/api";
+import { clearAssistantStorage } from "@/shared/lib/assistant-storage";
 import { recordAction, recordError } from "@/utils/metrics";
 import golden from "../../__fixtures__/assistant_stream.json";
 import { ChatRequest, StreamEvent } from "../../model/types";
@@ -14,6 +15,9 @@ import {
 } from "../stream-chat";
 
 jest.mock("next-auth/react", () => ({ signOut: jest.fn() }));
+jest.mock("@/shared/lib/assistant-storage", () => ({
+  clearAssistantStorage: jest.fn(),
+}));
 jest.mock("@/utils/metrics", () => ({
   recordAction: jest.fn(),
   recordError: jest.fn(),
@@ -367,12 +371,14 @@ describe("a refused message", () => {
   it("signs out on a 401", async () => {
     fetchMock.mockResolvedValue(errorResponse("unauthenticated"));
     await start().settled;
+    expect(clearAssistantStorage).toHaveBeenCalledTimes(1);
     expect(signOut).toHaveBeenCalledTimes(1);
   });
 
   it("stays signed in on any other status", async () => {
     fetchMock.mockResolvedValue(errorResponse("forbidden"));
     await start().settled;
+    expect(clearAssistantStorage).not.toHaveBeenCalled();
     expect(signOut).not.toHaveBeenCalled();
   });
 
