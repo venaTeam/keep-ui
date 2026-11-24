@@ -56,7 +56,7 @@ describe("AlertAssociateIncidentModal", () => {
     expect(query.candidate).toBe(false);
   });
 
-  it("marks suppressed incidents in the options", () => {
+  it("names every incident's status in the options", () => {
     (useIncidents as jest.Mock).mockReturnValue({
       data: {
         items: [
@@ -67,6 +67,12 @@ describe("AlertAssociateIncidentModal", () => {
             creation_time: "t1",
           },
           {
+            id: "claimed",
+            status: "acknowledged",
+            user_generated_name: "Claimed one",
+            creation_time: "t3",
+          },
+          {
             id: "dismissed",
             status: "suppressed",
             dismiss_mode: "permanent",
@@ -74,7 +80,7 @@ describe("AlertAssociateIncidentModal", () => {
             creation_time: "t2",
           },
         ],
-        count: 2,
+        count: 3,
       },
       isLoading: false,
       mutate: jest.fn(),
@@ -91,7 +97,8 @@ describe("AlertAssociateIncidentModal", () => {
 
     const { options } = mockSelect.mock.calls[mockSelect.mock.calls.length - 1][0];
     expect(options).toEqual([
-      { value: "active", label: "Active one (t1)" },
+      { value: "active", label: "Active one (t1) — firing" },
+      { value: "claimed", label: "Claimed one (t3) — acknowledged" },
       { value: "dismissed", label: "Dismissed one (t2) — suppressed" },
     ]);
   });

@@ -21,13 +21,14 @@ export function getIncidentNameWithCreationTime(incident: IncidentDto) {
 }
 
 /**
- * "suppressed" or "suppressed until <time>" for a suppressed incident, else null.
- * Linking an alert to a suppressed incident suppresses the alert too, so places
- * that offer incidents to link to show it.
+ * The incident's status as places that offer incidents to link to show it:
+ * "suppressed" or "suppressed until <time>" for a suppressed incident, else the
+ * status itself ("firing", "acknowledged"), or null when it has none. Linking an
+ * alert hands it the incident's state, so the status says what the alert gets.
  */
-export function getIncidentSuppressionLabel(incident: IncidentDto) {
+export function getIncidentStatusLabel(incident: IncidentDto) {
   if (incident.status !== Status.Suppressed) {
-    return null;
+    return incident.status || null;
   }
   if (incident.dismiss_mode === "dismiss_until" && incident.dismissed_until) {
     const deadline = parseDeadline(incident.dismissed_until);

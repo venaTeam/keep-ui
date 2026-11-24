@@ -9,7 +9,7 @@ import { AlertDto } from "@/entities/alerts/model";
 import {
   getIncidentName,
   getIncidentNameWithCreationTime,
-  getIncidentSuppressionLabel,
+  getIncidentStatusLabel,
 } from "@/entities/incidents/lib/utils";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { Select, showErrorToast } from "@/shared/ui";
@@ -24,11 +24,12 @@ const ASSOCIABLE_INCIDENT_STATUSES = [
   Status.Suppressed,
 ];
 
-// Picking a suppressed incident suppresses the alerts too (the gateway copies
-// its dismissal onto them), so say so in the option rather than look active.
-function withSuppression(label: string, incident: IncidentDto) {
-  const suppression = getIncidentSuppressionLabel(incident);
-  return suppression ? `${label} — ${suppression}` : label;
+// Every option names its incident's status. Linking hands the alerts the
+// incident's state — a suppressed incident's dismissal, an acknowledged one's
+// status — so the status says what the alerts are about to get.
+function withStatus(label: string, incident: IncidentDto) {
+  const status = getIncidentStatusLabel(incident);
+  return status ? `${label} — ${status}` : label;
 }
 
 interface AlertAssociateIncidentModalProps {
@@ -160,7 +161,7 @@ export const AlertAssociateIncidentModal = ({
             selectedIncidentInstance
               ? {
                 value: selectedIncident,
-                label: withSuppression(
+                label: withStatus(
                   getIncidentName(selectedIncidentInstance),
                   selectedIncidentInstance
                 ),
@@ -172,7 +173,7 @@ export const AlertAssociateIncidentModal = ({
           }
           options={incidents.items?.map((incident) => ({
             value: incident.id,
-            label: withSuppression(
+            label: withStatus(
               getIncidentNameWithCreationTime(incident),
               incident
             ),

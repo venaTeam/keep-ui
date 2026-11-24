@@ -1,29 +1,29 @@
 import { format } from "date-fns";
 import { IncidentDto, Status } from "@/entities/incidents/model";
-import { getIncidentSuppressionLabel } from "../utils";
+import { getIncidentStatusLabel } from "../utils";
 
 function incident(overrides: Partial<IncidentDto>): IncidentDto {
   return { id: "1", status: Status.Firing, ...overrides } as IncidentDto;
 }
 
-describe("getIncidentSuppressionLabel", () => {
-  it("is null for an incident that isn't suppressed", () => {
-    expect(getIncidentSuppressionLabel(incident({}))).toBeNull();
+describe("getIncidentStatusLabel", () => {
+  it("names the status of an incident that isn't suppressed", () => {
+    expect(getIncidentStatusLabel(incident({}))).toBe("firing");
     expect(
-      getIncidentSuppressionLabel(incident({ status: Status.Acknowledged }))
-    ).toBeNull();
+      getIncidentStatusLabel(incident({ status: Status.Acknowledged }))
+    ).toBe("acknowledged");
   });
 
   it("says suppressed for a permanent dismissal", () => {
     expect(
-      getIncidentSuppressionLabel(
+      getIncidentStatusLabel(
         incident({ status: Status.Suppressed, dismiss_mode: "permanent" })
       )
     ).toBe("suppressed");
   });
 
   it("names the deadline of a time-boxed dismissal, read as UTC", () => {
-    const label = getIncidentSuppressionLabel(
+    const label = getIncidentStatusLabel(
       incident({
         status: Status.Suppressed,
         dismiss_mode: "dismiss_until",
@@ -40,7 +40,7 @@ describe("getIncidentSuppressionLabel", () => {
 
   it("falls back to suppressed when the deadline can't be read", () => {
     expect(
-      getIncidentSuppressionLabel(
+      getIncidentStatusLabel(
         incident({
           status: Status.Suppressed,
           dismiss_mode: "dismiss_until",
@@ -48,5 +48,11 @@ describe("getIncidentSuppressionLabel", () => {
         })
       )
     ).toBe("suppressed");
+  });
+
+  it("is null for an incident with no status", () => {
+    expect(
+      getIncidentStatusLabel(incident({ status: undefined as any }))
+    ).toBeNull();
   });
 });
