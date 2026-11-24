@@ -84,6 +84,8 @@ import { useGroupExpansion } from "@/utils/hooks/useGroupExpansion";
 import { usePresetColumnState } from "@/entities/presets/model";
 import { STATIC_PRESET_IDS, STATIC_PRESETS_NAMES } from "@/entities/presets/model/constants";
 import { useHydratedSession } from "@/shared/lib/hooks/useHydratedSession";
+import { isAssistantEnabled } from "@/shared/lib/assistant-flag";
+import { useAssistantSelection } from "./useAssistantSelection";
 
 // Render the assignee identifier directly (no roster fetch).
 const AssigneeLabel = ({ email }: { email: string }) => email;
@@ -352,6 +354,7 @@ export function AlertTableServerSide({
   }, [onRegisterResetSelection, table.resetRowSelection]);
 
   const selectedAlertsFingerprints = Object.keys(table.getState().rowSelection);
+  useAssistantSelection(table, isAssistantEnabled(configData));
 
   let showSkeleton = isAsyncLoading;
   const isTableEmpty = table.getPageCount() === 0;
