@@ -17,6 +17,10 @@ export const ACTION_LABELS = [
   "create_dashboard",
   "duplicate_dashboard",
   "add_note",
+  "assistant_message",
+  "assistant_confirm",
+  "assistant_stream_timeout",
+  "assistant_stream_truncated",
 ] as const;
 
 export type ActionLabel = (typeof ACTION_LABELS)[number];

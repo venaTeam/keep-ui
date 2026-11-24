@@ -75,7 +75,13 @@ export function useOperators(
 export type KeycloakUser = { email: string; username?: string; name: string };
 export type KeycloakGroup = { id: string; name: string; path?: string };
 
-export type WhoAmI = { tenant_id: string; role?: string };
+export type WhoAmI = {
+  tenant_id: string;
+  role?: string;
+  email?: string;
+  /** A hint for the UI only. Null when the role is not a built-in one. */
+  scopes?: string[] | null;
+};
 
 /**
  * The backend-resolved identity (tenant_id + role). Unlike the Keycloak token
