@@ -5,6 +5,7 @@ export const ALERT_COLUMN_SIZE = {
   assignee: { min: 100, max: 400 },
   extraPayload: { min: 200, max: 800 },
   generated: { min: 100, max: 800 },
+  linkIcon: { min: 44, max: 120 },
 } as const;
 
 export const AUTOFIT_MAX_WIDTH = 800;
