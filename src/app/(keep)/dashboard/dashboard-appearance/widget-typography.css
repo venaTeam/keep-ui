@@ -69,6 +69,10 @@
 [data-widget-typography] td.overflow-visible {
   overflow: visible;
 }
+[data-widget-typography] .quick-tray {
+  --wt-scale: 1;
+  font-size: 1rem;
+}
 [data-widget-typography] .leading-none {
   line-height: 1;
 }
