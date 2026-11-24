@@ -14,7 +14,6 @@ import type { IncidentDto } from "@/entities/incidents/model";
 import { getIncidentName } from "@/entities/incidents/lib/utils";
 import "react-quill-new/dist/quill.snow.css";
 import "./react-quill-override.css";
-import { useSession } from "next-auth/react";
 import dynamic from "next/dynamic";
 import { IncidentSeveritySelect } from "@/features/incidents/change-incident-severity";
 import { Severity } from "@/entities/incidents/model/models";
@@ -36,13 +35,12 @@ export function CreateOrUpdateIncidentForm({
   const [incidentSeverity, setIncidentSeverity] = useState<Severity>(
     Severity.Critical
   );
-  const { data: session } = useSession();
-  const currentUser = session?.user;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
   const [incidentName, setIncidentName] = useState<string>("");
   const [incidentUserSummary, setIncidentUserSummary] = useState<string>("");
-  const [incidentAssignee, setIncidentAssignee] = useState<string>(currentUser?.email || "");
+  // Empty for a new incident: nobody owns it until someone is named here.
+  const [incidentAssignee, setIncidentAssignee] = useState<string>("");
   const [resolveOnAlertsResolved, setResolveOnAlertsResolved] =
     useState<string>("all");
   const { addIncident, updateIncident } = useIncidentActions();
