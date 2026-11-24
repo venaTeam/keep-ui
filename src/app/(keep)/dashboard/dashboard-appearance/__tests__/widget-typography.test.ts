@@ -113,7 +113,10 @@ describe("typographyCardProps", () => {
   it("sets only the scale when only the size differs", () => {
     expect(
       typographyCardProps({ font: "system", size: "lg", title: "normal" }, STACKS)
-    ).toEqual({ "data-widget-typography": "", style: { "--wt-scale": "1.3333" } });
+    ).toEqual({
+      "data-widget-typography": "",
+      style: { "--wt-scale": "1.3333", fontSize: "calc(1rem * 1.3333)" },
+    });
   });
 
   it("sets the font stack and title when they differ", () => {
@@ -123,7 +126,7 @@ describe("typographyCardProps", () => {
       "data-widget-typography": "",
       style: {
         fontFamily: "stack-inter",
-        "--wt-title": "calc(1.125rem * 1.65)",
+        "--wt-title-scale": "1.65",
       },
     });
   });

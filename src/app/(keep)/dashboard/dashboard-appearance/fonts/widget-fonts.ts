@@ -41,6 +41,7 @@ const rubikLatin = localFont({
   weight: "300 900",
   display: "swap",
   preload: false,
+  adjustFontFallback: false,
 });
 
 const rubikHebrew = localFont({

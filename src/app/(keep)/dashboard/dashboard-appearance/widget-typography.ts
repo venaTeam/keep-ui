@@ -66,8 +66,6 @@ export const DEFAULT_WIDGET_TYPOGRAPHY: ResolvedWidgetTypography = {
   title: "normal",
 };
 
-const TITLE_BASE_REM = 1.125;
-
 function isOneOf<T extends string>(
   value: unknown,
   allowed: readonly T[]
@@ -185,10 +183,12 @@ export function typographyCardProps(
     style.fontFamily = fontStacks[t.font];
   }
   if (t.size !== DEFAULT_WIDGET_TYPOGRAPHY.size) {
-    style["--wt-scale"] = textSizeFactor(t.size).toFixed(4);
+    const factor = textSizeFactor(t.size).toFixed(4);
+    style["--wt-scale"] = factor;
+    style.fontSize = `calc(1rem * ${factor})`;
   }
   if (t.title !== DEFAULT_WIDGET_TYPOGRAPHY.title) {
-    style["--wt-title"] = `calc(${TITLE_BASE_REM}rem * ${titleSizeFactor(t.title)})`;
+    style["--wt-title-scale"] = String(titleSizeFactor(t.title));
   }
   return { "data-widget-typography": "", style: style as CSSProperties };
 }

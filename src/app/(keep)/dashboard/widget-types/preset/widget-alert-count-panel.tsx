@@ -204,7 +204,7 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
       >
         <div className="flex-none flex items-center gap-1 min-w-0">
           <div className="flex-1 min-w-0 flex items-center justify-center gap-1 text-xl font-bold text-gray-700">
-            <span className="truncate" data-widget-title="">
+            <span className="truncate" data-widget-title="counter">
               {title}
             </span>
             <CustomTypeBadge active={hasCustomTypography} />

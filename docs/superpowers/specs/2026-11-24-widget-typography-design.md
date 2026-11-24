@@ -118,11 +118,12 @@ Title size is independent of text size and is also a multiplier on today's `text
 
 ### How it is applied (my call)
 
-- The widget card in `GridItem.tsx` gets `data-widget-typography` plus three CSS custom properties from the resolved settings: `--wt-font` (font stack), `--wt-scale` (text multiplier), `--wt-title` (title as `calc(1.125rem * <title factor>)`, so it also follows the viewer's root). Only widgets whose resolved settings differ from the defaults get the attribute, so untouched dashboards render byte-for-byte as today.
+- The widget card in `GridItem.tsx` gets `data-widget-typography` plus inline style from the resolved settings: `fontFamily` (font stack), `--wt-scale` (text multiplier) together with `font-size: calc(1rem * <factor>)` so text without a size utility scales too, and `--wt-title-scale` (title multiplier). Each title keeps its own base size (`GridItem` title 1.125rem, counter name 1.25rem), so a Normal title stays exactly today's size. Only widgets whose resolved settings differ from the defaults get the attribute, so untouched dashboards render byte-for-byte as today.
 - One scoped stylesheet next to the dashboard styles redefines, under `[data-widget-typography]` only:
   - `font-family: var(--wt-font)` on the card and its descendants (inputs and buttons included).
   - Every `text-*` font-size utility used inside widget content (`text-[10px]`, `text-[11px]`, `text-xs` … `text-4xl`, Tremor `text-tremor-label`, `text-tremor-default`, `text-tremor-title`, `text-tremor-metric`) as `calc(<original size> * var(--wt-scale))`, keeping each utility's line-height ratio.
-  - The title span (`[data-cy="dashboard-widget-title"]`, or a dedicated class added for this) to `font-size: var(--wt-title)`.
+  - The title elements (`[data-widget-title]`, and `[data-widget-title="counter"]` for the counter name) to `calc(<base> * var(--wt-title-scale, 1))`, line-height scaled the same way.
+  - `leading-*` utilities used inside widgets (`leading-none`) are restored after the text rules, so a utility's line-height override still wins.
 - Alert-count panel (my call): it has no `GridItem` title row; its name is the `text-xl font-bold` span in `widget-alert-count-panel.tsx`. That span is its title: it gets a title hook (class or `data-` attribute), takes `--wt-title`, and is exempt from the `--wt-scale` rule. The "Custom type" badge sits right after that name. Title size is therefore offered for this panel like any other widget.
 - The shared alerts-page components are not edited; the scope is the attribute, so the main alerts page is untouched.
 - The builder confirms the final utility list by grepping every file a widget renders (including `src/widgets/alerts-table/**` as reached from the widget) and covering whatever is found; the list above is a starting point, not exhaustive.
