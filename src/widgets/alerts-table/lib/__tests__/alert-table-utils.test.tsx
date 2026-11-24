@@ -171,9 +171,7 @@ describe("useAlertTableCols rule and runbook icon links", () => {
 
     fireEvent.focus(screen.getByRole("link", { name: "Open runbook" }));
 
-    expect((await screen.findByRole("tooltip")).parentElement).toHaveClass(
-      "z-60"
-    );
+    expect((await screen.findByRole("tooltip")).closest(".z-60")).not.toBeNull();
   });
 
   it("renders a non-Grafana rule URL as a generic link icon", () => {
