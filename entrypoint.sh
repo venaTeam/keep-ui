@@ -13,6 +13,10 @@ else
     echo "NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}"
 fi
 
+if [ "$(printf '%s' "${KEEP_ASSISTANT_ENABLED}" | tr '[:upper:]' '[:lower:]')" = "true" ] && [ -z "${ASSISTANT_API_URL}" ]; then
+    echo "⚠️ WARNING: KEEP_ASSISTANT_ENABLED is true but ASSISTANT_API_URL is not set, Keep Assistant stays hidden"
+fi
+
 # Check Azure AD environment variables if AUTH_TYPE is "azuread"
 if [ "${AUTH_TYPE}" = "azuread" ] || [ "${AUTH_TYPE}" = "AZUREAD" ]; then
     echo "Checking Azure AD configuration..."

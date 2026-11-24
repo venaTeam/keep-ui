@@ -1,5 +1,10 @@
-import { NextResponse } from "next/server";
+import {
+  NextResponse,
+  type NextFetchEvent,
+  type NextRequest,
+} from "next/server";
 import { getApiURL } from "@/utils/apiUrl";
+import { getAssistantApiUrl } from "@/utils/assistantApiUrl";
 import { config as authConfig } from "@/auth.config";
 import NextAuth from "next-auth";
 import {
@@ -16,7 +21,51 @@ function isMobileDevice(userAgent: string): boolean {
   );
 }
 
-export const middleware = auth(async (request) => {
+// The only request headers keep-assistant receives. Everything else, such as
+// the session cookie or x-keep-session, is dropped from the proxied request.
+const ASSISTANT_FORWARDED_HEADERS = [
+  "authorization",
+  "content-type",
+  "accept",
+  "content-length",
+];
+
+function isAssistantServicePath(pathname: string): boolean {
+  return (
+    pathname === "/backend/assistant" ||
+    pathname.startsWith("/backend/assistant/")
+  );
+}
+
+function rewriteToAssistant(request: NextRequest): NextResponse {
+  const { pathname, search } = request.nextUrl;
+  const assistantApiUrl = getAssistantApiUrl();
+  if (!assistantApiUrl) {
+    const message = "Keep Assistant is not configured";
+    return NextResponse.json(
+      {
+        errors: [{ field: null, code: "assistant_not_configured", message }],
+        detail: message,
+      },
+      { status: 503 }
+    );
+  }
+
+  const headers = new Headers();
+  for (const name of ASSISTANT_FORWARDED_HEADERS) {
+    const value = request.headers.get(name);
+    if (value !== null) {
+      headers.set(name, value);
+    }
+  }
+
+  return NextResponse.rewrite(
+    `${assistantApiUrl}${pathname.slice("/backend".length)}${search}`,
+    { request: { headers } }
+  );
+}
+
+const authMiddleware = auth(async (request) => {
   const { pathname, searchParams } = request.nextUrl;
 
   // go to temporary placeholder for mobile devices
@@ -42,6 +91,9 @@ export const middleware = auth(async (request) => {
     requestHeaders.delete(SESSION_HEADER);
   }
   // Handle legacy /backend/ redirects (when API_URL is not set and frontend act as a proxy)
+  if (isAssistantServicePath(pathname)) {
+    return rewriteToAssistant(request);
+  }
   if (pathname.startsWith("/backend/")) {
     const workflowsApiUrl = process.env.WORKFLOWS_API_URL || "http://localhost:8082";
     const isWorkflowServicePath = pathname === "/backend/workflows" || pathname.startsWith("/backend/workflows/");
@@ -101,6 +153,20 @@ export const middleware = auth(async (request) => {
     },
   });
 });
+
+export const middleware = async (
+  request: NextRequest,
+  event: NextFetchEvent
+) => {
+  const response = await authMiddleware(request, event as never);
+  if (isAssistantServicePath(request.nextUrl.pathname)) {
+    // auth() appends the refreshed session cookie to the response, and Next
+    // copies middleware response headers onto the request it proxies, past the
+    // header allowlist. Other requests keep the session fresh.
+    response?.headers.delete("set-cookie");
+  }
+  return response;
+};
 
 export const config = {
   matcher: [
