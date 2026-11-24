@@ -22,6 +22,7 @@ import { useSearchParams } from "next/navigation";
 import { buildTimeRangeCel } from "./time-range-cel";
 import { useSyncedAnimation } from "./use-synced-animation";
 import { getBlinkColor, getBlinkStyle } from "./blink-palette";
+import { CustomTypeBadge } from "../../dashboard-appearance/DashboardTypographyContext";
 
 const ERROR_COLOR = "#9ca3af";
 
@@ -35,6 +36,7 @@ interface WidgetAlertCountPanelProps {
   onEdit?: () => void;
   onDelete?: () => void;
   countBy?: CountBy;
+  hasCustomTypography?: boolean;
 }
 
 const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
@@ -47,6 +49,7 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
   onEdit,
   onDelete,
   countBy,
+  hasCustomTypography = false,
 }) => {
   const searchParams = useSearchParams();
   const timeRangeCel = useMemo(
@@ -201,7 +204,10 @@ const WidgetAlertCountPanel: React.FC<WidgetAlertCountPanelProps> = ({
       >
         <div className="flex-none flex items-center gap-1 min-w-0">
           <div className="flex-1 min-w-0 flex items-center justify-center gap-1 text-xl font-bold text-gray-700">
-            <span className="truncate">{title}</span>
+            <span className="truncate" data-widget-title="">
+              {title}
+            </span>
+            <CustomTypeBadge active={hasCustomTypography} />
             {appliesFiringOnly && (
               <Icon
                 className="p-0 shrink-0"

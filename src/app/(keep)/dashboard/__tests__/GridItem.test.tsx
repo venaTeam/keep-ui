@@ -3,6 +3,8 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import GridItem from "../GridItem";
 import { DashboardEditModeProvider } from "../DashboardEditModeContext";
 import { PresetPanelType, WidgetData, WidgetType } from "../types";
+import { DashboardTypographyProvider } from "../dashboard-appearance/DashboardTypographyContext";
+import type { WidgetTypography } from "../dashboard-appearance/widget-typography";
 
 jest.mock("../MenuButton", () => ({
   __esModule: true,
@@ -280,5 +282,66 @@ describe("GridItem edit mode", () => {
     );
     fireEvent.click(screen.getByText("change-filters"));
     expect(onSave).not.toHaveBeenCalled();
+  });
+});
+
+describe("GridItem typography", () => {
+  const renderWithTypography = (
+    item: WidgetData,
+    dashboard: WidgetTypography | undefined,
+    isEditMode = true
+  ) =>
+    render(
+      <DashboardEditModeProvider value={isEditMode}>
+        <DashboardTypographyProvider value={dashboard}>
+          <GridItem item={item} onEdit={jest.fn()} onDelete={jest.fn()} onSave={jest.fn()} />
+        </DashboardTypographyProvider>
+      </DashboardEditModeProvider>
+    );
+  const card = (container: HTMLElement) =>
+    container.querySelector('[data-cy="dashboard-widget-w1"]') as HTMLElement;
+
+  it("leaves a widget with no typography anywhere exactly as before", () => {
+    const { container } = renderWithTypography(baseItem(), undefined);
+    expect(card(container)).not.toHaveAttribute("data-widget-typography");
+    expect(card(container).style.fontFamily).toBe("");
+    expect(card(container).style.getPropertyValue("--wt-scale")).toBe("");
+  });
+
+  it("applies the dashboard text size to the card", () => {
+    const { container } = renderWithTypography(baseItem(), { size: "xl" });
+    expect(card(container)).toHaveAttribute("data-widget-typography");
+    expect(card(container).style.getPropertyValue("--wt-scale")).toBe("1.5238");
+  });
+
+  it("lets the widget override win over the dashboard", () => {
+    const { container } = renderWithTypography(
+      baseItem({ typography: { font: "system", size: "sm", title: "normal" } }),
+      { size: "xl" }
+    );
+    expect(card(container)).not.toHaveAttribute("data-widget-typography");
+  });
+
+  it("marks the title so the title size applies to it", () => {
+    const { container } = renderWithTypography(baseItem(), { title: "large" });
+    expect(
+      container.querySelector('[data-cy="dashboard-widget-title"]')
+    ).toHaveAttribute("data-widget-title");
+  });
+
+  it("shows the Custom type badge for an override in edit mode only", () => {
+    const item = baseItem({ typography: { font: "inter", size: "lg", title: "normal" } });
+    const { container, unmount } = renderWithTypography(item, undefined, true);
+    expect(container.querySelector('[data-cy="dashboard-widget-custom-type"]')).toHaveTextContent(
+      "Custom type"
+    );
+    unmount();
+    const view = renderWithTypography(item, undefined, false);
+    expect(view.container.querySelector('[data-cy="dashboard-widget-custom-type"]')).toBeNull();
+  });
+
+  it("shows no badge for a widget that follows the dashboard", () => {
+    const { container } = renderWithTypography(baseItem(), { size: "xl" });
+    expect(container.querySelector('[data-cy="dashboard-widget-custom-type"]')).toBeNull();
   });
 });

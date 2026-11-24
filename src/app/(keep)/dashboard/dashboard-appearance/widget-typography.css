@@ -1,0 +1,67 @@
+/**
+ * Widget typography (see dashboard-appearance/widget-typography.ts).
+ * `--wt-scale` multiplies every text size a widget renders; `--wt-title`
+ * sets the widget title. Rules apply only under `[data-widget-typography]`,
+ * which is absent for widgets left at the defaults.
+ */
+[data-widget-typography] .text-\[10px\] {
+  font-size: calc(10px * var(--wt-scale, 1));
+}
+[data-widget-typography] .text-\[11px\] {
+  font-size: calc(11px * var(--wt-scale, 1));
+}
+[data-widget-typography] .text-xs {
+  font-size: calc(.75rem * var(--wt-scale, 1));
+  line-height: calc(1rem * var(--wt-scale, 1));
+}
+[data-widget-typography] .text-sm {
+  font-size: calc(.875rem * var(--wt-scale, 1));
+  line-height: calc(1.25rem * var(--wt-scale, 1));
+}
+[data-widget-typography] .text-base {
+  font-size: calc(1rem * var(--wt-scale, 1));
+  line-height: calc(1.5rem * var(--wt-scale, 1));
+}
+[data-widget-typography] .text-lg {
+  font-size: calc(1.125rem * var(--wt-scale, 1));
+  line-height: calc(1.75rem * var(--wt-scale, 1));
+}
+[data-widget-typography] .text-xl {
+  font-size: calc(1.25rem * var(--wt-scale, 1));
+  line-height: calc(1.75rem * var(--wt-scale, 1));
+}
+[data-widget-typography] .text-2xl {
+  font-size: calc(1.5rem * var(--wt-scale, 1));
+  line-height: calc(2rem * var(--wt-scale, 1));
+}
+[data-widget-typography] .text-3xl {
+  font-size: calc(1.875rem * var(--wt-scale, 1));
+  line-height: calc(2.25rem * var(--wt-scale, 1));
+}
+[data-widget-typography] .text-4xl {
+  font-size: calc(2.25rem * var(--wt-scale, 1));
+  line-height: calc(2.5rem * var(--wt-scale, 1));
+}
+[data-widget-typography] .text-tremor-label {
+  font-size: calc(.75rem * var(--wt-scale, 1));
+}
+[data-widget-typography] .text-tremor-default {
+  font-size: calc(.875rem * var(--wt-scale, 1));
+  line-height: calc(1.25rem * var(--wt-scale, 1));
+}
+[data-widget-typography] .text-tremor-title {
+  font-size: calc(1.125rem * var(--wt-scale, 1));
+  line-height: calc(1.75rem * var(--wt-scale, 1));
+}
+[data-widget-typography] .text-tremor-metric {
+  font-size: calc(1.875rem * var(--wt-scale, 1));
+  line-height: calc(2.25rem * var(--wt-scale, 1));
+}
+[data-widget-typography] .\[\&\>table\]\:text-xs > table {
+  font-size: calc(.75rem * var(--wt-scale, 1));
+  line-height: calc(1rem * var(--wt-scale, 1));
+}
+[data-widget-typography] [data-widget-title] {
+  font-size: var(--wt-title, 1.125rem);
+  line-height: 1.3;
+}

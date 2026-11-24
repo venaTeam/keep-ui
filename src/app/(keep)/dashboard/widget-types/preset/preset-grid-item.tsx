@@ -71,6 +71,7 @@ const PresetGridItem: React.FC<GridItemProps> = ({
           widgetName={item.name}
           onEdit={onEdit}
           onDelete={onDelete}
+          hasCustomTypography={!!item.typography}
         />
       )}
     </div>
