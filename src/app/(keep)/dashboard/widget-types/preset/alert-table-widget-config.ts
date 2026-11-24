@@ -46,6 +46,15 @@ export const WIDGET_COLUMN_MIN_SIZE: ReadonlyMap<string, number> = new Map([
   ["description", 100],
 ]);
 
+/**
+ * Widths, in pixels, the widget opens a column at instead of its minimum, so
+ * the Rule and Runbook headers fit while the columns can still shrink to 44.
+ */
+export const WIDGET_COLUMN_START_SIZE: ReadonlyMap<string, number> = new Map([
+  ["alert_rule_url", 72],
+  ["runbook_url", 72],
+]);
+
 /** Ids of the fixed alert table columns the widget can show, without the excluded ones. */
 export const WIDGET_STATIC_COLUMN_IDS = [
   "severity",

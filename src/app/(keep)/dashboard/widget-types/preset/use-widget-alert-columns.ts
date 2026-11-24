@@ -9,6 +9,7 @@ import { getNestedValue } from "@/shared/lib/object-utils";
 import type { WidgetData } from "../../types";
 import {
   WIDGET_COLUMN_MIN_SIZE,
+  WIDGET_COLUMN_START_SIZE,
   WIDGET_EXCLUDED_COLUMNS,
   WIDGET_PINNED_LEFT,
   WIDGET_STATIC_COLUMN_IDS,
@@ -85,7 +86,11 @@ function isShownInWidget(column: ColumnDef<AlertDto>): boolean {
 function atMinimumSize(column: ColumnDef<AlertDto>): ColumnDef<AlertDto> {
   const minSize =
     WIDGET_COLUMN_MIN_SIZE.get(column.id as string) ?? column.minSize;
-  return minSize === undefined ? column : { ...column, minSize, size: minSize };
+  if (minSize === undefined) {
+    return column;
+  }
+  const size = WIDGET_COLUMN_START_SIZE.get(column.id as string) ?? minSize;
+  return { ...column, minSize, size };
 }
 
 /**
@@ -107,8 +112,9 @@ function atMinimumSize(column: ColumnDef<AlertDto>): ColumnDef<AlertDto> {
  * in the shared markup. Every column except the icon columns is headed by its
  * widget label, so no stored presets-page name can show through. Those
  * columns also start at their minimum width (`WIDGET_COLUMN_MIN_SIZE` for name
- * and description), so a full-width table spreads the spare room over them; a
- * width saved on the widget wins. `presetName` scopes the browser keys the
+ * and description), or at their `WIDGET_COLUMN_START_SIZE` (Rule and Runbook),
+ * so a full-width table spreads the spare room over them; a width saved on the
+ * widget wins. `presetName` scopes the browser keys the
  * shared column hook reads, so pass a widget-scoped name.
  */
 export function useWidgetAlertColumns({

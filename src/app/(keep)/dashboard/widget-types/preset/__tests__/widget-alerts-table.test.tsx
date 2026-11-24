@@ -743,6 +743,42 @@ describe("WidgetAlertsTable", () => {
       expect(widthOf("service")).toBe("100px");
     });
 
+    it.each(["alert_rule_url", "runbook_url"])(
+      "opens %s at 72px and keeps its 44px minimum",
+      (columnId) => {
+        const { result } = renderHook(() =>
+          useWidgetAlertColumns({
+            item: {
+              ...baseItem,
+              presetColumns: ["name", "alert_rule_url", "runbook_url"],
+            },
+            alerts: [alertWith()],
+            presetName: "link-start-size",
+          })
+        );
+        const column = result.current.columns.find(
+          (candidate) => candidate.id === columnId
+        )!;
+
+        expect([column.size, column.minSize]).toEqual([72, 44]);
+      }
+    );
+
+    it("renders the rule and runbook columns at 72px, and a saved width wins", () => {
+      const presetColumns = ["name", "alert_rule_url", "runbook_url"];
+      const { unmount } = renderWidget({ presetColumns });
+
+      expect(widthOf("alert_rule_url")).toBe("72px");
+      expect(widthOf("runbook_url")).toBe("72px");
+      unmount();
+
+      renderWidget({
+        presetColumns,
+        alertTable: { columnSizing: { runbook_url: 50 } },
+      });
+      expect(widthOf("runbook_url")).toBe("50px");
+    });
+
     it("a saved width overrides the minimum", () => {
       renderWidget({ alertTable: { columnSizing: { name: 240 } } });
 
