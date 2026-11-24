@@ -7,6 +7,44 @@ const createJestConfig = nextJest({
   dir: "./",
 });
 
+// react-markdown and what it imports, none of which has a CommonJS build
+const MARKDOWN_PACKAGES = [
+  "@ungap/structured-clone",
+  "bail",
+  "ccount",
+  "character-entities",
+  "character-entities-html4",
+  "character-entities-legacy",
+  "character-reference-invalid",
+  "comma-separated-tokens",
+  "decode-named-character-reference",
+  "devlop",
+  "estree-util-is-identifier-name",
+  "hast-util-[a-z-]+",
+  "html-url-attributes",
+  "is-alphabetical",
+  "is-alphanumerical",
+  "is-decimal",
+  "is-hexadecimal",
+  "is-plain-obj",
+  "longest-streak",
+  "mdast-util-[a-z-]+",
+  "micromark[a-z-]*",
+  "parse-entities",
+  "property-information",
+  "react-markdown",
+  "remark-[a-z-]+",
+  "space-separated-tokens",
+  "stringify-entities",
+  "trim-lines",
+  "trough",
+  "unified",
+  "unist-util-[a-z-]+",
+  "vfile",
+  "vfile-message",
+  "zwitch",
+];
+
 // Add any custom config to be passed to Jest
 const config: Config = {
   coverageProvider: "v8",
@@ -33,5 +71,18 @@ const config: Config = {
   testPathIgnorePatterns: ["/node_modules/", "<rootDir>/e2e/"],
 };
 
-// createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async
-export default createJestConfig(config);
+// next/jest adds patterns of its own, and a file that any pattern matches is
+// not transformed: the packages have to be exempt from every one of them
+const exemptMarkdownPackages = (pattern: string) =>
+  pattern.replace("(?!(", `(?!(${MARKDOWN_PACKAGES.join("|")}|`);
+
+// Async, because next/jest loads the Next.js config
+export default async function getJestConfig(): Promise<Config> {
+  const jestConfig = await createJestConfig(config)();
+  return {
+    ...jestConfig,
+    transformIgnorePatterns: jestConfig.transformIgnorePatterns?.map(
+      exemptMarkdownPackages
+    ),
+  };
+}
