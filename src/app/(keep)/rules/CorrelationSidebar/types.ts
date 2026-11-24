@@ -1,4 +1,5 @@
 import { RuleGroupType } from "react-querybuilder";
+import type { RuleResolveOn } from "@/utils/hooks/useRules";
 
 export type CorrelationFormType = {
   name: string;
@@ -7,7 +8,7 @@ export type CorrelationFormType = {
   timeUnit: "minutes" | "seconds" | "hours" | "days";
   groupedAttributes: string[];
   requireApprove: boolean;
-  resolveOn: "all" | "first" | "last" | "never";
+  resolveOn: RuleResolveOn;
   createOn: "any" | "all";
   query: RuleGroupType;
   incidentNameTemplate: string;

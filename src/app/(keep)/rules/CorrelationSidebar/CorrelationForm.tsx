@@ -13,6 +13,7 @@ import { Controller, get, useFormContext } from "react-hook-form";
 import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
 import React from "react";
 import { CorrelationFormType } from "./types";
+import { ResolveOnField } from "./ResolveOnField";
 import { useTenantConfiguration } from "@/utils/hooks/useTenantConfiguration";
 import { Input } from "@/shared/ui";
 
@@ -222,33 +223,7 @@ export const CorrelationForm = ({
           />
         </div>
 
-        <div className="mr-10">
-          <label
-            className="flex items-center text-tremor-default font-medium text-tremor-content-strong"
-            htmlFor="resolveOn"
-          >
-            Resolve on{" "}
-          </label>
-
-          <Controller
-            control={control}
-            name="resolveOn"
-            render={({ field: { value, onChange } }) => (
-              <Select value={value} onValueChange={onChange} className="mt-2">
-                <SelectItem value="never">No auto-resolution</SelectItem>
-                <SelectItem value="all_resolved">
-                  All alerts resolved
-                </SelectItem>
-                <SelectItem value="first_resolved">
-                  First alert resolved
-                </SelectItem>
-                <SelectItem value="last_resolved">
-                  Last alert resolved
-                </SelectItem>
-              </Select>
-            )}
-          />
-        </div>
+        <ResolveOnField />
 
         <div>
           <label
