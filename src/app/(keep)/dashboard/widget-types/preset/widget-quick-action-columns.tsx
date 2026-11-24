@@ -1,4 +1,4 @@
-import { ChangeEvent, useContext } from "react";
+import { ChangeEvent, useContext, useState } from "react";
 import clsx from "clsx";
 import type { ColumnDef, Row, Table } from "@tanstack/react-table";
 import type { AlertDto } from "@/entities/alerts/model/types";
@@ -11,6 +11,7 @@ import {
 } from "@/features/alerts/alert-quick-actions";
 import { isLinkIconColumn } from "@/widgets/alerts-table/lib/alert-link-columns";
 import { WidgetRowActionsContext } from "./widget-row-actions-context";
+import { useTrayDock } from "./widget-tray-dock";
 
 /** Id of the widget's checkbox gutter column. */
 export const CHECKBOX_COLUMN_ID = "checkbox";
@@ -72,8 +73,9 @@ function RowCheckbox({ row }: { row: Row<AlertDto> }) {
 }
 
 /**
- * A row's quick-action tray, hidden while anything is ticked. It floats left
- * of trailing link icon columns so it never covers their links.
+ * A row's quick-action tray, hidden while anything is ticked. Over trailing
+ * link icon columns it floats left of them, and slides over them while the
+ * pointer reads the cells it would cover (`useTrayDock`).
  */
 function RowActions({
   alert,
@@ -83,17 +85,22 @@ function RowActions({
   table: Table<AlertDto>;
 }) {
   const actions = useContext(WidgetRowActionsContext);
+  const [tray, setTray] = useState<HTMLDivElement | null>(null);
+  const linkColumnsPx = getTrailingLinkColumnsPx(table);
+  const dock = useTrayDock(tray, linkColumnsPx);
   if (!actions || actions.isSelecting) {
     return null;
   }
-  const linkColumnsPx = getTrailingLinkColumnsPx(table);
   return (
     <QuickActionTray
+      ref={setTray}
       alert={alert}
       compact={actions.compact}
       onOpen={actions.onOpenAction}
       rightOffsetPx={
-        linkColumnsPx > 0 ? linkColumnsPx + TRAY_GAP_PX : undefined
+        linkColumnsPx > 0 && dock === "left"
+          ? linkColumnsPx + TRAY_GAP_PX
+          : undefined
       }
     />
   );

@@ -63,6 +63,26 @@ describe("QuickActionTray", () => {
     );
   });
 
+  it("hands its root, with the tray class, to ref", () => {
+    const ref = { current: null as HTMLDivElement | null };
+    render(<QuickActionTray alert={firingNoIncident} onOpen={onOpen} ref={ref} />);
+    expect(ref.current).toHaveClass(QUICK_TRAY_CLASS);
+  });
+
+  it("slides its right edge only when motion is not reduced", () => {
+    const { container } = render(
+      <QuickActionTray alert={firingNoIncident} onOpen={onOpen} />
+    );
+    expect(container.firstElementChild).toHaveClass(
+      "motion-safe:transition-[right]",
+      "motion-safe:duration-[120ms]",
+      "motion-safe:ease-out"
+    );
+    expect(container.firstElementChild?.className).not.toMatch(
+      /(^|\s)transition/
+    );
+  });
+
   it("shows all three for a firing alert with no incident", () => {
     render(<QuickActionTray alert={firingNoIncident} onOpen={onOpen} />);
     expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual([

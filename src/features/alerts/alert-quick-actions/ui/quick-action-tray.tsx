@@ -1,4 +1,4 @@
-import { MouseEvent } from "react";
+import { MouseEvent, Ref } from "react";
 import clsx from "clsx";
 import { AlertDto } from "@/entities/alerts/model/types";
 import { ALERT_QUICK_ACTIONS } from "../model/actions";
@@ -11,24 +11,29 @@ interface QuickActionTrayProps {
   compact?: boolean;
   onOpen: OpenQuickActionHandler;
   rightOffsetPx?: number;
+  ref?: Ref<HTMLDivElement>;
 }
 
 /**
  * A widget row's floating tray of the quick actions that apply to its alert;
  * `compact` shows icons only, and `rightOffsetPx` moves its right edge that
- * many pixels in from the row's right edge.
+ * many pixels in from the row's right edge. A change of that edge slides in
+ * 120 ms, unless reduced motion is preferred.
  */
 export function QuickActionTray({
   alert,
   compact = false,
   onOpen,
   rightOffsetPx,
+  ref,
 }: QuickActionTrayProps) {
   return (
     <div
+      ref={ref}
       className={clsx(
         QUICK_TRAY_CLASS,
-        "absolute right-1 top-1/2 -translate-y-1/2 z-20 flex gap-0.5 rounded-md border bg-white p-0.5 shadow-sm"
+        "absolute right-1 top-1/2 -translate-y-1/2 z-20 flex gap-0.5 rounded-md border bg-white p-0.5 shadow-sm",
+        "motion-safe:transition-[right] motion-safe:duration-[120ms] motion-safe:ease-out"
       )}
       style={rightOffsetPx === undefined ? undefined : { right: rightOffsetPx }}
     >

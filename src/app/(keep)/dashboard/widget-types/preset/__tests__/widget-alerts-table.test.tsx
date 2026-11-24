@@ -2220,6 +2220,91 @@ describe("WidgetAlertsTable", () => {
         expect(trayOf(ruleAlert).style.right).toBe("");
       });
 
+      describe("moving with the pointer", () => {
+        const ROW_RIGHT = 1000;
+        const TRAY_LEFT = 700;
+        const ON_DESCRIPTION = 300;
+        const ON_TRAY = 750;
+        const ON_ICONS = 900;
+
+        const renderMeasured = () => {
+          renderHarness({ alerts: [ruleAlert], presetColumns });
+          const row = rowFor(ruleAlert);
+          const tray = trayOf(ruleAlert);
+          row.getBoundingClientRect = () =>
+            ({ left: 0, right: ROW_RIGHT, top: 0, bottom: 32 }) as DOMRect;
+          tray.getBoundingClientRect = () =>
+            ({ left: TRAY_LEFT, right: 852, top: 4, bottom: 28 }) as DOMRect;
+          return row;
+        };
+        const moveTo = (row: HTMLElement, clientX: number) =>
+          act(() => {
+            row.dispatchEvent(
+              new MouseEvent("pointermove", { bubbles: true, clientX })
+            );
+          });
+
+        it("slides right off the description and back left onto the icons", () => {
+          const row = renderMeasured();
+
+          moveTo(row, ON_DESCRIPTION);
+          expect(trayOf(ruleAlert).style.right).toBe("");
+          expect(trayOf(ruleAlert)).toHaveClass("right-1");
+
+          moveTo(row, ON_TRAY);
+          expect(trayOf(ruleAlert).style.right).toBe("");
+
+          moveTo(row, ON_ICONS);
+          expect(trayOf(ruleAlert).style.right).toBe("148px");
+        });
+
+        it("stays left when the pointer moves from the icons onto the tray", () => {
+          const row = renderMeasured();
+
+          moveTo(row, ON_ICONS);
+          moveTo(row, ON_TRAY);
+
+          expect(trayOf(ruleAlert).style.right).toBe("148px");
+        });
+
+        it("docks left again when the pointer leaves the row", () => {
+          const row = renderMeasured();
+
+          moveTo(row, ON_DESCRIPTION);
+          fireEvent.pointerLeave(row);
+
+          expect(trayOf(ruleAlert).style.right).toBe("148px");
+        });
+
+        it("docks left on keyboard focus", () => {
+          const row = renderMeasured();
+
+          moveTo(row, ON_DESCRIPTION);
+          act(() => {
+            screen
+              .getByRole("button", { name: `Dismiss: ${ruleAlert.name}` })
+              .focus();
+          });
+
+          expect(trayOf(ruleAlert).style.right).toBe("148px");
+        });
+
+        it("stays at its default edge without trailing link columns", () => {
+          renderHarness({
+            alerts: [ruleAlert],
+            presetColumns: ["name", "alert_rule_url", "runbook_url", "service"],
+          });
+          const row = rowFor(ruleAlert);
+          row.getBoundingClientRect = () =>
+            ({ left: 0, right: ROW_RIGHT, top: 0, bottom: 32 }) as DOMRect;
+
+          moveTo(row, ON_DESCRIPTION);
+          moveTo(row, ON_ICONS);
+
+          expect(trayOf(ruleAlert).style.right).toBe("");
+        });
+      });
+
       it("renders the icons dimmed and without links in edit mode", () => {
         renderHarness({ alerts: [ruleAlert], presetColumns, isEditMode: true });
 
