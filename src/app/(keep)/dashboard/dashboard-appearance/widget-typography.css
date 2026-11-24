@@ -66,6 +66,9 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+[data-widget-typography] td.overflow-visible {
+  overflow: visible;
+}
 [data-widget-typography] .leading-none {
   line-height: 1;
 }
