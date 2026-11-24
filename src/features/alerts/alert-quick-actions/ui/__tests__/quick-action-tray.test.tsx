@@ -83,6 +83,22 @@ describe("QuickActionTray", () => {
     );
   });
 
+  it("places its right edge without sliding, and marks it, when instantPlacement is set", () => {
+    const { container } = render(
+      <QuickActionTray
+        alert={firingNoIncident}
+        onOpen={onOpen}
+        rightOffsetPx={148}
+        instantPlacement
+      />
+    );
+    const tray = container.firstElementChild as HTMLElement;
+    expect(tray).toHaveClass(QUICK_TRAY_CLASS);
+    expect(tray).toHaveAttribute("data-instant-placement");
+    expect(tray.className).not.toMatch(/transition/);
+    expect(tray.style.right).toBe("148px");
+  });
+
   it("shows all three for a firing alert with no incident", () => {
     render(<QuickActionTray alert={firingNoIncident} onOpen={onOpen} />);
     expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual([

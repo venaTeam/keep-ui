@@ -2222,27 +2222,65 @@ describe("WidgetAlertsTable", () => {
 
       describe("moving with the pointer", () => {
         const ROW_RIGHT = 1000;
-        const TRAY_LEFT = 700;
         const ON_DESCRIPTION = 300;
         const ON_TRAY = 750;
         const ON_ICONS = 900;
+        const NO_RECT = { left: 0, right: 0, top: 0, bottom: 0, width: 0, height: 0 };
+        const rect = (left: number, right: number) =>
+          ({ left, right, top: 0, bottom: 32, width: right - left, height: 32 }) as DOMRect;
+        const CELL_RECTS: Record<string, DOMRect> = {
+          checkbox: rect(0, 28),
+          name: rect(28, 856),
+          alert_rule_url: rect(856, 928),
+          runbook_url: rect(928, 1000),
+        };
+        const textRects = (nameRight: number): Record<string, DOMRect> => ({
+          checkbox: rect(8, 20),
+          name: rect(36, nameRight),
+          alert_rule_url: rect(880, 904),
+          runbook_url: rect(952, 976),
+        });
 
-        const renderMeasured = () => {
+        afterEach(() => {
+          jest.restoreAllMocks();
+        });
+
+        const renderMeasured = ({ covered = true } = {}) => {
           renderHarness({ alerts: [ruleAlert], presetColumns });
           const row = rowFor(ruleAlert);
           const tray = trayOf(ruleAlert);
-          row.getBoundingClientRect = () =>
-            ({ left: 0, right: ROW_RIGHT, top: 0, bottom: 32 }) as DOMRect;
-          tray.getBoundingClientRect = () =>
-            ({ left: TRAY_LEFT, right: 852, top: 4, bottom: 28 }) as DOMRect;
+          row.getBoundingClientRect = () => rect(0, ROW_RIGHT);
+          tray.getBoundingClientRect = () => rect(700, 852);
+          row
+            .querySelectorAll<HTMLElement>("td[data-column-id]")
+            .forEach((cell) => {
+              cell.getBoundingClientRect = () =>
+                CELL_RECTS[cell.dataset.columnId!] ?? (NO_RECT as DOMRect);
+            });
+          const texts = textRects(covered ? 760 : 400);
+          jest.spyOn(document, "createRange").mockImplementation(() => {
+            let node: HTMLElement | null = null;
+            return {
+              selectNodeContents: (target: Node) => {
+                node = target as HTMLElement;
+              },
+              getBoundingClientRect: () =>
+                texts[node?.dataset.columnId ?? ""] ?? NO_RECT,
+            } as unknown as Range;
+          });
           return row;
         };
+        const pointer = (row: HTMLElement, type: string, clientX: number) =>
+          row.dispatchEvent(new MouseEvent(type, { bubbles: true, clientX }));
         const moveTo = (row: HTMLElement, clientX: number) =>
           act(() => {
-            row.dispatchEvent(
-              new MouseEvent("pointermove", { bubbles: true, clientX })
-            );
+            pointer(row, "pointermove", clientX);
           });
+        const enterAt = (row: HTMLElement, clientX: number) =>
+          act(() => {
+            pointer(row, "pointerenter", clientX);
+          });
+        const at = (now: number) => jest.spyOn(performance, "now").mockReturnValue(now);
 
         it("slides right off the description and back left onto the icons", () => {
           const row = renderMeasured();
@@ -2295,13 +2333,107 @@ describe("WidgetAlertsTable", () => {
             presetColumns: ["name", "alert_rule_url", "runbook_url", "service"],
           });
           const row = rowFor(ruleAlert);
-          row.getBoundingClientRect = () =>
-            ({ left: 0, right: ROW_RIGHT, top: 0, bottom: 32 }) as DOMRect;
+          row.getBoundingClientRect = () => rect(0, ROW_RIGHT);
 
           moveTo(row, ON_DESCRIPTION);
           moveTo(row, ON_ICONS);
 
           expect(trayOf(ruleAlert).style.right).toBe("");
+        });
+
+        it("never slides when the left dock covers no text in the row", () => {
+          const row = renderMeasured({ covered: false });
+
+          enterAt(row, ON_DESCRIPTION);
+          [ON_DESCRIPTION, 120, ON_TRAY, ON_ICONS, ON_DESCRIPTION].forEach((x) => {
+            moveTo(row, x);
+            expect(trayOf(ruleAlert).style.right).toBe("148px");
+          });
+        });
+
+        describe("entering the row", () => {
+          it("docks right at once, without sliding, when entered on the description", () => {
+            const row = renderMeasured();
+
+            pointer(row, "pointerenter", ON_DESCRIPTION);
+
+            const tray = trayOf(ruleAlert);
+            expect(tray.style.right).toBe("");
+            expect(tray).toHaveAttribute("data-instant-placement");
+            expect(tray.className).not.toMatch(/transition/);
+          });
+
+          it("docks left at once when entered on the icons", () => {
+            const row = renderMeasured();
+
+            enterAt(row, ON_ICONS);
+
+            expect(trayOf(ruleAlert).style.right).toBe("148px");
+            expect(trayOf(ruleAlert)).toHaveAttribute("data-instant-placement");
+          });
+
+          it("slides on a later dock change", () => {
+            const row = renderMeasured();
+
+            enterAt(row, ON_DESCRIPTION);
+            moveTo(row, ON_ICONS);
+
+            const tray = trayOf(ruleAlert);
+            expect(tray.style.right).toBe("148px");
+            expect(tray).not.toHaveAttribute("data-instant-placement");
+            expect(tray).toHaveClass("motion-safe:transition-[right]");
+          });
+        });
+
+        describe("click guard after a dock change", () => {
+          const dismiss = () =>
+            screen.getByRole("button", { name: `Dismiss: ${ruleAlert.name}` });
+          const ruleLink = () =>
+            screen.getByRole("link", { name: "Open alert rule in Grafana" });
+
+          it("swallows a tray button click within 200ms, and lets it through after", () => {
+            const row = renderMeasured();
+            enterAt(row, ON_ICONS);
+            at(1000);
+            moveTo(row, ON_DESCRIPTION);
+
+            at(1199);
+            expect(fireEvent.click(dismiss())).toBe(false);
+            expect(onOpenAction).not.toHaveBeenCalled();
+
+            at(1200);
+            fireEvent.click(dismiss());
+            expect(onOpenAction).toHaveBeenCalledTimes(1);
+          });
+
+          it("swallows a link icon click within 200ms, and lets it through after", () => {
+            const row = renderMeasured();
+            enterAt(row, ON_DESCRIPTION);
+            at(1000);
+            moveTo(row, ON_ICONS);
+
+            at(1100);
+            expect(fireEvent.click(ruleLink())).toBe(false);
+
+            at(1300);
+            const reachedDocument = jest.fn((event: Event) => event.preventDefault());
+            document.addEventListener("click", reachedDocument);
+            const notPrevented = fireEvent.click(ruleLink());
+            document.removeEventListener("click", reachedDocument);
+            expect(notPrevented).toBe(true);
+          });
+
+          it("leaves other clicks in the row alone", () => {
+            const row = renderMeasured();
+            enterAt(row, ON_ICONS);
+            at(1000);
+            moveTo(row, ON_DESCRIPTION);
+
+            at(1050);
+            fireEvent.click(checkboxFor(ruleAlert));
+
+            expect(onRowSelectionChange).toHaveBeenCalledTimes(1);
+          });
         });
       });
 

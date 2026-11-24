@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
+import { isLinkIconColumn } from "@/widgets/alerts-table/lib/alert-link-columns";
 
 /**
  * Where a widget row's quick-action tray sits when the row ends in link icon
@@ -10,9 +12,23 @@ export type TrayDock = "left" | "right";
 export interface TrayDockEdges {
   /** Left edge of the row's trailing link icon columns. */
   linkZoneLeft: number;
-  /** Left edge of the tray. */
+  /** Left edge of the tray when docked left. */
   trayLeft: number;
 }
+
+/** The tray's dock, and whether it got there by jumping instead of sliding. */
+export interface TrayPlacement {
+  dock: TrayDock;
+  instant: boolean;
+}
+
+/** Gap, in pixels, between the left-docked tray and the link icon columns. */
+export const TRAY_GAP_PX = 4;
+
+/** How long, in milliseconds, after a dock change clicks on the tray or the link icons are swallowed. */
+export const DOCK_CLICK_GUARD_MS = 200;
+
+const INITIAL_PLACEMENT: TrayPlacement = { dock: "left", instant: true };
 
 /**
  * The tray's next dock for a pointer at `x`. Docked left, it moves right only
@@ -34,44 +50,147 @@ export function nextTrayDock(
   return current;
 }
 
+/** Whether a table cell belongs to a link icon column. */
+function isLinkIconCell(cell: Element | null): boolean {
+  const columnId = (cell as HTMLElement | null)?.dataset.columnId;
+  return columnId !== undefined && isLinkIconColumn(columnId);
+}
+
+/** The row's dock edges, from the row's right edge and the tray's width. */
+function getDockEdges(
+  row: HTMLElement,
+  tray: HTMLElement,
+  linkColumnsPx: number
+): TrayDockEdges {
+  const linkZoneLeft = row.getBoundingClientRect().right - linkColumnsPx;
+  return {
+    linkZoneLeft,
+    trayLeft: linkZoneLeft - TRAY_GAP_PX - tray.getBoundingClientRect().width,
+  };
+}
+
+/**
+ * Whether the tray, docked left with its left edge at `trayLeft`, would cover
+ * the content of any of the row's cells besides the link icon cells and its
+ * own. A cell's content is measured with a Range and cut at the cell's edge.
+ */
+function wouldCoverContent(
+  row: HTMLTableRowElement,
+  tray: HTMLElement,
+  trayLeft: number
+): boolean {
+  return Array.from(row.cells).some((cell) => {
+    if (cell.contains(tray) || isLinkIconCell(cell)) {
+      return false;
+    }
+    const range = document.createRange();
+    range.selectNodeContents(cell);
+    const content = range.getBoundingClientRect();
+    if (content.width === 0 && content.height === 0) {
+      return false;
+    }
+    return Math.min(content.right, cell.getBoundingClientRect().right) > trayLeft;
+  });
+}
+
+/** Whether a click target is one of the tray's buttons or a link icon anchor of the row. */
+function isGuardedTarget(
+  row: HTMLElement,
+  tray: HTMLElement,
+  target: EventTarget | null
+): boolean {
+  const control =
+    target instanceof Element ? target.closest("a, button") : null;
+  if (!control || !row.contains(control)) {
+    return false;
+  }
+  return (
+    tray.contains(control) ||
+    (control.tagName === "A" && isLinkIconCell(control.closest("td")))
+  );
+}
+
 /**
  * Docks `tray` by the pointer over its row (`nextTrayDock`), when the row ends
- * in `linkColumnsPx` pixels of link icon columns. Leaving the row or focusing
- * into it by keyboard docks it left again.
+ * in `linkColumnsPx` pixels of link icon columns and the left dock would
+ * cover content of another cell; otherwise it stays left. Entering the row
+ * places it at once, without sliding, before it shows. Leaving the row or
+ * focusing into it by keyboard docks it left. For `DOCK_CLICK_GUARD_MS` after
+ * a dock change, clicks on the tray's buttons and the link icons are
+ * swallowed, so a click aimed before the move doesn't land on what slid in.
  */
 export function useTrayDock(
   tray: HTMLElement | null,
   linkColumnsPx: number
-): TrayDock {
-  const [dock, setDock] = useState<TrayDock>("left");
+): TrayPlacement {
+  const [placement, setPlacement] = useState<TrayPlacement>(INITIAL_PLACEMENT);
+  const dockRef = useRef<TrayDock>(INITIAL_PLACEMENT.dock);
 
   useEffect(() => {
     const row = tray?.closest("tr");
     if (!tray || !row || linkColumnsPx <= 0) {
       return;
     }
-    const onPointerMove = (event: PointerEvent) => {
-      const edges = {
-        linkZoneLeft: row.getBoundingClientRect().right - linkColumnsPx,
-        trayLeft: tray.getBoundingClientRect().left,
-      };
-      setDock((current) => nextTrayDock(current, event.clientX, edges));
+    let canSlide: boolean | null = null;
+    let changedAt = -Infinity;
+    const place = (dock: TrayDock, instant: boolean) => {
+      dockRef.current = dock;
+      setPlacement({ dock, instant });
     };
-    const dockLeft = () => setDock("left");
-    const onFocusIn = (event: FocusEvent) => {
-      if ((event.target as Element).matches(":focus-visible")) {
-        dockLeft();
+    const onPointerEnter = (event: PointerEvent) => {
+      const edges = getDockEdges(row, tray, linkColumnsPx);
+      canSlide = wouldCoverContent(row, tray, edges.trayLeft);
+      const dock = canSlide ? nextTrayDock("left", event.clientX, edges) : "left";
+      flushSync(() => place(dock, true));
+    };
+    const onPointerMove = (event: PointerEvent) => {
+      const edges = getDockEdges(row, tray, linkColumnsPx);
+      if (canSlide === null) {
+        canSlide = wouldCoverContent(row, tray, edges.trayLeft);
+      }
+      if (!canSlide) {
+        return;
+      }
+      const next = nextTrayDock(dockRef.current, event.clientX, edges);
+      if (next !== dockRef.current) {
+        changedAt = performance.now();
+        place(next, false);
       }
     };
+    const onPointerLeave = () => {
+      canSlide = null;
+      place("left", true);
+    };
+    const onFocusIn = (event: FocusEvent) => {
+      if (
+        (event.target as Element).matches(":focus-visible") &&
+        dockRef.current !== "left"
+      ) {
+        place("left", false);
+      }
+    };
+    const onClickCapture = (event: MouseEvent) => {
+      if (
+        performance.now() - changedAt < DOCK_CLICK_GUARD_MS &&
+        isGuardedTarget(row, tray, event.target)
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+    row.addEventListener("pointerenter", onPointerEnter);
     row.addEventListener("pointermove", onPointerMove);
-    row.addEventListener("pointerleave", dockLeft);
+    row.addEventListener("pointerleave", onPointerLeave);
     row.addEventListener("focusin", onFocusIn);
+    row.addEventListener("click", onClickCapture, true);
     return () => {
+      row.removeEventListener("pointerenter", onPointerEnter);
       row.removeEventListener("pointermove", onPointerMove);
-      row.removeEventListener("pointerleave", dockLeft);
+      row.removeEventListener("pointerleave", onPointerLeave);
       row.removeEventListener("focusin", onFocusIn);
+      row.removeEventListener("click", onClickCapture, true);
     };
   }, [tray, linkColumnsPx]);
 
-  return dock;
+  return placement;
 }
