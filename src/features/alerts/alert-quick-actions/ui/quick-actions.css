@@ -1,4 +1,4 @@
-/* Alert Table widget quick actions: hover-revealed checkboxes, the row tray and the ticked or open row highlight. */
+/* Alert Table widget quick actions: hover-revealed checkboxes, the row tray (shown at once, hidden 150ms after its row loses hover or focus, its cell raised above the next row) and the ticked or open row highlight. */
 .quick-actions-table .quick-reveal {
   opacity: 0;
   transition: opacity 0.12s;
@@ -13,13 +13,35 @@
 
 .quick-actions-table .quick-tray {
   opacity: 0;
-  pointer-events: none;
+  visibility: hidden;
+  transition: opacity 0.1s ease-out 0.15s, visibility 0s linear 0.25s;
 }
 
 .quick-actions-table tr:hover .quick-tray,
 .quick-actions-table tr:has(:focus-visible) .quick-tray {
   opacity: 1;
-  pointer-events: auto;
+  visibility: visible;
+  transition: none;
+}
+
+.quick-actions-table .quick-tray-cell {
+  transition: z-index 0s linear 0.25s;
+}
+
+.quick-actions-table tr:hover > .quick-tray-cell,
+.quick-actions-table tr:has(:focus-visible) > .quick-tray-cell {
+  z-index: 2;
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quick-actions-table .quick-tray {
+    transition: opacity 0s linear 0.15s, visibility 0s linear 0.15s;
+  }
+
+  .quick-actions-table .quick-tray-cell {
+    transition: z-index 0s linear 0.15s;
+  }
 }
 
 .quick-actions-table tr:has(.quick-pick:checked) > td,

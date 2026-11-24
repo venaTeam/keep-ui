@@ -9,8 +9,11 @@ export const QUICK_REVEAL_CLASS = "quick-reveal";
 /** Marks a row checkbox; a row whose checkbox is ticked is highlighted. */
 export const QUICK_PICK_CLASS = "quick-pick";
 
-/** Marks the row tray; hidden and unclickable until its row is hovered or holds keyboard focus (`:focus-visible`). */
+/** Marks the row tray; hidden and unclickable until its row is hovered or holds keyboard focus (`:focus-visible`), and kept shown for 150ms after. */
 export const QUICK_TRAY_CLASS = "quick-tray";
+
+/** Marks the cell holding the row tray; raised above the next row's cells while the tray shows. */
+export const QUICK_TRAY_CELL_CLASS = "quick-tray-cell";
 
 /** Attribute on an element inside the row whose dialog is open; that row stays highlighted. */
 export const QUICK_OPEN_ATTR = "data-quick-open";

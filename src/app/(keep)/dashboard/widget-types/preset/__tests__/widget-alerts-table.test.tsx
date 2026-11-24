@@ -2201,316 +2201,6 @@ describe("WidgetAlertsTable", () => {
         expect(onOpenAction).not.toHaveBeenCalled();
       });
 
-      const trayOf = (alert: AlertDto) =>
-        rowFor(alert).querySelector<HTMLElement>(".quick-tray")!;
-
-      it("floats the tray left of trailing Rule and Runbook columns", () => {
-        renderHarness({ alerts: [ruleAlert], presetColumns });
-
-        expect(trayOf(ruleAlert).style.right).toBe("148px");
-      });
-
-      it("keeps the tray at its default edge when no link column is last", () => {
-        renderHarness({
-          alerts: [ruleAlert],
-          presetColumns: ["name", "alert_rule_url", "runbook_url", "service"],
-        });
-
-        expect(headerIds().slice(-2)).toEqual(["service", "alertMenu"]);
-        expect(trayOf(ruleAlert).style.right).toBe("");
-      });
-
-      describe("moving with the pointer", () => {
-        const ROW_RIGHT = 1000;
-        const ON_DESCRIPTION = 300;
-        const ON_TRAY = 750;
-        const ON_ICONS = 900;
-        const NO_RECT = { left: 0, right: 0, top: 0, bottom: 0, width: 0, height: 0 };
-        const rect = (left: number, right: number) =>
-          ({ left, right, top: 0, bottom: 32, width: right - left, height: 32 }) as DOMRect;
-        const CELL_RECTS: Record<string, DOMRect> = {
-          checkbox: rect(0, 28),
-          name: rect(28, 856),
-          alert_rule_url: rect(856, 928),
-          runbook_url: rect(928, 1000),
-        };
-        const textRects = (nameRight: number): Record<string, DOMRect> => ({
-          checkbox: rect(8, 20),
-          name: rect(36, nameRight),
-          alert_rule_url: rect(880, 904),
-          runbook_url: rect(952, 976),
-        });
-
-        afterEach(() => {
-          jest.restoreAllMocks();
-        });
-
-        const renderMeasured = ({ covered = true, trayWidth = 152 } = {}) => {
-          renderHarness({ alerts: [ruleAlert], presetColumns });
-          const row = rowFor(ruleAlert);
-          const tray = trayOf(ruleAlert);
-          row.getBoundingClientRect = () => rect(0, ROW_RIGHT);
-          tray.getBoundingClientRect = () =>
-            rect(ROW_RIGHT - 148 - trayWidth, ROW_RIGHT - 148);
-          row
-            .querySelectorAll<HTMLElement>("td[data-column-id]")
-            .forEach((cell) => {
-              cell.getBoundingClientRect = () =>
-                CELL_RECTS[cell.dataset.columnId!] ?? (NO_RECT as DOMRect);
-            });
-          const texts = textRects(covered ? 760 : 400);
-          jest.spyOn(document, "createRange").mockImplementation(() => {
-            let node: HTMLElement | null = null;
-            return {
-              selectNodeContents: (target: Node) => {
-                node = target as HTMLElement;
-              },
-              getBoundingClientRect: () =>
-                texts[node?.dataset.columnId ?? ""] ?? NO_RECT,
-            } as unknown as Range;
-          });
-          return row;
-        };
-        const pointer = (row: HTMLElement, type: string, clientX: number) =>
-          row.dispatchEvent(new MouseEvent(type, { bubbles: true, clientX }));
-        const moveTo = (row: HTMLElement, clientX: number) =>
-          act(() => {
-            pointer(row, "pointermove", clientX);
-          });
-        const enterAt = (row: HTMLElement, clientX: number) =>
-          act(() => {
-            pointer(row, "pointerenter", clientX);
-          });
-        const at = (now: number) => jest.spyOn(performance, "now").mockReturnValue(now);
-
-        it("slides right off the description and back left onto the icons", () => {
-          const row = renderMeasured();
-
-          moveTo(row, ON_DESCRIPTION);
-          expect(trayOf(ruleAlert).style.right).toBe("");
-          expect(trayOf(ruleAlert)).toHaveClass("right-1");
-
-          moveTo(row, ON_TRAY);
-          expect(trayOf(ruleAlert).style.right).toBe("");
-
-          moveTo(row, ON_ICONS);
-          expect(trayOf(ruleAlert).style.right).toBe("148px");
-        });
-
-        it("stays left when the pointer moves from the icons onto the tray", () => {
-          const row = renderMeasured();
-
-          moveTo(row, ON_ICONS);
-          moveTo(row, ON_TRAY);
-
-          expect(trayOf(ruleAlert).style.right).toBe("148px");
-        });
-
-        it("docks left again when the pointer leaves the row", () => {
-          const row = renderMeasured();
-
-          moveTo(row, ON_DESCRIPTION);
-          fireEvent.pointerLeave(row);
-
-          expect(trayOf(ruleAlert).style.right).toBe("148px");
-        });
-
-        it("docks left on keyboard focus", () => {
-          const row = renderMeasured();
-
-          moveTo(row, ON_DESCRIPTION);
-          act(() => {
-            screen
-              .getByRole("button", { name: `Dismiss: ${ruleAlert.name}` })
-              .focus();
-          });
-
-          expect(trayOf(ruleAlert).style.right).toBe("148px");
-        });
-
-        it("stays at its default edge without trailing link columns", () => {
-          renderHarness({
-            alerts: [ruleAlert],
-            presetColumns: ["name", "alert_rule_url", "runbook_url", "service"],
-          });
-          const row = rowFor(ruleAlert);
-          row.getBoundingClientRect = () => rect(0, ROW_RIGHT);
-
-          moveTo(row, ON_DESCRIPTION);
-          moveTo(row, ON_ICONS);
-
-          expect(trayOf(ruleAlert).style.right).toBe("");
-        });
-
-        it("never slides when the left dock covers no text in the row", () => {
-          const row = renderMeasured({ covered: false });
-
-          enterAt(row, ON_DESCRIPTION);
-          [ON_DESCRIPTION, 120, ON_TRAY, ON_ICONS, ON_DESCRIPTION].forEach((x) => {
-            moveTo(row, x);
-            expect(trayOf(ruleAlert).style.right).toBe("148px");
-          });
-        });
-
-        describe("compact while docked right", () => {
-          const labels = () =>
-            Array.from(
-              trayOf(ruleAlert).querySelectorAll<HTMLButtonElement>("button")
-            ).map((button) => button.textContent);
-          const FULL = ["Change Status", "Link to incident", "Dismiss"];
-          const ICONS = ["", "", ""];
-
-          it("shows icons only when the full tray is wider than the link columns", () => {
-            const row = renderMeasured({ trayWidth: 152 });
-
-            moveTo(row, ON_DESCRIPTION);
-
-            expect(trayOf(ruleAlert).style.right).toBe("");
-            expect(labels()).toEqual(ICONS);
-            expect(
-              screen.getByRole("button", { name: `Dismiss: ${ruleAlert.name}` })
-            ).toHaveAttribute("title", "Dismiss");
-          });
-
-          it("keeps full labels when the full tray fits over the link columns", () => {
-            const row = renderMeasured({ trayWidth: 140 });
-
-            moveTo(row, ON_DESCRIPTION);
-
-            expect(trayOf(ruleAlert).style.right).toBe("");
-            expect(labels()).toEqual(FULL);
-          });
-
-          it("shows full labels again when it slides back left", () => {
-            const row = renderMeasured({ trayWidth: 152 });
-
-            moveTo(row, ON_DESCRIPTION);
-            moveTo(row, ON_ICONS);
-
-            expect(trayOf(ruleAlert).style.right).toBe("148px");
-            expect(labels()).toEqual(FULL);
-          });
-
-          it("keeps the widget's compact mode while docked left", () => {
-            observeWidth(600);
-            const row = renderMeasured({ trayWidth: 80 });
-
-            moveTo(row, ON_ICONS);
-
-            expect(trayOf(ruleAlert).style.right).toBe("148px");
-            expect(labels()).toEqual(ICONS);
-          });
-
-          it("enters on the description compact at once, without sliding", () => {
-            const row = renderMeasured({ trayWidth: 152 });
-
-            pointer(row, "pointerenter", ON_DESCRIPTION);
-
-            expect(trayOf(ruleAlert).style.right).toBe("");
-            expect(labels()).toEqual(ICONS);
-            expect(trayOf(ruleAlert)).toHaveAttribute("data-instant-placement");
-          });
-
-          it("decides from the full width measured on entry, not the compact one", () => {
-            const row = renderMeasured({ trayWidth: 152 });
-
-            enterAt(row, ON_ICONS);
-            moveTo(row, ON_DESCRIPTION);
-            trayOf(ruleAlert).getBoundingClientRect = () => rect(936, 996);
-            moveTo(row, ON_ICONS);
-            moveTo(row, ON_DESCRIPTION);
-
-            expect(trayOf(ruleAlert).style.right).toBe("");
-            expect(labels()).toEqual(ICONS);
-          });
-        });
-
-        describe("entering the row", () => {
-          it("docks right at once, without sliding, when entered on the description", () => {
-            const row = renderMeasured();
-
-            pointer(row, "pointerenter", ON_DESCRIPTION);
-
-            const tray = trayOf(ruleAlert);
-            expect(tray.style.right).toBe("");
-            expect(tray).toHaveAttribute("data-instant-placement");
-            expect(tray.className).not.toMatch(/transition/);
-          });
-
-          it("docks left at once when entered on the icons", () => {
-            const row = renderMeasured();
-
-            enterAt(row, ON_ICONS);
-
-            expect(trayOf(ruleAlert).style.right).toBe("148px");
-            expect(trayOf(ruleAlert)).toHaveAttribute("data-instant-placement");
-          });
-
-          it("slides on a later dock change", () => {
-            const row = renderMeasured();
-
-            enterAt(row, ON_DESCRIPTION);
-            moveTo(row, ON_ICONS);
-
-            const tray = trayOf(ruleAlert);
-            expect(tray.style.right).toBe("148px");
-            expect(tray).not.toHaveAttribute("data-instant-placement");
-            expect(tray).toHaveClass("motion-safe:transition-[right]");
-          });
-        });
-
-        describe("click guard after a dock change", () => {
-          const dismiss = () =>
-            screen.getByRole("button", { name: `Dismiss: ${ruleAlert.name}` });
-          const ruleLink = () =>
-            screen.getByRole("link", { name: "Open alert rule in Grafana" });
-
-          it("swallows a tray button click within 200ms, and lets it through after", () => {
-            const row = renderMeasured();
-            enterAt(row, ON_ICONS);
-            at(1000);
-            moveTo(row, ON_DESCRIPTION);
-
-            at(1199);
-            expect(fireEvent.click(dismiss())).toBe(false);
-            expect(onOpenAction).not.toHaveBeenCalled();
-
-            at(1200);
-            fireEvent.click(dismiss());
-            expect(onOpenAction).toHaveBeenCalledTimes(1);
-          });
-
-          it("swallows a link icon click within 200ms, and lets it through after", () => {
-            const row = renderMeasured();
-            enterAt(row, ON_DESCRIPTION);
-            at(1000);
-            moveTo(row, ON_ICONS);
-
-            at(1100);
-            expect(fireEvent.click(ruleLink())).toBe(false);
-
-            at(1300);
-            const reachedDocument = jest.fn((event: Event) => event.preventDefault());
-            document.addEventListener("click", reachedDocument);
-            const notPrevented = fireEvent.click(ruleLink());
-            document.removeEventListener("click", reachedDocument);
-            expect(notPrevented).toBe(true);
-          });
-
-          it("leaves other clicks in the row alone", () => {
-            const row = renderMeasured();
-            enterAt(row, ON_ICONS);
-            at(1000);
-            moveTo(row, ON_DESCRIPTION);
-
-            at(1050);
-            fireEvent.click(checkboxFor(ruleAlert));
-
-            expect(onRowSelectionChange).toHaveBeenCalledTimes(1);
-          });
-        });
-      });
-
       it("renders the icons dimmed and without links in edit mode", () => {
         renderHarness({ alerts: [ruleAlert], presetColumns, isEditMode: true });
 
@@ -2518,6 +2208,77 @@ describe("WidgetAlertsTable", () => {
         expect(
           cellsOf("alert_rule_url")[0].querySelector('[aria-disabled="true"]')
         ).not.toBeNull();
+      });
+    });
+
+    describe("tray placement", () => {
+      const trayOf = (alert: AlertDto) =>
+        rowFor(alert).querySelector<HTMLElement>(".quick-tray");
+      const rect = (top: number, bottom: number) =>
+        ({ top, bottom, left: 0, right: 600, width: 600, height: bottom - top }) as DOMRect;
+
+      const renderClipped = (clipBottom: number) => {
+        renderHarness({ alerts: [a1, a2] });
+        const container = widgetRoot();
+        container.style.overflowY = "auto";
+        container.getBoundingClientRect = () => rect(0, clipBottom);
+        rowFor(a1).getBoundingClientRect = () => rect(40, 72);
+        rowFor(a2).getBoundingClientRect = () => rect(72, 104);
+        [a1, a2].forEach((alert) => {
+          trayOf(alert)!.getBoundingClientRect = () => rect(0, 28);
+        });
+      };
+      const enter = (alert: AlertDto) =>
+        rowFor(alert).dispatchEvent(new MouseEvent("pointerenter"));
+
+      it("hangs the tray from the row's bottom edge, at its right end", () => {
+        renderClipped(400);
+
+        enter(a1);
+
+        const tray = trayOf(a1)!;
+        expect(tray).toHaveAttribute("data-placement", "below");
+        expect(tray).toHaveClass("absolute", "right-1", "top-full");
+        expect(tray.closest("td")).toHaveAttribute("data-column-id", "alertMenu");
+      });
+
+      it("flips above the last row when hanging below would be clipped", () => {
+        renderClipped(120);
+
+        enter(a1);
+        enter(a2);
+
+        expect(trayOf(a1)).toHaveAttribute("data-placement", "below");
+        expect(trayOf(a2)).toHaveAttribute("data-placement", "above");
+        expect(trayOf(a2)).toHaveClass(
+          "data-[placement=above]:top-auto",
+          "data-[placement=above]:bottom-full"
+        );
+      });
+
+      it("decides on pointerenter itself, before anything renders", () => {
+        renderClipped(120);
+        const tray = trayOf(a2)!;
+
+        expect(tray).not.toHaveAttribute("data-placement");
+        rowFor(a2).dispatchEvent(new MouseEvent("pointerenter"));
+        expect(tray).toHaveAttribute("data-placement", "above");
+      });
+
+      it("places the tray by the same rule on keyboard focus", () => {
+        renderClipped(120);
+
+        act(() => {
+          checkboxFor(a2).focus();
+        });
+
+        expect(trayOf(a2)).toHaveAttribute("data-placement", "above");
+      });
+
+      it("renders no tray in edit mode", () => {
+        renderHarness({ alerts: [a1, a2], isEditMode: true });
+
+        expect(document.querySelector(".quick-tray")).toBeNull();
       });
     });
 

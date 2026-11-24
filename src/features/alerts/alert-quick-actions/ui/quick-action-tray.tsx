@@ -10,37 +10,29 @@ interface QuickActionTrayProps {
   alert: AlertDto;
   compact?: boolean;
   onOpen: OpenQuickActionHandler;
-  rightOffsetPx?: number;
-  instantPlacement?: boolean;
   ref?: Ref<HTMLDivElement>;
 }
 
 /**
  * A widget row's floating tray of the quick actions that apply to its alert;
- * `compact` shows icons only, and `rightOffsetPx` moves its right edge that
- * many pixels in from the row's right edge. A change of that edge slides in
- * 120 ms, unless reduced motion is preferred or `instantPlacement` is set,
- * which jumps there and marks the tray `data-instant-placement`.
+ * `compact` shows icons only. It hangs from the bottom edge of its positioned
+ * anchor at the anchor's right end, or from its top edge when the tray
+ * carries `data-placement="above"`.
  */
 export function QuickActionTray({
   alert,
   compact = false,
   onOpen,
-  rightOffsetPx,
-  instantPlacement = false,
   ref,
 }: QuickActionTrayProps) {
   return (
     <div
       ref={ref}
-      data-instant-placement={instantPlacement ? "" : undefined}
       className={clsx(
         QUICK_TRAY_CLASS,
-        "absolute right-1 top-1/2 -translate-y-1/2 z-20 flex gap-0.5 rounded-md border bg-white p-0.5 shadow-sm",
-        !instantPlacement &&
-          "motion-safe:transition-[right] motion-safe:duration-[120ms] motion-safe:ease-out"
+        "absolute right-1 top-full z-20 flex gap-0.5 rounded-md border bg-white p-0.5 shadow-sm",
+        "data-[placement=above]:top-auto data-[placement=above]:bottom-full"
       )}
-      style={rightOffsetPx === undefined ? undefined : { right: rightOffsetPx }}
     >
       {ALERT_QUICK_ACTIONS.filter((action) => action.appliesTo(alert)).map(
         (action) => {

@@ -6,6 +6,7 @@ export {
   QUICK_OPEN_ATTR,
   QUICK_PICK_CLASS,
   QUICK_REVEAL_CLASS,
+  QUICK_TRAY_CELL_CLASS,
   QUICK_TRAY_CLASS,
 } from "./ui/class-names";
 export { useRefreshAlertQueries } from "./model/use-refresh-alert-queries";

@@ -41,62 +41,24 @@ describe("QuickActionTray", () => {
     expect(container.firstElementChild).toHaveClass(QUICK_TRAY_CLASS);
   });
 
-  it("keeps its default right edge without an offset", () => {
+  it("hangs below its anchor, and above it when data-placement is above", () => {
     const { container } = render(
       <QuickActionTray alert={firingNoIncident} onOpen={onOpen} />
     );
-    const tray = container.firstElementChild as HTMLElement;
-    expect(tray).toHaveClass("right-1");
-    expect(tray.style.right).toBe("");
-  });
-
-  it("sits rightOffsetPx from the right edge when given an offset", () => {
-    const { container } = render(
-      <QuickActionTray
-        alert={firingNoIncident}
-        onOpen={onOpen}
-        rightOffsetPx={148}
-      />
+    expect(container.firstElementChild).toHaveClass(
+      "absolute",
+      "right-1",
+      "top-full",
+      "data-[placement=above]:top-auto",
+      "data-[placement=above]:bottom-full"
     );
-    expect((container.firstElementChild as HTMLElement).style.right).toBe(
-      "148px"
-    );
+    expect(container.firstElementChild).not.toHaveAttribute("style");
   });
 
   it("hands its root, with the tray class, to ref", () => {
     const ref = { current: null as HTMLDivElement | null };
     render(<QuickActionTray alert={firingNoIncident} onOpen={onOpen} ref={ref} />);
     expect(ref.current).toHaveClass(QUICK_TRAY_CLASS);
-  });
-
-  it("slides its right edge only when motion is not reduced", () => {
-    const { container } = render(
-      <QuickActionTray alert={firingNoIncident} onOpen={onOpen} />
-    );
-    expect(container.firstElementChild).toHaveClass(
-      "motion-safe:transition-[right]",
-      "motion-safe:duration-[120ms]",
-      "motion-safe:ease-out"
-    );
-    expect(container.firstElementChild?.className).not.toMatch(
-      /(^|\s)transition/
-    );
-  });
-
-  it("places its right edge without sliding, and marks it, when instantPlacement is set", () => {
-    const { container } = render(
-      <QuickActionTray
-        alert={firingNoIncident}
-        onOpen={onOpen}
-        rightOffsetPx={148}
-        instantPlacement
-      />
-    );
-    const tray = container.firstElementChild as HTMLElement;
-    expect(tray).toHaveClass(QUICK_TRAY_CLASS);
-    expect(tray).toHaveAttribute("data-instant-placement");
-    expect(tray.className).not.toMatch(/transition/);
-    expect(tray.style.right).toBe("148px");
   });
 
   it("shows all three for a firing alert with no incident", () => {
