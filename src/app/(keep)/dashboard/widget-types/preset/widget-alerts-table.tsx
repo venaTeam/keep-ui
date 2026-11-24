@@ -70,6 +70,7 @@ import {
   ROW_ACTIONS_COLUMN_ID,
 } from "./widget-quick-action-columns";
 import { useFittedLinkColumns } from "./widget-link-column-fit";
+import { useTrayHoverIntent } from "./widget-tray-intent";
 import {
   WidgetRowActions,
   WidgetRowActionsContext,
@@ -471,6 +472,7 @@ function WidgetAlertsTableContent({
         : null,
     [chromeSelection, isSelecting, isTrayCompact, onPick]
   );
+  useTrayHoverIntent(wrapperRef, chrome && !isSelecting);
 
   const setVisibleColumnOrder = useCallback(
     (order: string[]) =>

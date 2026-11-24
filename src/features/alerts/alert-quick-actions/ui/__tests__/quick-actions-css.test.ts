@@ -2,6 +2,8 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import {
   QUICK_ACTIONS_TABLE_CLASS,
+  QUICK_ACTIVE_ATTR,
+  QUICK_LEAVING_ATTR,
   QUICK_TRAY_CELL_CLASS,
   QUICK_TRAY_CLASS,
 } from "../class-names";
@@ -44,8 +46,10 @@ const trayOf = (id: string) =>
   document.querySelector<HTMLElement>(`#${id} .${QUICK_TRAY_CLASS}`)!;
 const trayCellOf = (id: string) =>
   document.querySelector<HTMLElement>(`#${id} .${QUICK_TRAY_CELL_CLASS}`)!;
-const focusLinkIn = (id: string) =>
-  document.querySelector<HTMLElement>(`#${id} a`)!.focus();
+const activate = (id: string) =>
+  document.getElementById(id)!.setAttribute(QUICK_ACTIVE_ATTR, "");
+const markLeaving = (id: string) =>
+  document.getElementById(id)!.setAttribute(QUICK_LEAVING_ATTR, "");
 const computed = (element: Element) => getComputedStyle(element);
 
 const ruleFor = (selector: string) =>
@@ -63,53 +67,63 @@ const reducedMotionRules = () =>
     .flatMap((rule) => Array.from(rule.cssRules) as CSSStyleRule[]);
 
 describe("quick-actions.css tray", () => {
-  it("is hidden and unclickable outside a hovered or focused row", () => {
-    expect(computed(trayOf("first")).opacity).toBe("0");
-    expect(computed(trayOf("first")).visibility).toBe("hidden");
+  it("is hidden, unclickable and parked inside its row unless the row is active", () => {
+    ["below", "above", "inside"].forEach((placement) => {
+      trayOf("first").dataset.placement = placement;
+      const tray = computed(trayOf("first"));
+      expect([tray.opacity, tray.visibility]).toEqual(["0", "hidden"]);
+      expect([tray.top, tray.transform]).toEqual(["50%", "translateY(-50%)"]);
+      expect(tray.transition).toBe("");
+    });
   });
 
-  it("stays shown, with its row's tint, for 150ms after the row loses hover or focus, then fades", () => {
-    expect(computed(trayOf("first")).transition).toBe(
-      "opacity 0.1s ease-out 0.15s, visibility 0s linear 0.25s, top 0s linear 0.25s, transform 0s linear 0.25s"
+  it("shows on the active row only, with no hover or focus rule of its own", () => {
+    activate("first");
+
+    expect(computed(trayOf("first")).opacity).toBe("1");
+    expect(computed(trayOf("first")).visibility).toBe("visible");
+    expect(computed(trayOf("second")).visibility).toBe("hidden");
+    const trayRules = (Array.from(style.sheet!.cssRules) as CSSStyleRule[])
+      .map((rule) => rule.selectorText ?? "")
+      .filter((selector) => selector.includes(QUICK_TRAY_CLASS));
+    trayRules.forEach((selector) =>
+      expect(selector).not.toMatch(/:hover|:focus-visible/)
     );
-    expect(computed(trayCellOf("first")).transition).toBe(
-      "z-index 0s linear 0.25s"
+  });
+
+  it("fades the tray and the tint of a row the pointer left, then parks the tray", () => {
+    markLeaving("first");
+
+    expect(computed(trayOf("first")).transition).toBe(
+      "opacity 0.1s ease-out, visibility 0s linear 0.1s, top 0s linear 0.1s, transform 0s linear 0.1s"
     );
     cellsOf("first")
       .slice(0, 2)
       .forEach((cell) =>
         expect(computed(cell).transition).toBe(
-          "background-color 0.1s ease-out 0.15s, box-shadow 0.1s ease-out 0.15s"
+          "background-color 0.1s ease-out, box-shadow 0.1s ease-out"
         )
       );
+    expect(computed(trayOf("second")).transition).toBe("");
   });
 
-  it("shows at once while its row holds keyboard focus", () => {
-    focusLinkIn("first");
-
-    expect(computed(trayOf("first")).opacity).toBe("1");
-    expect(computed(trayOf("first")).visibility).toBe("visible");
-    expect(computed(trayOf("first")).transition).toBe("none");
-    expect(computed(trayOf("second")).visibility).toBe("hidden");
-  });
-
-  it("raises the shown tray's cell over the sticky cells' !important z-index 40, leaving other rows alone", () => {
+  it("raises the active or fading row's tray cell over the sticky cells' !important z-index 40", () => {
     expect(computed(trayCellOf("first")).zIndex).toBe("40");
 
-    focusLinkIn("first");
+    activate("first");
+    markLeaving("second");
 
     expect(computed(trayCellOf("first")).zIndex).toBe("41");
-    expect(computed(trayCellOf("first")).transition).toBe("none");
-    expect(computed(trayCellOf("second")).zIndex).toBe("40");
+    expect(computed(trayCellOf("second")).zIndex).toBe("41");
     expect(
       ruleFor(
-        `.${QUICK_ACTIONS_TABLE_CLASS} tr:hover > td.${QUICK_TRAY_CELL_CLASS}`
+        `.${QUICK_ACTIONS_TABLE_CLASS} tr[${QUICK_ACTIVE_ATTR}] > td.${QUICK_TRAY_CELL_CLASS}`
       ).style.getPropertyPriority("z-index")
     ).toBe("important");
   });
 
-  it("tints and outlines the row whose tray shows, and no other", () => {
-    focusLinkIn("first");
+  it("tints and outlines the active row, and no other", () => {
+    activate("first");
 
     const [checkbox, link] = cellsOf("first");
     expect(computed(checkbox).backgroundColor).toBe(TINT);
@@ -120,23 +134,14 @@ describe("quick-actions.css tray", () => {
     expect(computed(link).boxShadow).toBe(
       `inset -1px 0 0 ${OUTLINE}, inset 0 1px 0 ${OUTLINE}, inset 0 -1px 0 ${OUTLINE}`
     );
-    expect(computed(link).transition).toBe("none");
     cellsOf("second").forEach((cell) => {
       expect(computed(cell).backgroundColor).toBe("");
       expect(computed(cell).boxShadow).toBe("");
     });
   });
 
-  it("parks a hidden tray inside its row, so it adds no scrollable overflow", () => {
-    ["below", "above", "inside"].forEach((placement) => {
-      trayOf("first").dataset.placement = placement;
-      expect(computed(trayOf("first")).top).toBe("50%");
-      expect(computed(trayOf("first")).transform).toBe("translateY(-50%)");
-    });
-  });
-
-  it("hangs a shown tray below its row as a tab: the row's tint, outlined except on top, rounded at the bottom, over the row's bottom line", () => {
-    focusLinkIn("first");
+  it("hangs the active row's tray below it as a tab: the row's tint, outlined except on top, rounded at the bottom, over the row's bottom line", () => {
+    activate("first");
     const tray = computed(trayOf("first"));
 
     expect(tray.top).toBe("calc(100% - 1px)");
@@ -153,9 +158,9 @@ describe("quick-actions.css tray", () => {
     expect(tray.borderRadius).toBe("0 0 0.375rem 0.375rem");
   });
 
-  it("sets a shown tray above its row as a tab: outlined except on its bottom, rounded at the top", () => {
+  it("sets the active row's tray above it as a tab: outlined except on its bottom, rounded at the top", () => {
     trayOf("first").dataset.placement = "above";
-    focusLinkIn("first");
+    activate("first");
     const tray = computed(trayOf("first"));
 
     expect(tray.top).toBe("1px");
@@ -167,9 +172,9 @@ describe("quick-actions.css tray", () => {
     expect(tray.borderRadius).toBe("0.375rem 0.375rem 0 0");
   });
 
-  it("centres a shown tray inside its row with a plain rounded outline", () => {
+  it("centres the active row's tray inside it with a plain rounded outline", () => {
     trayOf("first").dataset.placement = "inside";
-    focusLinkIn("first");
+    activate("first");
     const tray = computed(trayOf("first"));
 
     expect(tray.top).toBe("50%");
@@ -183,21 +188,17 @@ describe("quick-actions.css tray", () => {
     expect(tray.borderRadius).toBe("0.375rem");
   });
 
-  it("keeps the 150ms delay without the fade under reduced motion", () => {
+  it("drops the fade under reduced motion", () => {
     const transitions = Object.fromEntries(
       reducedMotionRules().map((rule) => [
-        rule.selectorText,
+        rule.selectorText.replace(/\s+/g, " "),
         rule.style.transition,
       ])
     );
 
     expect(transitions).toEqual({
-      [`.${QUICK_ACTIONS_TABLE_CLASS} .${QUICK_TRAY_CLASS}`]:
-        "opacity 0s linear 0.15s, visibility 0s linear 0.15s, top 0s linear 0.15s, transform 0s linear 0.15s",
-      [`.${QUICK_ACTIONS_TABLE_CLASS} tr:has(.${QUICK_TRAY_CLASS}) > td`]:
-        "background-color 0s linear 0.15s, box-shadow 0s linear 0.15s",
-      [`.${QUICK_ACTIONS_TABLE_CLASS} tr:has(.${QUICK_TRAY_CLASS}) > td.${QUICK_TRAY_CELL_CLASS}`]:
-        "z-index 0s linear 0.15s",
+      [`.${QUICK_ACTIONS_TABLE_CLASS} tr[${QUICK_LEAVING_ATTR}] .${QUICK_TRAY_CLASS}, .${QUICK_ACTIONS_TABLE_CLASS} tr[${QUICK_LEAVING_ATTR}] > td`]:
+        "none",
     });
   });
 });

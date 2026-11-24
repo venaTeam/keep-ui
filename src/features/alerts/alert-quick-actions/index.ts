@@ -3,6 +3,8 @@ export { SelectionStrip } from "./ui/selection-strip";
 export { QuickActionDialogHost } from "./ui/quick-action-dialog-host";
 export {
   QUICK_ACTIONS_TABLE_CLASS,
+  QUICK_ACTIVE_ATTR,
+  QUICK_LEAVING_ATTR,
   QUICK_OPEN_ATTR,
   QUICK_PICK_CLASS,
   QUICK_REVEAL_CLASS,

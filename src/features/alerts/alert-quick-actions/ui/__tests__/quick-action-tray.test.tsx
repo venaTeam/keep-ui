@@ -51,12 +51,6 @@ describe("QuickActionTray", () => {
     expect(tray).not.toHaveAttribute("style");
   });
 
-  it("hands its root, with the tray class, to ref", () => {
-    const ref = { current: null as HTMLDivElement | null };
-    render(<QuickActionTray alert={firingNoIncident} onOpen={onOpen} ref={ref} />);
-    expect(ref.current).toHaveClass(QUICK_TRAY_CLASS);
-  });
-
   it("shows all three for a firing alert with no incident", () => {
     render(<QuickActionTray alert={firingNoIncident} onOpen={onOpen} />);
     expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual([

@@ -1,4 +1,4 @@
-import { MouseEvent, Ref } from "react";
+import { MouseEvent } from "react";
 import clsx from "clsx";
 import { AlertDto } from "@/entities/alerts/model/types";
 import { ALERT_QUICK_ACTIONS } from "../model/actions";
@@ -10,7 +10,6 @@ interface QuickActionTrayProps {
   alert: AlertDto;
   compact?: boolean;
   onOpen: OpenQuickActionHandler;
-  ref?: Ref<HTMLDivElement>;
 }
 
 /**
@@ -23,11 +22,9 @@ export function QuickActionTray({
   alert,
   compact = false,
   onOpen,
-  ref,
 }: QuickActionTrayProps) {
   return (
     <div
-      ref={ref}
       className={clsx(
         QUICK_TRAY_CLASS,
         "absolute right-1 z-20 flex gap-0.5 p-0.5"

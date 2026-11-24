@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { isLinkIconColumn } from "@/widgets/alerts-table/lib/alert-link-columns";
 
 /** Whether a widget row's quick-action tray hangs below its row, sits above it, or sits inside it. */
@@ -93,40 +92,26 @@ function getClipEdges(element: HTMLElement): { top: number; bottom: number } {
 }
 
 /**
- * Places `tray` (`getTrayPlacement`) each time the pointer enters its row or
- * focus moves into it, and ends it where the row's trailing link icon cells
- * start, so it never covers any row's Rule or Runbook icons. Both are written
- * straight to the tray (`data-placement`, `style.right`), so they land in the
- * same task, before the shown tray paints.
+ * Places `tray` below, above or inside `row` (`getTrayPlacement`), and ends it
+ * where the row's trailing link icon cells start, so it never covers any
+ * row's Rule or Runbook icons. Both are written straight to the tray
+ * (`data-placement`, `style.right`), so a caller that shows the tray in the
+ * same task gets it placed before it paints.
  */
-export function useTrayPlacement(tray: HTMLElement | null): void {
-  useEffect(() => {
-    const row = tray?.closest("tr");
-    if (!tray || !row) {
-      return;
-    }
-    const place = () => {
-      const rowRect = row.getBoundingClientRect();
-      const clip = getClipEdges(row);
-      tray.dataset.placement = getTrayPlacement({
-        rowTop: rowRect.top,
-        rowBottom: rowRect.bottom,
-        trayHeight: tray.getBoundingClientRect().height,
-        clipTop: clip.top,
-        clipBottom: clip.bottom,
-      });
-      const linkCellsWidth = getTrailingLinkCellsWidth(row, tray);
-      if (linkCellsWidth > 0) {
-        tray.style.right = `${linkCellsWidth}px`;
-      } else {
-        tray.style.removeProperty("right");
-      }
-    };
-    row.addEventListener("pointerenter", place);
-    row.addEventListener("focusin", place);
-    return () => {
-      row.removeEventListener("pointerenter", place);
-      row.removeEventListener("focusin", place);
-    };
-  }, [tray]);
+export function placeTray(row: HTMLTableRowElement, tray: HTMLElement): void {
+  const rowRect = row.getBoundingClientRect();
+  const clip = getClipEdges(row);
+  tray.dataset.placement = getTrayPlacement({
+    rowTop: rowRect.top,
+    rowBottom: rowRect.bottom,
+    trayHeight: tray.getBoundingClientRect().height,
+    clipTop: clip.top,
+    clipBottom: clip.bottom,
+  });
+  const linkCellsWidth = getTrailingLinkCellsWidth(row, tray);
+  if (linkCellsWidth > 0) {
+    tray.style.right = `${linkCellsWidth}px`;
+  } else {
+    tray.style.removeProperty("right");
+  }
 }

@@ -2322,7 +2322,9 @@ describe("WidgetAlertsTable", () => {
         });
       };
       const enter = (alert: AlertDto) =>
-        rowFor(alert).dispatchEvent(new MouseEvent("pointerenter"));
+        act(() => {
+          checkboxFor(alert).focus();
+        });
 
       it("hangs the tray from the row's bottom edge, at its right end", () => {
         renderInCard();
@@ -2390,7 +2392,7 @@ describe("WidgetAlertsTable", () => {
           });
           widthOfCells({ alert_rule_url: 72, runbook_url: 96 });
 
-          rowFor(linkAlert).dispatchEvent(new MouseEvent("pointerenter"));
+          enter(linkAlert);
 
           expect(trayOf(linkAlert)!.style.right).toBe("168px");
         });
@@ -2402,36 +2404,161 @@ describe("WidgetAlertsTable", () => {
           });
           widthOfCells({ alert_rule_url: 72, runbook_url: 96 });
 
-          rowFor(linkAlert).dispatchEvent(new MouseEvent("pointerenter"));
+          enter(linkAlert);
 
           expect(trayOf(linkAlert)!.style.right).toBe("");
           expect(trayOf(linkAlert)).toHaveClass("right-1");
         });
       });
 
-      it("decides on pointerenter itself, before anything renders", () => {
-        renderInCard({ cardBottom: 120 });
-        const tray = trayOf(a2)!;
+      it("places the tray in the same step that makes its row active", () => {
+        jest.useFakeTimers();
+        try {
+          renderInCard({ cardBottom: 120 });
+          const tray = trayOf(a2)!;
+          rowFor(a2).firstElementChild!.dispatchEvent(
+            new MouseEvent("pointerover", { bubbles: true })
+          );
 
-        expect(tray).not.toHaveAttribute("data-placement");
-        rowFor(a2).dispatchEvent(new MouseEvent("pointerenter"));
-        expect(tray).toHaveAttribute("data-placement", "above");
-      });
-
-      it("places the tray by the same rule on keyboard focus", () => {
-        renderInCard({ cardBottom: 120 });
-
-        act(() => {
-          checkboxFor(a2).focus();
-        });
-
-        expect(trayOf(a2)).toHaveAttribute("data-placement", "above");
+          expect(tray).not.toHaveAttribute("data-placement");
+          jest.advanceTimersByTime(100);
+          expect(rowFor(a2)).toHaveAttribute("data-quick-active");
+          expect(tray).toHaveAttribute("data-placement", "above");
+        } finally {
+          jest.useRealTimers();
+        }
       });
 
       it("renders no tray in edit mode", () => {
         renderHarness({ alerts: [a1, a2], isEditMode: true });
 
         expect(document.querySelector(".quick-tray")).toBeNull();
+      });
+    });
+
+    describe("hover intent", () => {
+      const rows5 = [alertWith(), alertWith(), alertWith(), alertWith(), alertWith()];
+      const activeRows = () =>
+        Array.from(document.querySelectorAll("tr[data-quick-active]"));
+      const over = (element: Element) =>
+        element.dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
+      const overRow = (alert: AlertDto) => over(rowFor(alert).firstElementChild!);
+      const leaveWidget = () =>
+        widgetRoot().dispatchEvent(new MouseEvent("pointerleave"));
+      const wait = (ms: number) => jest.advanceTimersByTime(ms);
+      const trayIn = (alert: AlertDto) =>
+        rowFor(alert).querySelector<HTMLElement>(".quick-tray")!;
+
+      beforeEach(() => {
+        jest.useFakeTimers();
+      });
+
+      afterEach(() => {
+        jest.useRealTimers();
+      });
+
+      it("shows no tray during a sweep that spends under 100ms on each row", () => {
+        renderHarness({ alerts: rows5 });
+
+        rows5.forEach((alert) => {
+          overRow(alert);
+          wait(80);
+          expect(activeRows()).toHaveLength(0);
+        });
+        over(widgetRoot());
+        wait(200);
+        expect(activeRows()).toHaveLength(0);
+      });
+
+      it("makes the row active after resting on it for 100ms, and only that row", () => {
+        renderHarness({ alerts: rows5 });
+
+        overRow(rows5[2]);
+        wait(99);
+        expect(activeRows()).toHaveLength(0);
+        wait(1);
+
+        expect(activeRows()).toEqual([rowFor(rows5[2])]);
+      });
+
+      it("hands over to the next row in one step, with no overlap", () => {
+        renderHarness({ alerts: rows5 });
+        overRow(rows5[0]);
+        wait(100);
+
+        overRow(rows5[1]);
+        wait(99);
+        expect(activeRows()).toEqual([rowFor(rows5[0])]);
+        wait(1);
+
+        expect(activeRows()).toEqual([rowFor(rows5[1])]);
+        expect(rowFor(rows5[0])).not.toHaveAttribute("data-quick-leaving");
+      });
+
+      it("keeps the tray when the pointer crosses the next row on its way to the tab", () => {
+        renderHarness({ alerts: rows5 });
+        overRow(rows5[0]);
+        wait(100);
+
+        overRow(rows5[1]);
+        wait(60);
+        over(trayIn(rows5[0]).querySelector("button")!);
+        wait(200);
+
+        expect(activeRows()).toEqual([rowFor(rows5[0])]);
+      });
+
+      it("hides the tray 150ms after the pointer leaves the widget, with a fade", () => {
+        renderHarness({ alerts: rows5 });
+        overRow(rows5[3]);
+        wait(100);
+
+        leaveWidget();
+        wait(149);
+        expect(activeRows()).toEqual([rowFor(rows5[3])]);
+        wait(1);
+
+        expect(activeRows()).toHaveLength(0);
+        expect(rowFor(rows5[3])).toHaveAttribute("data-quick-leaving");
+      });
+
+      it("keeps the tray when the pointer comes back before the 150ms are up", () => {
+        renderHarness({ alerts: rows5 });
+        overRow(rows5[3]);
+        wait(100);
+
+        leaveWidget();
+        wait(100);
+        overRow(rows5[3]);
+        wait(200);
+
+        expect(activeRows()).toEqual([rowFor(rows5[3])]);
+      });
+
+      it("makes a row active at once on keyboard focus, and inactive when focus leaves the widget", () => {
+        renderHarness({ alerts: rows5 });
+
+        act(() => {
+          checkboxFor(rows5[4]).focus();
+        });
+        expect(activeRows()).toEqual([rowFor(rows5[4])]);
+
+        act(() => {
+          (document.activeElement as HTMLElement).blur();
+        });
+        expect(activeRows()).toHaveLength(0);
+      });
+
+      it("leaves no timer running after unmount", () => {
+        const { unmount } = renderHarness({ alerts: rows5 });
+        overRow(rows5[0]);
+        wait(100);
+        overRow(rows5[1]);
+        leaveWidget();
+
+        unmount();
+
+        expect(jest.getTimerCount()).toBe(0);
       });
     });
 

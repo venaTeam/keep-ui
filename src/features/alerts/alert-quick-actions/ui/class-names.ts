@@ -9,10 +9,16 @@ export const QUICK_REVEAL_CLASS = "quick-reveal";
 /** Marks a row checkbox; a row whose checkbox is ticked is highlighted. */
 export const QUICK_PICK_CLASS = "quick-pick";
 
-/** Marks the row tray; hidden and unclickable until its row is hovered or holds keyboard focus (`:focus-visible`), and kept shown for 150ms after. */
+/** Marks the row tray; hidden and unclickable unless its row carries `QUICK_ACTIVE_ATTR`. */
 export const QUICK_TRAY_CLASS = "quick-tray";
 
-/** Marks the cell holding the row tray; raised above the next row's cells while the tray shows. */
+/** Attribute on the one row of a widget table whose tray shows; that row is tinted and outlined. */
+export const QUICK_ACTIVE_ATTR = "data-quick-active";
+
+/** Attribute on a row that stopped being active because the pointer left the table; its tray and tint fade out. */
+export const QUICK_LEAVING_ATTR = "data-quick-leaving";
+
+/** Marks the cell holding the row tray; raised above the next row's cells while the tray shows or fades. */
 export const QUICK_TRAY_CELL_CLASS = "quick-tray-cell";
 
 /** Attribute on an element inside the row whose dialog is open; that row stays highlighted. */

@@ -1,4 +1,4 @@
-import { ChangeEvent, useContext, useState } from "react";
+import { ChangeEvent, useContext } from "react";
 import clsx from "clsx";
 import type { ColumnDef, Row } from "@tanstack/react-table";
 import type { AlertDto } from "@/entities/alerts/model/types";
@@ -11,7 +11,6 @@ import {
   QuickActionTray,
 } from "@/features/alerts/alert-quick-actions";
 import { WidgetRowActionsContext } from "./widget-row-actions-context";
-import { useTrayPlacement } from "./widget-tray-placement";
 
 /** Id of the widget's checkbox gutter column. */
 export const CHECKBOX_COLUMN_ID = "checkbox";
@@ -51,20 +50,16 @@ function RowCheckbox({ row }: { row: Row<AlertDto> }) {
 }
 
 /**
- * A row's quick-action tray, hidden while anything is ticked. It hangs below
- * the row's right end, or above it where below would be clipped
- * (`useTrayPlacement`).
+ * A row's quick-action tray, hidden while anything is ticked. The table's
+ * hover intent (`useTrayHoverIntent`) shows and places it.
  */
 function RowActions({ alert }: { alert: AlertDto }) {
   const actions = useContext(WidgetRowActionsContext);
-  const [tray, setTray] = useState<HTMLDivElement | null>(null);
-  useTrayPlacement(tray);
   if (!actions || actions.isSelecting) {
     return null;
   }
   return (
     <QuickActionTray
-      ref={setTray}
       alert={alert}
       compact={actions.compact}
       onOpen={actions.onOpenAction}
