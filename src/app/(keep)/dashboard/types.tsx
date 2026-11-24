@@ -3,6 +3,7 @@ import { Preset } from "@/entities/presets/model/types";
 import { CountBy } from "@/entities/presets/model/count-by";
 import type { TimeFormatOption } from "@/widgets/alerts-table/lib/alert-table-time-format";
 import type { ListFormatOption } from "@/widgets/alerts-table/lib/alert-table-list-format";
+import type { WidgetTypography } from "./dashboard-appearance/widget-typography";
 
 export interface LayoutItem {
   i: string;
@@ -127,6 +128,7 @@ export interface WidgetData extends LayoutItem {
   html?: HtmlWidgetConfig;
   grafanaPanel?: GrafanaPanelWidgetConfig;
   incidentTable?: IncidentTableWidgetConfig;
+  typography?: WidgetTypography;
 }
 
 export interface Threshold {
