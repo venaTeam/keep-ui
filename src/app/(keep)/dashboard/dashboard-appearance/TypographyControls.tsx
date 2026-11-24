@@ -68,7 +68,9 @@ function StepGroup<T extends string>({
             onClick={() => onSelect(step.id)}
             data-cy={`${dataCy}-${step.id}`}
             className={`flex flex-col items-center border-l border-gray-300 px-1 py-1 text-sm font-medium first:border-l-0 ${
-              selected ? "bg-orange-50 text-orange-600" : "bg-white text-gray-500"
+              selected
+                ? "bg-orange-50 text-orange-600"
+                : "bg-white text-gray-500"
             }`}
           >
             {step.label}
@@ -112,7 +114,9 @@ function FontList({
             onClick={() => onSelect(id)}
             data-cy={`${dataCy}-${id}`}
             className={`grid grid-cols-[1fr_auto] items-center gap-x-2 border-t border-gray-200 px-3 py-1.5 text-left first:border-t-0 ${
-              selected ? "bg-orange-50 shadow-[inset_3px_0_0_theme(colors.orange.500)]" : "bg-white"
+              selected
+                ? "bg-orange-50 shadow-[inset_3px_0_0_theme(colors.orange.500)]"
+                : "bg-white"
             }`}
             style={{ fontFamily: font.stack }}
           >
@@ -145,7 +149,11 @@ function FontSelect({
       data-cy={dataCy}
     >
       {WIDGET_FONT_IDS.map((id) => (
-        <SelectItem key={id} value={id} style={{ fontFamily: WIDGET_FONTS[id].stack }}>
+        <SelectItem
+          key={id}
+          value={id}
+          style={{ fontFamily: WIDGET_FONTS[id].stack }}
+        >
           {WIDGET_FONTS[id].label}
           {WIDGET_FONTS[id].note ? ` · ${WIDGET_FONTS[id].note}` : ""}
         </SelectItem>
@@ -158,6 +166,8 @@ function FontSelect({
  * Font, text-size and title-size controls with a preview line. Shared by the
  * Customize panel (font as a list) and the Edit Widget modal (font as a
  * select). `value` may omit fields; missing fields show as the default.
+ * `showTextSize` false hides the text-size row (widgets whose body is an
+ * iframe or image, where only the title follows typography).
  */
 export function TypographyControls({
   value,
@@ -165,12 +175,14 @@ export function TypographyControls({
   fontPicker,
   idPrefix,
   previewTitle = "Critical firing",
+  showTextSize = true,
 }: {
   value: WidgetTypography;
   onChange: (next: WidgetTypography) => void;
   fontPicker: "list" | "select";
   idPrefix: string;
   previewTitle?: string;
+  showTextSize?: boolean;
 }) {
   const rootPx = useRootFontPx();
   const font = value.font ?? DEFAULT_WIDGET_TYPOGRAPHY.font;
@@ -199,17 +211,19 @@ export function TypographyControls({
           />
         )}
       </div>
-      <div>
-        <span className={labelClass}>Text size</span>
-        <StepGroup<WidgetTextSize>
-          label="Text size"
-          steps={WIDGET_TEXT_SIZES}
-          active={size}
-          onSelect={(id) => onChange({ ...value, size: id })}
-          caption={(step) => formatPx(TABLE_TEXT_REM * rootPx * step.factor)}
-          dataCy={`${idPrefix}-size`}
-        />
-      </div>
+      {showTextSize && (
+        <div>
+          <span className={labelClass}>Text size</span>
+          <StepGroup<WidgetTextSize>
+            label="Text size"
+            steps={WIDGET_TEXT_SIZES}
+            active={size}
+            onSelect={(id) => onChange({ ...value, size: id })}
+            caption={(step) => formatPx(TABLE_TEXT_REM * rootPx * step.factor)}
+            dataCy={`${idPrefix}-size`}
+          />
+        </div>
+      )}
       <div>
         <span className={labelClass}>Title size</span>
         <StepGroup<WidgetTitleSize>

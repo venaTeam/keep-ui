@@ -82,6 +82,8 @@ describe("WidgetTypographySection", () => {
     (type) => {
       renderSection({ font: "inter", size: "lg", title: "normal" }, undefined, type);
       expect(screen.getByText("Applies to the title only.")).toBeInTheDocument();
+      expect(screen.queryByRole("group", { name: "Text size" })).toBeNull();
+      expect(screen.getByRole("group", { name: "Title size" })).toBeInTheDocument();
     }
   );
 

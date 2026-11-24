@@ -62,6 +62,10 @@
   font-size: calc(.75rem * var(--wt-scale, 1));
   line-height: calc(1rem * var(--wt-scale, 1));
 }
+[data-widget-typography] td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 [data-widget-typography] .leading-none {
   line-height: 1;
 }

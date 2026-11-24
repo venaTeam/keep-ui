@@ -79,6 +79,7 @@ export function WidgetTypographySection({
             fontPicker="select"
             idPrefix="dashboard-widget-typography"
             previewTitle={widgetName || undefined}
+            showTextSize={!TITLE_ONLY_TYPES.has(widgetType)}
           />
         </div>
       ) : (
