@@ -1,5 +1,6 @@
 // TODO: refactor, move to entities
 import { AlertDto } from "@/entities/alerts/model";
+import type { RuleResolveOn } from "@/utils/hooks/useRules";
 
 export enum Status {
   Firing = "firing",
@@ -69,7 +70,7 @@ export interface IncidentDto {
   enrichments: { [key: string]: any };
   incident_type?: string;
   incident_application?: string;
-  resolve_on: "all_resolved" | "first" | "last" | "never";
+  resolve_on: RuleResolveOn;
   rule_id?: string;
   rule_name?: string;
   rule_is_deleted?: boolean;
