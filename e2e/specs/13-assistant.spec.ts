@@ -285,6 +285,24 @@ test.describe("[check:13] assistant", () => {
     expect(assistant.chats).toHaveLength(1);
   });
 
+  test("a message of one long word stays inside the panel", async ({
+    page,
+    assistant,
+    panel,
+  }) => {
+    const text = "x".repeat(300);
+    assistant.chatAnswers = [textStream(ANSWER)];
+    assistant.conversation = conversation(text, { answer: ANSWER });
+    await page.goto("/alerts/feed");
+    await panel.open();
+    await panel.send(text);
+    await expect(panel.messages("user")).toContainText([text]);
+    const bubble = await panel.messages("user").first().boundingBox();
+    const root = await panel.root.boundingBox();
+    expect(bubble!.x).toBeGreaterThanOrEqual(root!.x);
+    expect(bubble!.x + bubble!.width).toBeLessThanOrEqual(root!.x + root!.width);
+  });
+
   test("an answer loads nothing from where it points to", async ({
     page,
     assistant,

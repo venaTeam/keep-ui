@@ -24,7 +24,8 @@ export const MessageBubble = memo(function MessageBubble({
       <div
         data-cy="assistant-message"
         data-role={role}
-        className="ml-8 self-end whitespace-pre-wrap break-words rounded-lg bg-orange-50 px-3 py-2 text-sm text-gray-900"
+        // Not only a margin: one long word is wider than the panel.
+        className="max-w-[calc(100%-2rem)] self-end whitespace-pre-wrap break-words rounded-lg bg-orange-50 px-3 py-2 text-sm text-gray-900"
         dir="auto"
       >
         {content}
