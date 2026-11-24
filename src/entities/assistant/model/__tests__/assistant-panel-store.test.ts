@@ -68,7 +68,11 @@ it("is restored from storage", async () => {
   expect(store.getState()).toMatchObject({
     isOpen: true,
     conversationIdByTenant: { keep: "c-1" },
+    // So that a reload does not move the focus
+    isOpenedByUser: false,
   });
+  store.getState().toggle();
+  expect(store.getState().isOpenedByUser).toBe(true);
 });
 
 it.each([

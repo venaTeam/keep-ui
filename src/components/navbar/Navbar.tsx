@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react";
 import { Search } from "@/components/navbar/Search";
 import { NoiseReductionLinks } from "@/components/navbar/NoiseReductionLinks";
 import { AlertsLinks } from "@/components/navbar/AlertsLinks";
+import { AssistantToggle } from "@/components/navbar/AssistantToggle";
 import { UserInfo } from "@/components/navbar/UserInfo";
 import { Menu } from "@/components/navbar/Menu";
 import { MinimizeMenuButton } from "@/components/navbar/MinimizeMenuButton";
@@ -29,6 +30,7 @@ export default function NavbarInner() {
           <NoiseReductionLinks session={session} />
           <IncidentsLinks session={session} />
         </div>
+        <AssistantToggle />
         <UserInfo session={session} />
       </Menu>
       <MinimizeMenuButton />

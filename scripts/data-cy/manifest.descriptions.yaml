@@ -149,3 +149,64 @@
   description: "Tenant option button in the logo/tenant-switcher popover; one per tenant the current user belongs to."
   idSource: "tenant.tenant_id (server-issued tenant uuid from session.user.tenantIds)"
   resolvedExample: "nav-tenant-option-2f8a3a5e-3a47-4b27-9d2f-7d2af6e3aa12"
+
+# ---------------------------------------------------------------------------
+# Assistant panel
+# ---------------------------------------------------------------------------
+
+"assistant-panel":
+  description: "The assistant panel; absent while it is closed."
+
+"assistant-panel-close":
+  description: "Closes the assistant panel."
+
+"assistant-new-conversation":
+  description: "Starts a new conversation."
+
+"assistant-message":
+  description: "One message; data-role is user or assistant."
+
+"assistant-tool-status":
+  description: "What the assistant does with a tool; data-outcome once it is done."
+
+"assistant-context-chip-page":
+  description: "The page that goes with the next message."
+
+"assistant-context-chip-selection":
+  description: "The selected alerts that go with the next message."
+
+"assistant-context-chip-remove":
+  description: "Leaves the selected alerts out of the next message."
+
+"assistant-composer-input":
+  description: "Text of the next message."
+
+"assistant-composer-send":
+  description: "Sends the message; disabled while an answer arrives."
+
+"assistant-error":
+  description: "Why there is no answer; data-code is the error code."
+
+"assistant-error-sign-in":
+  description: "Signs out, after the session expired."
+
+"assistant-error-retry":
+  description: "Loads the conversation again."
+
+"assistant-draft-card":
+  description: "A drafted change; data-state is the state of the card."
+
+"assistant-draft-confirm":
+  description: "Makes the drafted change."
+
+"assistant-draft-discard":
+  description: "Discards the drafted change."
+
+"assistant-draft-check-again":
+  description: "Asks again about a change that takes long."
+
+"assistant-draft-outcome":
+  description: "What became of the drafted change."
+
+"nav-assistant-toggle":
+  description: "Opens and closes the assistant panel."

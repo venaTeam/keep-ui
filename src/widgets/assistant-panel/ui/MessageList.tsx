@@ -31,7 +31,7 @@ interface MessageListProps extends Pick<
   isStreaming: boolean;
   /** The server is on an answer this page does not stream. */
   isAnswering: boolean;
-  timedOutDraftIds: Set<string>;
+  timedOutDraftIds: ReadonlySet<string>;
 }
 
 /** The conversation, kept scrolled to its end unless the user scrolled up. */

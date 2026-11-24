@@ -9,6 +9,8 @@ interface PersistedPanelState {
 }
 
 interface AssistantPanelState extends PersistedPanelState {
+  /** False while the panel is open only because it was before a reload. */
+  isOpenedByUser: boolean;
   toggle: () => void;
   close: () => void;
   setConversationId: (tenantId: string, conversationId: string) => void;
@@ -39,7 +41,9 @@ export const useAssistantPanelStore = create<AssistantPanelState>()(
     (set) => ({
       isOpen: false,
       conversationIdByTenant: {},
-      toggle: () => set((state) => ({ isOpen: !state.isOpen })),
+      isOpenedByUser: false,
+      toggle: () =>
+        set((state) => ({ isOpen: !state.isOpen, isOpenedByUser: true })),
       close: () => set({ isOpen: false }),
       setConversationId: (tenantId, conversationId) =>
         set((state) => ({
