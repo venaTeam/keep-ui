@@ -102,4 +102,49 @@ describe("DashboardSettingsPanel", () => {
       "true"
     );
   });
+
+  describe("typography", () => {
+    it("reports a picked font", () => {
+      const { props } = renderPanel();
+      fireEvent.click(screen.getByRole("button", { name: /^Inter/ }));
+      expect(props.onChange).toHaveBeenLastCalledWith({ typography: { font: "inter" } });
+    });
+
+    it("keeps other appearance fields when changing the text size", () => {
+      const { props } = renderPanel({ density: "compact" });
+      fireEvent.click(screen.getByRole("button", { name: "Text size XL" }));
+      expect(props.onChange).toHaveBeenLastCalledWith({
+        density: "compact",
+        typography: { size: "xl" },
+      });
+    });
+
+    it("removes typography when every field is back to the default", () => {
+      const { props } = renderPanel({ typography: { size: "xl" } });
+      fireEvent.click(screen.getByRole("button", { name: "Text size S" }));
+      expect(props.onChange).toHaveBeenLastCalledWith({});
+    });
+
+    it("marks the saved steps as selected", () => {
+      renderPanel({ typography: { size: "lg", title: "xl" } });
+      expect(screen.getByRole("button", { name: "Text size L" })).toHaveAttribute(
+        "aria-pressed",
+        "true"
+      );
+      expect(screen.getByRole("button", { name: "Title size XL" })).toHaveAttribute(
+        "aria-pressed",
+        "true"
+      );
+      expect(screen.getByRole("button", { name: /^System default/ })).toHaveAttribute(
+        "aria-pressed",
+        "true"
+      );
+    });
+
+    it("captions each text size with the alert-table cell size at the viewer's root", () => {
+      renderPanel();
+      expect(screen.getByRole("button", { name: "Text size S" })).toHaveTextContent("S10.5px");
+      expect(screen.getByRole("button", { name: "Text size 2XL" })).toHaveTextContent("2XL20px");
+    });
+  });
 });
