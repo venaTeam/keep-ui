@@ -69,6 +69,7 @@ import {
   QUICK_ACTION_COLUMNS,
   ROW_ACTIONS_COLUMN_ID,
 } from "./widget-quick-action-columns";
+import { useFittedLinkColumns } from "./widget-link-column-fit";
 import {
   WidgetRowActions,
   WidgetRowActionsContext,
@@ -288,10 +289,15 @@ function WidgetAlertsTableContent({
     () => fullColumnOrder.filter((id) => columnVisibility[id]),
     [fullColumnOrder, columnVisibility]
   );
+  const sizedColumns = useFittedLinkColumns(
+    columns,
+    visibleColumnOrder,
+    tableRef
+  );
   const layout = useMemo(
     () =>
       getWidgetColumnLayout({
-        columns,
+        columns: sizedColumns,
         visibleOrder: visibleColumnOrder,
         savedSizing,
         containerWidth:
@@ -301,7 +307,7 @@ function WidgetAlertsTableContent({
         shrinkAllowance: chrome ? CHECKBOX_COLUMN_PX : 0,
       }),
     [
-      columns,
+      sizedColumns,
       visibleColumnOrder,
       savedSizing,
       containerWidth,
@@ -313,18 +319,21 @@ function WidgetAlertsTableContent({
   const layoutColumns = useMemo(
     () =>
       withUnclampedColumns(
-        columns,
+        sizedColumns,
         JSON.parse(unclampedIdsKey),
         layout.shrunkColumnId
       ),
-    [columns, unclampedIdsKey, layout.shrunkColumnId]
+    [sizedColumns, unclampedIdsKey, layout.shrunkColumnId]
   );
   const columnBounds = useMemo(
     () =>
       new Map(
-        columns.map((column) => [column.id as string, getColumnBounds(column)])
+        sizedColumns.map((column) => [
+          column.id as string,
+          getColumnBounds(column),
+        ])
       ),
-    [columns]
+    [sizedColumns]
   );
 
   const tableSetup = useMemo(

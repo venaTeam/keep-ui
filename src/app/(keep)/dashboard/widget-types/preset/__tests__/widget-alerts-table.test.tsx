@@ -779,6 +779,48 @@ describe("WidgetAlertsTable", () => {
       expect(widthOf("runbook_url")).toBe("50px");
     });
 
+    describe("link column headers at a scaled text size", () => {
+      const presetColumns = ["name", "alert_rule_url", "runbook_url"];
+      const JSDOM_BUTTON_PADDING_PX = 12;
+      const mockRunbookLabelWidth = (width: number) =>
+        jest
+          .spyOn(HTMLElement.prototype, "scrollWidth", "get")
+          .mockImplementation(function (this: HTMLElement) {
+            return this.tagName === "SPAN" && this.textContent === "Runbook"
+              ? width
+              : 0;
+          });
+
+      afterEach(() => {
+        jest.restoreAllMocks();
+      });
+
+      it("opens a link column wide enough for its header label plus padding, past 72px", () => {
+        mockRunbookLabelWidth(104);
+        renderWidget({ presetColumns });
+
+        expect(widthOf("runbook_url")).toBe(`${104 + JSDOM_BUTTON_PADDING_PX}px`);
+        expect(widthOf("alert_rule_url")).toBe("72px");
+      });
+
+      it("keeps 72px for a header that fits", () => {
+        mockRunbookLabelWidth(50);
+        renderWidget({ presetColumns });
+
+        expect(widthOf("runbook_url")).toBe("72px");
+      });
+
+      it("keeps a saved width", () => {
+        mockRunbookLabelWidth(104);
+        renderWidget({
+          presetColumns,
+          alertTable: { columnSizing: { runbook_url: 50 } },
+        });
+
+        expect(widthOf("runbook_url")).toBe("50px");
+      });
+    });
+
     it("a saved width overrides the minimum", () => {
       renderWidget({ alertTable: { columnSizing: { name: 240 } } });
 
