@@ -2201,6 +2201,25 @@ describe("WidgetAlertsTable", () => {
         expect(onOpenAction).not.toHaveBeenCalled();
       });
 
+      const trayOf = (alert: AlertDto) =>
+        rowFor(alert).querySelector<HTMLElement>(".quick-tray")!;
+
+      it("floats the tray left of trailing Rule and Runbook columns", () => {
+        renderHarness({ alerts: [ruleAlert], presetColumns });
+
+        expect(trayOf(ruleAlert).style.right).toBe("148px");
+      });
+
+      it("keeps the tray at its default edge when no link column is last", () => {
+        renderHarness({
+          alerts: [ruleAlert],
+          presetColumns: ["name", "alert_rule_url", "runbook_url", "service"],
+        });
+
+        expect(headerIds().slice(-2)).toEqual(["service", "alertMenu"]);
+        expect(trayOf(ruleAlert).style.right).toBe("");
+      });
+
       it("renders the icons dimmed and without links in edit mode", () => {
         renderHarness({ alerts: [ruleAlert], presetColumns, isEditMode: true });
 

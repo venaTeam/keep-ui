@@ -41,6 +41,28 @@ describe("QuickActionTray", () => {
     expect(container.firstElementChild).toHaveClass(QUICK_TRAY_CLASS);
   });
 
+  it("keeps its default right edge without an offset", () => {
+    const { container } = render(
+      <QuickActionTray alert={firingNoIncident} onOpen={onOpen} />
+    );
+    const tray = container.firstElementChild as HTMLElement;
+    expect(tray).toHaveClass("right-1");
+    expect(tray.style.right).toBe("");
+  });
+
+  it("sits rightOffsetPx from the right edge when given an offset", () => {
+    const { container } = render(
+      <QuickActionTray
+        alert={firingNoIncident}
+        onOpen={onOpen}
+        rightOffsetPx={148}
+      />
+    );
+    expect((container.firstElementChild as HTMLElement).style.right).toBe(
+      "148px"
+    );
+  });
+
   it("shows all three for a firing alert with no incident", () => {
     render(<QuickActionTray alert={firingNoIncident} onOpen={onOpen} />);
     expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual([
