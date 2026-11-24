@@ -2,6 +2,13 @@ import useSWR, { SWRConfiguration } from "swr";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { CelAst } from "../cel-ast";
 
+// The two strategies a rule may be saved with.
+export type SelectableResolveOn = "never" | "all_resolved";
+// Strategies of rules created before they were retired. Such a rule still
+// loads and runs, but cannot be saved until moved to a SelectableResolveOn.
+export type LegacyResolveOn = "first_resolved" | "last_resolved";
+export type RuleResolveOn = SelectableResolveOn | LegacyResolveOn;
+
 export type Rule = {
   id: string;
   name: string;
@@ -19,7 +26,7 @@ export type Rule = {
   updated_by: string | null;
   update_time: string | null;
   require_approve: boolean;
-  resolve_on: "all" | "first" | "last" | "never";
+  resolve_on: RuleResolveOn;
   create_on: "any" | "all";
   distribution: { [group: string]: { [timestamp: string]: number } };
   incidents: number;
