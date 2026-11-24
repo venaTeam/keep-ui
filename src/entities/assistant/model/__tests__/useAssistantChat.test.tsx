@@ -431,6 +431,25 @@ describe("a conversation that is gone", () => {
     expect(isAccepted()).toBe(false);
   });
 
+  // A gateway whose own flag is off has no assistant routes
+  it("is kept when the gateway has no assistant", async () => {
+    store.getState().setConversationId("keep", "c-old");
+    const chat = setup();
+    await advance(0);
+    const { isAccepted } = await send(chat);
+    await fail(
+      new KeepApiError("Not Found", "/x", "", { detail: "Not Found" }, 404)
+    );
+    expect(storedId()).toBe("c-old");
+    expect(calls).toHaveLength(1);
+    expect(isAccepted()).toBe(false);
+    expect(chat.result.current.error).toEqual({
+      code: null,
+      message: "Keep Assistant is not available.",
+      retryAfterSeconds: null,
+    });
+  });
+
   it("is forgotten when it cannot be read", async () => {
     store.getState().setConversationId("keep", "c-old");
     store.getState().setConversationId("other", "c-9");

@@ -99,6 +99,10 @@ describe("a conversation that does not exist", () => {
   it.each([
     ["a gateway error", apiError("gateway_unavailable")],
     ["an unknown error", new Error("500")],
+    [
+      "the 404 of a gateway without the assistant",
+      new KeepApiError("Not Found", "/x", "", { detail: "Not Found" }, 404),
+    ],
   ])("is not assumed after %s", async (_, error) => {
     get.mockRejectedValue(error);
     const { result } = render();

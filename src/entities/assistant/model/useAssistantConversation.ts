@@ -2,7 +2,10 @@ import { useCallback, useMemo, useRef } from "react";
 import useSWR from "swr";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { getConversation, getConversationUrl } from "../api/assistant-api";
-import { getAssistantError } from "../api/assistant-error";
+import {
+  getAssistantError,
+  isConversationMissing,
+} from "../api/assistant-error";
 import { ConversationView, DraftView, TimelineItem } from "./types";
 import { useBudgetedPolling } from "./useBudgetedPolling";
 
@@ -64,7 +67,7 @@ export function useAssistantConversation(
   const lastApplied = useRef(0);
 
   const handleError = useCallback((error: unknown, id: string) => {
-    if (getAssistantError(error)?.status === 404) {
+    if (isConversationMissing(error)) {
       onMissingRef.current?.(id);
     }
   }, []);

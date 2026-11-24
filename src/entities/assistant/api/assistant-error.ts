@@ -77,3 +77,16 @@ export function getAssistantError(error: unknown): AssistantError | null {
     draft: draft?.id ? draft : null,
   };
 }
+
+/**
+ * Whether the conversation itself is gone. The status alone cannot tell: a
+ * gateway whose assistant is switched off also answers 404.
+ */
+export function isConversationMissing(error: unknown): boolean {
+  return getAssistantError(error)?.code === "conversation_not_found";
+}
+
+/** Whether the gateway has no assistant routes. */
+export function isAssistantUnavailable(error: AssistantError): boolean {
+  return error.status === 404 && error.code === null;
+}

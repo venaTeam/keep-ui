@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { useHydratedSession } from "@/shared/lib/hooks/useHydratedSession";
-import { getAssistantError } from "../api/assistant-error";
+import {
+  getAssistantError,
+  isAssistantUnavailable,
+  isConversationMissing,
+} from "../api/assistant-error";
 import { streamChat } from "../api/stream-chat";
 import {
   applyStreamEvent,
@@ -38,6 +42,11 @@ export interface ChatError {
 const UNREACHABLE: ChatError = {
   code: null,
   message: "The assistant could not be reached. Try again.",
+  retryAfterSeconds: null,
+};
+const UNAVAILABLE: ChatError = {
+  code: null,
+  message: "Keep Assistant is not available.",
   retryAfterSeconds: null,
 };
 const INTERRUPTED: ChatError = {
@@ -209,8 +218,7 @@ export function useAssistantChat() {
           await stream(conversationId);
         } catch (chatError) {
           const isMissing =
-            conversationId !== null &&
-            getAssistantError(chatError)?.status === 404;
+            conversationId !== null && isConversationMissing(chatError);
           if (!isMissing || controller.signal.aborted) {
             throw chatError;
           }
@@ -243,6 +251,10 @@ export function useAssistantChat() {
         }
 
         setTurn(null);
+        if (refusal && isAssistantUnavailable(refusal)) {
+          setError(UNAVAILABLE);
+          return false;
+        }
         setError(
           refusal
             ? {
