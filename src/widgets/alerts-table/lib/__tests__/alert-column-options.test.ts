@@ -7,6 +7,7 @@ import {
   getColumnLabel,
   getGroupByFieldOptions,
   matchesSearch,
+  searchFields,
 } from "../alert-column-options";
 
 describe("getAlertColumnOptions", () => {
@@ -74,13 +75,18 @@ describe("getGroupByFieldOptions", () => {
 });
 
 describe("getColumnLabel", () => {
-  it("labels prefer the rename, then the shortlist, then startCase", () => {
-    expect(getColumnLabel("node_name")).toBe("Host");
+  it("labels prefer the rename, then startCase", () => {
+    expect(getColumnLabel("node_name")).toBe("Node Name");
     expect(getColumnLabel("node_name", { node_name: "Server" })).toBe("Server");
     expect(getColumnLabel("labels.team")).toBe("Labels Team");
   });
 
-  it("uses the Count control's label for the alert name", () =>
+  it("gives node_name and host different labels", () => {
+    expect(getColumnLabel("node_name")).toBe("Node Name");
+    expect(getColumnLabel("host")).toBe("Host");
+  });
+
+  it("keeps \"Alert name\" for the name column", () =>
     expect(getColumnLabel("name")).toBe("Alert name"));
 
   it("ignores an empty rename", () =>
@@ -117,7 +123,7 @@ describe("GROUP_BY_SHORTLIST", () => {
       "severity"
     ));
 
-  it("follows the Count field options instead of copying them", () => {
+  it("follows the Count options; column labels keep their names", () => {
     jest.isolateModules(() => {
       jest.doMock("@/entities/presets/model/count-by", () => ({
         COUNT_BY_ALERT_FIELD_OPTIONS: [{ value: "site", label: "Location" }],
@@ -129,7 +135,7 @@ describe("GROUP_BY_SHORTLIST", () => {
         { value: "source", label: "Source" },
         { value: "status", label: "Status" },
       ]);
-      expect(isolated.getColumnLabel("site")).toBe("Location");
+      expect(isolated.getColumnLabel("site")).toBe("Site");
     });
     jest.dontMock("@/entities/presets/model/count-by");
   });
@@ -182,4 +188,40 @@ describe("matchesSearch", () => {
     expect(matchesSearch("service", "")).toBe(true);
     expect(matchesSearch("service", "host")).toBe(false);
   });
+});
+
+describe("searchFields", () => {
+  const NODE_NAME_FIELDS = [
+    "labels.Node_Name",
+    "labels.Node_name",
+    "labels.node_Name",
+    "labels.node_name",
+    "labels.node_name.keyword",
+    "node_name",
+  ];
+
+  it("lists top-level fields before nested ones", () =>
+    expect(searchFields(NODE_NAME_FIELDS, "node_name")[0]).toBe("node_name"));
+
+  it("drops a .keyword copy of a listed field", () =>
+    expect(searchFields(NODE_NAME_FIELDS, "node_name")).toEqual([
+      "node_name",
+      "labels.Node_Name",
+      "labels.Node_name",
+      "labels.node_Name",
+      "labels.node_name",
+    ]));
+
+  it("keeps a .keyword field whose base field is not listed", () =>
+    expect(searchFields(["labels.host.keyword"], "host")).toEqual([
+      "labels.host.keyword",
+    ]));
+
+  it("matches the label as well as the id", () =>
+    expect(searchFields(["node_name", "lastReceived"], "node name")).toEqual([
+      "node_name",
+    ]));
+
+  it("ignores case", () =>
+    expect(searchFields(["ticket_url"], "TICKET")).toEqual(["ticket_url"]));
 });

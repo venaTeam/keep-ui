@@ -24,6 +24,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
+  Column,
   ColumnDef,
   ColumnOrderState,
   VisibilityState,
@@ -92,6 +93,7 @@ interface DraggableHeaderCellProps {
   interactive: boolean;
   showSortItems: boolean;
   showFormatItems: boolean;
+  canFormatAsList: (column: Column<AlertDto>) => boolean;
   getOriginalColumnName?: (columnId: string) => string;
 }
 
@@ -116,6 +118,7 @@ const DraggableHeaderCell = ({
   interactive,
   showSortItems,
   showFormatItems,
+  canFormatAsList,
   getOriginalColumnName,
 }: DraggableHeaderCellProps) => {
   const { column, getResizeHandler } = header;
@@ -295,7 +298,8 @@ const DraggableHeaderCell = ({
           <button
             type="button"
             className={clsx(
-              "flex-none flex items-center cursor-grab active:cursor-grabbing touch-none",
+              "absolute inset-y-0 left-0 z-10 flex items-center bg-orange-100",
+              "cursor-grab active:cursor-grabbing touch-none",
               "text-gray-400 hover:text-gray-600 dark:hover:text-gray-200",
               "opacity-0 group-hover:opacity-100 transition-opacity"
             )}
@@ -373,7 +377,7 @@ const DraggableHeaderCell = ({
                 />
               </>
             )}
-            {showFormatItems && column.getCanSort() && (
+            {showFormatItems && (column.getCanSort() || !showSortItems) && (
               <>
                 {isDateTimeColumn(column.id) &&
                   createTimeFormatMenuItems(
@@ -382,7 +386,7 @@ const DraggableHeaderCell = ({
                     setColumnTimeFormats,
                     DropdownMenu
                   )}
-                {isListColumn(column) &&
+                {canFormatAsList(column) &&
                   createListFormatMenuItems(
                     column.id,
                     columnListFormats,
@@ -554,6 +558,12 @@ interface Props {
   interactive?: boolean;
   showSortItems?: boolean;
   showFormatItems?: boolean;
+  /**
+   * Whether a column's header menu offers Format list, when format items are
+   * shown. Defaults to `isListColumn`: the column's first row holds a non-empty
+   * array or a JSON-string list.
+   */
+  canFormatAsList?: (column: Column<AlertDto>) => boolean;
   getOriginalColumnName?: (columnId: string) => string;
 }
 
@@ -575,6 +585,7 @@ export default function AlertsTableHeaders({
   interactive = true,
   showSortItems = true,
   showFormatItems = true,
+  canFormatAsList = isListColumn,
   getOriginalColumnName,
 }: Props) {
   const sensors = useSensors(
@@ -702,6 +713,7 @@ export default function AlertsTableHeaders({
                     interactive={interactive}
                     showSortItems={showSortItems}
                     showFormatItems={showFormatItems}
+                    canFormatAsList={canFormatAsList}
                     getOriginalColumnName={getOriginalColumnName}
                     dropIndicatorSide={
                       dropTarget?.columnId === header.column.id

@@ -50,7 +50,7 @@ import {
   getAlertColumnOptions,
   getColumnLabel,
   getGroupByFieldOptions,
-  matchesSearch,
+  searchFields,
 } from "@/widgets/alerts-table/lib/alert-column-options";
 import {
   WIDGET_PINNED_LEFT,
@@ -59,6 +59,7 @@ import {
 } from "./alert-table-widget-config";
 import { EmptyGroupPositionControl } from "./empty-group-position-control";
 import { GroupBySelect } from "./group-by-select";
+import { RowStyleControl } from "./row-style-control";
 import type { WidgetColumnState } from "./use-widget-column-state";
 
 /**
@@ -548,10 +549,16 @@ function AddColumnSearch({
   const [query, setQuery] = useState("");
   const search = query.trim();
   const results = search
-    ? fieldOptions.filter(
-        (id) => !state.columnVisibility[id] && matchesSearch(id, search)
+    ? searchFields(
+        fieldOptions.filter((id) => !state.columnVisibility[id]),
+        search
       )
     : [];
+  const labelCounts = new Map<string, number>();
+  results.forEach((id) => {
+    const label = getColumnLabel(id);
+    labelCounts.set(label, (labelCounts.get(label) ?? 0) + 1);
+  });
 
   const add = (id: string) => {
     state.setVisibleColumns([...state.visibleColumns, id]);
@@ -584,7 +591,10 @@ function AddColumnSearch({
                 className="block w-full truncate px-2 py-1 text-left hover:bg-orange-50 focus:bg-orange-50 focus:outline-none"
                 onClick={() => add(id)}
               >
-                {id}
+                {getColumnLabel(id)}
+                {labelCounts.get(getColumnLabel(id))! > 1 && (
+                  <span className="ml-1 text-gray-400">{id}</span>
+                )}
               </button>
             </li>
           ))}
@@ -644,6 +654,13 @@ function SettingsContent({
           titleClassName={SECTION_TITLE_CLASS}
         />
       )}
+      <RowStyleControl
+        value={state.rowStyle}
+        onChange={state.setRowStyle}
+        titleAs="h5"
+        titleClassName={SECTION_TITLE_CLASS}
+        data-cy="dashboard-widget-table-settings-row-style"
+      />
       <div className="mt-3 flex items-center gap-2 border-t border-gray-200 pt-2">
         {state.isCustomized && (
           <span className="text-gray-500">Customized for this widget</span>
@@ -674,8 +691,9 @@ function SettingsContent({
  * capped at its maximum, so the width renders exactly; Auto-fit, which
  * measures `columnWidths.tableRef`; and, once a width is saved, Reset. A
  * search adds any alert field as a column. It also sets the grouping, where
- * rows with no value go, and resets the widget to the defaults. Every change
- * goes straight to `state`; a width change passes the whole sizing map.
+ * rows with no value go and the row style (Compact or Relaxed), and resets the
+ * widget to the defaults. Every change goes straight to `state`; a width
+ * change passes the whole sizing map.
  *
  * `columnIds` are the columns the widget can show. The search offers them and
  * every potential alert field; the grouping options are only the shortlist,

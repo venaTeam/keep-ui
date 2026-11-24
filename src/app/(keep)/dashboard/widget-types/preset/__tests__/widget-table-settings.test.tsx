@@ -65,6 +65,9 @@ const makeState = (
     columnSizing: {},
     grouping: [],
     emptyGroupPosition: "top",
+    rowStyle: "default",
+    columnTimeFormats: {},
+    columnListFormats: {},
     isCustomized: false,
     canEdit: true,
     setColumnOrder: jest.fn(),
@@ -74,6 +77,9 @@ const makeState = (
     setColumnSizing: jest.fn(),
     setGrouping: jest.fn(),
     setEmptyGroupPosition: jest.fn(),
+    setRowStyle: jest.fn(),
+    setColumnTimeFormats: jest.fn(),
+    setColumnListFormats: jest.fn(),
     reset: jest.fn(),
     ...overrides,
   };
@@ -408,7 +414,7 @@ describe("WidgetTableSettings", () => {
     fireEvent.change(screen.getByRole("searchbox", { name: "Find a field" }), {
       target: { value: "region" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "labels.region" }));
+    fireEvent.click(screen.getByRole("button", { name: "Labels Region" }));
 
     expect(state.setVisibleColumns).toHaveBeenCalledWith([
       ...VISIBLE,
@@ -433,16 +439,16 @@ describe("WidgetTableSettings", () => {
 
     expect(results).toEqual(
       expect.arrayContaining([
-        "labels.team",
-        "environment",
-        "lastReceived",
-        "assignee",
-        "ticket_type",
+        "Labels Team",
+        "Environment",
+        "Last Received",
+        "Assignee",
+        "Ticket Type",
       ])
     );
-    expect(results).not.toContain("name");
-    expect(results).not.toContain("description");
-    expect(results).not.toContain("severity");
+    expect(results).not.toContain("Alert name");
+    expect(results).not.toContain("Description");
+    expect(results).not.toContain("Severity");
 
     fireEvent.change(search, { target: { value: "checkbox" } });
     expect(screen.getByText("No matching fields")).toBeInTheDocument();
@@ -456,11 +462,37 @@ describe("WidgetTableSettings", () => {
     fireEvent.change(screen.getByRole("searchbox", { name: "Find a field" }), {
       target: { value: "f_1234" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "labels.f_1234" }));
+    fireEvent.click(screen.getByRole("button", { name: "Labels F 1234" }));
 
     expect(state.setVisibleColumns).toHaveBeenCalledWith([
       ...VISIBLE,
       "labels.f_1234",
+    ]);
+  });
+
+  it("search lists node_name first, by its label, and tells label variants apart by id", () => {
+    mockPotentialFields = [
+      "labels.Node_name",
+      "labels.node_name",
+      "labels.node_name.keyword",
+      "node_name",
+    ];
+    renderSettings();
+    openSettings();
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Find a field" }), {
+      target: { value: "node_name" },
+    });
+    const results = within(
+      screen.getByRole("list", { name: "Matching fields" })
+    )
+      .getAllByRole("button")
+      .map((button) => button.textContent);
+
+    expect(results).toEqual([
+      "Node Name",
+      "Labels Node Namelabels.node_name",
+      "Labels Node Namelabels.Node_name",
     ]);
   });
 
@@ -481,6 +513,55 @@ describe("WidgetTableSettings", () => {
 
     expect(grouped.state.setEmptyGroupPosition).toHaveBeenCalledWith("bottom");
     expect(state.setEmptyGroupPosition).not.toHaveBeenCalled();
+  });
+
+  describe("Rows", () => {
+    const follows = (first: Element, second: Element) =>
+      !!(
+        first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING
+      );
+
+    const rowsGroup = () => screen.getByRole("radiogroup", { name: "Rows" });
+
+    it("Rows sits after Group rows by and reflects state.rowStyle", () => {
+      const { unmount } = renderSettings({ grouping: ["service"] });
+      const opened = openSettings();
+
+      const groupRowsBy = within(opened).getByText("Group rows by");
+      const rowsWithNoValue = within(opened).getByRole("radiogroup", {
+        name: "Rows with no value",
+      });
+      const reset = within(opened).getByRole("button", {
+        name: "Reset to defaults",
+      });
+      expect(follows(groupRowsBy, rowsGroup())).toBe(true);
+      expect(follows(rowsWithNoValue, rowsGroup())).toBe(true);
+      expect(follows(rowsGroup(), reset)).toBe(true);
+      expect(within(opened).getByText("Rows").tagName).toBe("H5");
+      expect(
+        opened.querySelector(
+          '[data-cy="dashboard-widget-table-settings-row-style"]'
+        )
+      ).toContainElement(rowsGroup());
+      expect(screen.getByRole("radio", { name: "Compact" })).toBeChecked();
+      unmount();
+
+      renderSettings({ rowStyle: "relaxed" });
+      openSettings();
+
+      expect(screen.getByRole("radio", { name: "Relaxed" })).toBeChecked();
+      expect(screen.getByRole("radio", { name: "Compact" })).not.toBeChecked();
+    });
+
+    it("choosing Relaxed calls setRowStyle('relaxed')", () => {
+      const { state } = renderSettings();
+      openSettings();
+
+      fireEvent.click(screen.getByRole("radio", { name: "Relaxed" }));
+
+      expect(state.setRowStyle).toHaveBeenCalledTimes(1);
+      expect(state.setRowStyle).toHaveBeenCalledWith("relaxed");
+    });
   });
 
   it("Reset to defaults calls reset and is disabled when not customized", () => {

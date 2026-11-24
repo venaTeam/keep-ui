@@ -7,6 +7,7 @@ import {
   screen,
   within,
 } from "@testing-library/react";
+import { format } from "date-fns";
 import WidgetAlertsTable from "../widget-alerts-table";
 import { WidgetData, WidgetType } from "../../../types";
 import {
@@ -976,15 +977,15 @@ describe("WidgetAlertsTable", () => {
 
   it("header Rename starts from the name the header shows", async () => {
     renderWidget(
-      { presetColumns: ["name", "node_name"] },
-      [alertWith({ node_name: "db-1" })],
+      { presetColumns: ["name", "description"] },
+      [alertWith()],
       { isEditMode: true, onChange: jest.fn() }
     );
     expect(
-      within(screen.getByTestId("header-cell-node_name")).getByText("Host")
+      within(screen.getByTestId("header-cell-name")).getByText("Alert name")
     ).toBeInTheDocument();
 
-    const cell = screen.getByTestId("header-cell-node_name");
+    const cell = screen.getByTestId("header-cell-name");
     const trigger = within(cell).getByTestId("dropdown-menu-button");
     fireEvent.mouseDown(trigger);
     fireEvent.click(trigger);
@@ -993,8 +994,23 @@ describe("WidgetAlertsTable", () => {
     fireEvent.pointerEnter(rename);
     fireEvent.mouseMove(rename);
 
-    expect(await screen.findByDisplayValue("Host")).toBeInTheDocument();
-    expect(screen.queryByDisplayValue("Node Name")).toBeNull();
+    expect(await screen.findByDisplayValue("Alert name")).toBeInTheDocument();
+    expect(screen.queryByDisplayValue("Name")).toBeNull();
+  });
+
+  it("labels node_name and host columns differently", () => {
+    renderWidget({ presetColumns: ["name", "node_name", "host"] }, [
+      alertWith({ node_name: "db-1" }),
+    ]);
+    expect(
+      within(screen.getByTestId("header-cell-node_name")).getByText(
+        "Node Name"
+      )
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId("header-cell-host")).getByText("Host")
+    ).toBeInTheDocument();
+    expect(screen.getByText("db-1")).toBeInTheDocument();
   });
 
   it("Move left on description puts it before name, skipping hidden columns", async () => {
@@ -1277,6 +1293,222 @@ describe("WidgetAlertsTable", () => {
     });
   });
 
+  it("a widget saved Relaxed renders relaxed rows whatever the viewer's row style", () => {
+    localStorage.setItem(
+      "keephq-alert-table-row-style",
+      JSON.stringify("default")
+    );
+
+    renderWidget({
+      presetColumns: ["name", "description"],
+      alertTable: { rowStyle: "relaxed" },
+    });
+
+    expect(bodyRows()).toHaveLength(2);
+    bodyRows().forEach((row) => {
+      expect(row).toHaveClass("h-12");
+      expect(row).not.toHaveClass("h-8");
+    });
+    expect(cellsOf("description")).toHaveLength(2);
+    cellsOf("description").forEach((cell) => {
+      expect(cell.querySelector(".line-clamp-3")).not.toBeNull();
+      expect(cell.querySelector(".line-clamp-1")).toBeNull();
+    });
+  });
+
+  it("an unknown saved row style renders compact rows", () => {
+    renderWidget({
+      presetColumns: ["name", "description"],
+      alertTable: { rowStyle: "comfortable" as never },
+    });
+
+    expect(bodyRows()).toHaveLength(2);
+    bodyRows().forEach((row) => {
+      expect(row).toHaveClass("h-8");
+      expect(row).not.toHaveClass("h-12");
+    });
+  });
+
+  describe("column formats", () => {
+    const savedDate = format(new Date("2026-10-01T10:00:00Z"), "PP");
+    const exactly = (text: string) => new RegExp(`^${text}$`);
+    const openHeaderMenu = async (columnId: string) => {
+      const cell = screen.getByTestId(`header-cell-${columnId}`);
+      const trigger = within(cell).getByTestId("dropdown-menu-button");
+      fireEvent.mouseDown(trigger);
+      fireEvent.click(trigger);
+      await screen.findByTestId("dropdown-menu-list");
+    };
+    const pickTimeFormat = async (columnId: string, label: string) => {
+      await openHeaderMenu(columnId);
+      const formatTime = screen.getByText("Format time");
+      fireEvent.pointerEnter(formatTime);
+      fireEvent.mouseMove(formatTime);
+      fireEvent.click(await screen.findByText(label));
+    };
+    const pickListFormat = async (columnId: string, label: string) => {
+      await openHeaderMenu(columnId);
+      const formatList = screen.getByText("Format list");
+      fireEvent.pointerEnter(formatList);
+      fireEvent.mouseMove(formatList);
+      fireEvent.click(await screen.findByText(label));
+    };
+
+    it("a saved time format renders in that format", () => {
+      renderWidget({
+        presetColumns: ["name", "lastReceived"],
+        alertTable: { columnTimeFormats: { lastReceived: "date" } },
+      });
+
+      const cells = cellsOf("lastReceived");
+      expect(cells).toHaveLength(2);
+      cells.forEach((cell) =>
+        expect(cell).toHaveTextContent(exactly(savedDate))
+      );
+    });
+
+    it("Format time in the edit-mode header menu saves the column's format", async () => {
+      const onChange = jest.fn();
+      renderWidget({ presetColumns: ["name", "lastReceived"] }, undefined, {
+        isEditMode: true,
+        onChange,
+      });
+
+      await pickTimeFormat(
+        "lastReceived",
+        "Relative format (e.g. Today at 12:30 PM)"
+      );
+
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange.mock.calls[0][0].alertTable.columnTimeFormats).toEqual({
+        lastReceived: "relative",
+      });
+    });
+
+    it("choosing Time ago on an unformatted column saves nothing", async () => {
+      const onChange = jest.fn();
+      renderWidget({ presetColumns: ["name", "lastReceived"] }, undefined, {
+        isEditMode: true,
+        onChange,
+      });
+
+      await pickTimeFormat("lastReceived", "Time ago (e.g. 5 minutes ago)");
+
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
+    it("a saved list format renders in that format", () => {
+      const tags = JSON.stringify(["a", "b", "c"]);
+      renderWidget(
+        {
+          presetColumns: ["name", "tags"],
+          alertTable: { columnListFormats: { tags: "count" } },
+        },
+        [alertWith({ tags }), alertWith({ tags })]
+      );
+
+      const cells = cellsOf("tags");
+      expect(cells).toHaveLength(2);
+      cells.forEach((cell) =>
+        expect(within(cell as HTMLElement).getByText("3")).toBeInTheDocument()
+      );
+    });
+
+    it("Format list in the edit-mode header menu saves the column's format", async () => {
+      const onChange = jest.fn();
+      const tags = JSON.stringify(["a", "b", "c"]);
+      renderWidget(
+        { presetColumns: ["name", "tags"] },
+        [alertWith({ tags }), alertWith({ tags })],
+        { isEditMode: true, onChange }
+      );
+
+      await pickListFormat("tags", "Count only (show number of items)");
+
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange.mock.calls[0][0].alertTable.columnListFormats).toEqual({
+        tags: "count",
+      });
+    });
+
+    it("choosing Badges on an unformatted list column saves nothing", async () => {
+      const onChange = jest.fn();
+      const tags = JSON.stringify(["a", "b", "c"]);
+      renderWidget(
+        { presetColumns: ["name", "tags"] },
+        [alertWith({ tags }), alertWith({ tags })],
+        { isEditMode: true, onChange }
+      );
+
+      await pickListFormat("tags", "Badges (colored items with details)");
+
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
+    it("an array-valued column's header menu offers no Format list", async () => {
+      renderWidget(
+        { presetColumns: ["name", "enriched_fields"] },
+        [
+          alertWith({ enriched_fields: ["a", "b"] }),
+          alertWith({ enriched_fields: ["a", "b"] }),
+        ],
+        { isEditMode: true, onChange: jest.fn() }
+      );
+
+      await openHeaderMenu("enriched_fields");
+
+      expect(screen.getByText(/rename column/i)).toBeInTheDocument();
+      expect(screen.queryByText("Format list")).toBeNull();
+    });
+
+    it("a saved format on a missing generated date renders an empty cell", () => {
+      expect(() =>
+        renderWidget(
+          {
+            presetColumns: ["name", "firingStartTime"],
+            alertTable: { columnTimeFormats: { firingStartTime: "iso" } },
+          },
+          [alertWith({ firingStartTime: undefined })]
+        )
+      ).not.toThrow();
+
+      const cells = cellsOf("firingStartTime");
+      expect(cells).toHaveLength(1);
+      expect(cells[0].textContent).toBe("");
+    });
+
+    it("a narrow widget applies saved Relaxed and formats with no header menu", () => {
+      observeWidth(300);
+      renderWidget(
+        {
+          presetColumns: ["name", "lastReceived"],
+          alertTable: {
+            rowStyle: "relaxed",
+            columnTimeFormats: { lastReceived: "date" },
+          },
+        },
+        undefined,
+        { isEditMode: true, onChange: jest.fn() }
+      );
+
+      expect(bodyRows()).toHaveLength(2);
+      bodyRows().forEach((row) => expect(row).toHaveClass("h-12"));
+      cellsOf("lastReceived").forEach((cell) =>
+        expect(cell).toHaveTextContent(exactly(savedDate))
+      );
+      expect(screen.queryAllByTestId("dropdown-menu-button")).toHaveLength(0);
+    });
+
+    it("view mode offers no header menu", () => {
+      renderWidget({
+        presetColumns: ["name", "lastReceived"],
+        alertTable: { columnTimeFormats: { lastReceived: "date" } },
+      });
+
+      expect(screen.queryAllByTestId("dropdown-menu-button")).toHaveLength(0);
+    });
+  });
+
   it("does not read the preset's expanded rows", () => {
     const alerts = [alertWith()];
     localStorage.setItem(
@@ -1410,6 +1642,41 @@ describe("WidgetAlertsTable", () => {
 
       expect(onChange).toHaveBeenCalledTimes(1);
       expect(onChange.mock.calls[0][0].presetColumns).toEqual(["name"]);
+    });
+
+    it("choosing Relaxed in the panel saves the row style and the table turns relaxed", () => {
+      const onChange = jest.fn();
+      const alerts = [alertWith(), alertWith()];
+      const { rerender } = renderWithSlot(
+        { presetColumns: ["name", "description"] },
+        { isEditMode: true, onChange },
+        alerts
+      );
+      bodyRows().forEach((row) => expect(row).toHaveClass("h-8"));
+
+      fireEvent.click(settingsButton() as HTMLElement);
+      fireEvent.click(screen.getByRole("radio", { name: "Relaxed" }));
+
+      expect(onChange).toHaveBeenCalledTimes(1);
+      const relaxed: WidgetData = onChange.mock.calls[0][0];
+      expect(relaxed.alertTable).toEqual({ rowStyle: "relaxed" });
+      expect(relaxed.presetColumns).toEqual(["name", "description"]);
+
+      rerender(
+        <WidgetAlertsTable
+          item={relaxed}
+          alerts={alerts}
+          isEditMode
+          onChange={onChange}
+          settingsSlot={slot}
+        />
+      );
+
+      expect(bodyRows()).toHaveLength(2);
+      bodyRows().forEach((row) => {
+        expect(row).toHaveClass("h-12");
+        expect(row).not.toHaveClass("h-8");
+      });
     });
 
     it("a saved snake_case groupBy adds no empty column beside the real one", () => {

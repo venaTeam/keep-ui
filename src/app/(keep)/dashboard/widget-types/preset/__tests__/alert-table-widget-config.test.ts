@@ -9,6 +9,7 @@ import {
   applyWidgetColumnChange,
   getGroupByColumnId,
   getVisibleColumnIds,
+  getWidgetRowStyle,
   mergeVisibleColumnOrder,
   normalizeColumnOrder,
   resetWidgetColumns,
@@ -16,6 +17,7 @@ import {
   resolveWidgetColumnId,
   toVisibilityState,
   visibleIdsFromVisibilityState,
+  withoutDefaultFormats,
 } from "../alert-table-widget-config";
 
 describe("constants", () => {
@@ -111,6 +113,36 @@ describe("getGroupByColumnId", () => {
     ).toBe("firingCounter");
     expect(getGroupByColumnId({} as WidgetData)).toBeUndefined();
   });
+});
+
+describe("withoutDefaultFormats", () => {
+  it("drops the entries equal to the default format", () =>
+    expect(
+      withoutDefaultFormats({ a: "timeago", b: "iso" }, "timeago")
+    ).toEqual({ b: "iso" }));
+  it("returns an empty map when every entry is the default format", () =>
+    expect(withoutDefaultFormats({ a: "timeago" }, "timeago")).toEqual({}));
+  it("drops empty entries", () =>
+    expect(
+      withoutDefaultFormats({ a: "" as string, b: "iso" }, "timeago")
+    ).toEqual({ b: "iso" }));
+});
+
+describe("getWidgetRowStyle", () => {
+  it("is relaxed when the widget saved relaxed rows", () =>
+    expect(
+      getWidgetRowStyle({ alertTable: { rowStyle: "relaxed" } } as WidgetData)
+    ).toBe("relaxed"));
+  it.each([
+    ["no alertTable", {} as WidgetData],
+    ["a null rowStyle", { alertTable: { rowStyle: null } } as WidgetData],
+    [
+      "an unknown rowStyle",
+      { alertTable: { rowStyle: "comfortable" } } as unknown as WidgetData,
+    ],
+  ])("is default for %s", (_, item) =>
+    expect(getWidgetRowStyle(item)).toBe("default")
+  );
 });
 
 describe("getVisibleColumnIds", () => {
@@ -275,6 +307,26 @@ describe("applyWidgetColumnChange / resetWidgetColumns", () => {
       applyWidgetColumnChange(item, { columnSizing: {}, groupBy: "incident" })
         .alertTable
     ).toEqual({ groupBy: "incident" }));
+  it("setting the row style back to Compact removes it and keeps the rest", () =>
+    expect(
+      applyWidgetColumnChange(
+        {
+          i: "w2",
+          alertTable: { columnOrder: ["name"], rowStyle: "relaxed" },
+        } as unknown as WidgetData,
+        { rowStyle: null }
+      ).alertTable
+    ).toEqual({ columnOrder: ["name"] }));
+  it("removes alertTable when an empty format map leaves nothing", () =>
+    expect(
+      applyWidgetColumnChange(
+        {
+          i: "w2",
+          alertTable: { columnTimeFormats: { lastReceived: "iso" } },
+        } as unknown as WidgetData,
+        { columnTimeFormats: {} }
+      )
+    ).not.toHaveProperty("alertTable"));
   it("keeps an emptyGroupPosition the change does not clear the grouping for", () =>
     expect(
       applyWidgetColumnChange({ i: "w2" } as unknown as WidgetData, {
