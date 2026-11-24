@@ -94,6 +94,16 @@ describe("getColumnLabel", () => {
 
   it("ignores inherited keys of the rename mapping", () =>
     expect(getColumnLabel("constructor", {})).toBe("Constructor"));
+
+  it("labels the rule and runbook columns Rule and Runbook", () => {
+    expect(getColumnLabel("alert_rule_url")).toBe("Rule");
+    expect(getColumnLabel("runbook_url")).toBe("Runbook");
+  });
+
+  it("prefers a runbook rename and ignores an empty one", () => {
+    expect(getColumnLabel("runbook_url", { runbook_url: "" })).toBe("Runbook");
+    expect(getColumnLabel("runbook_url", { runbook_url: "RB" })).toBe("RB");
+  });
 });
 
 describe("GROUP_BY_SHORTLIST", () => {

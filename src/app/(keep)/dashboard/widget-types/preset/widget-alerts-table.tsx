@@ -387,8 +387,8 @@ function WidgetAlertsTableContent({
 
   const { columnTimeFormats, columnListFormats } = state;
   const tableMeta = useMemo(
-    () => ({ columnTimeFormats, columnListFormats }),
-    [columnTimeFormats, columnListFormats]
+    () => ({ columnTimeFormats, columnListFormats, linksDisabled: isEditMode }),
+    [columnTimeFormats, columnListFormats, isEditMode]
   );
 
   const table = useReactTable({

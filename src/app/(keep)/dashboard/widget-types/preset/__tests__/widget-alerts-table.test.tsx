@@ -73,6 +73,8 @@ jest.mock("@/utils/hooks/useProviders", () => ({
   useProviders: () => ({ data: undefined }),
 }));
 
+jest.mock("react-icons/md", () => jest.requireActual("react-icons/md"));
+
 jest.mock("@/utils/hooks/useConfig", () => ({
   useConfig: jest.fn(() => ({ data: {} })),
   useApiUrl: () => "http://localhost:8080",
@@ -2053,6 +2055,7 @@ describe("WidgetAlertsTable", () => {
       settingsSlot?: HTMLElement;
       initial?: RowSelectionState;
       openFingerprint?: string | null;
+      presetColumns?: string[];
     };
 
     function Harness({
@@ -2063,6 +2066,7 @@ describe("WidgetAlertsTable", () => {
       settingsSlot,
       initial = {},
       openFingerprint = null,
+      presetColumns,
     }: HarnessOptions) {
       const [rowSelection, setRowSelection] =
         React.useState<RowSelectionState>(initial);
@@ -2074,6 +2078,7 @@ describe("WidgetAlertsTable", () => {
           <WidgetAlertsTable
             item={{
               ...baseItem,
+              ...(presetColumns ? { presetColumns } : {}),
               ...(groupBy
                 ? { alertTable: { groupBy, emptyGroupPosition: "top" } }
                 : {}),
@@ -2128,6 +2133,46 @@ describe("WidgetAlertsTable", () => {
       expect(screen.queryByRole("checkbox")).toBeNull();
       expect(document.querySelector('[data-column-id="alertMenu"]')).toBeNull();
       expect(widgetRoot()).not.toHaveClass("quick-actions-table");
+    });
+
+    describe("rule and runbook icon links", () => {
+      const ruleAlert = alertWith({
+        alert_rule_url:
+          "https://grafana-olly.com/alerting/grafana/aef3k2pq/view?orgId=1",
+        runbook_url: "https://wiki.ops.internal/runbooks/high-cpu-usage",
+      });
+      const presetColumns = ["name", "alert_rule_url", "runbook_url"];
+
+      it("renders the Grafana icon link under a Rule header, and a click leaves the row alone", () => {
+        renderHarness({ alerts: [ruleAlert], presetColumns });
+
+        expect(screen.getByTestId("header-cell-alert_rule_url")).toHaveTextContent(
+          /^Rule$/
+        );
+        expect(screen.getByTestId("header-cell-runbook_url")).toHaveTextContent(
+          /^Runbook$/
+        );
+        const link = screen.getByRole("link", {
+          name: "Open alert rule in Grafana",
+        });
+        const reachedDocument = jest.fn((event: Event) => event.preventDefault());
+        document.addEventListener("click", reachedDocument);
+        fireEvent.click(link);
+        document.removeEventListener("click", reachedDocument);
+
+        expect(reachedDocument).not.toHaveBeenCalled();
+        expect(onRowSelectionChange).not.toHaveBeenCalled();
+        expect(onOpenAction).not.toHaveBeenCalled();
+      });
+
+      it("renders the icons dimmed and without links in edit mode", () => {
+        renderHarness({ alerts: [ruleAlert], presetColumns, isEditMode: true });
+
+        expect(screen.queryByRole("link")).toBeNull();
+        expect(
+          cellsOf("alert_rule_url")[0].querySelector('[aria-disabled="true"]')
+        ).not.toBeNull();
+      });
     });
 
     it("adds nothing actionable in edit mode even with selection props", () => {
