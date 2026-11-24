@@ -12,7 +12,7 @@ import * as path from "node:path";
  *   e2e/results/checks.json
  *
  * Each spec's describe block is titled "[check:NN] <name>"; this reporter parses
- * NN to key the 12 checks regardless of Playwright's internal JSON layout. A
+ * NN to key the 13 checks regardless of Playwright's internal JSON layout. A
  * single check may contain MORE than one test (e.g. check 3 = single + bulk
  * assign) — a check is "passed" only if all of its tests passed. Retries are
  * collapsed via `test.outcome()` ('flaky' counts as passed).
