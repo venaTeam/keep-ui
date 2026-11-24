@@ -9,7 +9,8 @@ import {
 /**
  * Icon link for a rule or runbook URL: the Grafana logo for a Grafana alert
  * rule, a generic external-link icon for any other rule, and a book for a
- * runbook. When disabled the icon is dimmed and does not navigate.
+ * runbook. When disabled the icon is dimmed and does not navigate. The
+ * tooltip stacks at z-60, above the presets page's z-10 CEL search bar layer.
  */
 export function AlertLinkIconCell({
   columnId,
@@ -43,6 +44,7 @@ export function AlertLinkIconCell({
   return (
     <Tooltip
       asChild
+      className="z-60"
       content={
         <>
           <div className="font-semibold">{action}</div>

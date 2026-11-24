@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import {
   flexRender,
   getCoreRowModel,
@@ -163,6 +163,16 @@ describe("useAlertTableCols rule and runbook icon links", () => {
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
     expect(link.querySelector("img")?.getAttribute("src")).toContain(
       "grafana-icon.png"
+    );
+  });
+
+  it("stacks its tooltip above the presets page's CEL search bar", async () => {
+    render(<GeneratedColumn columnId="runbook_url" value={RUNBOOK_URL} />);
+
+    fireEvent.focus(screen.getByRole("link", { name: "Open runbook" }));
+
+    expect((await screen.findByRole("tooltip")).parentElement).toHaveClass(
+      "z-60"
     );
   });
 
