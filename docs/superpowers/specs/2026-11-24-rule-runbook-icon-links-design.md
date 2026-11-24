@@ -158,3 +158,11 @@ Trade-offs:
   - Other URL columns (`url`, `generatorURL`, `ticket_url`, `playbook_url`) keep full-URL links; they can get icons later using the same component.
   - Values without an `http(s)://` scheme stay plain text. If production rule links turn out to be stored without a scheme, that needs its own decision (whether to add `https://`).
   - A host-based Grafana allowlist (Option B above), only if a non-Grafana source starts filling `alert_rule_url`.
+
+## Revision 2026-11-24 (browser check)
+
+The browser check found three issues. The user made each design call.
+
+1. **The quick-action tray covered the icons.** In the dashboard Alert Table widget, the hover tray (`QuickActionTray`, `absolute right-1`) floats over a row's last cells, and Rule and Runbook are usually the last columns, so a click hit Dismiss or Change Status instead of the link. **Decision: shift the tray left.** When the row's last visible columns before the zero-width row-actions column are link icon columns, the tray sits just left of that contiguous run. Its right offset is the sum of those columns' widths (`column.getSize()`) plus the existing 4px, passed as `rightOffsetPx`. Hidden columns don't count, and a link column followed by another column doesn't count. With no trailing link columns the tray renders exactly as before.
+2. **"Runbook" was truncated in the widget.** Widget columns open at their minimum width, so a 44px Runbook column showed "Run…". **Decision: fit the header.** The widget opens both link columns at 72px (`WIDGET_COLUMN_START_SIZE` in `alert-table-widget-config.ts`) and keeps their 44px minimum, so they can still be dragged down to 44. A saved width still wins. The presets page is unchanged.
+3. **The tooltip was hidden under the presets page's search bar.** On the first row, the CEL editor covered the tooltip's heading: the rules builder sits in a `relative z-10` layer (`alert-preset-manager.tsx`), which stacks above the portaled tooltip, while Monaco's own layers stay inside that layer. **Decision:** `AlertLinkIconCell` alone gives its tooltip `z-60`, the value the presets page's other tooltips already use. The shared `Tooltip` is unchanged.
