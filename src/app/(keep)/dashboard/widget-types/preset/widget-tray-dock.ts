@@ -16,10 +16,15 @@ export interface TrayDockEdges {
   trayLeft: number;
 }
 
-/** The tray's dock, and whether it got there by jumping instead of sliding. */
+/**
+ * The tray's dock, whether it got there by jumping instead of sliding, and
+ * whether it must show icons only so that, docked right, it stays within the
+ * link icon columns.
+ */
 export interface TrayPlacement {
   dock: TrayDock;
   instant: boolean;
+  compact: boolean;
 }
 
 /** Gap, in pixels, between the left-docked tray and the link icon columns. */
@@ -28,7 +33,11 @@ export const TRAY_GAP_PX = 4;
 /** How long, in milliseconds, after a dock change clicks on the tray or the link icons are swallowed. */
 export const DOCK_CLICK_GUARD_MS = 200;
 
-const INITIAL_PLACEMENT: TrayPlacement = { dock: "left", instant: true };
+const INITIAL_PLACEMENT: TrayPlacement = {
+  dock: "left",
+  instant: true,
+  compact: false,
+};
 
 /**
  * The tray's next dock for a pointer at `x`. Docked left, it moves right only
@@ -56,17 +65,14 @@ function isLinkIconCell(cell: Element | null): boolean {
   return columnId !== undefined && isLinkIconColumn(columnId);
 }
 
-/** The row's dock edges, from the row's right edge and the tray's width. */
+/** The row's dock edges, from the row's right edge and the left-docked tray's width. */
 function getDockEdges(
   row: HTMLElement,
-  tray: HTMLElement,
+  trayWidth: number,
   linkColumnsPx: number
 ): TrayDockEdges {
   const linkZoneLeft = row.getBoundingClientRect().right - linkColumnsPx;
-  return {
-    linkZoneLeft,
-    trayLeft: linkZoneLeft - TRAY_GAP_PX - tray.getBoundingClientRect().width,
-  };
+  return { linkZoneLeft, trayLeft: linkZoneLeft - TRAY_GAP_PX - trayWidth };
 }
 
 /**
@@ -118,6 +124,8 @@ function isGuardedTarget(
  * focusing into it by keyboard docks it left. For `DOCK_CLICK_GUARD_MS` after
  * a dock change, clicks on the tray's buttons and the link icons are
  * swallowed, so a click aimed before the move doesn't land on what slid in.
+ * Docked right, the tray turns compact when its left-docked width, measured
+ * on entry, would reach past the link icon columns.
  */
 export function useTrayDock(
   tray: HTMLElement | null,
@@ -132,19 +140,27 @@ export function useTrayDock(
       return;
     }
     let canSlide: boolean | null = null;
+    let trayWidth: number | null = null;
     let changedAt = -Infinity;
+    const leftDockWidth = () => {
+      trayWidth ??= tray.getBoundingClientRect().width;
+      return trayWidth;
+    };
     const place = (dock: TrayDock, instant: boolean) => {
       dockRef.current = dock;
-      setPlacement({ dock, instant });
+      const compact =
+        dock === "right" && leftDockWidth() + TRAY_GAP_PX > linkColumnsPx;
+      setPlacement({ dock, instant, compact });
     };
     const onPointerEnter = (event: PointerEvent) => {
-      const edges = getDockEdges(row, tray, linkColumnsPx);
+      trayWidth = null;
+      const edges = getDockEdges(row, leftDockWidth(), linkColumnsPx);
       canSlide = wouldCoverContent(row, tray, edges.trayLeft);
       const dock = canSlide ? nextTrayDock("left", event.clientX, edges) : "left";
       flushSync(() => place(dock, true));
     };
     const onPointerMove = (event: PointerEvent) => {
-      const edges = getDockEdges(row, tray, linkColumnsPx);
+      const edges = getDockEdges(row, leftDockWidth(), linkColumnsPx);
       if (canSlide === null) {
         canSlide = wouldCoverContent(row, tray, edges.trayLeft);
       }
@@ -159,6 +175,7 @@ export function useTrayDock(
     };
     const onPointerLeave = () => {
       canSlide = null;
+      trayWidth = null;
       place("left", true);
     };
     const onFocusIn = (event: FocusEvent) => {

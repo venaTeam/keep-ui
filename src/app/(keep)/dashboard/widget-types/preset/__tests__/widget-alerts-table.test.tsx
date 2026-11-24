@@ -2245,12 +2245,13 @@ describe("WidgetAlertsTable", () => {
           jest.restoreAllMocks();
         });
 
-        const renderMeasured = ({ covered = true } = {}) => {
+        const renderMeasured = ({ covered = true, trayWidth = 152 } = {}) => {
           renderHarness({ alerts: [ruleAlert], presetColumns });
           const row = rowFor(ruleAlert);
           const tray = trayOf(ruleAlert);
           row.getBoundingClientRect = () => rect(0, ROW_RIGHT);
-          tray.getBoundingClientRect = () => rect(700, 852);
+          tray.getBoundingClientRect = () =>
+            rect(ROW_RIGHT - 148 - trayWidth, ROW_RIGHT - 148);
           row
             .querySelectorAll<HTMLElement>("td[data-column-id]")
             .forEach((cell) => {
@@ -2348,6 +2349,79 @@ describe("WidgetAlertsTable", () => {
           [ON_DESCRIPTION, 120, ON_TRAY, ON_ICONS, ON_DESCRIPTION].forEach((x) => {
             moveTo(row, x);
             expect(trayOf(ruleAlert).style.right).toBe("148px");
+          });
+        });
+
+        describe("compact while docked right", () => {
+          const labels = () =>
+            Array.from(
+              trayOf(ruleAlert).querySelectorAll<HTMLButtonElement>("button")
+            ).map((button) => button.textContent);
+          const FULL = ["Change Status", "Link to incident", "Dismiss"];
+          const ICONS = ["", "", ""];
+
+          it("shows icons only when the full tray is wider than the link columns", () => {
+            const row = renderMeasured({ trayWidth: 152 });
+
+            moveTo(row, ON_DESCRIPTION);
+
+            expect(trayOf(ruleAlert).style.right).toBe("");
+            expect(labels()).toEqual(ICONS);
+            expect(
+              screen.getByRole("button", { name: `Dismiss: ${ruleAlert.name}` })
+            ).toHaveAttribute("title", "Dismiss");
+          });
+
+          it("keeps full labels when the full tray fits over the link columns", () => {
+            const row = renderMeasured({ trayWidth: 140 });
+
+            moveTo(row, ON_DESCRIPTION);
+
+            expect(trayOf(ruleAlert).style.right).toBe("");
+            expect(labels()).toEqual(FULL);
+          });
+
+          it("shows full labels again when it slides back left", () => {
+            const row = renderMeasured({ trayWidth: 152 });
+
+            moveTo(row, ON_DESCRIPTION);
+            moveTo(row, ON_ICONS);
+
+            expect(trayOf(ruleAlert).style.right).toBe("148px");
+            expect(labels()).toEqual(FULL);
+          });
+
+          it("keeps the widget's compact mode while docked left", () => {
+            observeWidth(600);
+            const row = renderMeasured({ trayWidth: 80 });
+
+            moveTo(row, ON_ICONS);
+
+            expect(trayOf(ruleAlert).style.right).toBe("148px");
+            expect(labels()).toEqual(ICONS);
+          });
+
+          it("enters on the description compact at once, without sliding", () => {
+            const row = renderMeasured({ trayWidth: 152 });
+
+            pointer(row, "pointerenter", ON_DESCRIPTION);
+
+            expect(trayOf(ruleAlert).style.right).toBe("");
+            expect(labels()).toEqual(ICONS);
+            expect(trayOf(ruleAlert)).toHaveAttribute("data-instant-placement");
+          });
+
+          it("decides from the full width measured on entry, not the compact one", () => {
+            const row = renderMeasured({ trayWidth: 152 });
+
+            enterAt(row, ON_ICONS);
+            moveTo(row, ON_DESCRIPTION);
+            trayOf(ruleAlert).getBoundingClientRect = () => rect(936, 996);
+            moveTo(row, ON_ICONS);
+            moveTo(row, ON_DESCRIPTION);
+
+            expect(trayOf(ruleAlert).style.right).toBe("");
+            expect(labels()).toEqual(ICONS);
           });
         });
 

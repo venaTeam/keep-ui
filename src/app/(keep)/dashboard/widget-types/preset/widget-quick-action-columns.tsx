@@ -71,8 +71,9 @@ function RowCheckbox({ row }: { row: Row<AlertDto> }) {
 
 /**
  * A row's quick-action tray, hidden while anything is ticked. Over trailing
- * link icon columns it floats left of them, and slides over them while the
- * pointer reads cells it would cover (`useTrayDock`).
+ * link icon columns it floats left of them, and slides over them, compact
+ * when its full labels would not fit there, while the pointer reads cells it
+ * would cover (`useTrayDock`).
  */
 function RowActions({
   alert,
@@ -92,7 +93,7 @@ function RowActions({
     <QuickActionTray
       ref={setTray}
       alert={alert}
-      compact={actions.compact}
+      compact={actions.compact || (linkColumnsPx > 0 && placement.compact)}
       onOpen={actions.onOpenAction}
       rightOffsetPx={
         linkColumnsPx > 0 && placement.dock === "left"
