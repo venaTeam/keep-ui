@@ -12,6 +12,9 @@ export const TRAY_INTENT_MS = 100;
 /** How long, in milliseconds, the tray stays after the pointer leaves the table, before it fades. */
 export const TRAY_LEAVE_MS = 150;
 
+/** How long, in milliseconds, a leaving row's tray and tint take to fade. */
+export const TRAY_FADE_MS = 100;
+
 /**
  * Shows at most one row tray in the table inside `containerRef`, by marking
  * one row `QUICK_ACTIVE_ATTR`:
@@ -22,7 +25,8 @@ export const TRAY_LEAVE_MS = 150;
  * - The pointer back on the active row, its tray included, cancels a pending
  *   switch, so a diagonal move to the tray across the next row keeps it.
  * - The pointer leaving the table deactivates the row after `TRAY_LEAVE_MS`,
- *   marked `QUICK_LEAVING_ATTR` so its tray fades.
+ *   marked `QUICK_LEAVING_ATTR` for the `TRAY_FADE_MS` its tray takes to fade.
+ *   The pointer back on that row meanwhile makes it active again at once.
  * - Keyboard focus in a row (`:focus-visible`) makes it active at once, and
  *   focus leaving the table deactivates it.
  * Nothing is attached while `enabled` is false. Timers, listeners and marks
@@ -42,6 +46,7 @@ export function useTrayHoverIntent(
     let pendingRow: HTMLTableRowElement | null = null;
     let pendingTimer: number | undefined;
     let leaveTimer: number | undefined;
+    let fadeTimer: number | undefined;
 
     const trayOf = (row: HTMLTableRowElement) =>
       row.querySelector<HTMLElement>(`.${QUICK_TRAY_CLASS}`);
@@ -60,6 +65,8 @@ export function useTrayHoverIntent(
       leaveTimer = undefined;
     };
     const clearLeaving = () => {
+      window.clearTimeout(fadeTimer);
+      fadeTimer = undefined;
       leaving?.removeAttribute(QUICK_LEAVING_ATTR);
       leaving = null;
     };
@@ -90,6 +97,7 @@ export function useTrayHoverIntent(
       if (fade) {
         active.setAttribute(QUICK_LEAVING_ATTR, "");
         leaving = active;
+        fadeTimer = window.setTimeout(clearLeaving, TRAY_FADE_MS);
       }
       active = null;
     };
@@ -97,6 +105,10 @@ export function useTrayHoverIntent(
     const onPointerOver = (event: PointerEvent) => {
       cancelLeave();
       const row = rowOf(event.target);
+      if (row !== null && row === leaving) {
+        activate(row);
+        return;
+      }
       if (row === active || row === null) {
         cancelPending();
         return;

@@ -415,6 +415,17 @@ describe("WidgetAlertsTable", () => {
       expect(cellText("firingStartTime")).toEqual(["", "", ""]);
     });
 
+    it("Last Received truncates inside its cell, keeping the full text and the ISO title", () => {
+      renderWidget({ presetColumns: ["name", "lastReceived"] }, [
+        alertWith({ lastReceived: "2026-10-01T10:00:00Z" }),
+      ]);
+
+      const span = cellsOf("lastReceived")[0].querySelector("span")!;
+      expect(span).toHaveClass("block", "truncate");
+      expect(span.textContent).toMatch(/ ago$/);
+      expect(span).toHaveAttribute("title", "2026-10-01T10:00:00.000Z");
+    });
+
     it("a valid date renders through the shared renderer, with its ISO title", () => {
       renderWidget({ presetColumns: ["name", "updatedAt"] }, [
         alertWith({ updatedAt: "2026-10-01T10:00:00Z" }),
@@ -2522,6 +2533,36 @@ describe("WidgetAlertsTable", () => {
         expect(rowFor(rows5[3])).toHaveAttribute("data-quick-leaving");
       });
 
+      it("clears the leaving mark once the fade is over, 250ms after the pointer left", () => {
+        renderHarness({ alerts: rows5 });
+        overRow(rows5[3]);
+        wait(100);
+
+        leaveWidget();
+        wait(249);
+        expect(rowFor(rows5[3])).toHaveAttribute("data-quick-leaving");
+        wait(1);
+
+        expect(rowFor(rows5[3])).not.toHaveAttribute("data-quick-leaving");
+        expect(activeRows()).toHaveLength(0);
+      });
+
+      it("makes a fading row active again at once when the pointer comes back, without the mark", () => {
+        renderHarness({ alerts: rows5 });
+        overRow(rows5[3]);
+        wait(100);
+        leaveWidget();
+        wait(200);
+
+        overRow(rows5[3]);
+
+        expect(activeRows()).toEqual([rowFor(rows5[3])]);
+        expect(rowFor(rows5[3])).not.toHaveAttribute("data-quick-leaving");
+        wait(300);
+        expect(activeRows()).toEqual([rowFor(rows5[3])]);
+        expect(rowFor(rows5[3])).not.toHaveAttribute("data-quick-leaving");
+      });
+
       it("keeps the tray when the pointer comes back before the 150ms are up", () => {
         renderHarness({ alerts: rows5 });
         overRow(rows5[3]);
@@ -2555,6 +2596,18 @@ describe("WidgetAlertsTable", () => {
         wait(100);
         overRow(rows5[1]);
         leaveWidget();
+
+        unmount();
+
+        expect(jest.getTimerCount()).toBe(0);
+      });
+
+      it("leaves no timer running after unmount mid-fade", () => {
+        const { unmount } = renderHarness({ alerts: rows5 });
+        overRow(rows5[0]);
+        wait(100);
+        leaveWidget();
+        wait(160);
 
         unmount();
 
