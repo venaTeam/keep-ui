@@ -140,6 +140,28 @@ describe("quick-actions.css tray", () => {
     });
   });
 
+  it.each([
+    ["has its dialog open", (cell: HTMLElement) => cell.insertAdjacentHTML("beforeend", '<span data-quick-open hidden></span>')],
+    ["is ticked", (cell: HTMLElement) => {
+      const box = cell.querySelector("input")!;
+      box.classList.add("quick-pick");
+      (box as HTMLInputElement).checked = true;
+    }],
+  ])("keeps the orange highlight over the tint on an active row that %s", (_state, mark) => {
+    activate("first");
+    mark(cellsOf("first")[0]);
+
+    cellsOf("first")
+      .slice(0, 2)
+      .forEach((cell) =>
+        expect(computed(cell).backgroundColor).toBe("rgb(255, 247, 237)")
+      );
+    const highlightRule = ruleFor(
+      `.${QUICK_ACTIONS_TABLE_CLASS} tr[${QUICK_ACTIVE_ATTR}]:has([data-quick-open]) > td`
+    );
+    expect(highlightRule.style.background).toBe("#fff7ed");
+  });
+
   it("hangs the active row's tray below it as a tab: the row's tint, outlined except on top, rounded at the bottom, over the row's bottom line", () => {
     activate("first");
     const tray = computed(trayOf("first"));

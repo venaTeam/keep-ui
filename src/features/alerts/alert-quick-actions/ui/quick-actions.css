@@ -1,4 +1,4 @@
-/* Alert Table widget quick actions: hover-revealed checkboxes; the tray of the one active row (data-quick-active, set by the table's hover intent), drawn as a tab growing out of its tinted, outlined row, below, above or inside it by its data-placement, parked inside the row while hidden so it adds no scrollable overflow, its cell raised over the sticky cells' z-index 40; the fade of a row the pointer left (data-quick-leaving); and the ticked or open row highlight, which wins over the tint. */
+/* Alert Table widget quick actions: hover-revealed checkboxes; the tray of the one active row (data-quick-active, set by the table's hover intent), drawn as a tab growing out of its tinted, outlined row, below, above or inside it by its data-placement, parked inside the row while hidden so it adds no scrollable overflow, its cell raised over the sticky cells' z-index 40; the fade of a row the pointer left (data-quick-leaving); and the ticked or open row highlight, which wins over the tint: on the active row its selector also carries data-quick-active, so it is more specific than the tint's. */
 .quick-actions-table .quick-reveal {
   opacity: 0;
   transition: opacity 0.12s;
@@ -84,6 +84,8 @@
 }
 
 .quick-actions-table tr:has(.quick-pick:checked) > td,
-.quick-actions-table tr:has([data-quick-open]) > td {
+.quick-actions-table tr:has([data-quick-open]) > td,
+.quick-actions-table tr[data-quick-active]:has(.quick-pick:checked) > td,
+.quick-actions-table tr[data-quick-active]:has([data-quick-open]) > td {
   background: #fff7ed;
 }
