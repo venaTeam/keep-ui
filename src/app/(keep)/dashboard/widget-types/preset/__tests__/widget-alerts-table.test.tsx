@@ -2396,14 +2396,30 @@ describe("WidgetAlertsTable", () => {
           alert_rule_url: "https://grafana-olly.com/alerting/grafana/x/view",
           runbook_url: "https://wiki.ops.internal/runbooks/x",
         });
-        const widthOfCells = (widths: Record<string, number>) =>
+        const widthOfCells = (widths: Record<string, number>) => {
+          let left = 0;
           rowFor(linkAlert)
             .querySelectorAll<HTMLElement>("td[data-column-id]")
             .forEach((cell) => {
-              const width = widths[cell.dataset.columnId!] ?? 100;
-              cell.getBoundingClientRect = () =>
-                ({ ...rect(40, 72), width }) as DOMRect;
+              const columnId = cell.dataset.columnId!;
+              const width =
+                widths[columnId] ?? (columnId === "alertMenu" ? 0 : 100);
+              const cellRect = {
+                ...rect(40, 72),
+                left,
+                right: left + width,
+                width,
+              } as DOMRect;
+              cell.getBoundingClientRect = () => cellRect;
+              left += width;
             });
+        };
+        const scrollerWithRight = (right: number) => {
+          const scroller = widgetRoot();
+          scroller.style.overflowX = "auto";
+          scroller.getBoundingClientRect = () =>
+            ({ ...rect(0, 400), left: 0, right, width: right }) as DOMRect;
+        };
 
         it("ends the tab where the trailing link columns start", () => {
           renderHarness({
@@ -2415,6 +2431,42 @@ describe("WidgetAlertsTable", () => {
           enter(linkAlert);
 
           expect(trayOf(linkAlert)!.style.right).toBe("168px");
+        });
+
+        it("counts only the part of the link columns the table shows when it is scrolled", () => {
+          renderHarness({
+            alerts: [linkAlert],
+            presetColumns: ["name", "alert_rule_url", "runbook_url"],
+          });
+          widthOfCells({ checkbox: 28, alert_rule_url: 72, runbook_url: 96 });
+          scrollerWithRight(250);
+
+          enter(linkAlert);
+
+          expect(trayOf(linkAlert)!.style.right).toBe("122px");
+        });
+
+        it("places the tab again when the table scrolls or the window resizes", () => {
+          renderHarness({
+            alerts: [linkAlert],
+            presetColumns: ["name", "alert_rule_url", "runbook_url"],
+          });
+          widthOfCells({ checkbox: 28, alert_rule_url: 72, runbook_url: 96 });
+          scrollerWithRight(400);
+          enter(linkAlert);
+          expect(trayOf(linkAlert)!.style.right).toBe("168px");
+
+          scrollerWithRight(250);
+          act(() => {
+            widgetRoot().dispatchEvent(new Event("scroll"));
+          });
+          expect(trayOf(linkAlert)!.style.right).toBe("122px");
+
+          scrollerWithRight(220);
+          act(() => {
+            window.dispatchEvent(new Event("resize"));
+          });
+          expect(trayOf(linkAlert)!.style.right).toBe("92px");
         });
 
         it("keeps the tab at the row's right end without trailing link columns", () => {

@@ -42,6 +42,9 @@ export const TRAY_FADE_MS = 100;
  *   deactivated: a deactivation asked for meanwhile waits until the dialog
  *   closes, and is dropped if focus came back into the row or the row is
  *   hovered.
+ * - While a row is active, its tray is placed again when anything holding the
+ *   row scrolls (the rows area, the table's wrapper, the page) and when the
+ *   window resizes.
  * Nothing is attached while `enabled` is false. Timers, listeners and marks
  * are cleared when it turns false or the table unmounts.
  */
@@ -209,6 +212,17 @@ export function useTrayHoverIntent(
         deactivate(false);
       }
     };
+    const placeActiveAgain = () => {
+      const tray = active && trayOf(active);
+      if (active && tray) {
+        placeTray(active, tray);
+      }
+    };
+    const onScroll = (event: Event) => {
+      if (event.target instanceof Node && active && event.target.contains(active)) {
+        placeActiveAgain();
+      }
+    };
     const onFocusOut = (event: FocusEvent) => {
       const next = event.relatedTarget;
       if (!(next instanceof Node) || !container.contains(next)) {
@@ -221,8 +235,12 @@ export function useTrayHoverIntent(
     container.addEventListener("focusin", onFocusIn);
     container.addEventListener("focusout", onFocusOut);
     document.addEventListener("pointerdown", onPointerDown, true);
+    document.addEventListener("scroll", onScroll, true);
+    window.addEventListener("resize", placeActiveAgain);
     return () => {
       document.removeEventListener("pointerdown", onPointerDown, true);
+      document.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("resize", placeActiveAgain);
       container.removeEventListener("pointerover", onPointerOver);
       container.removeEventListener("pointerleave", onPointerLeave);
       container.removeEventListener("focusin", onFocusIn);

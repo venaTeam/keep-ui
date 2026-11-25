@@ -37,13 +37,38 @@ export function getTrayPlacement({
 }
 
 /**
- * Rendered width, in pixels, of the run of link icon cells (Rule, Runbook)
- * that ends `row`, not counting the tray's own cell; 0 when there is none.
+ * The visible horizontal band around `element`: the viewport, cut by every
+ * ancestor up to the widget card whose horizontal overflow is not visible,
+ * such as the table's `overflow-x-auto` wrapper the tray's cell sticks to.
+ */
+function getHorizontalClip(element: HTMLElement): { left: number; right: number } {
+  let left = 0;
+  let right = window.innerWidth;
+  for (let node = element.parentElement; node; node = node.parentElement) {
+    const { overflowX } = getComputedStyle(node);
+    if (overflowX !== "" && overflowX !== "visible") {
+      const rect = node.getBoundingClientRect();
+      left = Math.max(left, rect.left);
+      right = Math.min(right, rect.right);
+    }
+    if (node.matches(WIDGET_CARD_SELECTOR)) {
+      break;
+    }
+  }
+  return { left, right };
+}
+
+/**
+ * Visible width, in pixels, of the run of link icon cells (Rule, Runbook)
+ * that ends `row`, not counting the tray's own cell: each cell's part inside
+ * the row's horizontal clip (`getHorizontalClip`), so a table scrolled short
+ * of its right end counts only what it shows; 0 when there is none.
  */
 function getTrailingLinkCellsWidth(
   row: HTMLTableRowElement,
   tray: HTMLElement
 ): number {
+  const clip = getHorizontalClip(row);
   let width = 0;
   const cells = Array.from(row.cells);
   for (let index = cells.length - 1; index >= 0; index -= 1) {
@@ -55,7 +80,11 @@ function getTrailingLinkCellsWidth(
     if (columnId === undefined || !isLinkIconColumn(columnId)) {
       break;
     }
-    width += cell.getBoundingClientRect().width;
+    const rect = cell.getBoundingClientRect();
+    width += Math.max(
+      0,
+      Math.min(rect.right, clip.right) - Math.max(rect.left, clip.left)
+    );
   }
   return width;
 }
