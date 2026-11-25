@@ -69,6 +69,8 @@ import {
   QUICK_ACTION_COLUMNS,
   ROW_ACTIONS_COLUMN_ID,
 } from "./widget-quick-action-columns";
+import { useFittedLinkColumns } from "./widget-link-column-fit";
+import { useTrayHoverIntent } from "./widget-tray-intent";
 import {
   WidgetRowActions,
   WidgetRowActionsContext,
@@ -220,6 +222,7 @@ function WidgetAlertsTableContent({
   const isNarrow = containerWidth !== null && containerWidth < NARROW_WIDGET_PX;
   const isTrayCompact =
     containerWidth !== null && containerWidth < QUICK_TRAY_COMPACT_PX;
+  const headersInteractive = isEditMode && !!onChange && !isNarrow;
 
   const { columns, allColumnIds } = useWidgetAlertColumns({
     item,
@@ -288,10 +291,16 @@ function WidgetAlertsTableContent({
     () => fullColumnOrder.filter((id) => columnVisibility[id]),
     [fullColumnOrder, columnVisibility]
   );
+  const sizedColumns = useFittedLinkColumns(
+    columns,
+    visibleColumnOrder,
+    tableRef,
+    headersInteractive
+  );
   const layout = useMemo(
     () =>
       getWidgetColumnLayout({
-        columns,
+        columns: sizedColumns,
         visibleOrder: visibleColumnOrder,
         savedSizing,
         containerWidth:
@@ -301,7 +310,7 @@ function WidgetAlertsTableContent({
         shrinkAllowance: chrome ? CHECKBOX_COLUMN_PX : 0,
       }),
     [
-      columns,
+      sizedColumns,
       visibleColumnOrder,
       savedSizing,
       containerWidth,
@@ -313,18 +322,21 @@ function WidgetAlertsTableContent({
   const layoutColumns = useMemo(
     () =>
       withUnclampedColumns(
-        columns,
+        sizedColumns,
         JSON.parse(unclampedIdsKey),
         layout.shrunkColumnId
       ),
-    [columns, unclampedIdsKey, layout.shrunkColumnId]
+    [sizedColumns, unclampedIdsKey, layout.shrunkColumnId]
   );
   const columnBounds = useMemo(
     () =>
       new Map(
-        columns.map((column) => [column.id as string, getColumnBounds(column)])
+        sizedColumns.map((column) => [
+          column.id as string,
+          getColumnBounds(column),
+        ])
       ),
-    [columns]
+    [sizedColumns]
   );
 
   const tableSetup = useMemo(
@@ -387,8 +399,8 @@ function WidgetAlertsTableContent({
 
   const { columnTimeFormats, columnListFormats } = state;
   const tableMeta = useMemo(
-    () => ({ columnTimeFormats, columnListFormats }),
-    [columnTimeFormats, columnListFormats]
+    () => ({ columnTimeFormats, columnListFormats, linksDisabled: isEditMode }),
+    [columnTimeFormats, columnListFormats, isEditMode]
   );
 
   const table = useReactTable({
@@ -460,6 +472,7 @@ function WidgetAlertsTableContent({
         : null,
     [chromeSelection, isSelecting, isTrayCompact, onPick]
   );
+  useTrayHoverIntent(wrapperRef, chrome && !isSelecting);
 
   const setVisibleColumnOrder = useCallback(
     (order: string[]) =>
@@ -560,7 +573,7 @@ function WidgetAlertsTableContent({
               setColumnVisibility={state.setColumnVisibility}
               columnRenameMapping={renames}
               setColumnRenameMapping={state.setColumnRenameMapping}
-              interactive={isEditMode && !!onChange && !isNarrow}
+              interactive={headersInteractive}
               showSortItems={false}
               showFormatItems={isEditMode}
               canFormatAsList={isJsonStringListColumn}

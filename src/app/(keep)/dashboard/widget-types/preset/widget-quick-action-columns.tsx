@@ -7,6 +7,7 @@ import {
   QUICK_OPEN_ATTR,
   QUICK_PICK_CLASS,
   QUICK_REVEAL_CLASS,
+  QUICK_TRAY_CELL_CLASS,
   QuickActionTray,
 } from "@/features/alerts/alert-quick-actions";
 import { WidgetRowActionsContext } from "./widget-row-actions-context";
@@ -48,7 +49,10 @@ function RowCheckbox({ row }: { row: Row<AlertDto> }) {
   );
 }
 
-/** A row's quick-action tray, hidden while anything is ticked. */
+/**
+ * A row's quick-action tray, hidden while anything is ticked. The table's
+ * hover intent (`useTrayHoverIntent`) shows and places it.
+ */
 function RowActions({ alert }: { alert: AlertDto }) {
   const actions = useContext(WidgetRowActionsContext);
   if (!actions || actions.isSelecting) {
@@ -66,7 +70,7 @@ function RowActions({ alert }: { alert: AlertDto }) {
 /**
  * The Alert Table widget's selection chrome columns: a 28 px checkbox gutter
  * with a select-all-shown header, and a zero-width row-actions column whose
- * tray floats over the row's last cells. They read `WidgetRowActionsContext`
+ * tray hangs from the row's right end. They read `WidgetRowActionsContext`
  * and are never part of the widget's saved columns.
  */
 export const QUICK_ACTION_COLUMNS: {
@@ -99,7 +103,7 @@ export const QUICK_ACTION_COLUMNS: {
     header: () => null,
     cell: ({ row }) => <RowActions alert={row.original} />,
     meta: {
-      tdClassName: "!p-0 !w-0 overflow-visible",
+      tdClassName: clsx(QUICK_TRAY_CELL_CLASS, "!p-0 !w-0 overflow-visible"),
       thClassName: "!p-0 !w-0",
     },
   },

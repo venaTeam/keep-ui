@@ -73,6 +73,8 @@ jest.mock("@/utils/hooks/useProviders", () => ({
   useProviders: () => ({ data: undefined }),
 }));
 
+jest.mock("react-icons/md", () => jest.requireActual("react-icons/md"));
+
 jest.mock("@/utils/hooks/useConfig", () => ({
   useConfig: jest.fn(() => ({ data: {} })),
   useApiUrl: () => "http://localhost:8080",
@@ -413,6 +415,17 @@ describe("WidgetAlertsTable", () => {
       expect(cellText("firingStartTime")).toEqual(["", "", ""]);
     });
 
+    it("Last Received truncates inside its cell, keeping the full text and the ISO title", () => {
+      renderWidget({ presetColumns: ["name", "lastReceived"] }, [
+        alertWith({ lastReceived: "2026-10-01T10:00:00Z" }),
+      ]);
+
+      const span = cellsOf("lastReceived")[0].querySelector("span")!;
+      expect(span).toHaveClass("block", "truncate");
+      expect(span.textContent).toMatch(/ ago$/);
+      expect(span).toHaveAttribute("title", "2026-10-01T10:00:00.000Z");
+    });
+
     it("a valid date renders through the shared renderer, with its ISO title", () => {
       renderWidget({ presetColumns: ["name", "updatedAt"] }, [
         alertWith({ updatedAt: "2026-10-01T10:00:00Z" }),
@@ -739,6 +752,112 @@ describe("WidgetAlertsTable", () => {
       expect(widthOf("lastReceived")).toBe("80px");
       expect(widthOf("assignee")).toBe("100px");
       expect(widthOf("service")).toBe("100px");
+    });
+
+    it.each(["alert_rule_url", "runbook_url"])(
+      "opens %s at 72px and keeps its 44px minimum",
+      (columnId) => {
+        const { result } = renderHook(() =>
+          useWidgetAlertColumns({
+            item: {
+              ...baseItem,
+              presetColumns: ["name", "alert_rule_url", "runbook_url"],
+            },
+            alerts: [alertWith()],
+            presetName: "link-start-size",
+          })
+        );
+        const column = result.current.columns.find(
+          (candidate) => candidate.id === columnId
+        )!;
+
+        expect([column.size, column.minSize]).toEqual([72, 44]);
+      }
+    );
+
+    it("renders the rule and runbook columns at 72px, and a saved width wins", () => {
+      const presetColumns = ["name", "alert_rule_url", "runbook_url"];
+      const { unmount } = renderWidget({ presetColumns });
+
+      expect(widthOf("alert_rule_url")).toBe("72px");
+      expect(widthOf("runbook_url")).toBe("72px");
+      unmount();
+
+      renderWidget({
+        presetColumns,
+        alertTable: { columnSizing: { runbook_url: 50 } },
+      });
+      expect(widthOf("runbook_url")).toBe("50px");
+    });
+
+    describe("link column headers at a scaled text size", () => {
+      const presetColumns = ["name", "alert_rule_url", "runbook_url"];
+      const JSDOM_BUTTON_PADDING_PX = 12;
+      const mockRunbookLabelWidth = (width: number) =>
+        jest
+          .spyOn(HTMLElement.prototype, "scrollWidth", "get")
+          .mockImplementation(function (this: HTMLElement) {
+            return this.tagName === "SPAN" && this.textContent === "Runbook"
+              ? width
+              : 0;
+          });
+
+      afterEach(() => {
+        jest.restoreAllMocks();
+      });
+
+      it("opens a link column at its header label plus padding and 1px, past 72px", () => {
+        mockRunbookLabelWidth(104);
+        renderWidget({ presetColumns });
+
+        expect(widthOf("runbook_url")).toBe(
+          `${104 + JSDOM_BUTTON_PADDING_PX + 1}px`
+        );
+        expect(widthOf("alert_rule_url")).toBe("72px");
+      });
+
+      it("keeps 72px for a header that fits", () => {
+        mockRunbookLabelWidth(50);
+        renderWidget({ presetColumns });
+
+        expect(widthOf("runbook_url")).toBe("72px");
+      });
+
+      it("makes room for the header's edit-mode menu", () => {
+        const MENU_WIDTH = 37;
+        mockRunbookLabelWidth(104);
+        const original = HTMLElement.prototype.getBoundingClientRect;
+        jest
+          .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+          .mockImplementation(function (this: HTMLElement) {
+            const header = this.parentElement;
+            const isRunbookMenu =
+              header?.dataset.cy === "alerts-header-runbook_url" &&
+              !this.querySelector("span") &&
+              !this.dataset.testid?.startsWith("drag-handle-");
+            return isRunbookMenu
+              ? ({ width: MENU_WIDTH, height: 16, top: 0, left: 0, right: MENU_WIDTH, bottom: 16 } as DOMRect)
+              : original.call(this);
+          });
+        renderWidget({ presetColumns }, undefined, {
+          isEditMode: true,
+          onChange: jest.fn(),
+        });
+
+        expect(widthOf("runbook_url")).toBe(
+          `${104 + JSDOM_BUTTON_PADDING_PX + MENU_WIDTH + 1}px`
+        );
+      });
+
+      it("keeps a saved width", () => {
+        mockRunbookLabelWidth(104);
+        renderWidget({
+          presetColumns,
+          alertTable: { columnSizing: { runbook_url: 50 } },
+        });
+
+        expect(widthOf("runbook_url")).toBe("50px");
+      });
     });
 
     it("a saved width overrides the minimum", () => {
@@ -2053,6 +2172,7 @@ describe("WidgetAlertsTable", () => {
       settingsSlot?: HTMLElement;
       initial?: RowSelectionState;
       openFingerprint?: string | null;
+      presetColumns?: string[];
     };
 
     function Harness({
@@ -2063,6 +2183,7 @@ describe("WidgetAlertsTable", () => {
       settingsSlot,
       initial = {},
       openFingerprint = null,
+      presetColumns,
     }: HarnessOptions) {
       const [rowSelection, setRowSelection] =
         React.useState<RowSelectionState>(initial);
@@ -2074,6 +2195,7 @@ describe("WidgetAlertsTable", () => {
           <WidgetAlertsTable
             item={{
               ...baseItem,
+              ...(presetColumns ? { presetColumns } : {}),
               ...(groupBy
                 ? { alertTable: { groupBy, emptyGroupPosition: "top" } }
                 : {}),
@@ -2128,6 +2250,670 @@ describe("WidgetAlertsTable", () => {
       expect(screen.queryByRole("checkbox")).toBeNull();
       expect(document.querySelector('[data-column-id="alertMenu"]')).toBeNull();
       expect(widgetRoot()).not.toHaveClass("quick-actions-table");
+    });
+
+    describe("rule and runbook icon links", () => {
+      const ruleAlert = alertWith({
+        alert_rule_url:
+          "https://grafana-olly.com/alerting/grafana/aef3k2pq/view?orgId=1",
+        runbook_url: "https://wiki.ops.internal/runbooks/high-cpu-usage",
+      });
+      const presetColumns = ["name", "alert_rule_url", "runbook_url"];
+
+      it("renders the Grafana icon link under a Rule header, and a click leaves the row alone", () => {
+        renderHarness({ alerts: [ruleAlert], presetColumns });
+
+        expect(screen.getByTestId("header-cell-alert_rule_url")).toHaveTextContent(
+          /^Rule$/
+        );
+        expect(screen.getByTestId("header-cell-runbook_url")).toHaveTextContent(
+          /^Runbook$/
+        );
+        const link = screen.getByRole("link", {
+          name: "Open alert rule in Grafana",
+        });
+        const reachedDocument = jest.fn((event: Event) => event.preventDefault());
+        document.addEventListener("click", reachedDocument);
+        fireEvent.click(link);
+        document.removeEventListener("click", reachedDocument);
+
+        expect(reachedDocument).not.toHaveBeenCalled();
+        expect(onRowSelectionChange).not.toHaveBeenCalled();
+        expect(onOpenAction).not.toHaveBeenCalled();
+      });
+
+      it("renders the icons dimmed and disabled, without an href, in edit mode", () => {
+        renderHarness({ alerts: [ruleAlert], presetColumns, isEditMode: true });
+
+        expect(document.querySelector("[data-cy^='alert-link-icon-'][href]")).toBeNull();
+        expect(
+          screen.getByRole("link", { name: "Open alert rule in Grafana" })
+        ).toHaveAttribute("aria-disabled", "true");
+      });
+    });
+
+    describe("tray placement", () => {
+      const trayOf = (alert: AlertDto) =>
+        rowFor(alert).querySelector<HTMLElement>(".quick-tray");
+      const rect = (top: number, bottom: number) =>
+        ({ top, bottom, left: 0, right: 600, width: 600, height: bottom - top }) as DOMRect;
+
+      const clipWith = (
+        element: HTMLElement,
+        top: number,
+        bottom: number,
+        overflows: boolean
+      ) => {
+        element.style.overflowY = "auto";
+        element.getBoundingClientRect = () => rect(top, bottom);
+        Object.defineProperty(element, "clientHeight", {
+          configurable: true,
+          value: bottom - top,
+        });
+        Object.defineProperty(element, "scrollHeight", {
+          configurable: true,
+          value: bottom - top + (overflows ? 40 : 0),
+        });
+      };
+
+      const renderInCard = ({
+        cardTop = 0,
+        cardBottom = 400,
+        innerBottom = 400,
+        innerOverflows = false,
+      } = {}) => {
+        const view = renderHarness({ alerts: [a1, a2] });
+        view.container.setAttribute("data-cy", "dashboard-widget-preset");
+        clipWith(view.container, cardTop, cardBottom, false);
+        clipWith(widgetRoot(), 0, innerBottom, innerOverflows);
+        rowFor(a1).getBoundingClientRect = () => rect(40, 72);
+        rowFor(a2).getBoundingClientRect = () => rect(72, 104);
+        [a1, a2].forEach((alert) => {
+          trayOf(alert)!.getBoundingClientRect = () => rect(0, 28);
+        });
+      };
+      const enter = (alert: AlertDto) =>
+        act(() => {
+          checkboxFor(alert).focus();
+        });
+
+      it("hangs the tray from the row's bottom edge, at its right end", () => {
+        renderInCard();
+
+        enter(a1);
+
+        const tray = trayOf(a1)!;
+        expect(tray).toHaveAttribute("data-placement", "below");
+        expect(tray).toHaveClass("absolute", "right-1");
+        expect(tray.closest("td")).toHaveAttribute("data-column-id", "alertMenu");
+      });
+
+      it("flips above the last visible row when the widget card clips, past a scroller that doesn't", () => {
+        renderInCard({ cardBottom: 120, innerBottom: 400 });
+
+        enter(a1);
+        enter(a2);
+
+        expect(trayOf(a1)).toHaveAttribute("data-placement", "below");
+        expect(trayOf(a2)).toHaveAttribute("data-placement", "above");
+      });
+
+      it("flips above when an inner scroller that overflows clips the row", () => {
+        renderInCard({ cardBottom: 400, innerBottom: 120, innerOverflows: true });
+
+        enter(a2);
+
+        expect(trayOf(a2)).toHaveAttribute("data-placement", "above");
+      });
+
+      it("flips above when an inner scroller clips the row, overflowing or not", () => {
+        renderInCard({ cardBottom: 400, innerBottom: 120, innerOverflows: false });
+
+        enter(a2);
+
+        expect(trayOf(a2)).toHaveAttribute("data-placement", "above");
+      });
+
+      it("ignores ancestors whose vertical overflow is visible", () => {
+        renderInCard({ cardBottom: 400, innerBottom: 120 });
+        widgetRoot().style.overflowY = "visible";
+
+        enter(a2);
+
+        expect(trayOf(a2)).toHaveAttribute("data-placement", "below");
+      });
+
+      it("sits inside the row when neither below nor above fits, as in a 1-row widget", () => {
+        renderInCard({ cardTop: 60, cardBottom: 120 });
+
+        enter(a2);
+
+        expect(trayOf(a2)).toHaveAttribute("data-placement", "inside");
+      });
+
+      describe("beside trailing link columns", () => {
+        const linkAlert = alertWith({
+          alert_rule_url: "https://grafana-olly.com/alerting/grafana/x/view",
+          runbook_url: "https://wiki.ops.internal/runbooks/x",
+        });
+        const widthOfCells = (widths: Record<string, number>) => {
+          let left = 0;
+          rowFor(linkAlert)
+            .querySelectorAll<HTMLElement>("td[data-column-id]")
+            .forEach((cell) => {
+              const columnId = cell.dataset.columnId!;
+              const width =
+                widths[columnId] ?? (columnId === "alertMenu" ? 0 : 100);
+              const cellRect = {
+                ...rect(40, 72),
+                left,
+                right: left + width,
+                width,
+              } as DOMRect;
+              cell.getBoundingClientRect = () => cellRect;
+              left += width;
+            });
+        };
+        const scrollerWithRight = (right: number) => {
+          const scroller = widgetRoot();
+          scroller.style.overflowX = "auto";
+          scroller.getBoundingClientRect = () =>
+            ({ ...rect(0, 400), left: 0, right, width: right }) as DOMRect;
+        };
+
+        it("ends the tab where the trailing link columns start", () => {
+          renderHarness({
+            alerts: [linkAlert],
+            presetColumns: ["name", "alert_rule_url", "runbook_url"],
+          });
+          widthOfCells({ alert_rule_url: 72, runbook_url: 96 });
+
+          enter(linkAlert);
+
+          expect(trayOf(linkAlert)!.style.right).toBe("168px");
+        });
+
+        it("counts only the part of the link columns the table shows when it is scrolled", () => {
+          renderHarness({
+            alerts: [linkAlert],
+            presetColumns: ["name", "alert_rule_url", "runbook_url"],
+          });
+          widthOfCells({ checkbox: 28, alert_rule_url: 72, runbook_url: 96 });
+          scrollerWithRight(250);
+
+          enter(linkAlert);
+
+          expect(trayOf(linkAlert)!.style.right).toBe("122px");
+        });
+
+        it("places the tab again when the table scrolls or the window resizes", () => {
+          renderHarness({
+            alerts: [linkAlert],
+            presetColumns: ["name", "alert_rule_url", "runbook_url"],
+          });
+          widthOfCells({ checkbox: 28, alert_rule_url: 72, runbook_url: 96 });
+          scrollerWithRight(400);
+          enter(linkAlert);
+          expect(trayOf(linkAlert)!.style.right).toBe("168px");
+
+          scrollerWithRight(250);
+          act(() => {
+            widgetRoot().dispatchEvent(new Event("scroll"));
+          });
+          expect(trayOf(linkAlert)!.style.right).toBe("122px");
+
+          scrollerWithRight(220);
+          act(() => {
+            window.dispatchEvent(new Event("resize"));
+          });
+          expect(trayOf(linkAlert)!.style.right).toBe("92px");
+        });
+
+        it("places the tab again once the layout settles, from a ResizeObserver on the wrapper and link cells", () => {
+          const observers: {
+            callback: ResizeObserverCallback;
+            targets: Element[];
+          }[] = [];
+          window.ResizeObserver = class {
+            private readonly entry: {
+              callback: ResizeObserverCallback;
+              targets: Element[];
+            };
+            constructor(callback: ResizeObserverCallback) {
+              this.entry = { callback, targets: [] };
+              observers.push(this.entry);
+            }
+            observe(target: Element) {
+              this.entry.targets.push(target);
+            }
+            unobserve() {}
+            disconnect() {
+              this.entry.targets = [];
+            }
+          } as unknown as typeof ResizeObserver;
+          renderHarness({
+            alerts: [linkAlert],
+            presetColumns: ["name", "alert_rule_url", "runbook_url"],
+          });
+          widthOfCells({ checkbox: 28, alert_rule_url: 72, runbook_url: 96 });
+          scrollerWithRight(400);
+          enter(linkAlert);
+          const ruleCell = rowFor(linkAlert).querySelector(
+            'td[data-column-id="alert_rule_url"]'
+          )!;
+          const trayObserver = observers.find(
+            (observer) =>
+              observer.targets.includes(widgetRoot()) &&
+              observer.targets.includes(ruleCell)
+          )!;
+          expect(trayObserver).toBeDefined();
+
+          scrollerWithRight(250);
+          act(() => {
+            trayObserver.callback([], {} as ResizeObserver);
+          });
+
+          expect(trayOf(linkAlert)!.style.right).toBe("122px");
+        });
+
+        it("keeps the tab at the row's right end without trailing link columns", () => {
+          renderHarness({
+            alerts: [linkAlert],
+            presetColumns: ["name", "alert_rule_url", "runbook_url", "service"],
+          });
+          widthOfCells({ alert_rule_url: 72, runbook_url: 96 });
+
+          enter(linkAlert);
+
+          expect(trayOf(linkAlert)!.style.right).toBe("");
+          expect(trayOf(linkAlert)).toHaveClass("right-1");
+        });
+      });
+
+      it("places the tray in the same step that makes its row active", () => {
+        jest.useFakeTimers();
+        try {
+          renderInCard({ cardBottom: 120 });
+          const tray = trayOf(a2)!;
+          rowFor(a2).firstElementChild!.dispatchEvent(
+            new MouseEvent("pointerover", { bubbles: true })
+          );
+
+          expect(tray).not.toHaveAttribute("data-placement");
+          jest.advanceTimersByTime(100);
+          expect(rowFor(a2)).toHaveAttribute("data-quick-active");
+          expect(tray).toHaveAttribute("data-placement", "above");
+        } finally {
+          jest.useRealTimers();
+        }
+      });
+
+      it("renders no tray in edit mode", () => {
+        renderHarness({ alerts: [a1, a2], isEditMode: true });
+
+        expect(document.querySelector(".quick-tray")).toBeNull();
+      });
+    });
+
+    describe("hover intent", () => {
+      const rows5 = [alertWith(), alertWith(), alertWith(), alertWith(), alertWith()];
+      const activeRows = () =>
+        Array.from(document.querySelectorAll("tr[data-quick-active]"));
+      const over = (element: Element) =>
+        element.dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
+      const overRow = (alert: AlertDto) => over(rowFor(alert).firstElementChild!);
+      const leaveWidget = () =>
+        widgetRoot().dispatchEvent(new MouseEvent("pointerleave"));
+      const wait = (ms: number) => jest.advanceTimersByTime(ms);
+      const trayIn = (alert: AlertDto) =>
+        rowFor(alert).querySelector<HTMLElement>(".quick-tray")!;
+
+      beforeEach(() => {
+        jest.useFakeTimers();
+      });
+
+      afterEach(() => {
+        jest.useRealTimers();
+      });
+
+      it("shows no tray during a sweep that spends under 100ms on each row", () => {
+        renderHarness({ alerts: rows5 });
+
+        rows5.forEach((alert) => {
+          overRow(alert);
+          wait(80);
+          expect(activeRows()).toHaveLength(0);
+        });
+        over(widgetRoot());
+        wait(200);
+        expect(activeRows()).toHaveLength(0);
+      });
+
+      it("makes the row active after resting on it for 100ms, and only that row", () => {
+        renderHarness({ alerts: rows5 });
+
+        overRow(rows5[2]);
+        wait(99);
+        expect(activeRows()).toHaveLength(0);
+        wait(1);
+
+        expect(activeRows()).toEqual([rowFor(rows5[2])]);
+      });
+
+      it("hands over to the next row in one step, with no overlap", () => {
+        renderHarness({ alerts: rows5 });
+        overRow(rows5[0]);
+        wait(100);
+
+        overRow(rows5[1]);
+        wait(99);
+        expect(activeRows()).toEqual([rowFor(rows5[0])]);
+        wait(1);
+
+        expect(activeRows()).toEqual([rowFor(rows5[1])]);
+        expect(rowFor(rows5[0])).not.toHaveAttribute("data-quick-leaving");
+      });
+
+      it("keeps the tray when the pointer crosses the next row on its way to the tab", () => {
+        renderHarness({ alerts: rows5 });
+        overRow(rows5[0]);
+        wait(100);
+
+        overRow(rows5[1]);
+        wait(60);
+        over(trayIn(rows5[0]).querySelector("button")!);
+        wait(200);
+
+        expect(activeRows()).toEqual([rowFor(rows5[0])]);
+      });
+
+      it("hides the tray 150ms after the pointer leaves the widget, with a fade", () => {
+        renderHarness({ alerts: rows5 });
+        overRow(rows5[3]);
+        wait(100);
+
+        leaveWidget();
+        wait(149);
+        expect(activeRows()).toEqual([rowFor(rows5[3])]);
+        wait(1);
+
+        expect(activeRows()).toHaveLength(0);
+        expect(rowFor(rows5[3])).toHaveAttribute("data-quick-leaving");
+      });
+
+      it("clears the leaving mark once the fade is over, 250ms after the pointer left", () => {
+        renderHarness({ alerts: rows5 });
+        overRow(rows5[3]);
+        wait(100);
+
+        leaveWidget();
+        wait(249);
+        expect(rowFor(rows5[3])).toHaveAttribute("data-quick-leaving");
+        wait(1);
+
+        expect(rowFor(rows5[3])).not.toHaveAttribute("data-quick-leaving");
+        expect(activeRows()).toHaveLength(0);
+      });
+
+      it("makes a fading row active again at once when the pointer comes back, without the mark", () => {
+        renderHarness({ alerts: rows5 });
+        overRow(rows5[3]);
+        wait(100);
+        leaveWidget();
+        wait(200);
+
+        overRow(rows5[3]);
+
+        expect(activeRows()).toEqual([rowFor(rows5[3])]);
+        expect(rowFor(rows5[3])).not.toHaveAttribute("data-quick-leaving");
+        wait(300);
+        expect(activeRows()).toEqual([rowFor(rows5[3])]);
+        expect(rowFor(rows5[3])).not.toHaveAttribute("data-quick-leaving");
+      });
+
+      it("keeps the tray when the pointer comes back before the 150ms are up", () => {
+        renderHarness({ alerts: rows5 });
+        overRow(rows5[3]);
+        wait(100);
+
+        leaveWidget();
+        wait(100);
+        overRow(rows5[3]);
+        wait(200);
+
+        expect(activeRows()).toEqual([rowFor(rows5[3])]);
+      });
+
+      it("makes a row active at once on keyboard focus, and inactive when focus leaves the widget", () => {
+        renderHarness({ alerts: rows5 });
+
+        act(() => {
+          checkboxFor(rows5[4]).focus();
+        });
+        expect(activeRows()).toEqual([rowFor(rows5[4])]);
+
+        act(() => {
+          (document.activeElement as HTMLElement).blur();
+        });
+        expect(activeRows()).toHaveLength(0);
+      });
+
+      describe("touch", () => {
+        const touch = (element: Element, type: string, pointerType = "touch") => {
+          const event = new MouseEvent(type, {
+            bubbles: type !== "pointerleave",
+          });
+          Object.defineProperty(event, "pointerType", { value: pointerType });
+          act(() => {
+            element.dispatchEvent(event);
+          });
+        };
+        const tapRow = (alert: AlertDto) => {
+          const cell = rowFor(alert).firstElementChild!;
+          touch(cell, "pointerdown");
+          touch(cell, "pointerup");
+          touch(cell, "pointerout");
+          touch(widgetRoot(), "pointerleave");
+        };
+
+        it("opens the tray on a tap and keeps it after the finger lifts", () => {
+          renderHarness({ alerts: rows5 });
+
+          tapRow(rows5[1]);
+          expect(activeRows()).toEqual([rowFor(rows5[1])]);
+          wait(500);
+
+          expect(activeRows()).toEqual([rowFor(rows5[1])]);
+        });
+
+        it("hands the tray over on a tap on another row", () => {
+          renderHarness({ alerts: rows5 });
+          tapRow(rows5[1]);
+
+          tapRow(rows5[3]);
+
+          expect(activeRows()).toEqual([rowFor(rows5[3])]);
+        });
+
+        it("keeps the tray on a tap on its own buttons, and hides it on a tap outside the widget", () => {
+          renderHarness({ alerts: rows5 });
+          tapRow(rows5[1]);
+
+          touch(trayIn(rows5[1]).querySelector("button")!, "pointerdown");
+          expect(activeRows()).toEqual([rowFor(rows5[1])]);
+
+          touch(document.body, "pointerdown");
+          wait(300);
+          expect(activeRows()).toHaveLength(0);
+        });
+
+        it("ignores touch pointerover, and pen behaves like touch", () => {
+          renderHarness({ alerts: rows5 });
+
+          touch(rowFor(rows5[0]).firstElementChild!, "pointerover");
+          wait(200);
+          expect(activeRows()).toHaveLength(0);
+
+          touch(rowFor(rows5[2]).firstElementChild!, "pointerdown", "pen");
+          expect(activeRows()).toEqual([rowFor(rows5[2])]);
+        });
+
+        it("leaves mouse presses alone", () => {
+          renderHarness({ alerts: rows5 });
+
+          touch(rowFor(rows5[0]).firstElementChild!, "pointerdown", "mouse");
+
+          expect(activeRows()).toHaveLength(0);
+        });
+      });
+
+      describe("off the rows", () => {
+        const headerButton = () =>
+          screen.getByTestId("header-cell-name").querySelector("button")!;
+
+        it("hides the tray 150ms after the pointer moves onto the header, with a fade", () => {
+          renderHarness({ alerts: rows5 });
+          overRow(rows5[1]);
+          wait(100);
+
+          over(headerButton());
+          wait(149);
+          expect(activeRows()).toEqual([rowFor(rows5[1])]);
+          over(screen.getByTestId("header-cell-name"));
+          wait(1);
+
+          expect(activeRows()).toHaveLength(0);
+          expect(rowFor(rows5[1])).toHaveAttribute("data-quick-leaving");
+        });
+
+        it("keeps the tray when the pointer comes back to the active row in time", () => {
+          renderHarness({ alerts: rows5 });
+          overRow(rows5[1]);
+          wait(100);
+
+          over(headerButton());
+          wait(100);
+          overRow(rows5[1]);
+          wait(300);
+
+          expect(activeRows()).toEqual([rowFor(rows5[1])]);
+        });
+
+        it("deactivates the row when keyboard focus moves to the header", () => {
+          renderHarness({ alerts: rows5 });
+          act(() => {
+            checkboxFor(rows5[2]).focus();
+          });
+
+          act(() => {
+            headerButton().focus();
+          });
+
+          expect(activeRows()).toHaveLength(0);
+        });
+      });
+
+      describe("while the row's dialog is open", () => {
+        const markOpen = (alert: AlertDto) => {
+          const marker = document.createElement("span");
+          marker.setAttribute("data-quick-open", "");
+          rowFor(alert).firstElementChild!.appendChild(marker);
+          return marker;
+        };
+        const outside = () => {
+          const button = document.createElement("button");
+          document.body.appendChild(button);
+          return button;
+        };
+
+        it("stays active when focus moves out to the dialog, and deactivates once the dialog closes", async () => {
+          renderHarness({ alerts: rows5 });
+          act(() => {
+            checkboxFor(rows5[1]).focus();
+          });
+          const marker = markOpen(rows5[1]);
+          const dialogButton = outside();
+
+          act(() => {
+            dialogButton.focus();
+          });
+          expect(activeRows()).toEqual([rowFor(rows5[1])]);
+
+          await act(async () => {
+            marker.remove();
+          });
+          expect(activeRows()).toHaveLength(0);
+          dialogButton.remove();
+        });
+
+        it("stays active when the pointer leaves the widget", () => {
+          renderHarness({ alerts: rows5 });
+          overRow(rows5[2]);
+          wait(100);
+          markOpen(rows5[2]);
+
+          leaveWidget();
+          wait(400);
+
+          expect(activeRows()).toEqual([rowFor(rows5[2])]);
+        });
+
+        it("stays active after the dialog closes when focus comes back to the row", async () => {
+          renderHarness({ alerts: rows5 });
+          act(() => {
+            checkboxFor(rows5[1]).focus();
+          });
+          const marker = markOpen(rows5[1]);
+          const dialogButton = outside();
+          act(() => {
+            dialogButton.focus();
+          });
+
+          await act(async () => {
+            trayIn(rows5[1]).querySelector("button")!.focus();
+            marker.remove();
+          });
+
+          expect(activeRows()).toEqual([rowFor(rows5[1])]);
+          dialogButton.remove();
+        });
+      });
+
+      it("makes a row active when focus lands on one of its hidden tray's buttons", () => {
+        renderHarness({ alerts: rows5 });
+        overRow(rows5[0]);
+        wait(100);
+
+        act(() => {
+          trayIn(rows5[3]).querySelector("button")!.focus();
+        });
+
+        expect(activeRows()).toEqual([rowFor(rows5[3])]);
+      });
+
+      it("leaves no timer running after unmount", () => {
+        const { unmount } = renderHarness({ alerts: rows5 });
+        overRow(rows5[0]);
+        wait(100);
+        overRow(rows5[1]);
+        leaveWidget();
+
+        unmount();
+
+        expect(jest.getTimerCount()).toBe(0);
+      });
+
+      it("leaves no timer running after unmount mid-fade", () => {
+        const { unmount } = renderHarness({ alerts: rows5 });
+        overRow(rows5[0]);
+        wait(100);
+        leaveWidget();
+        wait(160);
+
+        unmount();
+
+        expect(jest.getTimerCount()).toBe(0);
+      });
     });
 
     it("adds nothing actionable in edit mode even with selection props", () => {

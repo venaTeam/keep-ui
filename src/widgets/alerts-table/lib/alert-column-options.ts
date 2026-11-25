@@ -1,6 +1,7 @@
 import { startCase } from "lodash";
 import type { AlertDto } from "@/entities/alerts/model/types";
 import { COUNT_BY_ALERT_FIELD_OPTIONS } from "@/entities/presets/model/count-by";
+import { LINK_ICON_COLUMN_LABELS } from "@/widgets/alerts-table/lib/alert-link-columns";
 
 /**
  * Enrichment fields offered as columns even when no loaded alert carries
@@ -159,6 +160,7 @@ export function getGroupByFieldOptions(columnIds: readonly string[]): string[] {
  */
 const COLUMN_LABELS: ReadonlyMap<string, string> = new Map([
   ["name", "Alert name"],
+  ...LINK_ICON_COLUMN_LABELS,
 ]);
 
 /**

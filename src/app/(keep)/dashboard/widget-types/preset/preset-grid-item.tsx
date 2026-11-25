@@ -50,7 +50,14 @@ const PresetGridItem: React.FC<GridItemProps> = ({
     item.presetPanelType === PresetPanelType.ALERT_COUNT_PANEL;
 
   return (
-    <div className="flex flex-col overflow-y-auto gap-2" data-cy="dashboard-widget-preset">
+    <div
+      className={
+        isAlertTable
+          ? "flex min-h-0 flex-col gap-2"
+          : "flex flex-col overflow-y-auto gap-2"
+      }
+      data-cy="dashboard-widget-preset"
+    >
       {isAlertTable && (
         <PresetAlertTablePanel
           item={item}

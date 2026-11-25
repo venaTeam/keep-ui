@@ -1,4 +1,4 @@
-/* Alert Table widget quick actions: hover-revealed checkboxes, the row tray and the ticked or open row highlight. */
+/* Alert Table widget quick actions: hover-revealed checkboxes; the tray of the one active row (data-quick-active, set by the table's hover intent), drawn as a tab growing out of its tinted, outlined row, below, above or inside it by its data-placement, parked inside the row while hidden (transparent and unclickable, but still focusable, so a dialog can hand focus back to its button) so it adds no scrollable overflow, its cell raised over the sticky cells' z-index 40; the fade of a row the pointer left (data-quick-leaving); and the ticked or open row highlight, which wins over the tint: on the active row its selector also carries data-quick-active, so it is more specific than the tint's. */
 .quick-actions-table .quick-reveal {
   opacity: 0;
   transition: opacity 0.12s;
@@ -12,17 +12,80 @@
 }
 
 .quick-actions-table .quick-tray {
+  top: 50%;
+  transform: translateY(-50%);
+  border: 1px solid #d1d5db;
+  border-top-width: 0;
+  border-radius: 0 0 0.375rem 0.375rem;
+  background-color: #f8fafc;
   opacity: 0;
   pointer-events: none;
 }
 
-.quick-actions-table tr:hover .quick-tray,
-.quick-actions-table tr:has(:focus-visible) .quick-tray {
+.quick-actions-table .quick-tray[data-placement="above"] {
+  border-top-width: 1px;
+  border-bottom-width: 0;
+  border-radius: 0.375rem 0.375rem 0 0;
+}
+
+.quick-actions-table .quick-tray[data-placement="inside"] {
+  border-width: 1px;
+  border-radius: 0.375rem;
+}
+
+.quick-actions-table tr[data-quick-active] .quick-tray {
+  top: calc(100% - 1px);
+  transform: translateY(0);
   opacity: 1;
   pointer-events: auto;
 }
 
+.quick-actions-table tr[data-quick-active] .quick-tray[data-placement="above"] {
+  top: 1px;
+  transform: translateY(-100%);
+}
+
+.quick-actions-table tr[data-quick-active] .quick-tray[data-placement="inside"] {
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.quick-actions-table tr[data-quick-leaving] .quick-tray {
+  transition: opacity 0.1s ease-out, top 0s linear 0.1s, transform 0s linear 0.1s;
+}
+
+.quick-actions-table tr[data-quick-active] > td.quick-tray-cell,
+.quick-actions-table tr[data-quick-leaving] > td.quick-tray-cell {
+  z-index: 41 !important;
+}
+
+.quick-actions-table tr[data-quick-active]:has(.quick-tray) > td {
+  background-color: #f8fafc;
+  box-shadow: inset 0 1px 0 #d1d5db, inset 0 -1px 0 #d1d5db;
+}
+
+.quick-actions-table tr[data-quick-active]:has(.quick-tray) > td:first-child {
+  box-shadow: inset 1px 0 0 #d1d5db, inset 0 1px 0 #d1d5db, inset 0 -1px 0 #d1d5db;
+}
+
+.quick-actions-table tr[data-quick-active]:has(.quick-tray) > td:nth-last-child(2) {
+  box-shadow: inset -1px 0 0 #d1d5db, inset 0 1px 0 #d1d5db, inset 0 -1px 0 #d1d5db;
+}
+
+.quick-actions-table tr[data-quick-leaving] > td {
+  transition: background-color 0.1s ease-out, box-shadow 0.1s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quick-actions-table tr[data-quick-leaving] .quick-tray,
+  .quick-actions-table tr[data-quick-leaving] > td {
+    transition: none;
+  }
+}
+
 .quick-actions-table tr:has(.quick-pick:checked) > td,
-.quick-actions-table tr:has([data-quick-open]) > td {
+.quick-actions-table tr:has([data-quick-open]) > td,
+.quick-actions-table tr[data-quick-active]:has(.quick-pick:checked) > td,
+.quick-actions-table tr[data-quick-active]:has([data-quick-open]) > td {
   background: #fff7ed;
 }

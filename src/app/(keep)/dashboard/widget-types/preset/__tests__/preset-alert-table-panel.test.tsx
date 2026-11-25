@@ -495,6 +495,62 @@ describe("PresetAlertTablePanel in dashboard edit mode", () => {
     expect(mockLastTableProps!.selection).toBeUndefined();
   });
 
+  describe("only the rows scroll", () => {
+    const rowsArea = () =>
+      document.querySelector<HTMLElement>(
+        '[data-cy="dashboard-widget-preset-rows"]'
+      );
+    const scrollsVertically = (element: Element) =>
+      /(^|\s)overflow(-y)?-(auto|scroll)(\s|$)/.test(element.className);
+    const scrollingAncestors = (element: Element, root: Element) => {
+      const found: Element[] = [];
+      for (let node = element.parentElement; node && node !== root; node = node.parentElement) {
+        if (scrollsVertically(node)) {
+          found.push(node);
+        }
+      }
+      return found;
+    };
+
+    it.each([
+      ["edit", true],
+      ["view", false],
+    ])("in %s mode keeps the header row outside the rows' vertical scroll area", (_mode, isEditMode) => {
+      const { container } = renderInMode(isEditMode, { onSave: jest.fn() });
+
+      const rows = rowsArea()!;
+      expect(rows).toHaveClass("min-h-0", "flex-1", "overflow-y-auto");
+      expect(rows).toContainElement(screen.getByTestId("alerts-table"));
+      const header = goToPreset().closest(
+        '[data-cy="dashboard-widget-preset-header"]'
+      )!;
+      expect(header).toHaveClass("flex-none");
+      expect(rows.contains(header)).toBe(false);
+      expect(scrollingAncestors(header, container)).toEqual([]);
+      if (isEditMode) {
+        const slot = mockLastTableProps?.settingsSlot as HTMLElement;
+        expect(header).toContainElement(slot);
+        expect(rows.contains(slot)).toBe(false);
+      }
+    });
+
+    it("renders no rows area when the widget shows no alerts", () => {
+      render(
+        <PresetAlertTablePanel
+          item={buildItem({
+            preset: { id: "p1", name: "feed", countOfLastAlerts: 0 },
+          } as unknown as Partial<WidgetData>)}
+          filterCel=""
+        />
+      );
+
+      expect(rowsArea()).toBeNull();
+      expect(
+        document.querySelector('[data-cy="dashboard-widget-preset-header"]')
+      ).not.toBeNull();
+    });
+  });
+
   it("gives the table no settings slot in view mode", () => {
     renderInMode(false);
 

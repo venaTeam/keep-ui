@@ -12,7 +12,12 @@ interface QuickActionTrayProps {
   onOpen: OpenQuickActionHandler;
 }
 
-/** A widget row's floating tray of the quick actions that apply to its alert; `compact` shows icons only. */
+/**
+ * A widget row's floating tray of the quick actions that apply to its alert;
+ * `compact` shows icons only. It sits at its positioned anchor's right end;
+ * the widget's quick-action styles hang it below the anchor, or above it
+ * with `data-placement="above"`, drawn as a tab of the row.
+ */
 export function QuickActionTray({
   alert,
   compact = false,
@@ -22,7 +27,7 @@ export function QuickActionTray({
     <div
       className={clsx(
         QUICK_TRAY_CLASS,
-        "absolute right-1 top-1/2 -translate-y-1/2 z-20 flex gap-0.5 rounded-md border bg-white p-0.5 shadow-sm"
+        "absolute right-1 z-20 flex gap-0.5 p-0.5"
       )}
     >
       {ALERT_QUICK_ACTIONS.filter((action) => action.appliesTo(alert)).map(

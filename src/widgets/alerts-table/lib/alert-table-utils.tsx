@@ -53,6 +53,11 @@ import {
   getColumnDisplayName,
 } from "@/widgets/alerts-table/ui/alert-table-column-rename";
 import { useProviders } from "@/utils/hooks/useProviders";
+import {
+  isLinkIconColumn,
+  LINK_ICON_COLUMN_LABELS,
+} from "@/widgets/alerts-table/lib/alert-link-columns";
+import { AlertLinkIconCell } from "@/widgets/alerts-table/ui/alert-link-icon-cell";
 
 // Detects whether a cell value is an http(s) URL so it can be rendered as a
 // clickable external link (e.g. runbook_url, alert_rule_url, generatorURL).
@@ -280,9 +285,19 @@ export const useAlertTableCols = (
       (row) => getNestedValue(row, colName),
       {
         id: colName,
-        header: getColumnDisplayName(colName, colName, columnRenameMapping),
-        minSize: ALERT_COLUMN_SIZE.generated.min,
-        maxSize: ALERT_COLUMN_SIZE.generated.max,
+        header: getColumnDisplayName(
+          colName,
+          isLinkIconColumn(colName)
+            ? LINK_ICON_COLUMN_LABELS.get(colName)!
+            : colName,
+          columnRenameMapping
+        ),
+        minSize: isLinkIconColumn(colName)
+          ? ALERT_COLUMN_SIZE.linkIcon.min
+          : ALERT_COLUMN_SIZE.generated.min,
+        maxSize: isLinkIconColumn(colName)
+          ? ALERT_COLUMN_SIZE.linkIcon.max
+          : ALERT_COLUMN_SIZE.generated.max,
         enableGrouping: true,
         getGroupingValue: (row) => {
           const value = getNestedValue(row, colName);
@@ -389,6 +404,20 @@ export const useAlertTableCols = (
               // Fallback for incompatible types
               return String(value || "");
             }
+          }
+
+          const columnId = context.column.id;
+          const trimmed = typeof value === "string" ? value.trim() : value;
+          if (isLinkIconColumn(columnId) && isHttpUrl(trimmed)) {
+            return (
+              <AlertLinkIconCell
+                columnId={columnId}
+                url={trimmed}
+                disabled={
+                  (context.table.options.meta as any)?.linksDisabled === true
+                }
+              />
+            );
           }
 
           if (isHttpUrl(value)) {
@@ -693,7 +722,7 @@ export const useAlertTableCols = (
             "timeago";
 
           return (
-            <span title={isoString} className="select-text">{formatDateTime(date, formatOption)}</span>
+            <span title={isoString} className="block truncate select-text">{formatDateTime(date, formatOption)}</span>
           );
         },
       }),

@@ -41,6 +41,16 @@ describe("QuickActionTray", () => {
     expect(container.firstElementChild).toHaveClass(QUICK_TRAY_CLASS);
   });
 
+  it("leaves its vertical edge, outline and tint to the widget's tab styles", () => {
+    const { container } = render(
+      <QuickActionTray alert={firingNoIncident} onOpen={onOpen} />
+    );
+    const tray = container.firstElementChild as HTMLElement;
+    expect(tray).toHaveClass("absolute", "right-1");
+    expect(tray.className).not.toMatch(/shadow|bg-white|rounded|border|top-|bottom-/);
+    expect(tray).not.toHaveAttribute("style");
+  });
+
   it("shows all three for a firing alert with no incident", () => {
     render(<QuickActionTray alert={firingNoIncident} onOpen={onOpen} />);
     expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual([

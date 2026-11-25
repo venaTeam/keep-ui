@@ -1,0 +1,4 @@
+/* Rule and Runbook icon tooltips are informational only: Radix's floating wrapper around them (position: fixed, child of body) must not catch the pointer, or it blocks the next row's icon where the tooltip opens below. */
+[data-radix-popper-content-wrapper]:has(.alert-link-tooltip) {
+  pointer-events: none;
+}
