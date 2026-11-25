@@ -2599,6 +2599,84 @@ describe("WidgetAlertsTable", () => {
         expect(activeRows()).toHaveLength(0);
       });
 
+      describe("while the row's dialog is open", () => {
+        const markOpen = (alert: AlertDto) => {
+          const marker = document.createElement("span");
+          marker.setAttribute("data-quick-open", "");
+          rowFor(alert).firstElementChild!.appendChild(marker);
+          return marker;
+        };
+        const outside = () => {
+          const button = document.createElement("button");
+          document.body.appendChild(button);
+          return button;
+        };
+
+        it("stays active when focus moves out to the dialog, and deactivates once the dialog closes", async () => {
+          renderHarness({ alerts: rows5 });
+          act(() => {
+            checkboxFor(rows5[1]).focus();
+          });
+          const marker = markOpen(rows5[1]);
+          const dialogButton = outside();
+
+          act(() => {
+            dialogButton.focus();
+          });
+          expect(activeRows()).toEqual([rowFor(rows5[1])]);
+
+          await act(async () => {
+            marker.remove();
+          });
+          expect(activeRows()).toHaveLength(0);
+          dialogButton.remove();
+        });
+
+        it("stays active when the pointer leaves the widget", () => {
+          renderHarness({ alerts: rows5 });
+          overRow(rows5[2]);
+          wait(100);
+          markOpen(rows5[2]);
+
+          leaveWidget();
+          wait(400);
+
+          expect(activeRows()).toEqual([rowFor(rows5[2])]);
+        });
+
+        it("stays active after the dialog closes when focus comes back to the row", async () => {
+          renderHarness({ alerts: rows5 });
+          act(() => {
+            checkboxFor(rows5[1]).focus();
+          });
+          const marker = markOpen(rows5[1]);
+          const dialogButton = outside();
+          act(() => {
+            dialogButton.focus();
+          });
+
+          await act(async () => {
+            trayIn(rows5[1]).querySelector("button")!.focus();
+            marker.remove();
+          });
+
+          expect(activeRows()).toEqual([rowFor(rows5[1])]);
+          dialogButton.remove();
+        });
+      });
+
+      it("makes a row active when focus lands on one of its hidden tray's buttons", () => {
+        renderHarness({ alerts: rows5 });
+        overRow(rows5[0]);
+        wait(100);
+
+        act(() => {
+          trayIn(rows5[3]).querySelector("button")!.focus();
+        });
+
+        expect(activeRows()).toEqual([rowFor(rows5[3])]);
+      });
+
       it("leaves no timer running after unmount", () => {
         const { unmount } = renderHarness({ alerts: rows5 });
         overRow(rows5[0]);

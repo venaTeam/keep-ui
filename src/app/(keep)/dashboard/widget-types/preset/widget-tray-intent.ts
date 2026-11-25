@@ -2,6 +2,7 @@ import { RefObject, useEffect } from "react";
 import {
   QUICK_ACTIVE_ATTR,
   QUICK_LEAVING_ATTR,
+  QUICK_OPEN_ATTR,
   QUICK_TRAY_CLASS,
 } from "@/features/alerts/alert-quick-actions";
 import { placeTray } from "./widget-tray-placement";
@@ -27,8 +28,13 @@ export const TRAY_FADE_MS = 100;
  * - The pointer leaving the table deactivates the row after `TRAY_LEAVE_MS`,
  *   marked `QUICK_LEAVING_ATTR` for the `TRAY_FADE_MS` its tray takes to fade.
  *   The pointer back on that row meanwhile makes it active again at once.
- * - Keyboard focus in a row (`:focus-visible`) makes it active at once, and
- *   focus leaving the table deactivates it.
+ * - Keyboard focus in a row (`:focus-visible`), or any focus on a tray
+ *   button, makes the row active at once, and focus leaving the table
+ *   deactivates it.
+ * - The active row whose dialog is open (it holds `QUICK_OPEN_ATTR`) is not
+ *   deactivated: a deactivation asked for meanwhile waits until the dialog
+ *   closes, and is dropped if focus came back into the row or the row is
+ *   hovered.
  * Nothing is attached while `enabled` is false. Timers, listeners and marks
  * are cleared when it turns false or the table unmounts.
  */
@@ -47,6 +53,8 @@ export function useTrayHoverIntent(
     let pendingTimer: number | undefined;
     let leaveTimer: number | undefined;
     let fadeTimer: number | undefined;
+    let deferredFade: boolean | null = null;
+    let openObserver: MutationObserver | null = null;
 
     const trayOf = (row: HTMLTableRowElement) =>
       row.querySelector<HTMLElement>(`.${QUICK_TRAY_CLASS}`);
@@ -74,6 +82,7 @@ export function useTrayHoverIntent(
       cancelPending();
       cancelLeave();
       clearLeaving();
+      stopWaitingForClose();
       if (row === active) {
         return;
       }
@@ -86,9 +95,36 @@ export function useTrayHoverIntent(
       row.setAttribute(QUICK_ACTIVE_ATTR, "");
       active = row;
     };
+    const isOpen = (row: HTMLTableRowElement) =>
+      row.querySelector(`[${QUICK_OPEN_ATTR}]`) !== null;
+    const stopWaitingForClose = () => {
+      openObserver?.disconnect();
+      openObserver = null;
+      deferredFade = null;
+    };
+    const onOpenRowChange = () => {
+      if (deferredFade === null || (active && isOpen(active))) {
+        return;
+      }
+      const fade = deferredFade;
+      stopWaitingForClose();
+      const keep =
+        active &&
+        (active.contains(document.activeElement) || active.matches(":hover"));
+      if (!keep) {
+        deactivate(fade);
+      }
+    };
     const deactivate = (fade: boolean) => {
       cancelPending();
       cancelLeave();
+      if (active && isOpen(active)) {
+        deferredFade = deferredFade === null ? fade : deferredFade && fade;
+        openObserver ??= new MutationObserver(onOpenRowChange);
+        openObserver.observe(active, { childList: true, subtree: true });
+        return;
+      }
+      stopWaitingForClose();
       clearLeaving();
       if (!active) {
         return;
@@ -128,7 +164,9 @@ export function useTrayHoverIntent(
     };
     const onFocusIn = (event: FocusEvent) => {
       const row = rowOf(event.target);
-      if (row && (event.target as Element).matches(":focus-visible")) {
+      const target = event.target as Element;
+      const onTray = row !== null && trayOf(row)?.contains(target) === true;
+      if (row && (onTray || target.matches(":focus-visible"))) {
         activate(row);
       }
     };
@@ -148,7 +186,12 @@ export function useTrayHoverIntent(
       container.removeEventListener("pointerleave", onPointerLeave);
       container.removeEventListener("focusin", onFocusIn);
       container.removeEventListener("focusout", onFocusOut);
-      deactivate(false);
+      stopWaitingForClose();
+      clearLeaving();
+      active?.removeAttribute(QUICK_ACTIVE_ATTR);
+      active = null;
+      cancelPending();
+      cancelLeave();
     };
   }, [containerRef, enabled]);
 }

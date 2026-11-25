@@ -9,7 +9,7 @@ export const QUICK_REVEAL_CLASS = "quick-reveal";
 /** Marks a row checkbox; a row whose checkbox is ticked is highlighted. */
 export const QUICK_PICK_CLASS = "quick-pick";
 
-/** Marks the row tray; hidden and unclickable unless its row carries `QUICK_ACTIVE_ATTR`. */
+/** Marks the row tray; transparent and unclickable, but focusable, unless its row carries `QUICK_ACTIVE_ATTR`. */
 export const QUICK_TRAY_CLASS = "quick-tray";
 
 /** Attribute on the one row of a widget table whose tray shows; that row is tinted and outlined. */

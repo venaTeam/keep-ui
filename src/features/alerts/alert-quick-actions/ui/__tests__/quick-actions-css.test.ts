@@ -67,22 +67,30 @@ const reducedMotionRules = () =>
     .flatMap((rule) => Array.from(rule.cssRules) as CSSStyleRule[]);
 
 describe("quick-actions.css tray", () => {
-  it("is hidden, unclickable and parked inside its row unless the row is active", () => {
+  it("is transparent, unclickable but focusable, and parked inside its row unless the row is active", () => {
     ["below", "above", "inside"].forEach((placement) => {
       trayOf("first").dataset.placement = placement;
       const tray = computed(trayOf("first"));
-      expect([tray.opacity, tray.visibility]).toEqual(["0", "hidden"]);
+      expect([tray.opacity, tray.pointerEvents]).toEqual(["0", "none"]);
+      expect(tray.visibility).not.toBe("hidden");
       expect([tray.top, tray.transform]).toEqual(["50%", "translateY(-50%)"]);
       expect(tray.transition).toBe("");
     });
+    const trayRules = (Array.from(style.sheet!.cssRules) as CSSStyleRule[]).filter(
+      (rule) => rule.selectorText?.includes(QUICK_TRAY_CLASS)
+    );
+    trayRules.forEach((rule) =>
+      expect(rule.style.getPropertyValue("visibility")).toBe("")
+    );
   });
 
   it("shows on the active row only, with no hover or focus rule of its own", () => {
     activate("first");
 
     expect(computed(trayOf("first")).opacity).toBe("1");
-    expect(computed(trayOf("first")).visibility).toBe("visible");
-    expect(computed(trayOf("second")).visibility).toBe("hidden");
+    expect(computed(trayOf("first")).pointerEvents).toBe("auto");
+    expect(computed(trayOf("second")).opacity).toBe("0");
+    expect(computed(trayOf("second")).pointerEvents).toBe("none");
     const trayRules = (Array.from(style.sheet!.cssRules) as CSSStyleRule[])
       .map((rule) => rule.selectorText ?? "")
       .filter((selector) => selector.includes(QUICK_TRAY_CLASS));
@@ -95,7 +103,7 @@ describe("quick-actions.css tray", () => {
     markLeaving("first");
 
     expect(computed(trayOf("first")).transition).toBe(
-      "opacity 0.1s ease-out, visibility 0s linear 0.1s, top 0s linear 0.1s, transform 0s linear 0.1s"
+      "opacity 0.1s ease-out, top 0s linear 0.1s, transform 0s linear 0.1s"
     );
     cellsOf("first")
       .slice(0, 2)
