@@ -30,6 +30,11 @@ export const TRAY_FADE_MS = 100;
  *   deactivates the row after `TRAY_LEAVE_MS`,
  *   marked `QUICK_LEAVING_ATTR` for the `TRAY_FADE_MS` its tray takes to fade.
  *   The pointer back on that row meanwhile makes it active again at once.
+ * - Touch and pen don't hover: their pointerover and pointerleave are
+ *   ignored. A tap (pointerdown) on a row with a tray makes it active at
+ *   once, without blocking the row's own click, and it stays active after the
+ *   finger lifts. A tap anywhere else on the page, the active row and its
+ *   tray aside, deactivates it.
  * - Keyboard focus in a row (`:focus-visible`), or any focus on a tray
  *   button, makes the row active at once. Focus leaving the table, or moving
  *   to anything in it outside the rows with a tray, deactivates it.
@@ -145,7 +150,12 @@ export function useTrayHoverIntent(
         leaveTimer = window.setTimeout(() => deactivate(true), TRAY_LEAVE_MS);
       }
     };
+    const isTouchLike = (event: PointerEvent) =>
+      event.pointerType === "touch" || event.pointerType === "pen";
     const onPointerOver = (event: PointerEvent) => {
+      if (isTouchLike(event)) {
+        return;
+      }
       const row = rowOf(event.target);
       if (row === null) {
         cancelPending();
@@ -171,9 +181,23 @@ export function useTrayHoverIntent(
       pendingRow = row;
       pendingTimer = window.setTimeout(() => activate(row), TRAY_INTENT_MS);
     };
-    const onPointerLeave = () => {
+    const onPointerLeave = (event: PointerEvent) => {
+      if (isTouchLike(event)) {
+        return;
+      }
       cancelPending();
       startLeave();
+    };
+    const onPointerDown = (event: PointerEvent) => {
+      if (!isTouchLike(event)) {
+        return;
+      }
+      const row = rowOf(event.target);
+      if (row) {
+        activate(row);
+      } else if (!(event.target instanceof Node && active?.contains(event.target))) {
+        deactivate(true);
+      }
     };
     const onFocusIn = (event: FocusEvent) => {
       const row = rowOf(event.target);
@@ -196,7 +220,9 @@ export function useTrayHoverIntent(
     container.addEventListener("pointerleave", onPointerLeave);
     container.addEventListener("focusin", onFocusIn);
     container.addEventListener("focusout", onFocusOut);
+    document.addEventListener("pointerdown", onPointerDown, true);
     return () => {
+      document.removeEventListener("pointerdown", onPointerDown, true);
       container.removeEventListener("pointerover", onPointerOver);
       container.removeEventListener("pointerleave", onPointerLeave);
       container.removeEventListener("focusin", onFocusIn);

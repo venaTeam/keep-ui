@@ -2599,6 +2599,75 @@ describe("WidgetAlertsTable", () => {
         expect(activeRows()).toHaveLength(0);
       });
 
+      describe("touch", () => {
+        const touch = (element: Element, type: string, pointerType = "touch") => {
+          const event = new MouseEvent(type, {
+            bubbles: type !== "pointerleave",
+          });
+          Object.defineProperty(event, "pointerType", { value: pointerType });
+          act(() => {
+            element.dispatchEvent(event);
+          });
+        };
+        const tapRow = (alert: AlertDto) => {
+          const cell = rowFor(alert).firstElementChild!;
+          touch(cell, "pointerdown");
+          touch(cell, "pointerup");
+          touch(cell, "pointerout");
+          touch(widgetRoot(), "pointerleave");
+        };
+
+        it("opens the tray on a tap and keeps it after the finger lifts", () => {
+          renderHarness({ alerts: rows5 });
+
+          tapRow(rows5[1]);
+          expect(activeRows()).toEqual([rowFor(rows5[1])]);
+          wait(500);
+
+          expect(activeRows()).toEqual([rowFor(rows5[1])]);
+        });
+
+        it("hands the tray over on a tap on another row", () => {
+          renderHarness({ alerts: rows5 });
+          tapRow(rows5[1]);
+
+          tapRow(rows5[3]);
+
+          expect(activeRows()).toEqual([rowFor(rows5[3])]);
+        });
+
+        it("keeps the tray on a tap on its own buttons, and hides it on a tap outside the widget", () => {
+          renderHarness({ alerts: rows5 });
+          tapRow(rows5[1]);
+
+          touch(trayIn(rows5[1]).querySelector("button")!, "pointerdown");
+          expect(activeRows()).toEqual([rowFor(rows5[1])]);
+
+          touch(document.body, "pointerdown");
+          wait(300);
+          expect(activeRows()).toHaveLength(0);
+        });
+
+        it("ignores touch pointerover, and pen behaves like touch", () => {
+          renderHarness({ alerts: rows5 });
+
+          touch(rowFor(rows5[0]).firstElementChild!, "pointerover");
+          wait(200);
+          expect(activeRows()).toHaveLength(0);
+
+          touch(rowFor(rows5[2]).firstElementChild!, "pointerdown", "pen");
+          expect(activeRows()).toEqual([rowFor(rows5[2])]);
+        });
+
+        it("leaves mouse presses alone", () => {
+          renderHarness({ alerts: rows5 });
+
+          touch(rowFor(rows5[0]).firstElementChild!, "pointerdown", "mouse");
+
+          expect(activeRows()).toHaveLength(0);
+        });
+      });
+
       describe("off the rows", () => {
         const headerButton = () =>
           screen.getByTestId("header-cell-name").querySelector("button")!;
