@@ -10,7 +10,8 @@ import {
 /**
  * Icon link for a rule or runbook URL: the Grafana logo for a Grafana alert
  * rule, a generic external-link icon for any other rule, and a book for a
- * runbook. When disabled the icon is dimmed and does not navigate. The
+ * runbook. When disabled the icon is dimmed and does not navigate: a
+ * `role="link"` span with `aria-disabled`, so screen readers still name it. The
  * tooltip stacks at z-60, above the presets page's z-10 CEL search bar layer,
  * and never catches the pointer, so moving down the icon column reaches the
  * next row's icon even where the tooltip opens below: its content is
@@ -59,6 +60,7 @@ export function AlertLinkIconCell({
     >
       {disabled ? (
         <span
+          role="link"
           aria-disabled="true"
           aria-label={action}
           data-cy={`alert-link-icon-${columnId}`}

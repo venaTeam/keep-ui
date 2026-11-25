@@ -350,7 +350,7 @@ describe("useAlertTableCols rule and runbook icon links", () => {
     );
   });
 
-  it("renders a dimmed icon without a link when links are disabled", () => {
+  it("renders a dimmed, named, disabled link without an href when links are disabled", () => {
     render(
       <GeneratedColumn
         columnId="alert_rule_url"
@@ -359,10 +359,11 @@ describe("useAlertTableCols rule and runbook icon links", () => {
       />
     );
 
-    expect(
-      screen.getByTestId("cell").querySelector('[aria-disabled="true"]')
-    ).not.toBeNull();
-    expect(screen.queryByRole("link")).toBeNull();
+    const link = screen.getByRole("link", { name: "Open alert rule in Grafana" });
+    expect(link).toHaveAttribute("aria-disabled", "true");
+    expect(link).not.toHaveAttribute("href");
+    expect(link).not.toHaveAttribute("tabindex");
+    expect(screen.getByTestId("cell").querySelector("[href]")).toBeNull();
   });
 
   it("keeps the full URL link for other URL columns", () => {

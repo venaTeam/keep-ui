@@ -2282,13 +2282,13 @@ describe("WidgetAlertsTable", () => {
         expect(onOpenAction).not.toHaveBeenCalled();
       });
 
-      it("renders the icons dimmed and without links in edit mode", () => {
+      it("renders the icons dimmed and disabled, without an href, in edit mode", () => {
         renderHarness({ alerts: [ruleAlert], presetColumns, isEditMode: true });
 
-        expect(screen.queryByRole("link")).toBeNull();
+        expect(document.querySelector("[data-cy^='alert-link-icon-'][href]")).toBeNull();
         expect(
-          cellsOf("alert_rule_url")[0].querySelector('[aria-disabled="true"]')
-        ).not.toBeNull();
+          screen.getByRole("link", { name: "Open alert rule in Grafana" })
+        ).toHaveAttribute("aria-disabled", "true");
       });
     });
 
