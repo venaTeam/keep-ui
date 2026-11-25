@@ -109,6 +109,8 @@ Trade-offs:
 
 **Recommendation:** Option A. It needs no configuration, and the path is the stable part of Grafana 12 rule links, while the host varies per customer. Option B can be added later if a non-Grafana source starts filling `alert_rule_url`.
 
+**Assumption:** users can't set `alert_rule_url`. Only the alerts pipeline fills it, with Grafana rule links. No Keep provider maps another tool's rule link into it (checked on keep-event-handler, keep-api-gateway and keep-workflows dev, 2026-11-25). If that changes, revisit this choice (Option B).
+
 ### Headers and width
 
 There is one viable approach.
