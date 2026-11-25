@@ -3,6 +3,7 @@ import { Switch, Text } from "@tremor/react";
 import { WidgetType } from "../types";
 import { WIDGET_FONTS } from "./fonts/widget-fonts";
 import { TypographyControls } from "./TypographyControls";
+import { TITLE_ONLY_TYPES } from "./title-only-types";
 import {
   fullOverrideFrom,
   resolveWidgetTypography,
@@ -11,11 +12,6 @@ import {
   WidgetTypography,
 } from "./widget-typography";
 
-const TITLE_ONLY_TYPES = new Set<WidgetType>([
-  WidgetType.IMAGE,
-  WidgetType.HTML,
-  WidgetType.GRAFANA_PANEL,
-]);
 
 const SWITCH_ID = "dashboard-widget-typography-switch";
 

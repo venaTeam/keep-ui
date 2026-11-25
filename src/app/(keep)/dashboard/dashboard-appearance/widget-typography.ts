@@ -163,13 +163,15 @@ export function titleSizeFactor(title: WidgetTitleSize): number {
 
 export interface TypographyCardProps {
   "data-widget-typography"?: "";
+  "data-widget-typography-scaled"?: "";
   style?: CSSProperties;
 }
 
 /**
  * Attribute and inline style for a widget card. Defaults yield `{}` so an
  * untouched widget renders exactly as before; otherwise only the properties
- * that differ from the default are set.
+ * that differ from the default are set, and `data-widget-typography-scaled`
+ * marks a changed text size.
  */
 export function typographyCardProps(
   t: ResolvedWidgetTypography,
@@ -190,5 +192,13 @@ export function typographyCardProps(
   if (t.title !== DEFAULT_WIDGET_TYPOGRAPHY.title) {
     style["--wt-title-scale"] = String(titleSizeFactor(t.title));
   }
-  return { "data-widget-typography": "", style: style as CSSProperties };
+  const scaled: TypographyCardProps =
+    t.size !== DEFAULT_WIDGET_TYPOGRAPHY.size
+      ? { "data-widget-typography-scaled": "" }
+      : {};
+  return {
+    "data-widget-typography": "",
+    ...scaled,
+    style: style as CSSProperties,
+  };
 }

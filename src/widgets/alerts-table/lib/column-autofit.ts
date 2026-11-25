@@ -29,6 +29,17 @@ function measureContentWidth(source: Element, measurer: HTMLElement): number {
   return width;
 }
 
+/**
+ * Where the off-screen measurer lives. Inside a dashboard widget with custom
+ * typography it goes under that widget's card, so the clone picks up the
+ * widget's font and scaled text sizes; everywhere else it stays on `body`.
+ */
+function measurerHost(container: HTMLElement): HTMLElement {
+  return (
+    container.closest<HTMLElement>("[data-widget-typography]") ?? document.body
+  );
+}
+
 export function getAutofitColumnWidth(
   container: HTMLElement | null,
   columnId: string,
@@ -53,7 +64,8 @@ export function getAutofitColumnWidth(
   measurer.style.visibility = "hidden";
   measurer.style.whiteSpace = "nowrap";
   measurer.style.pointerEvents = "none";
-  document.body.appendChild(measurer);
+  const host = measurerHost(container);
+  host.appendChild(measurer);
 
   let contentWidth = 0;
   let horizontalPadding = 0;
@@ -78,7 +90,7 @@ export function getAutofitColumnWidth(
       }
     }
   } finally {
-    document.body.removeChild(measurer);
+    host.removeChild(measurer);
   }
 
   if (contentWidth === 0) {

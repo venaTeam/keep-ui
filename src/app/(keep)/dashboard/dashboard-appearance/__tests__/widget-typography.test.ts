@@ -115,6 +115,7 @@ describe("typographyCardProps", () => {
       typographyCardProps({ font: "system", size: "lg", title: "normal" }, STACKS)
     ).toEqual({
       "data-widget-typography": "",
+      "data-widget-typography-scaled": "",
       style: { "--wt-scale": "1.3333", fontSize: "calc(1rem * 1.3333)" },
     });
   });

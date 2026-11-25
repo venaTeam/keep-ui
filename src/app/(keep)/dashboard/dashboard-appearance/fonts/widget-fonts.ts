@@ -6,6 +6,7 @@ const inter = localFont({
   weight: "100 900",
   display: "swap",
   preload: false,
+  adjustFontFallback: false,
 });
 
 const roboto = localFont({
@@ -13,6 +14,7 @@ const roboto = localFont({
   weight: "100 900",
   display: "swap",
   preload: false,
+  adjustFontFallback: false,
 });
 
 const ibmPlexSans = localFont({
@@ -20,6 +22,7 @@ const ibmPlexSans = localFont({
   weight: "100 700",
   display: "swap",
   preload: false,
+  adjustFontFallback: false,
 });
 
 const sourceSans3 = localFont({
@@ -27,6 +30,7 @@ const sourceSans3 = localFont({
   weight: "200 900",
   display: "swap",
   preload: false,
+  adjustFontFallback: false,
 });
 
 const atkinsonHyperlegibleNext = localFont({
@@ -34,6 +38,7 @@ const atkinsonHyperlegibleNext = localFont({
   weight: "200 800",
   display: "swap",
   preload: false,
+  adjustFontFallback: false,
 });
 
 const rubikLatin = localFont({
@@ -49,6 +54,7 @@ const rubikHebrew = localFont({
   weight: "300 900",
   display: "swap",
   preload: false,
+  adjustFontFallback: false,
 });
 
 const jetbrainsMono = localFont({
@@ -56,6 +62,7 @@ const jetbrainsMono = localFont({
   weight: "100 800",
   display: "swap",
   preload: false,
+  adjustFontFallback: false,
 });
 
 const SANS_FALLBACK = "ui-sans-serif, system-ui, sans-serif";
@@ -70,7 +77,8 @@ export interface WidgetFont {
 /**
  * The fonts a dashboard widget can use. Files ship with the app (no network
  * fetch at build or run time) and are downloaded by the browser only when a
- * widget renders with them.
+ * widget renders with them. No generated Arial fallback face is added, so a
+ * face that is missing or still loading falls through to the system stack.
  */
 export const WIDGET_FONTS: Record<WidgetFontId, WidgetFont> = {
   system: { label: "System default", note: "current", stack: SANS_FALLBACK },

@@ -42,6 +42,21 @@ jest.mock("../widget-types/service-now/widget-service-now", () => ({
   default: () => <div data-testid="service-now" />,
 }));
 
+jest.mock("../widget-types/html/html-grid-item", () => ({
+  __esModule: true,
+  default: () => <div data-testid="html-grid-item" />,
+}));
+
+jest.mock("../widget-types/image/image-grid-item", () => ({
+  __esModule: true,
+  default: () => <div data-testid="image-grid-item" />,
+}));
+
+jest.mock("../widget-types/grafana-panel/grafana-panel-grid-item", () => ({
+  __esModule: true,
+  default: () => <div data-testid="grafana-panel-grid-item" />,
+}));
+
 jest.mock("../widget-types/incident-table/incident-table-grid-item", () => ({
   __esModule: true,
   default: () => <div data-testid="incident-table-grid-item" />,
@@ -344,4 +359,40 @@ describe("GridItem typography", () => {
     const { container } = renderWithTypography(baseItem(), { size: "xl" });
     expect(container.querySelector('[data-cy="dashboard-widget-custom-type"]')).toBeNull();
   });
+
+  it("marks a widget whose text size changed as scaled", () => {
+    const { container } = renderWithTypography(baseItem(), { size: "xl" });
+    expect(card(container)).toHaveAttribute("data-widget-typography-scaled");
+  });
+
+  it("does not mark a font-only or title-only widget as scaled", () => {
+    const { container } = renderWithTypography(baseItem(), {
+      font: "inter",
+      title: "large",
+    });
+    expect(card(container)).toHaveAttribute("data-widget-typography");
+    expect(card(container)).not.toHaveAttribute("data-widget-typography-scaled");
+  });
+
+  it.each([WidgetType.HTML, WidgetType.IMAGE, WidgetType.GRAFANA_PANEL])(
+    "ignores a stored text size on a %s widget but keeps its title size",
+    (widgetType) => {
+      const { container } = renderWithTypography(
+        baseItem({
+          widgetType,
+          preset: undefined,
+          presetPanelType: undefined,
+          typography: { font: "system", size: "2xl", title: "xl" },
+        }),
+        { size: "xl" }
+      );
+      const el = card(container);
+      expect(el).toHaveAttribute("data-widget-typography");
+      expect(el).not.toHaveAttribute("data-widget-typography-scaled");
+      expect(el.style.getPropertyValue("--wt-scale")).toBe("");
+      expect(el.style.fontSize).toBe("");
+      expect(el.style.getPropertyValue("--wt-title-scale")).toBe("1.65");
+    }
+  );
 });
+

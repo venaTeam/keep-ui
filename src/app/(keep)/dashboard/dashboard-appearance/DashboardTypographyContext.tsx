@@ -2,7 +2,9 @@ import React, { createContext, useContext } from "react";
 import { useDashboardEditMode } from "../DashboardEditModeContext";
 import type { WidgetData } from "../types";
 import { WIDGET_FONT_STACKS } from "./fonts/widget-fonts";
+import { TITLE_ONLY_TYPES } from "./title-only-types";
 import {
+  DEFAULT_WIDGET_TYPOGRAPHY,
   resolveWidgetTypography,
   typographyCardProps,
   TypographyCardProps,
@@ -33,11 +35,17 @@ export function useDashboardTypography(): WidgetTypography | undefined {
   return useContext(DashboardTypographyContext);
 }
 
-/** Card attribute and inline style for a widget, from its override or the dashboard setting. */
+/**
+ * Card attribute and inline style for a widget, from its override or the
+ * dashboard setting. Title-only widget types never take a text size.
+ */
 export function useWidgetTypographyProps(item: WidgetData): TypographyCardProps {
   const dashboard = useDashboardTypography();
+  const resolved = resolveWidgetTypography(item.typography, dashboard);
   return typographyCardProps(
-    resolveWidgetTypography(item.typography, dashboard),
+    TITLE_ONLY_TYPES.has(item.widgetType)
+      ? { ...resolved, size: DEFAULT_WIDGET_TYPOGRAPHY.size }
+      : resolved,
     WIDGET_FONT_STACKS
   );
 }

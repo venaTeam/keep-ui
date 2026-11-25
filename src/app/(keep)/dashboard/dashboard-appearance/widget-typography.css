@@ -62,11 +62,11 @@
   font-size: calc(.75rem * var(--wt-scale, 1));
   line-height: calc(1rem * var(--wt-scale, 1));
 }
-[data-widget-typography] td {
+[data-widget-typography-scaled] td {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-[data-widget-typography] td.overflow-visible {
+[data-widget-typography-scaled] td.overflow-visible {
   overflow: visible;
 }
 [data-widget-typography] .quick-tray {
