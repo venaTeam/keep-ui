@@ -177,7 +177,6 @@ export const GroupedRow = ({
                 : "group-header-cell bg-orange-100 group-hover:bg-orange-200",
               headerRingingCell.className
             )}
-            style={headerRingingCell.style}
           >
             <div className="flex items-center gap-2">
               <div className="flex items-center">
@@ -280,7 +279,7 @@ export const GroupedRow = ({
                         ),
                         ringingCell.className
                       )}
-                      style={{ ...style, ...ringingCell.style }}
+                      style={style}
                       data-cy={`alerts-cell-${cell.column.id}`}
                     >
                       {flexRender(

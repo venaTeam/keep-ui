@@ -34,7 +34,6 @@ const OVERLAY = [
   "before:absolute",
   "before:inset-0",
   "before:-z-10",
-  "before:border-y-2",
   "before:border-[color:var(--blink-row-edge)]",
   "before:bg-[color:var(--blink-row-tint)]",
   "motion-safe:before:animate-ringing-pulse",
@@ -57,7 +56,7 @@ describe("useRingingRows", () => {
     const classes = (index: number) =>
       row.cellProps(index, 3).className!.split(" ");
 
-    expect(row.rowProps).toEqual({ "data-ringing": "true" });
+    expect(row.rowProps["data-ringing"]).toBe("true");
     [0, 1, 2].forEach((index) =>
       expect(classes(index)).toEqual(expect.arrayContaining(OVERLAY))
     );
@@ -85,20 +84,17 @@ describe("useRingingRows", () => {
     ).toEqual([]);
   });
 
-  it("draws one edge between adjacent ringing rows, on the upper row", () => {
+  it("leaves the top and bottom edge to the row, so no cell draws its own", () => {
     const row = ringingRowOf(true)(critical);
-    const classes = (belowRingingRow?: boolean) =>
-      row.cellProps(1, 3, belowRingingRow).className!.split(" ");
 
-    expect(classes()).toEqual(
-      expect.arrayContaining([
-        "before:border-y-2",
-        "[tr[data-ringing]+tr[data-ringing]>&]:before:border-t-0",
-      ])
+    [0, 1, 2].forEach((index) =>
+      expect(
+        row
+          .cellProps(index, 3)
+          .className!.split(" ")
+          .filter((name) => /border-(y|t|b)(-|$)/.test(name))
+      ).toEqual([])
     );
-    expect(classes()).not.toContain("before:border-t-0");
-    expect(classes(false)).not.toContain("before:border-t-0");
-    expect(classes(true)).toContain("before:border-t-0");
   });
 
   it("closes the overlay's red edge at the first and the last cell", () => {
@@ -117,13 +113,14 @@ describe("useRingingRows", () => {
     );
   });
 
-  it("gives every ringing cell the row colors and the sync ref", () => {
-    const { style, ref } = ringingRowOf(true)(critical).cellProps(1, 3);
-    const vars = style as Record<string, string>;
+  it("puts the row colors on the row, for its cells and edge to inherit, and the sync ref on every cell", () => {
+    const row = ringingRowOf(true)(critical);
+    const vars = row.rowProps.style as Record<string, string>;
 
     expect(vars["--blink-row-tint"]).toMatch(/^rgb\(/);
     expect(vars["--blink-row-edge"]).toMatch(/^#/);
-    expect(typeof ref).toBe("function");
+    expect(row.cellProps(1, 3)).not.toHaveProperty("style");
+    expect(typeof row.cellProps(1, 3).ref).toBe("function");
   });
 
   it("rings a row for a list of alerts when any of them rings", () => {
@@ -131,7 +128,7 @@ describe("useRingingRows", () => {
 
     expect(
       ringingRow([{ ...critical, severity: "high" }, critical]).rowProps
-    ).toEqual({ "data-ringing": "true" });
+    ).toHaveProperty("data-ringing", "true");
     expect(ringingRow([{ ...critical, severity: "high" }]).rowProps).toEqual(
       {}
     );

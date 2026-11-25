@@ -161,3 +161,18 @@ html.workaround-dark {
 tr[data-ringing] + tr[data-ringing] {
   border-top-width: 0 !important;
 }
+
+/* The ringing row's top and bottom edge, one line above all of its cells
+   (see useRingingRows in alert-ringing.tsx). */
+tr[data-ringing] {
+  @apply relative isolate;
+}
+
+tr[data-ringing]::after {
+  content: "";
+  @apply pointer-events-none absolute inset-0 z-[41] border-y-2 border-[color:var(--blink-row-edge)] motion-safe:animate-ringing-pulse;
+}
+
+tr[data-ringing] + tr[data-ringing]::after {
+  @apply border-t-0;
+}

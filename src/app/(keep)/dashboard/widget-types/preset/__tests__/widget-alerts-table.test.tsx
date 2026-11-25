@@ -2508,7 +2508,6 @@ describe("WidgetAlertsTable ringing rows", () => {
     "before:inset-0",
     "before:-z-10",
     "before:pointer-events-none",
-    "before:border-y-2",
     "before:bg-[color:var(--blink-row-tint)]",
     PULSE,
   ];
@@ -2571,12 +2570,12 @@ describe("WidgetAlertsTable ringing rows", () => {
 
     expect(row).toHaveAttribute("data-ringing", "true");
     expect(row).not.toHaveClass("cursor-pointer");
-    expect(row.getAttribute("style")).toBeNull();
+    expect(row.style.getPropertyValue("--blink-row-tint")).not.toBe("");
+    expect(row.style.getPropertyValue("--blink-row-edge")).not.toBe("");
     expect(cells).toHaveLength(4);
     cells.forEach((cell) => {
       expect(cell).toHaveClass(...OVERLAY);
-      expect(cell.style.getPropertyValue("--blink-row-tint")).not.toBe("");
-      expect(cell.style.getPropertyValue("--blink-row-edge")).not.toBe("");
+      expect(cell).not.toHaveClass("before:border-y-2");
     });
     expect(cells[0]).toHaveClass("before:border-l-2");
     expect(cells[cells.length - 1]).toHaveClass("before:border-r-2");

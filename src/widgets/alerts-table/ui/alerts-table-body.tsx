@@ -290,7 +290,6 @@ export function AlertsTableBody({
           )}
           style={{
             ...style,
-            ...ringingCell.style,
             // For source cells, enforce fixed width always
             ...(isSourceCell
               ? {

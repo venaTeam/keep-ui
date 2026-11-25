@@ -6,6 +6,7 @@ import clsx from "clsx";
 interface Props {
     children: React.ReactNode;
     className?: string;
+    style?: React.CSSProperties;
     onClick?: (e: React.MouseEvent) => void;
     onMouseDown?: (e: React.MouseEvent) => void;
     onMouseEnter?: () => void;
@@ -17,6 +18,7 @@ interface Props {
 const Row = ({
     children,
     className,
+    style,
     onClick,
     onMouseDown,
     onMouseEnter,
@@ -35,6 +37,7 @@ const Row = ({
                 isSelecting && "!bg-blue-100/50",
                 isSelected && "!bg-blue-200/50"
             )}
+            style={style}
             onClick={onClick}
             onMouseDown={onMouseDown}
             onMouseEnter={onMouseEnter}
