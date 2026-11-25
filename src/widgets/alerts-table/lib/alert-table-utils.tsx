@@ -722,7 +722,7 @@ export const useAlertTableCols = (
             "timeago";
 
           return (
-            <span title={isoString} className="select-text">{formatDateTime(date, formatOption)}</span>
+            <span title={isoString} className="block truncate select-text">{formatDateTime(date, formatOption)}</span>
           );
         },
       }),

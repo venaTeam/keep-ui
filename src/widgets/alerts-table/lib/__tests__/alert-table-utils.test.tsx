@@ -273,3 +273,33 @@ describe("useAlertTableCols rule and runbook icon links", () => {
     }
   );
 });
+
+/** Renders the Last Received cell of a one-row table built from useAlertTableCols. */
+function LastReceivedCell({ value }: { value: unknown }) {
+  const columns = useAlertTableCols({ presetName: "last-received-test" });
+  const table = useReactTable({
+    data: [{ fingerprint: "fp-1", lastReceived: value } as unknown as AlertDto],
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  });
+  const cell = table
+    .getRowModel()
+    .rows[0].getAllCells()
+    .find((c) => c.column.id === "lastReceived")!;
+  return (
+    <div data-testid="cell">
+      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+    </div>
+  );
+}
+
+describe("useAlertTableCols Last Received column", () => {
+  it("truncates its text inside the cell, keeping the full text and the ISO title", () => {
+    render(<LastReceivedCell value="2025-01-15T08:30:00.000Z" />);
+
+    const span = screen.getByTestId("cell").firstElementChild!;
+    expect(span).toHaveClass("block", "truncate", "select-text");
+    expect(span.textContent).toMatch(/ ago$/);
+    expect(span).toHaveAttribute("title", "2025-01-15T08:30:00.000Z");
+  });
+});
