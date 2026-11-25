@@ -74,6 +74,11 @@ jest.mock("../GridLayout", () => ({
             {d.alertTable?.groupBy ?? "none"}
           </span>
         ))}
+        {data.map((d: any) => (
+          <span key={`t-${d.i}`} data-testid={`typography-${d.i}`}>
+            {"typography" in d ? JSON.stringify(d.typography) : "absent"}
+          </span>
+        ))}
         <button
           onClick={() =>
             onLayoutChange(layout.map((l: any) => ({ ...l, x: l.x + 5 })))
@@ -574,3 +579,33 @@ describe("leaving edit mode with unsaved changes", () => {
     link.remove();
   });
 });
+
+describe("Dashboard widget typography on load", () => {
+  beforeEach(() => {
+    mockId = "Ops";
+  });
+
+  it.each<[string, unknown, string]>([
+    ["keeps no key when the widget has none", undefined, "absent"],
+    ["drops a non-object override", "huge", "absent"],
+    [
+      "fills invalid fields of an override with the defaults",
+      { font: "comic-sans", size: "xl" },
+      JSON.stringify({ font: "system", size: "xl", title: "normal" }),
+    ],
+  ])("%s", (_label, typography, expected) => {
+    const widget: Record<string, unknown> = { i: "w1", x: 0, y: 0, w: 3, h: 3, name: "Panel" };
+    if (typography !== undefined) {
+      widget.typography = typography;
+    }
+    mockDashboards = [
+      {
+        ...savedDashboard(),
+        dashboard_config: { layout: [{ i: "w1", x: 0, y: 0, w: 3, h: 3 }], widget_data: [widget] },
+      },
+    ];
+    render(<DashboardPage />);
+    expect(screen.getByTestId("typography-w1")).toHaveTextContent(expected);
+  });
+});
+

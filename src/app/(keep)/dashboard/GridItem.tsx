@@ -12,6 +12,10 @@ import ImageGridItem from "./widget-types/image/image-grid-item";
 import HtmlGridItem from "./widget-types/html/html-grid-item";
 import GrafanaPanelGridItem from "./widget-types/grafana-panel/grafana-panel-grid-item";
 import IncidentTableGridItem from "./widget-types/incident-table/incident-table-grid-item";
+import {
+  CustomTypeBadge,
+  useWidgetTypographyProps,
+} from "./dashboard-appearance/DashboardTypographyContext";
 
 interface GridItemProps {
   item: WidgetData;
@@ -41,6 +45,7 @@ const GridItem: React.FC<GridItemProps> = ({
   const handleDelete = () => onDelete(item.i);
 
   const isEditMode = useDashboardEditMode();
+  const typographyProps = useWidgetTypographyProps(item);
   const isAlertCountPanel =
     item.presetPanelType === PresetPanelType.ALERT_COUNT_PANEL;
   const isAlertTablePanel =
@@ -49,7 +54,11 @@ const GridItem: React.FC<GridItemProps> = ({
       !item.presetPanelType);
 
   return (
-    <Card className="relative w-full h-full p-3" data-cy={`dashboard-widget-${item.i}`}>
+    <Card
+      className="relative w-full h-full p-3"
+      data-cy={`dashboard-widget-${item.i}`}
+      {...typographyProps}
+    >
       {isDraggable && (
         <span
           className="grid-item__widget absolute left-0.5 top-3 h-7 flex items-center text-gray-400 hover:text-gray-600"
@@ -63,8 +72,16 @@ const GridItem: React.FC<GridItemProps> = ({
       <div className="flex flex-col h-full px-2">
         {!isAlertCountPanel && (
           <div className={`flex-none flex items-center justify-between`}>
-            <span className="text-lg font-bold grid-item__widget" title={item.name} data-cy="dashboard-widget-title">
-              {item.name}
+            <span className="flex min-w-0 items-center">
+              <span
+                className="text-lg font-bold grid-item__widget"
+                title={item.name}
+                data-cy="dashboard-widget-title"
+                data-widget-title=""
+              >
+                {item.name}
+              </span>
+              <CustomTypeBadge active={!!item.typography} />
             </span>
             {isEditMode && (
               <MenuButton onEdit={handleEdit} onDelete={handleDelete} />

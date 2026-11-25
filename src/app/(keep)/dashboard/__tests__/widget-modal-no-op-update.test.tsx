@@ -254,3 +254,59 @@ describe("Edit Widget, then change Rows with no value", () => {
     });
   });
 });
+
+describe("Edit Widget typography", () => {
+  it("leaves a widget with a saved typography override unchanged", async () => {
+    const item = {
+      ...formSavedWidget,
+      typography: { font: "inter", size: "xl", title: "large" },
+    } as WidgetData;
+    const updated = await submit(renderModal(item));
+
+    expect(updated).toEqual(item);
+    expect(editKey(updated)).toBe(editKey(item));
+  });
+
+  it("adds no typography key when the switch is left off", async () => {
+    const updated = await submit(renderModal(formSavedWidget));
+
+    expect(updated).not.toHaveProperty("typography");
+  });
+
+  it("saves a full override seeded from the dashboard when the switch is turned on", async () => {
+    const onEditWidget = jest.fn();
+    render(
+      <WidgetModal
+        isOpen
+        onClose={jest.fn()}
+        onAddWidget={jest.fn()}
+        onEditWidget={onEditWidget}
+        presets={[preset]}
+        editingItem={formSavedWidget}
+        metricWidgets={[]}
+        dashboardTypography={{ size: "xl" }}
+      />
+    );
+    fireEvent.click(
+      await screen.findByRole("switch", { name: "Custom for this widget" })
+    );
+
+    const updated = await submit(onEditWidget);
+
+    expect(updated.typography).toEqual({ font: "system", size: "xl", title: "normal" });
+  });
+
+  it("removes the override when the switch is turned off", async () => {
+    const onEditWidget = renderModal({
+      ...formSavedWidget,
+      typography: { font: "inter", size: "xl", title: "large" },
+    } as WidgetData);
+    fireEvent.click(
+      await screen.findByRole("switch", { name: "Custom for this widget" })
+    );
+
+    const updated = await submit(onEditWidget);
+
+    expect(updated).not.toHaveProperty("typography");
+  });
+});

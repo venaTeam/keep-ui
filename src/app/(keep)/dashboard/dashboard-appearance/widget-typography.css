@@ -1,0 +1,86 @@
+/**
+ * Widget typography (see dashboard-appearance/widget-typography.ts).
+ * `--wt-scale` multiplies every text size a widget renders (the card's own
+ * inline font-size scales text that has no size utility); `--wt-title-scale`
+ * multiplies the widget title, whose base is today's title size. Rules apply only under `[data-widget-typography]`,
+ * which is absent for widgets left at the defaults.
+ */
+[data-widget-typography] .text-\[10px\] {
+  font-size: calc(10px * var(--wt-scale, 1));
+}
+[data-widget-typography] .text-\[11px\] {
+  font-size: calc(11px * var(--wt-scale, 1));
+}
+[data-widget-typography] .text-xs {
+  font-size: calc(.75rem * var(--wt-scale, 1));
+  line-height: calc(1rem * var(--wt-scale, 1));
+}
+[data-widget-typography] .text-sm {
+  font-size: calc(.875rem * var(--wt-scale, 1));
+  line-height: calc(1.25rem * var(--wt-scale, 1));
+}
+[data-widget-typography] .text-base {
+  font-size: calc(1rem * var(--wt-scale, 1));
+  line-height: calc(1.5rem * var(--wt-scale, 1));
+}
+[data-widget-typography] .text-lg {
+  font-size: calc(1.125rem * var(--wt-scale, 1));
+  line-height: calc(1.75rem * var(--wt-scale, 1));
+}
+[data-widget-typography] .text-xl {
+  font-size: calc(1.25rem * var(--wt-scale, 1));
+  line-height: calc(1.75rem * var(--wt-scale, 1));
+}
+[data-widget-typography] .text-2xl {
+  font-size: calc(1.5rem * var(--wt-scale, 1));
+  line-height: calc(2rem * var(--wt-scale, 1));
+}
+[data-widget-typography] .text-3xl {
+  font-size: calc(1.875rem * var(--wt-scale, 1));
+  line-height: calc(2.25rem * var(--wt-scale, 1));
+}
+[data-widget-typography] .text-4xl {
+  font-size: calc(2.25rem * var(--wt-scale, 1));
+  line-height: calc(2.5rem * var(--wt-scale, 1));
+}
+[data-widget-typography] .text-tremor-label {
+  font-size: calc(.75rem * var(--wt-scale, 1));
+}
+[data-widget-typography] .text-tremor-default {
+  font-size: calc(.875rem * var(--wt-scale, 1));
+  line-height: calc(1.25rem * var(--wt-scale, 1));
+}
+[data-widget-typography] .text-tremor-title {
+  font-size: calc(1.125rem * var(--wt-scale, 1));
+  line-height: calc(1.75rem * var(--wt-scale, 1));
+}
+[data-widget-typography] .text-tremor-metric {
+  font-size: calc(1.875rem * var(--wt-scale, 1));
+  line-height: calc(2.25rem * var(--wt-scale, 1));
+}
+[data-widget-typography] .\[\&\>table\]\:text-xs > table {
+  font-size: calc(.75rem * var(--wt-scale, 1));
+  line-height: calc(1rem * var(--wt-scale, 1));
+}
+[data-widget-typography-scaled] td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+[data-widget-typography-scaled] td.overflow-visible {
+  overflow: visible;
+}
+[data-widget-typography] .quick-tray {
+  --wt-scale: 1;
+  font-size: 1rem;
+}
+[data-widget-typography] .leading-none {
+  line-height: 1;
+}
+[data-widget-typography] [data-widget-title] {
+  font-size: calc(1.125rem * var(--wt-title-scale, 1));
+  line-height: calc(1.75rem * var(--wt-title-scale, 1));
+}
+[data-widget-typography] [data-widget-title="counter"] {
+  font-size: calc(1.25rem * var(--wt-title-scale, 1));
+  line-height: calc(1.75rem * var(--wt-title-scale, 1));
+}

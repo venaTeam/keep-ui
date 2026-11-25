@@ -8,6 +8,8 @@ import {
   DENSITIES,
   PRESET_THEMES,
 } from "./dashboard-appearance-validation";
+import { TypographyControls } from "./TypographyControls";
+import { clampWidgetTypography, WidgetTypography } from "./widget-typography";
 
 const DENSITY_LABELS: Record<DashboardDensity, string> = {
   compact: "Compact",
@@ -50,6 +52,17 @@ export function DashboardSettingsPanel({
 
   const setDensity = (density: DashboardDensity) =>
     onChange({ ...appearance, density });
+
+  const setTypography = (typography: WidgetTypography) => {
+    const next: DashboardAppearance = { ...appearance };
+    const clamped = clampWidgetTypography(typography);
+    if (Object.keys(clamped).length > 0) {
+      next.typography = clamped;
+    } else {
+      delete next.typography;
+    }
+    onChange(next);
+  };
 
   return (
     <div
@@ -160,6 +173,18 @@ export function DashboardSettingsPanel({
             );
           })}
         </div>
+      </div>
+
+      <div data-cy="dashboard-settings-typography">
+        <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+          Typography
+        </label>
+        <TypographyControls
+          value={appearance.typography ?? {}}
+          onChange={setTypography}
+          fontPicker="list"
+          idPrefix="dashboard-settings-typography"
+        />
       </div>
 
       <div className="mt-auto flex items-center gap-2 pt-4">

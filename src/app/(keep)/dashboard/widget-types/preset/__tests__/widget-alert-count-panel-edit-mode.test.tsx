@@ -81,3 +81,31 @@ describe("WidgetAlertCountPanel in edit mode", () => {
     expect(screen.queryAllByRole("button")).toHaveLength(0);
   });
 });
+
+describe("WidgetAlertCountPanel typography", () => {
+  const renderWithOverride = (isEditMode: boolean) =>
+    render(
+      <DashboardEditModeProvider value={isEditMode}>
+        <WidgetAlertCountPanel
+          presetName="feed"
+          widgetName="Critical firing"
+          onEdit={jest.fn()}
+          onDelete={jest.fn()}
+          hasCustomTypography
+        />
+      </DashboardEditModeProvider>
+    );
+
+  it("marks its name as the widget title", () => {
+    renderWithOverride(false);
+    expect(document.querySelector("[data-widget-title]")).toBeInTheDocument();
+  });
+
+  it("shows the Custom type badge in edit mode only", () => {
+    const { unmount } = renderWithOverride(true);
+    expect(screen.getByText("Custom type")).toBeInTheDocument();
+    unmount();
+    renderWithOverride(false);
+    expect(screen.queryByText("Custom type")).toBeNull();
+  });
+});

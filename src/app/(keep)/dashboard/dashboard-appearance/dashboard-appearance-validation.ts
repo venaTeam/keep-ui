@@ -1,8 +1,11 @@
+import { clampWidgetTypography, WidgetTypography } from "./widget-typography";
+
 export type DashboardDensity = "compact" | "normal" | "spacious";
 
 export interface DashboardAppearance {
   backgroundColor?: string;
   density?: DashboardDensity;
+  typography?: WidgetTypography;
 }
 
 export interface PresetTheme {
@@ -65,8 +68,8 @@ export function isDensity(value: unknown): value is DashboardDensity {
 
 /**
  * Coerce a persisted appearance, which the gateway stores unvalidated, into one
- * the UI can render: only a hex color and a known density survive, every other
- * key is dropped.
+ * the UI can render: only a hex color, a known density and allowlisted
+ * typography survive, every other key is dropped.
  */
 export function clampAppearance(raw: unknown): DashboardAppearance {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
@@ -79,6 +82,10 @@ export function clampAppearance(raw: unknown): DashboardAppearance {
   }
   if (isDensity(source.density)) {
     result.density = source.density;
+  }
+  const typography = clampWidgetTypography(source.typography);
+  if (Object.keys(typography).length > 0) {
+    result.typography = typography;
   }
   return result;
 }
