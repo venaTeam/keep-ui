@@ -2366,8 +2366,17 @@ describe("WidgetAlertsTable", () => {
         expect(trayOf(a2)).toHaveAttribute("data-placement", "above");
       });
 
-      it("ignores an inner scroller that doesn't overflow", () => {
+      it("flips above when an inner scroller clips the row, overflowing or not", () => {
         renderInCard({ cardBottom: 400, innerBottom: 120, innerOverflows: false });
+
+        enter(a2);
+
+        expect(trayOf(a2)).toHaveAttribute("data-placement", "above");
+      });
+
+      it("ignores ancestors whose vertical overflow is visible", () => {
+        renderInCard({ cardBottom: 400, innerBottom: 120 });
+        widgetRoot().style.overflowY = "visible";
 
         enter(a2);
 

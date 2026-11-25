@@ -12,7 +12,7 @@ export interface TrayPlacementInput {
   clipBottom: number;
 }
 
-/** The dashboard card around a widget, which clips it vertically. */
+/** The dashboard card's preset container, where the walk for clipping ancestors stops. */
 const WIDGET_CARD_SELECTOR = '[data-cy="dashboard-widget-preset"]';
 
 /**
@@ -60,31 +60,32 @@ function getTrailingLinkCellsWidth(
   return width;
 }
 
-/** Whether an element clips its content vertically and its content can overflow it. */
-function clipsVertically(element: HTMLElement, isCard: boolean): boolean {
+/**
+ * Whether an element clips its content vertically: its vertical overflow is
+ * anything but visible. Such an element clips a tray hanging out of it
+ * whether or not its content overflows it now, so that isn't checked: a
+ * hidden tray is parked inside its row and adds no overflow of its own.
+ */
+function clipsVertically(element: HTMLElement): boolean {
   const { overflowY } = getComputedStyle(element);
-  if (overflowY === "" || overflowY === "visible") {
-    return false;
-  }
-  return isCard || element.clientHeight < element.scrollHeight;
+  return overflowY !== "" && overflowY !== "visible";
 }
 
 /**
  * The visible vertical band around `element`: the viewport, cut by every
- * ancestor up to the widget card that clips (`clipsVertically`). An
- * overflow-auto ancestor as tall as its content doesn't clip; the card does.
+ * ancestor up to the widget card that clips (`clipsVertically`), such as the
+ * Alert Table widget's rows area, which owns the vertical scroll.
  */
 function getClipEdges(element: HTMLElement): { top: number; bottom: number } {
   let top = 0;
   let bottom = window.innerHeight;
   for (let node = element.parentElement; node; node = node.parentElement) {
-    const isCard = node.matches(WIDGET_CARD_SELECTOR);
-    if (clipsVertically(node, isCard)) {
+    if (clipsVertically(node)) {
       const rect = node.getBoundingClientRect();
       top = Math.max(top, rect.top);
       bottom = Math.min(bottom, rect.bottom);
     }
-    if (isCard) {
+    if (node.matches(WIDGET_CARD_SELECTOR)) {
       break;
     }
   }

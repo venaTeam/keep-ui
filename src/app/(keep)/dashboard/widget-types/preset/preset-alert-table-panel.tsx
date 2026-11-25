@@ -360,7 +360,7 @@ const PresetAlertTablePanel: React.FC<PresetAlertTablePanelProps> = ({
 
   return (
     <>
-      <div className="flex gap-2">
+      <div className="flex flex-none gap-2" data-cy="dashboard-widget-preset-header">
         <div className="flex-1 min-w-0 overflow-hidden whitespace-nowrap">
           {renderGroupCountLine()}
           {renderMissingLine()}
@@ -392,20 +392,25 @@ const PresetAlertTablePanel: React.FC<PresetAlertTablePanelProps> = ({
         </div>
       </div>
       {countOfLastAlerts > 0 && (
-        <WidgetAlertsTable
-          item={item}
-          presetNoisy={!!preset?.is_noisy}
-          isEditMode={isEditMode}
-          onChange={isEditMode ? onSave : undefined}
-          settingsSlot={settingsSlot}
-          alerts={shownAlerts}
-          background={
-            isLoading || (countBy && isGroupLoading)
-              ? undefined
-              : hexToRgb(getColor(), 0.1)
-          }
-          selection={selection}
-        />
+        <div
+          className="min-h-0 flex-1 overflow-y-auto"
+          data-cy="dashboard-widget-preset-rows"
+        >
+          <WidgetAlertsTable
+            item={item}
+            presetNoisy={!!preset?.is_noisy}
+            isEditMode={isEditMode}
+            onChange={isEditMode ? onSave : undefined}
+            settingsSlot={settingsSlot}
+            alerts={shownAlerts}
+            background={
+              isLoading || (countBy && isGroupLoading)
+                ? undefined
+                : hexToRgb(getColor(), 0.1)
+            }
+            selection={selection}
+          />
+        </div>
       )}
       <QuickActionDialogHost
         open={openAction}

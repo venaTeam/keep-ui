@@ -79,6 +79,30 @@ describe("PresetGridItem", () => {
     expect(mockCountPanel).not.toHaveBeenCalled();
   });
 
+  it("gives the table panel a column that shrinks to the card and doesn't scroll itself", () => {
+    render(
+      <PresetGridItem
+        item={buildItem({ presetPanelType: PresetPanelType.ALERT_TABLE })}
+      />
+    );
+
+    const container = screen.getByTestId("table-panel").parentElement!;
+    expect(container).toHaveAttribute("data-cy", "dashboard-widget-preset");
+    expect(container.className).toBe("flex min-h-0 flex-col gap-2");
+  });
+
+  it("keeps the counter tile's scrolling column as it was", () => {
+    render(
+      <PresetGridItem
+        item={buildItem({ presetPanelType: PresetPanelType.ALERT_COUNT_PANEL })}
+      />
+    );
+
+    const container = screen.getByTestId("count-panel").parentElement!;
+    expect(container).toHaveAttribute("data-cy", "dashboard-widget-preset");
+    expect(container.className).toBe("flex flex-col overflow-y-auto gap-2");
+  });
+
   it("passes onSave to the table panel", () => {
     const onSave = jest.fn();
     render(
