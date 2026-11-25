@@ -2469,6 +2469,53 @@ describe("WidgetAlertsTable", () => {
           expect(trayOf(linkAlert)!.style.right).toBe("92px");
         });
 
+        it("places the tab again once the layout settles, from a ResizeObserver on the wrapper and link cells", () => {
+          const observers: {
+            callback: ResizeObserverCallback;
+            targets: Element[];
+          }[] = [];
+          window.ResizeObserver = class {
+            private readonly entry: {
+              callback: ResizeObserverCallback;
+              targets: Element[];
+            };
+            constructor(callback: ResizeObserverCallback) {
+              this.entry = { callback, targets: [] };
+              observers.push(this.entry);
+            }
+            observe(target: Element) {
+              this.entry.targets.push(target);
+            }
+            unobserve() {}
+            disconnect() {
+              this.entry.targets = [];
+            }
+          } as unknown as typeof ResizeObserver;
+          renderHarness({
+            alerts: [linkAlert],
+            presetColumns: ["name", "alert_rule_url", "runbook_url"],
+          });
+          widthOfCells({ checkbox: 28, alert_rule_url: 72, runbook_url: 96 });
+          scrollerWithRight(400);
+          enter(linkAlert);
+          const ruleCell = rowFor(linkAlert).querySelector(
+            'td[data-column-id="alert_rule_url"]'
+          )!;
+          const trayObserver = observers.find(
+            (observer) =>
+              observer.targets.includes(widgetRoot()) &&
+              observer.targets.includes(ruleCell)
+          )!;
+          expect(trayObserver).toBeDefined();
+
+          scrollerWithRight(250);
+          act(() => {
+            trayObserver.callback([], {} as ResizeObserver);
+          });
+
+          expect(trayOf(linkAlert)!.style.right).toBe("122px");
+        });
+
         it("keeps the tab at the row's right end without trailing link columns", () => {
           renderHarness({
             alerts: [linkAlert],

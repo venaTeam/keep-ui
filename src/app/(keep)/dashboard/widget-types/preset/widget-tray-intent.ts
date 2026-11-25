@@ -5,6 +5,7 @@ import {
   QUICK_OPEN_ATTR,
   QUICK_TRAY_CLASS,
 } from "@/features/alerts/alert-quick-actions";
+import { isLinkIconColumn } from "@/widgets/alerts-table/lib/alert-link-columns";
 import { placeTray } from "./widget-tray-placement";
 
 /** How long, in milliseconds, the pointer must rest on a row before its tray shows. */
@@ -43,8 +44,10 @@ export const TRAY_FADE_MS = 100;
  *   closes, and is dropped if focus came back into the row or the row is
  *   hovered.
  * - While a row is active, its tray is placed again when anything holding the
- *   row scrolls (the rows area, the table's wrapper, the page) and when the
- *   window resizes.
+ *   row scrolls (the rows area, the table's wrapper, the page), when the
+ *   window resizes, and, once the layout has settled, when the table's
+ *   wrapper or the row's link icon cells change size (a `ResizeObserver`), so
+ *   a resize that re-lays the columns out leaves no stale offset.
  * Nothing is attached while `enabled` is false. Timers, listeners and marks
  * are cleared when it turns false or the table unmounts.
  */
@@ -65,6 +68,7 @@ export function useTrayHoverIntent(
     let fadeTimer: number | undefined;
     let deferredFade: boolean | null = null;
     let openObserver: MutationObserver | null = null;
+    let layoutObserver: ResizeObserver | null = null;
 
     const trayOf = (row: HTMLTableRowElement) =>
       row.querySelector<HTMLElement>(`.${QUICK_TRAY_CLASS}`);
@@ -104,6 +108,22 @@ export function useTrayHoverIntent(
       placeTray(row, tray);
       row.setAttribute(QUICK_ACTIVE_ATTR, "");
       active = row;
+      watchLayout(row);
+    };
+    const stopWatchingLayout = () => {
+      layoutObserver?.disconnect();
+      layoutObserver = null;
+    };
+    const watchLayout = (row: HTMLTableRowElement) => {
+      stopWatchingLayout();
+      if (typeof ResizeObserver === "undefined") {
+        return;
+      }
+      layoutObserver = new ResizeObserver(() => placeActiveAgain());
+      layoutObserver.observe(container);
+      Array.from(row.cells)
+        .filter((cell) => isLinkIconColumn(cell.dataset.columnId ?? ""))
+        .forEach((cell) => layoutObserver?.observe(cell));
     };
     const isOpen = (row: HTMLTableRowElement) =>
       row.querySelector(`[${QUICK_OPEN_ATTR}]`) !== null;
@@ -136,6 +156,7 @@ export function useTrayHoverIntent(
       }
       stopWaitingForClose();
       clearLeaving();
+      stopWatchingLayout();
       if (!active) {
         return;
       }
@@ -245,6 +266,7 @@ export function useTrayHoverIntent(
       container.removeEventListener("pointerleave", onPointerLeave);
       container.removeEventListener("focusin", onFocusIn);
       container.removeEventListener("focusout", onFocusOut);
+      stopWatchingLayout();
       stopWaitingForClose();
       clearLeaving();
       active?.removeAttribute(QUICK_ACTIVE_ATTR);
