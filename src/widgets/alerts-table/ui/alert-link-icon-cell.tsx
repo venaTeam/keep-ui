@@ -1,4 +1,5 @@
 import { MdMenuBook, MdOpenInNew } from "react-icons/md";
+import "./alert-link-icon-cell.css";
 import clsx from "clsx";
 import { Tooltip } from "@/shared/ui";
 import {
@@ -12,7 +13,9 @@ import {
  * runbook. When disabled the icon is dimmed and does not navigate. The
  * tooltip stacks at z-60, above the presets page's z-10 CEL search bar layer,
  * and never catches the pointer, so moving down the icon column reaches the
- * next row's icon even where the tooltip opens below.
+ * next row's icon even where the tooltip opens below: its content is
+ * `pointer-events-none`, and `alert-link-icon-cell.css` makes Radix's floating
+ * wrapper around the `alert-link-tooltip` content pointer-transparent as well.
  */
 export function AlertLinkIconCell({
   columnId,
@@ -46,7 +49,7 @@ export function AlertLinkIconCell({
   return (
     <Tooltip
       asChild
-      className="pointer-events-none z-60"
+      className="alert-link-tooltip pointer-events-none z-60"
       content={
         <>
           <div className="font-semibold">{action}</div>

@@ -1,4 +1,6 @@
 import React from "react";
+import { readFileSync } from "fs";
+import { join } from "path";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import {
   flexRender,
@@ -212,7 +214,49 @@ describe("useAlertTableCols rule and runbook icon links", () => {
     fireEvent.focus(screen.getByRole("link", { name: "Open runbook" }));
 
     const tooltip = await screen.findByRole("tooltip");
-    expect(tooltip.closest(".pointer-events-none.z-60")).not.toBeNull();
+    expect(
+      tooltip.closest(".alert-link-tooltip.pointer-events-none.z-60")
+    ).not.toBeNull();
+  });
+
+  it("renders its content inside Radix's floating wrapper, which the stylesheet targets", async () => {
+    render(<GeneratedColumn columnId="runbook_url" value={RUNBOOK_URL} />);
+    fireEvent.focus(screen.getByRole("link", { name: "Open runbook" }));
+
+    const content = (await screen.findByRole("tooltip")).closest(
+      ".alert-link-tooltip"
+    )!;
+
+    expect(content.closest("[data-radix-popper-content-wrapper]")).not.toBeNull();
+  });
+
+  it("makes the floating wrapper of a Rule or Runbook tooltip pointer-transparent, and no other tooltip's", () => {
+    const style = document.createElement("style");
+    style.textContent = readFileSync(
+      join(__dirname, "../../ui/alert-link-icon-cell.css"),
+      "utf8"
+    );
+    document.head.appendChild(style);
+    const host = document.createElement("div");
+    host.innerHTML = `
+      <div data-radix-popper-content-wrapper id="link-wrapper">
+        <div class="alert-link-tooltip pointer-events-none z-60">Open runbook</div>
+      </div>
+      <div data-radix-popper-content-wrapper id="other-wrapper">
+        <div>Other tooltip</div>
+      </div>`;
+    document.body.appendChild(host);
+    try {
+      expect(
+        getComputedStyle(document.getElementById("link-wrapper")!).pointerEvents
+      ).toBe("none");
+      expect(
+        getComputedStyle(document.getElementById("other-wrapper")!).pointerEvents
+      ).not.toBe("none");
+    } finally {
+      style.remove();
+      host.remove();
+    }
   });
 
   it("hands the tooltip over when the pointer moves from one icon to the next", () => {
