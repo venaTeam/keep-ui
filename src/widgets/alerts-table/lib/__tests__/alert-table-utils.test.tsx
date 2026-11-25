@@ -1,5 +1,5 @@
 import React from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import {
   flexRender,
   getCoreRowModel,
@@ -149,6 +149,38 @@ function GeneratedColumn({
   );
 }
 
+/** Renders the Rule and Runbook cells of a one-row table built from useAlertTableCols. */
+function RuleAndRunbookCells() {
+  const columns = useAlertTableCols({
+    additionalColsToGenerate: ["alert_rule_url", "runbook_url"],
+    presetName: LINK_PRESET,
+  });
+  const table = useReactTable({
+    data: [
+      {
+        fingerprint: "fp-1",
+        alert_rule_url: GRAFANA_RULE_URL,
+        runbook_url: RUNBOOK_URL,
+      } as unknown as AlertDto,
+    ],
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  });
+  return (
+    <div>
+      {table
+        .getRowModel()
+        .rows[0].getAllCells()
+        .filter((cell) => ["alert_rule_url", "runbook_url"].includes(cell.column.id))
+        .map((cell) => (
+          <div key={cell.id}>
+            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+          </div>
+        ))}
+    </div>
+  );
+}
+
 describe("useAlertTableCols rule and runbook icon links", () => {
   afterEach(() => {
     localStorage.clear();
@@ -172,6 +204,67 @@ describe("useAlertTableCols rule and runbook icon links", () => {
     fireEvent.focus(screen.getByRole("link", { name: "Open runbook" }));
 
     expect((await screen.findByRole("tooltip")).closest(".z-60")).not.toBeNull();
+  });
+
+  it("never lets its tooltip catch the pointer", async () => {
+    render(<GeneratedColumn columnId="runbook_url" value={RUNBOOK_URL} />);
+
+    fireEvent.focus(screen.getByRole("link", { name: "Open runbook" }));
+
+    const tooltip = await screen.findByRole("tooltip");
+    expect(tooltip.closest(".pointer-events-none.z-60")).not.toBeNull();
+  });
+
+  it("hands the tooltip over when the pointer moves from one icon to the next", () => {
+    jest.useFakeTimers();
+    try {
+      render(<RuleAndRunbookCells />);
+      const rule = screen.getByRole("link", { name: "Open alert rule in Grafana" });
+      const runbook = screen.getByRole("link", { name: "Open runbook" });
+      rule.getBoundingClientRect = () =>
+        ({ left: 0, right: 24, top: 0, bottom: 24, width: 24, height: 24 }) as DOMRect;
+      runbook.getBoundingClientRect = () =>
+        ({ left: 0, right: 24, top: 32, bottom: 56, width: 24, height: 24 }) as DOMRect;
+      const pointer = (
+        target: Element,
+        type: string,
+        clientY: number,
+        relatedTarget: Element | null = null
+      ) =>
+        act(() => {
+          target.dispatchEvent(
+            new MouseEvent(type, {
+              bubbles: !type.endsWith("enter") && !type.endsWith("leave"),
+              clientX: 12,
+              clientY,
+              relatedTarget,
+            })
+          );
+        });
+      const tooltipText = () =>
+        screen.queryAllByRole("tooltip").map((tooltip) => tooltip.textContent);
+
+      pointer(rule, "pointerover", 12);
+      pointer(rule, "pointermove", 12);
+      act(() => {
+        jest.advanceTimersByTime(200);
+      });
+      expect(tooltipText()).toEqual([
+        expect.stringContaining("Open alert rule in Grafana"),
+      ]);
+
+      pointer(rule, "pointerout", 30, runbook);
+      pointer(rule, "pointerleave", 30, runbook);
+      pointer(runbook, "pointerover", 40, rule);
+      pointer(runbook, "pointermove", 40);
+      act(() => {
+        jest.advanceTimersByTime(200);
+      });
+
+      expect(tooltipText()).toEqual([expect.stringContaining("Open runbook")]);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it("renders a non-Grafana rule URL as a generic link icon", () => {
