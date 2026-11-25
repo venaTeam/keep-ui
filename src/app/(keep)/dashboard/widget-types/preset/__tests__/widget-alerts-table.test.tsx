@@ -2599,6 +2599,52 @@ describe("WidgetAlertsTable", () => {
         expect(activeRows()).toHaveLength(0);
       });
 
+      describe("off the rows", () => {
+        const headerButton = () =>
+          screen.getByTestId("header-cell-name").querySelector("button")!;
+
+        it("hides the tray 150ms after the pointer moves onto the header, with a fade", () => {
+          renderHarness({ alerts: rows5 });
+          overRow(rows5[1]);
+          wait(100);
+
+          over(headerButton());
+          wait(149);
+          expect(activeRows()).toEqual([rowFor(rows5[1])]);
+          over(screen.getByTestId("header-cell-name"));
+          wait(1);
+
+          expect(activeRows()).toHaveLength(0);
+          expect(rowFor(rows5[1])).toHaveAttribute("data-quick-leaving");
+        });
+
+        it("keeps the tray when the pointer comes back to the active row in time", () => {
+          renderHarness({ alerts: rows5 });
+          overRow(rows5[1]);
+          wait(100);
+
+          over(headerButton());
+          wait(100);
+          overRow(rows5[1]);
+          wait(300);
+
+          expect(activeRows()).toEqual([rowFor(rows5[1])]);
+        });
+
+        it("deactivates the row when keyboard focus moves to the header", () => {
+          renderHarness({ alerts: rows5 });
+          act(() => {
+            checkboxFor(rows5[2]).focus();
+          });
+
+          act(() => {
+            headerButton().focus();
+          });
+
+          expect(activeRows()).toHaveLength(0);
+        });
+      });
+
       describe("while the row's dialog is open", () => {
         const markOpen = (alert: AlertDto) => {
           const marker = document.createElement("span");

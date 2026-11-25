@@ -25,12 +25,14 @@ export const TRAY_FADE_MS = 100;
  *   sweep that moves on sooner shows none.
  * - The pointer back on the active row, its tray included, cancels a pending
  *   switch, so a diagonal move to the tray across the next row keeps it.
- * - The pointer leaving the table deactivates the row after `TRAY_LEAVE_MS`,
+ * - The pointer leaving the table, or moving onto anything in it that is
+ *   neither a row with a tray nor the active row (the header, a group row),
+ *   deactivates the row after `TRAY_LEAVE_MS`,
  *   marked `QUICK_LEAVING_ATTR` for the `TRAY_FADE_MS` its tray takes to fade.
  *   The pointer back on that row meanwhile makes it active again at once.
  * - Keyboard focus in a row (`:focus-visible`), or any focus on a tray
- *   button, makes the row active at once, and focus leaving the table
- *   deactivates it.
+ *   button, makes the row active at once. Focus leaving the table, or moving
+ *   to anything in it outside the rows with a tray, deactivates it.
  * - The active row whose dialog is open (it holds `QUICK_OPEN_ATTR`) is not
  *   deactivated: a deactivation asked for meanwhile waits until the dialog
  *   closes, and is dropped if focus came back into the row or the row is
@@ -138,14 +140,27 @@ export function useTrayHoverIntent(
       active = null;
     };
 
+    const startLeave = () => {
+      if (active && leaveTimer === undefined) {
+        leaveTimer = window.setTimeout(() => deactivate(true), TRAY_LEAVE_MS);
+      }
+    };
     const onPointerOver = (event: PointerEvent) => {
-      cancelLeave();
       const row = rowOf(event.target);
-      if (row !== null && row === leaving) {
+      if (row === null) {
+        cancelPending();
+        const target = event.target as Node;
+        if (!active?.contains(target)) {
+          startLeave();
+        }
+        return;
+      }
+      cancelLeave();
+      if (row === leaving) {
         activate(row);
         return;
       }
-      if (row === active || row === null) {
+      if (row === active) {
         cancelPending();
         return;
       }
@@ -158,9 +173,7 @@ export function useTrayHoverIntent(
     };
     const onPointerLeave = () => {
       cancelPending();
-      if (active && leaveTimer === undefined) {
-        leaveTimer = window.setTimeout(() => deactivate(true), TRAY_LEAVE_MS);
-      }
+      startLeave();
     };
     const onFocusIn = (event: FocusEvent) => {
       const row = rowOf(event.target);
@@ -168,6 +181,8 @@ export function useTrayHoverIntent(
       const onTray = row !== null && trayOf(row)?.contains(target) === true;
       if (row && (onTray || target.matches(":focus-visible"))) {
         activate(row);
+      } else if (row === null) {
+        deactivate(false);
       }
     };
     const onFocusOut = (event: FocusEvent) => {
