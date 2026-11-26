@@ -1,5 +1,4 @@
 import { Button, Callout, Icon } from "@tremor/react";
-import { formatQuery } from "react-querybuilder";
 import { useLocalStorage } from "utils/hooks/useLocalStorage";
 import { IoMdClose } from "react-icons/io";
 import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
@@ -17,6 +16,7 @@ import { showErrorToast } from "@/shared/ui";
 import { CorrelationFormType } from "./types";
 import { TIMEFRAME_UNITS_TO_SECONDS } from "./timeframe-constants";
 import { useMatchingAlerts } from "./useMatchingAlerts";
+import { buildCorrelationRuleBody } from "./correlation-rule-body";
 
 type CorrelationSidebarBodyProps = {
   toggle: VoidFunction;
@@ -63,41 +63,10 @@ export const CorrelationSidebarBody = ({
   const onCorrelationFormSubmit: SubmitHandler<CorrelationFormType> = async (
     correlationFormData
   ) => {
-    const {
-      name,
-      query,
-      timeUnit,
-      description,
-      groupedAttributes,
-      requireApprove,
-      resolveOn,
-      createOn,
-      incidentNameTemplate,
-      incidentPrefix,
-      multiLevel,
-      multiLevelPropertyName,
-      threshold,
-      assignee,
-    } = correlationFormData;
-
-    const body = {
-      sqlQuery: formatQuery(query, "parameterized_named"),
-      groupDescription: description,
-      ruleName: name,
-      celQuery: formatQuery(query, "cel"),
+    const body = buildCorrelationRuleBody(correlationFormData, {
       timeframeInSeconds,
-      timeUnit: timeUnit,
-      groupingCriteria: totalAlertsFound ? groupedAttributes : [],
-      requireApprove: requireApprove,
-      resolveOn: resolveOn,
-      createOn: createOn,
-      incidentNameTemplate,
-      incidentPrefix,
-      multiLevel,
-      multiLevelPropertyName,
-      threshold,
-      assignee,
-    };
+      alertsFound: totalAlertsFound,
+    });
 
     try {
       selectedId
