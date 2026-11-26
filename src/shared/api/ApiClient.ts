@@ -1,6 +1,7 @@
 import { InternalConfig } from "@/types/internal-config";
 import { Session } from "next-auth";
 import { KeepApiError, KeepApiReadOnlyError } from "./KeepApiError";
+import { clearAssistantStorage } from "@/shared/lib/assistant-storage";
 import { getApiUrlFromConfig } from "@/shared/lib/getApiUrlFromConfig";
 import { getApiURL } from "@/utils/apiUrl";
 import * as Sentry from "@sentry/nextjs";
@@ -12,6 +13,7 @@ const READ_ONLY_ALWAYS_ALLOWED_URLS = [
   "/alerts/audit",
   "/alerts/facets/options",
   "/alerts/query",
+  "/assistant/",
   "/incidents/facets/options",
   "/workflows/query",
   "/workflows/facets/options",
@@ -80,6 +82,7 @@ export class ApiClient {
         if (response.status === 401) {
           // on server, middleware will handle the sign out
           if (!this.isServer) {
+            clearAssistantStorage();
             await signOutClient();
           }
           throw new KeepApiError(
@@ -168,6 +171,15 @@ export class ApiClient {
         // so the middleware can rewrite to WORKFLOWS_API_URL
         apiUrl = "/backend";
       }
+    }
+
+    // On the client, /assistant/* always goes through the /backend middleware
+    // proxy, the same way as the chat stream
+    if (
+      !this.isServer &&
+      (url === "/assistant" || url.startsWith("/assistant/"))
+    ) {
+      apiUrl = "/backend";
     }
 
     const fullUrl = apiUrl + url;

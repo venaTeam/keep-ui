@@ -3,6 +3,7 @@
 import { useCallback } from "react";
 import { signOut } from "next-auth/react";
 import * as Sentry from "@sentry/nextjs";
+import { clearAssistantStorage } from "@/shared/lib/assistant-storage";
 import { useConfig } from "@/utils/hooks/useConfig";
 
 export function useSignOut() {
@@ -17,6 +18,7 @@ export function useSignOut() {
       Sentry.setUser(null);
     }
 
+    clearAssistantStorage();
     signOut();
   }, [configData]);
 }

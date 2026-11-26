@@ -1,11 +1,13 @@
 import React from "react";
-import { render } from "@testing-library/react";
-import { ColumnDef, createColumnHelper } from "@tanstack/react-table";
+import { act, render } from "@testing-library/react";
+import { ColumnDef, createColumnHelper, Table } from "@tanstack/react-table";
+import { useAssistantContextStore } from "@/entities/assistant";
 import { AlertTableServerSide } from "@/widgets/alerts-table/ui/alert-table-server-side";
 import { AlertDto, Severity, Status } from "@/entities/alerts/model/types";
 
 let mockBodyProps: Record<string, unknown> | undefined;
 let mockColumnRenameMapping: Record<string, string> = {};
+let mockConfig: Record<string, unknown> = {};
 
 const mockNull = () => null;
 
@@ -63,7 +65,7 @@ jest.mock("@/shared/lib/hooks/useHydratedSession", () => ({
   useHydratedSession: () => ({ data: null }),
 }));
 jest.mock("@/utils/hooks/useConfig", () => ({
-  useConfig: () => ({ data: {} }),
+  useConfig: () => ({ data: mockConfig }),
 }));
 jest.mock("@/components/ui/useTimeframeState", () => ({
   useTimeframeState: () => [null, jest.fn()],
@@ -114,17 +116,18 @@ const alert = {
   enriched_fields: [],
 } as AlertDto;
 
-const renderTable = () =>
-  render(
-    <AlertTableServerSide
-      alerts={[alert]}
-      alertsTotalCount={1}
-      columns={columns}
-      presetName="team-feed"
-      facetsCel={null}
-      facetsPanelRefreshToken={undefined}
-    />
-  );
+const tableOf = (alerts: AlertDto[]) => (
+  <AlertTableServerSide
+    alerts={alerts}
+    alertsTotalCount={alerts.length}
+    columns={columns}
+    presetName="team-feed"
+    facetsCel={null}
+    facetsPanelRefreshToken={undefined}
+  />
+);
+
+const renderTable = (alerts = [alert]) => render(tableOf(alerts));
 
 const getColumnLabel = () => {
   expect(mockBodyProps).toBeDefined();
@@ -136,7 +139,12 @@ const getColumnLabel = () => {
 beforeEach(() => {
   mockBodyProps = undefined;
   mockColumnRenameMapping = {};
+  mockConfig = {};
   localStorage.clear();
+  useAssistantContextStore.setState(
+    useAssistantContextStore.getInitialState(),
+    true
+  );
 });
 
 describe("AlertTableServerSide group labels", () => {
@@ -155,5 +163,150 @@ describe("AlertTableServerSide group labels", () => {
 
     expect(getColumnLabel()?.("service")).toBe("Service");
     expect(getColumnLabel()?.("lastReceived")).toBe("Last Received");
+  });
+});
+
+describe("AlertTableServerSide assistant selection", () => {
+  const make = (number: number, service: string): AlertDto => ({
+    ...alert,
+    id: `a${number}`,
+    fingerprint: `fp-${number}`,
+    name: `alert ${number}`,
+    service,
+  });
+  const alerts = [make(1, "api"), make(2, "api"), make(3, "db")];
+  const selected = (number: number) => ({
+    fingerprint: `fp-${number}`,
+    name: `alert ${number}`,
+    severity: Severity.Warning,
+    status: Status.Firing,
+  });
+
+  const table = () => mockBodyProps?.table as Table<AlertDto>;
+  const getSelection = () => useAssistantContextStore.getState().selection;
+  const select = (...keys: string[]) =>
+    act(() =>
+      table().setRowSelection(
+        Object.fromEntries(keys.map((key) => [key, true]))
+      )
+    );
+  const groupBy = (...columnIds: string[]) =>
+    act(() => table().setGrouping(columnIds));
+
+  beforeEach(() => {
+    mockConfig = { KEEP_ASSISTANT_ENABLED: true };
+  });
+
+  it("is what is ticked, and nothing else", () => {
+    renderTable(alerts);
+    expect(getSelection()).toEqual([]);
+    select("fp-1", "fp-3");
+    expect(getSelection()).toEqual([selected(1), selected(3)]);
+    act(() => table().setRowSelection({ "fp-1": false, "fp-3": true }));
+    expect(getSelection()).toEqual([selected(3)]);
+    act(() => table().resetRowSelection());
+    expect(getSelection()).toEqual([]);
+  });
+
+  it("has an alert of another page by its fingerprint only", () => {
+    const { rerender } = renderTable(alerts);
+    select("fp-1", "fp-2");
+    rerender(tableOf([make(2, "api"), make(4, "db")]));
+    expect(getSelection()).toEqual([{ fingerprint: "fp-1" }, selected(2)]);
+
+    rerender(tableOf(alerts));
+    expect(getSelection()).toEqual([selected(1), selected(2)]);
+  });
+
+  it("has the state of the alerts as it is now", () => {
+    const { rerender } = renderTable(alerts);
+    select("fp-1");
+    rerender(tableOf([{ ...alerts[0], status: Status.Resolved }]));
+    expect(getSelection()).toEqual([
+      { ...selected(1), status: Status.Resolved },
+    ]);
+  });
+
+  describe("with grouping", () => {
+    const groupRow = (id: string) => table().getGroupedRowModel().rowsById[id];
+
+    it("has the alerts of a ticked group, and not its header", () => {
+      renderTable(alerts);
+      groupBy("service");
+      act(() => groupRow("service:api").toggleSelected(true));
+      // This is what the table itself has
+      expect(Object.keys(table().getState().rowSelection)).toContain(
+        "service:api"
+      );
+      expect(getSelection()).toEqual([selected(1), selected(2)]);
+    });
+
+    it("has none of the headers of nested groups", () => {
+      renderTable(alerts);
+      groupBy("service", "name");
+      act(() => groupRow("service:api").toggleSelected(true));
+      expect(
+        Object.keys(table().getState().rowSelection).filter((key) =>
+          key.includes(":")
+        ).length
+      ).toBeGreaterThan(1);
+      expect(getSelection()).toEqual([selected(1), selected(2)]);
+    });
+
+    it("does not take a header for an alert after the group is gone", () => {
+      const { rerender } = renderTable(alerts);
+      groupBy("service");
+      act(() => groupRow("service:api").toggleSelected(true));
+
+      rerender(tableOf([make(4, "db")]));
+      expect(getSelection()).toEqual([
+        { fingerprint: "fp-1" },
+        { fingerprint: "fp-2" },
+      ]);
+      groupBy();
+      expect(getSelection()).toEqual([
+        { fingerprint: "fp-1" },
+        { fingerprint: "fp-2" },
+      ]);
+      rerender(tableOf(alerts));
+      expect(getSelection()).toEqual([selected(1), selected(2)]);
+    });
+  });
+
+  it("does not change with a render that changes nothing", () => {
+    const onChange = jest.fn();
+    const { rerender } = renderTable(alerts);
+    select("fp-1");
+    const unsubscribe = useAssistantContextStore.subscribe(onChange);
+    rerender(tableOf(alerts));
+    // As a poll: new objects, the same alerts
+    rerender(tableOf(alerts.map((item) => ({ ...item }))));
+    unsubscribe();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("is gone with the table", () => {
+    const { unmount } = renderTable(alerts);
+    select("fp-1");
+    unmount();
+    expect(getSelection()).toEqual([]);
+  });
+
+  it.each([
+    ["without the flag", {}],
+    [
+      "with AI features disabled",
+      { KEEP_ASSISTANT_ENABLED: true, KEEP_AI_FEATURES_DISABLED: true },
+    ],
+  ])("is not looked at %s", (_, config) => {
+    mockConfig = config;
+    const onChange = jest.fn();
+    const unsubscribe = useAssistantContextStore.subscribe(onChange);
+    const { unmount } = renderTable(alerts);
+    select("fp-1");
+    unmount();
+    unsubscribe();
+    expect(onChange).not.toHaveBeenCalled();
+    expect(getSelection()).toEqual([]);
   });
 });

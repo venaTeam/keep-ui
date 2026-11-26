@@ -27,3 +27,6 @@ export * from "./dashboard/dashboard.page";
 
 // workflows
 export * from "./workflows/workflows.page";
+
+// assistant
+export * from "./assistant/assistant-panel.page";

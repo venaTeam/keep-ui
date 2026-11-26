@@ -1,12 +1,13 @@
 {
   "version": "cb39f4c9988b010a615f6aa43789b48062ef4d7b",
   "generatedAt": "2026-05-07T00:18:05.043Z",
-  "totalSelectors": 801,
+  "totalSelectors": 822,
   "byArea": {
     "(dynamic)": 5,
     "ai": 4,
     "alerts": 109,
     "apply": 1,
+    "assistant": 20,
     "auth": 49,
     "cancel": 2,
     "cel": 2,
@@ -27,7 +28,7 @@
     "maintenance": 13,
     "mapping": 23,
     "modal": 1,
-    "nav": 42,
+    "nav": 43,
     "no": 2,
     "noisy": 1,
     "notif": 1,
@@ -1235,6 +1236,206 @@
       "line": 105,
       "description": "",
       "mirrorsDataTestId": true
+    },
+    {
+      "selector": "assistant-draft-card",
+      "area": "assistant",
+      "role": "draft",
+      "dynamic": false,
+      "file": "features/assistant-draft-card/ui/DraftCard.tsx",
+      "line": 99,
+      "description": "A drafted change; data-state is the state of the card.",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "assistant-draft-card",
+      "area": "assistant",
+      "role": "draft",
+      "dynamic": false,
+      "file": "features/assistant-draft-card/ui/DraftCard.tsx",
+      "line": 129,
+      "description": "A drafted change; data-state is the state of the card.",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "assistant-draft-confirm",
+      "area": "assistant",
+      "role": "draft",
+      "dynamic": false,
+      "file": "features/assistant-draft-card/ui/DraftCard.tsx",
+      "line": 168,
+      "description": "Makes the drafted change.",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "assistant-draft-discard",
+      "area": "assistant",
+      "role": "draft",
+      "dynamic": false,
+      "file": "features/assistant-draft-card/ui/DraftCard.tsx",
+      "line": 185,
+      "description": "Discards the drafted change.",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "assistant-draft-check-again",
+      "area": "assistant",
+      "role": "draft",
+      "dynamic": false,
+      "file": "features/assistant-draft-card/ui/DraftCard.tsx",
+      "line": 202,
+      "description": "Asks again about a change that takes long.",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "assistant-draft-outcome",
+      "area": "assistant",
+      "role": "draft",
+      "dynamic": false,
+      "file": "features/assistant-draft-card/ui/DraftCardOutcome.tsx",
+      "line": 99,
+      "description": "What became of the drafted change.",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "assistant-panel",
+      "area": "assistant",
+      "role": "panel",
+      "dynamic": false,
+      "file": "widgets/assistant-panel/ui/AssistantPanel.tsx",
+      "line": 121,
+      "description": "The assistant panel; absent while it is closed.",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "assistant-new-conversation",
+      "area": "assistant",
+      "role": "new",
+      "dynamic": false,
+      "file": "widgets/assistant-panel/ui/AssistantPanel.tsx",
+      "line": 131,
+      "description": "Starts a new conversation.",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "assistant-panel-close",
+      "area": "assistant",
+      "role": "panel",
+      "dynamic": false,
+      "file": "widgets/assistant-panel/ui/AssistantPanel.tsx",
+      "line": 141,
+      "description": "Closes the assistant panel.",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "assistant-composer-input",
+      "area": "assistant",
+      "role": "composer",
+      "dynamic": false,
+      "file": "widgets/assistant-panel/ui/Composer.tsx",
+      "line": 58,
+      "description": "Text of the next message.",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "assistant-composer-send",
+      "area": "assistant",
+      "role": "composer",
+      "dynamic": false,
+      "file": "widgets/assistant-panel/ui/Composer.tsx",
+      "line": 70,
+      "description": "Sends the message; disabled while an answer arrives.",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "assistant-context-chip-page",
+      "area": "assistant",
+      "role": "context",
+      "dynamic": false,
+      "file": "widgets/assistant-panel/ui/ContextChips.tsx",
+      "line": 35,
+      "description": "The page that goes with the next message.",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "assistant-context-chip-selection",
+      "area": "assistant",
+      "role": "context",
+      "dynamic": false,
+      "file": "widgets/assistant-panel/ui/ContextChips.tsx",
+      "line": 44,
+      "description": "The selected alerts that go with the next message.",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "assistant-context-chip-remove",
+      "area": "assistant",
+      "role": "context",
+      "dynamic": false,
+      "file": "widgets/assistant-panel/ui/ContextChips.tsx",
+      "line": 51,
+      "description": "Leaves the selected alerts out of the next message.",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "assistant-error",
+      "area": "assistant",
+      "role": "error",
+      "dynamic": false,
+      "file": "widgets/assistant-panel/ui/ErrorNotice.tsx",
+      "line": 24,
+      "description": "Why there is no answer; data-code is the error code.",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "assistant-error-sign-in",
+      "area": "assistant",
+      "role": "error",
+      "dynamic": false,
+      "file": "widgets/assistant-panel/ui/ErrorNotice.tsx",
+      "line": 37,
+      "description": "Signs out, after the session expired.",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "assistant-error-retry",
+      "area": "assistant",
+      "role": "error",
+      "dynamic": false,
+      "file": "widgets/assistant-panel/ui/ErrorNotice.tsx",
+      "line": 49,
+      "description": "Loads the conversation again.",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "assistant-message",
+      "area": "assistant",
+      "role": "message",
+      "dynamic": false,
+      "file": "widgets/assistant-panel/ui/MessageBubble.tsx",
+      "line": 25,
+      "description": "One message; data-role is user or assistant.",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "assistant-message",
+      "area": "assistant",
+      "role": "message",
+      "dynamic": false,
+      "file": "widgets/assistant-panel/ui/MessageBubble.tsx",
+      "line": 38,
+      "description": "One message; data-role is user or assistant.",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "assistant-tool-status",
+      "area": "assistant",
+      "role": "tool",
+      "dynamic": false,
+      "file": "widgets/assistant-panel/ui/ToolStatusLine.tsx",
+      "line": 42,
+      "description": "What the assistant does with a tool; data-outcome once it is done.",
+      "mirrorsDataTestId": false
     },
     {
       "selector": "auth-api-key-row",
@@ -4724,6 +4925,16 @@
       "file": "components/navbar/AlertsLinks.tsx",
       "line": 180,
       "description": "",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "nav-assistant-toggle",
+      "area": "nav",
+      "role": "assistant",
+      "dynamic": false,
+      "file": "components/navbar/AssistantToggle.tsx",
+      "line": 34,
+      "description": "Opens and closes the assistant panel.",
       "mirrorsDataTestId": false
     },
     {

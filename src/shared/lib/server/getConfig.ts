@@ -61,6 +61,8 @@ export function getConfig(): InternalConfig {
         (!!process.env.OPEN_AI_API_KEY || !!process.env.OPENAI_API_KEY) &&
         process.env.KEEP_AI_FEATURES_DISABLED?.toLowerCase() !== "true"
       ),
+    KEEP_ASSISTANT_ENABLED:
+      process.env.KEEP_ASSISTANT_ENABLED?.toLowerCase() === "true",
     // NOISY ALERTS DISABLED BY DEFAULT TO SPARE SPACE ON THE TABLE
     NOISY_ALERTS_ENABLED: process.env.NOISY_ALERTS_ENABLED === "true",
     // The URL of the documentation site

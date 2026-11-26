@@ -25,6 +25,9 @@ import ScreenWakeLock from "@/components/ui/ScreenWakeLock";
 import { SSEProvider } from "@/app/sse-provider";
 import { FontSizeInitializer } from "@/components/FontSizeInitializer";
 import ActiveUsersTracker from "@/components/ActiveUsersTracker";
+import { AssistantPanelHost } from "@/widgets/assistant-panel";
+import { isAssistantEnabled } from "@/shared/lib/assistant-flag";
+import { getShellClassName } from "./shell-class-name";
 
 type RootLayoutProps = {
   children: ReactNode;
@@ -46,7 +49,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
 
   return (
     <html lang="en" className="bg-gray-50">
-      <body className="h-screen flex flex-col lg:grid lg:grid-cols-[192px_12px_auto] xl:grid-cols-[220px_12px_auto] 2xl:grid-cols-[250px_12px_auto] lg:grid-rows-1 lg:has-[aside[data-minimized='true']]:grid-cols-[0px_12px_auto]">
+      <body className={getShellClassName(isAssistantEnabled(config))}>
         {/* ThemeScript must be the first thing to avoid flickering */}
         <ThemeScript />
         <FontSizeInitializer />
@@ -81,6 +84,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
                         )}
                       <ToastContainer />
                     </main>
+                    <AssistantPanelHost />
                   </WorkflowModalProvider>
                 </TopologyPollingContextProvider>
               </SSEProvider>

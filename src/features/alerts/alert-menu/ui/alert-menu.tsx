@@ -31,6 +31,7 @@ import { useProviders } from "@/utils/hooks/useProviders";
 import { useAlerts } from "@/entities/alerts/model/useAlerts";
 import { useRouter } from "next/navigation";
 import { useApi } from "@/shared/lib/hooks/useApi";
+import { isHttpUrl } from "@/shared/lib/http-url";
 import { DropdownMenu } from "@/shared/ui";
 import { Button, DynamicImageProviderIcon } from "@/components/ui";
 import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
@@ -314,10 +315,10 @@ export function AlertMenu({
           variant="light"
           onClick={(e) => {
             e.stopPropagation();
-            if (!ticketUrl && setTicketModalAlert) {
-              setTicketModalAlert(alert);
-            } else {
+            if (isHttpUrl(ticketUrl)) {
               window.open(ticketUrl, "_blank");
+            } else {
+              setTicketModalAlert(alert);
             }
           }}
           className={actionIconButtonClassName}
