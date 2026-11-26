@@ -1,20 +1,16 @@
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { showErrorToast, showSuccessToast } from "@/shared/ui";
 import { useCallback } from "react";
-import { formatQuery } from "react-querybuilder";
-import { parseCEL } from "react-querybuilder/parseCEL";
+import { celToSqlQuery } from "@/shared/lib/cel-to-sql-query";
 import { Preset, PresetCreateUpdateDto } from "./types";
 import { useRevalidateMultiple } from "@/shared/lib/state-utils";
 import { useLocalStorage } from "@/utils/hooks/useLocalStorage";
 import { LOCAL_PRESETS_KEY } from "./constants";
 
-function createPresetBody(data: PresetCreateUpdateDto) {
+export function createPresetBody(data: PresetCreateUpdateDto) {
   let sqlQuery;
   try {
-    sqlQuery = formatQuery(parseCEL(data.CEL), {
-      format: "parameterized_named",
-      parseNumbers: true,
-    });
+    sqlQuery = celToSqlQuery(data.CEL, { parseNumbers: true });
   } catch (error) {
     throw new Error("Failed to parse the CEL query");
   }
