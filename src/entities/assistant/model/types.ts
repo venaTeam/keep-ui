@@ -2,7 +2,14 @@
  * The contract of the gateway's `/assistant/*` routes. Mirrors the models in
  * keep-api-gateway `src/services/assistant/`, pinned on both sides by the
  * vendored `__fixtures__/assistant_stream.json`.
+ *
+ * A newer gateway may send values this build does not list (its `future`
+ * fixture section): codes are open, and an unknown event or timeline item is
+ * left out where it is read.
  */
+
+/** A value this build knows, or one of a newer gateway. */
+export type OrUnknown<T extends string> = T | (string & {});
 
 export const STREAM_EVENT_NAMES = [
   "conversation",
@@ -26,6 +33,10 @@ export const TOOL_OUTCOMES = [
   "invalid_arguments",
   "unauthenticated",
   "error",
+  "found",
+  "not_found",
+  "link_ready",
+  "name_taken",
 ] as const;
 export type ToolOutcome = (typeof TOOL_OUTCOMES)[number];
 
@@ -79,6 +90,12 @@ export const OUTCOME_CODES = [
   "failed",
   "interrupted",
   "outcome_unknown",
+  "name_taken",
+  "object_gone",
+  "stale_draft",
+  "invalid_filter",
+  "opened_in_form",
+  "rules_unreadable",
 ] as const;
 export type OutcomeCode = (typeof OUTCOME_CODES)[number];
 
@@ -92,6 +109,7 @@ export const GATEWAY_RESULTS = [
   "not_permitted",
   "unauthenticated",
   "unknown",
+  "not_found",
 ] as const;
 export type GatewayResult = (typeof GATEWAY_RESULTS)[number];
 
@@ -104,8 +122,19 @@ export const ALERT_RESULTS = [
 ] as const;
 export type AlertResult = (typeof ALERT_RESULTS)[number];
 
+/** What a draft of an object kind saved. */
+export const OBJECT_TYPES = [
+  "preset",
+  "correlation_rule",
+  "dashboard",
+] as const;
+export type ObjectType = (typeof OBJECT_TYPES)[number];
+
 export const MESSAGE_STATUSES = ["complete", "interrupted", "error"] as const;
 export type MessageStatus = (typeof MESSAGE_STATUSES)[number];
+
+export const DISCARD_REASONS = ["opened_in_form"] as const;
+export type DiscardReason = (typeof DISCARD_REASONS)[number];
 
 /** The `kind` of a draft made by the status-change tool. */
 export const CHANGE_ALERT_STATUS_KIND = "change_alert_status";
@@ -147,15 +176,24 @@ export interface ChangeAlertStatusPayload {
 export interface AlertOutcome {
   fingerprint: string;
   name: string | null;
-  result: AlertResult;
+  result: OrUnknown<AlertResult>;
   status_after: string | null;
 }
 
+/** The object a draft saved, or would have saved. */
+export interface DraftObject {
+  type: OrUnknown<ObjectType>;
+  id: string;
+  name?: string | null;
+  /** Where the object is shown. Null when it has no page. */
+  path?: string | null;
+}
+
 export interface DraftOutcome {
-  code: OutcomeCode;
+  code: OrUnknown<OutcomeCode>;
   message: string;
   /** Null when nothing was sent to the gateway. */
-  gateway_result: GatewayResult | null;
+  gateway_result: OrUnknown<GatewayResult> | null;
   applied_count: number;
   failed_count: number;
   unconfirmed_count: number;
@@ -163,6 +201,8 @@ export interface DraftOutcome {
   not_found_count: number;
   results: AlertOutcome[];
   finished_at: string | null;
+  /** Object kinds only. A gateway older than objects leaves it out. */
+  object?: DraftObject | null;
 }
 
 export interface DraftView {
@@ -193,7 +233,13 @@ export interface TimelineDraft {
   draft: DraftView;
 }
 
+/** The items this build shows; others are left out when they are read. */
 export type TimelineItem = TimelineMessage | TimelineDraft;
+
+export const TIMELINE_ITEM_TYPES: readonly TimelineItem["type"][] = [
+  "message",
+  "draft",
+];
 
 export interface ConversationView {
   id: string;
@@ -224,11 +270,11 @@ export interface ToolStatus {
   phase: ToolPhase;
   label: string;
   /** Only on `finished`. */
-  outcome?: ToolOutcome;
+  outcome?: OrUnknown<ToolOutcome>;
 }
 
 export interface StreamError {
-  code: StreamErrorCode;
+  code: OrUnknown<StreamErrorCode>;
   message: string;
   retryable: boolean;
 }
@@ -249,14 +295,35 @@ export type StreamEvent =
   | { event: "error"; data: StreamError }
   | {
       event: "done";
-      data: { message_id: string | null; finish_reason: FinishReason };
+      data: {
+        message_id: string | null;
+        finish_reason: OrUnknown<FinishReason>;
+      };
     };
+
+/** The SQL the browser derived from a filter, as the gateway takes it. */
+export interface SqlQueryInput {
+  sql: string;
+  params: Record<string, string | number | boolean>;
+}
+
+/**
+ * The body of a Confirm, for a kind that needs what only the browser can
+ * compute. Other kinds are confirmed without a body.
+ */
+export interface ConfirmDraftBody {
+  derived: { cel_roundtrip: string; sql_query: SqlQueryInput };
+}
+
+export interface DiscardDraftBody {
+  reason: DiscardReason;
+}
 
 /** The body of every error of the assistant routes. */
 export interface AssistantErrorBody {
   errors: { field: string | null; code: string; message: string }[];
   detail: string;
-  /** On a 409 about a draft. */
+  /** On a 409 about a draft, except `draft_unsupported`. */
   draft?: DraftView;
 }
 

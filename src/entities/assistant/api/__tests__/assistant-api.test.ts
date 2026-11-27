@@ -3,6 +3,7 @@
  */
 import type { ApiClient } from "@/shared/api";
 import golden from "../../__fixtures__/assistant_stream.json";
+import { DiscardDraftBody } from "../../model/types";
 import { confirmDraft, discardDraft, getConversation } from "../assistant-api";
 
 const get = jest.fn();
@@ -46,7 +47,30 @@ it("confirms and discards a draft without a body", async () => {
   ]);
 });
 
-it.each([[null], ["<html></html>"], [{}]])(
+it("leaves out the timeline items of a newer gateway", async () => {
+  const { conversation, values } = golden.future;
+  get.mockResolvedValue(conversation);
+  const view = await getConversation(api, "c-1");
+  expect(view.items.map((item) => item.type)).toEqual(["message", "draft"]);
+  expect(view).toEqual({
+    ...conversation,
+    items: conversation.items.filter(({ type }) => type !== values.item_type),
+  });
+});
+
+it("sends the body a kind needs with its Confirm or Discard", async () => {
+  const { confirm, discard } = golden.requests;
+  post.mockResolvedValueOnce(golden.drafts.applied);
+  await confirmDraft(api, "d-1", confirm.derived);
+  post.mockResolvedValueOnce(golden.drafts.discarded);
+  await discardDraft(api, "d-1", discard.opened_in_form as DiscardDraftBody);
+  expect(post.mock.calls).toEqual([
+    ["/assistant/drafts/d-1/confirm", confirm.derived],
+    ["/assistant/drafts/d-1/discard", discard.opened_in_form],
+  ]);
+});
+
+it.each([[null], ["<html></html>"], [{}], [{ items: "none" }]])(
   "rejects the answer %j instead of returning it",
   async (body) => {
     get.mockResolvedValue(body);

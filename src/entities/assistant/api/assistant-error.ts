@@ -16,7 +16,10 @@ export class AssistantChatError extends KeepApiError {
 }
 
 export interface AssistantError {
+  /** An open set: a newer gateway may send a code this build does not know. */
   code: string | null;
+  /** The request field it is about, as `derived` on a refused Confirm body. */
+  field: string | null;
   message: string;
   status: number | null;
   retryAfterSeconds: number | null;
@@ -70,6 +73,7 @@ export function getAssistantError(error: unknown): AssistantError | null {
   const { errors, draft } = getBody(error);
   return {
     code: errors?.[0]?.code ?? null,
+    field: errors?.[0]?.field ?? null,
     message: errors?.[0]?.message ?? error.message,
     status: error.statusCode ?? null,
     retryAfterSeconds:

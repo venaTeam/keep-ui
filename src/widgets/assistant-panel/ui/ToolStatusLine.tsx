@@ -11,7 +11,17 @@ const OUTCOME_TEXTS: Record<ToolOutcome, string> = {
   invalid_arguments: "the request is not valid",
   unauthenticated: "your session expired",
   error: "failed",
+  found: "found",
+  not_found: "not found",
+  link_ready: "link ready",
+  name_taken: "the name is taken",
 };
+
+// An own key only: the outcome is an open set, "constructor" included
+const getOutcomeText = (outcome: string | undefined) =>
+  outcome && Object.prototype.hasOwnProperty.call(OUTCOME_TEXTS, outcome)
+    ? OUTCOME_TEXTS[outcome as ToolOutcome]
+    : undefined;
 
 function StatusIcon({
   tool,
@@ -35,7 +45,7 @@ interface ToolStatusLineProps {
 
 /** What the assistant is doing, or did, with one of its tools. */
 export function ToolStatusLine({ tool, isStreaming }: ToolStatusLineProps) {
-  const outcome = tool.outcome && OUTCOME_TEXTS[tool.outcome];
+  const outcome = getOutcomeText(tool.outcome);
 
   return (
     <p

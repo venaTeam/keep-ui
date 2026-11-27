@@ -8,7 +8,7 @@ import { formatTime } from "../lib/format-time";
 import { useDraftActions } from "../model/useDraftActions";
 import { useNow } from "../model/useNow";
 import { presentDraft } from "./draft-body-registry";
-import { DraftCardOutcome } from "./DraftCardOutcome";
+import { DraftCardOutcome, isOpenedInForm } from "./DraftCardOutcome";
 
 const TITLES: Record<CardState, string> = {
   streaming: "Preparing a draft",
@@ -111,6 +111,7 @@ export function DraftCard({
   }
 
   const { body, confirmLabel, notPermittedText } = presentDraft(draft);
+  const label = isOpenedInForm(draft) ? "Opened in form" : TITLES[state];
   const expiresAt = state === "draft" ? formatTime(draft.expires_at) : null;
   const isSubmitting = state === "submitting";
   const canConfirm = (state === "draft" || isSubmitting) && !!confirmLabel;
@@ -124,7 +125,7 @@ export function DraftCard({
     <section
       ref={card}
       tabIndex={-1}
-      aria-label={`${TITLES[state]}${confirmLabel ? `: ${confirmLabel}` : ""}`}
+      aria-label={`${label}${confirmLabel ? `: ${confirmLabel}` : ""}`}
       aria-busy={isSubmitting}
       data-cy="assistant-draft-card"
       data-state={state}

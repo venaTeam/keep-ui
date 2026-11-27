@@ -208,5 +208,8 @@
 "assistant-draft-outcome":
   description: "What became of the drafted change."
 
+"assistant-draft-object-link":
+  description: "Opens the preset, rule or dashboard the draft saved."
+
 "nav-assistant-toggle":
   description: "Opens and closes the assistant panel."

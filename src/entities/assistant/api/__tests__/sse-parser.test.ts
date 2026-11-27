@@ -7,14 +7,17 @@ import path from "path";
 import golden from "../../__fixtures__/assistant_stream.json";
 import {
   ALERT_RESULTS,
+  DISCARD_REASONS,
   DRAFT_STATES,
   FINISH_REASONS,
   GATEWAY_RESULTS,
   MESSAGE_STATUSES,
+  OBJECT_TYPES,
   OUTCOME_CODES,
   STREAM_ERROR_CODES,
   STREAM_EVENT_NAMES,
   TARGET_STATUSES,
+  TIMELINE_ITEM_TYPES,
   TOOL_OUTCOMES,
   TOOL_PHASES,
 } from "../../model/types";
@@ -54,7 +57,7 @@ describe("the vendored contract", () => {
       .update(`blob ${bytes.length}\0`)
       .update(bytes)
       .digest("hex");
-    expect(blobId).toBe("c110bbf2b5b30b0f51a6191648a6e80d8a3dadba");
+    expect(blobId).toBe("bfaf94e1ed517d0f4d0911c7d5f93c82b800918c");
   });
 
   it("has the same vocabulary as the types", () => {
@@ -69,8 +72,42 @@ describe("the vendored contract", () => {
       outcome_codes: OUTCOME_CODES,
       gateway_results: GATEWAY_RESULTS,
       alert_results: ALERT_RESULTS,
+      object_types: OBJECT_TYPES,
       message_statuses: MESSAGE_STATUSES,
+      discard_reasons: DISCARD_REASONS,
     });
+  });
+
+  it("has values of a newer gateway that this build does not know", () => {
+    const { values } = golden.future;
+    const known: [string, readonly string[]][] = [
+      [values.event, STREAM_EVENT_NAMES],
+      [values.item_type, TIMELINE_ITEM_TYPES],
+      [values.outcome_code, OUTCOME_CODES],
+      [values.object_type, OBJECT_TYPES],
+      [values.tool_outcome, TOOL_OUTCOMES],
+      [values.gateway_result, GATEWAY_RESULTS],
+      [values.alert_result, ALERT_RESULTS],
+    ];
+    known.forEach(([value, list]) => expect(list).not.toContain(value));
+  });
+});
+
+describe("a stream of a newer gateway", () => {
+  const { raw, events } = golden.future.stream;
+  const known = events.filter(
+    ({ event }) => event !== golden.future.values.event
+  );
+
+  it("is parsed without the events this build does not know", () => {
+    expect(known).toHaveLength(events.length - 1);
+    expect(createStreamParser().push(raw)).toEqual(known);
+  });
+
+  it("is parsed the same when split anywhere", () => {
+    for (const size of [1, 2, 3, 7, 64]) {
+      expect(parseInChunks(raw, size)).toEqual(known);
+    }
   });
 });
 

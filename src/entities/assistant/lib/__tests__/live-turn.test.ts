@@ -78,6 +78,33 @@ describe("applyStreamEvent", () => {
     expect(turn.items).toHaveLength(4);
     expect(turn.error).toBeNull();
   });
+
+  describe("of a newer gateway", () => {
+    const events = golden.future.stream.events as StreamEvent[];
+    const unknown = events.find(
+      ({ event }) => event === golden.future.values.event
+    ) as StreamEvent;
+
+    it("ignores an event it does not know", () => {
+      const turn = startTurn("quiet hours");
+      expect(applyStreamEvent(turn, unknown)).toBe(turn);
+    });
+
+    it("keeps the kinds and codes it does not know", () => {
+      const turn = events.reduce(applyStreamEvent, startTurn("quiet hours"));
+      expect(turn.items).toEqual([
+        {
+          type: "tool",
+          tool: expect.objectContaining({
+            outcome: golden.future.values.tool_outcome,
+          }),
+        },
+        { type: "draft", draft: golden.future.drafts.pending },
+        { type: "text", messageId: id(4), content: "I drafted quiet hours." },
+      ]);
+      expect(turn.error).toBeNull();
+    });
+  });
 });
 
 describe("drafts of the live turn", () => {
@@ -167,6 +194,15 @@ describe("mergeTimeline", () => {
     expect(merged[0]).toMatchObject({
       content: "acknowledge these with the note investigating",
     });
+  });
+
+  it("leaves out a stored item of a newer gateway", () => {
+    const items = golden.future.conversation.items as unknown as TimelineItem[];
+    expect(items).toHaveLength(3);
+    expect(keys(mergeTimeline(items, null))).toEqual([
+      id(2),
+      `draft-${id(51)}`,
+    ]);
   });
 
   it("marks the text a broken turn was writing", () => {

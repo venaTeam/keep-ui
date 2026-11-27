@@ -432,9 +432,44 @@ describe("getAssistantError", () => {
     const error = new KeepApiError("nope", "/x", "", { detail: "nope" }, 500);
     expect(getAssistantError(error)).toEqual({
       code: null,
+      field: null,
       message: "nope",
       status: 500,
       retryAfterSeconds: null,
+      draft: null,
+    });
+  });
+
+  it("names the field of a refused request body", () => {
+    const { body, status } = golden.errors.confirm_derived_invalid;
+    const error = new KeepApiError(body.detail, "/x", "", body, status);
+    expect(getAssistantError(error)).toMatchObject({
+      code: "invalid_value",
+      field: "derived",
+      draft: null,
+    });
+  });
+
+  it("keeps a code this build does not know", () => {
+    const error = new KeepApiError(
+      "nope",
+      "/x",
+      "",
+      {
+        errors: [
+          {
+            field: null,
+            code: golden.future.values.outcome_code,
+            message: "m",
+          },
+        ],
+        detail: "m",
+      },
+      409
+    );
+    expect(getAssistantError(error)).toMatchObject({
+      code: golden.future.values.outcome_code,
+      message: "m",
       draft: null,
     });
   });

@@ -1,13 +1,13 @@
 {
   "version": "cb39f4c9988b010a615f6aa43789b48062ef4d7b",
   "generatedAt": "2026-05-07T00:18:05.043Z",
-  "totalSelectors": 822,
+  "totalSelectors": 823,
   "byArea": {
     "(dynamic)": 5,
     "ai": 4,
     "alerts": 109,
     "apply": 1,
-    "assistant": 20,
+    "assistant": 21,
     "auth": 49,
     "cancel": 2,
     "cel": 2,
@@ -1295,6 +1295,16 @@
       "file": "features/assistant-draft-card/ui/DraftCardOutcome.tsx",
       "line": 99,
       "description": "What became of the drafted change.",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "assistant-draft-object-link",
+      "area": "assistant",
+      "role": "draft",
+      "dynamic": false,
+      "file": "features/assistant-draft-card/ui/DraftCardOutcome.tsx",
+      "line": 144,
+      "description": "Opens the preset, rule or dashboard the draft saved.",
       "mirrorsDataTestId": false
     },
     {

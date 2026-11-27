@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { AlertOutcome, AlertResult, DraftView } from "@/entities/assistant";
 import { CardState } from "../lib/draft-card-state";
 import { formatTime } from "../lib/format-time";
+import { getObjectLink } from "../lib/object-link";
 
 const RESULT_LABELS: [AlertResult, string][] = [
   ["applied", "Changed"],
@@ -9,6 +11,8 @@ const RESULT_LABELS: [AlertResult, string][] = [
   ["skipped", "Skipped"],
   ["not_found", "Not found"],
 ];
+// The results of a newer gateway, listed so that none goes missing
+const OTHER_LABEL = "Other";
 
 function ResultList({
   label,
@@ -30,6 +34,13 @@ function ResultList({
         ))}
       </ul>
     </div>
+  );
+}
+
+/** Whether a discarded draft went on in a form, which is not throwing it away. */
+export function isOpenedInForm(draft: DraftView): boolean {
+  return (
+    draft.state === "discarded" && draft.outcome?.code === "opened_in_form"
   );
 }
 
@@ -55,11 +66,34 @@ function getText(
     case "error":
       return message ?? "The change failed.";
     case "declined":
-      return "Discarded";
+      return isOpenedInForm(draft)
+        ? (message ?? "Opened in the form.")
+        : "Discarded";
     case "draft":
     case "streaming":
       return null;
   }
+}
+
+function groupResults(results: AlertOutcome[], state: CardState) {
+  const known = new Set<string>(RESULT_LABELS.map(([result]) => result));
+  return [
+    ...RESULT_LABELS.map(([result, label]) => ({
+      key: result,
+      label,
+      results: results.filter((alert) => alert.result === result),
+    })),
+    {
+      key: "other",
+      label: OTHER_LABEL,
+      results: results.filter((alert) => !known.has(alert.result)),
+    },
+  ].filter(
+    (group) =>
+      group.results.length > 0 &&
+      // Everything in the list above was changed
+      !(state === "saved" && group.key === "applied")
+  );
 }
 
 interface DraftCardOutcomeProps {
@@ -82,17 +116,8 @@ export function DraftCardOutcome({
     return null;
   }
   const time = formatTime(draft.outcome?.finished_at);
-  const results = draft.outcome?.results ?? [];
-  const groups = RESULT_LABELS.map(([result, label]) => ({
-    result,
-    label,
-    results: results.filter((alert) => alert.result === result),
-  })).filter(
-    (group) =>
-      group.results.length > 0 &&
-      // Everything in the list above was changed
-      !(state === "saved" && group.result === "applied")
-  );
+  const groups = groupResults(draft.outcome?.results ?? [], state);
+  const link = getObjectLink(draft.outcome?.object);
 
   return (
     <div
@@ -108,11 +133,20 @@ export function DraftCardOutcome({
       )}
       {groups.map((group) => (
         <ResultList
-          key={group.result}
+          key={group.key}
           label={group.label}
           results={group.results}
         />
       ))}
+      {link && (
+        <Link
+          href={link.href}
+          data-cy="assistant-draft-object-link"
+          className="self-start font-medium text-orange-700 underline hover:text-orange-800 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-orange-400"
+        >
+          Open <bdi>{link.name}</bdi>
+        </Link>
+      )}
     </div>
   );
 }

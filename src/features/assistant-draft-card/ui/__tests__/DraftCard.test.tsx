@@ -381,6 +381,147 @@ describe("a kind of draft this build does not know", () => {
   });
 });
 
+describe("a draft of a newer gateway", () => {
+  const future = (name: keyof typeof golden.future.drafts) =>
+    golden.future.drafts[name] as unknown as DraftView;
+
+  it("pending can only be discarded", () => {
+    show(future("pending"));
+    expect(card()).toHaveAttribute("data-state", "draft");
+    expect(confirmButton()).toBeNull();
+    expect(discardButton()).toBeEnabled();
+    expect(card()).toHaveTextContent('"title": "Quiet hours"');
+  });
+
+  it("applied shows its outcome as the gateway wrote it, and no link", () => {
+    show(future("applied"));
+    expect(card()).toHaveAttribute("data-state", "saved");
+    expect(outcome()).toHaveTextContent("The quiet hours were saved.");
+    // Its result is not one this build knows: listed, not dropped
+    const lists = within(outcome() as HTMLElement).getAllByRole("list");
+    expect(lists).toHaveLength(1);
+    expect(lists[0].previousElementSibling).toHaveTextContent("Other (1)");
+    expect(lists[0]).toHaveTextContent("High CPU on prod-db-01");
+    expect(byCy("assistant-draft-object-link")).toBeNull();
+    expect(within(card()).queryByRole("link")).toBeNull();
+  });
+});
+
+describe("the object an outcome names", () => {
+  const withOutcome = (
+    state: DraftView["state"],
+    value: DraftView["outcome"]
+  ): DraftView => ({ ...draft("applied"), state, outcome: value });
+  const objectOutcome = (name: keyof typeof golden.outcomes) =>
+    golden.outcomes[name] as DraftView["outcome"];
+  const link = () => byCy("assistant-draft-object-link");
+
+  it.each<[keyof typeof golden.outcomes, string, string]>([
+    ["preset_saved", "Open Night shift", "/alerts/night-shift"],
+    ["correlation_rule_saved", "Open Database storms", "/rules"],
+  ])("%s links to it", (name, text, href) => {
+    show(withOutcome("applied", objectOutcome(name)));
+    expect(outcome()).toHaveTextContent(objectOutcome(name)!.message);
+    expect(link()).toHaveTextContent(text);
+    expect(link()).toHaveAttribute("href", href);
+  });
+
+  it("links to a known object of a failed draft too", () => {
+    show(withOutcome("failed", objectOutcome("stale_draft")));
+    expect(card()).toHaveAttribute("data-state", "error");
+    expect(link()).toHaveTextContent("Open On call");
+  });
+
+  it("isolates the object's name from the text around it", () => {
+    show(withOutcome("applied", objectOutcome("preset_saved")));
+    expect(within(link() as HTMLElement).getByText("Night shift").tagName).toBe(
+      "BDI"
+    );
+  });
+
+  it.each(["dashboard_saved", "object_gone", "name_taken"] as const)(
+    "%s has no link without a path",
+    (name) => {
+      show(withOutcome("failed", objectOutcome(name)));
+      expect(link()).toBeNull();
+    }
+  );
+
+  const preset = golden.outcomes.preset_saved;
+  it.each<[string, object]>([
+    [
+      "an incident, which this build does not know",
+      {
+        type: "incident",
+        id: "00000000-0000-4000-8000-000000000060",
+        name: "Database down",
+        path: "/incidents/00000000-0000-4000-8000-000000000060",
+      },
+    ],
+    ["a type of a newer gateway", { ...preset.object, type: "constructor" }],
+    ["another host", { ...preset.object, path: "//evil.test/alerts/x" }],
+    ["a backslash host", { ...preset.object, path: "/\\evil.test" }],
+    ["a script", { ...preset.object, path: "javascript:alert(1)" }],
+    ["a full address", { ...preset.object, path: "https://evil.test/alerts" }],
+    ["another page", { ...preset.object, path: "/settings" }],
+    ["a page that starts the same", { ...preset.object, path: "/alertsx/y" }],
+    ["a control character", { ...preset.object, path: "/alerts/a\nb" }],
+    ["a path that is not text", { ...preset.object, path: 7 }],
+  ])("is no link for %s", (_, object) => {
+    show(
+      withOutcome("applied", {
+        ...preset,
+        message: "Done.",
+        object,
+      } as DraftView["outcome"])
+    );
+    expect(outcome()).toHaveTextContent("Done.");
+    expect(link()).toBeNull();
+  });
+
+  it("names what it is when it has no name", () => {
+    show(
+      withOutcome("applied", {
+        ...preset,
+        object: { ...preset.object, name: null },
+      } as DraftView["outcome"])
+    );
+    expect(link()).toHaveTextContent("Open the preset");
+  });
+});
+
+describe("a draft opened in the form", () => {
+  const opened = (): DraftView => ({
+    ...draft("discarded"),
+    outcome: golden.outcomes.opened_in_form as DraftView["outcome"],
+  });
+
+  it("says so instead of Discarded", () => {
+    show(opened());
+    expect(card()).toHaveAttribute("data-state", "declined");
+    // All that is left is the outcome, and when it happened
+    expect(card().textContent).toMatch(
+      /^Opened in the form, to finish there\. · [^·]+$/
+    );
+    expect(card()).toHaveAttribute(
+      "aria-label",
+      expect.stringMatching(/^Opened in form:/)
+    );
+  });
+
+  it("is still Discarded with another outcome", () => {
+    show({
+      ...draft("discarded"),
+      outcome: golden.outcomes.name_taken as DraftView["outcome"],
+    });
+    expect(card().textContent).toMatch(/^Discarded · [^·]+$/);
+    expect(card()).toHaveAttribute(
+      "aria-label",
+      expect.stringMatching(/^Discarded:/)
+    );
+  });
+});
+
 describe("Confirm", () => {
   it("disables both buttons, keeps the focus and announces the result", async () => {
     let resolve: (view: DraftView) => void = () => {};

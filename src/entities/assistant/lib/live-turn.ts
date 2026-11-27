@@ -99,6 +99,9 @@ export function applyStreamEvent(turn: LiveTurn, event: StreamEvent): LiveTurn {
       return { ...turn, error: event.data };
     case "done":
       return turn;
+    default:
+      // An event of a newer gateway
+      return turn;
   }
 }
 
@@ -130,26 +133,37 @@ export function hasStoredTurn(items: TimelineItem[], turn: LiveTurn): boolean {
   );
 }
 
+function toEntry(item: TimelineItem): TimelineEntry[] {
+  switch (item.type) {
+    case "draft":
+      return [
+        { key: `draft-${item.draft.id}`, type: "draft", draft: item.draft },
+      ];
+    case "message":
+      return [
+        {
+          key: item.id,
+          type: "message",
+          role: item.role,
+          content: item.content,
+          status: item.status,
+        },
+      ];
+    default:
+      // An item of a newer gateway
+      return [];
+  }
+}
+
 /**
  * The stored conversation followed by what only the live turn has. An item in
- * both is taken from the server.
+ * both is taken from the server. Items this build does not know are left out.
  */
 export function mergeTimeline(
   stored: TimelineItem[],
   turn: LiveTurn | null
 ): TimelineEntry[] {
-  const entries = stored.map(
-    (item): TimelineEntry =>
-      item.type === "draft"
-        ? { key: `draft-${item.draft.id}`, type: "draft", draft: item.draft }
-        : {
-            key: item.id,
-            type: "message",
-            role: item.role,
-            content: item.content,
-            status: item.status,
-          }
-  );
+  const entries = stored.flatMap(toEntry);
   if (!turn) {
     return entries;
   }

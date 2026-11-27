@@ -30,6 +30,8 @@ const STATES: Record<GoldenDraft, CardState> = {
   failed_outcome_unknown: "error",
   discarded: "declined",
   expired: "expired",
+  pending_resolve: "draft",
+  pending_reopen: "draft",
 };
 
 it("shows a draft that has not arrived as streaming", () => {
@@ -104,6 +106,22 @@ it.each(
       isSubmitting: true,
     })
   ).toBe(expected);
+});
+
+it.each(Object.keys(golden.outcomes) as (keyof typeof golden.outcomes)[])(
+  "shows a failed draft with the object-kind outcome %s as an error",
+  (name) => {
+    const outcome = golden.outcomes[name] as DraftView["outcome"];
+    const failed: DraftView = { ...draft("failed"), outcome };
+    expect(getDraftCardState(failed, options)).toBe("error");
+  }
+);
+
+it("shows an outcome code of a newer gateway by the draft's state", () => {
+  const applied = golden.future.drafts.applied as unknown as DraftView;
+  expect(getDraftCardState(applied, options)).toBe("saved");
+  const failed: DraftView = { ...applied, state: "failed" };
+  expect(getDraftCardState(failed, options)).toBe("error");
 });
 
 it("shows a failed draft without an outcome as an error", () => {

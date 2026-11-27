@@ -98,6 +98,19 @@ export function events(name: string): [string, Json][] {
     });
 }
 
+/**
+ * The data of a golden stream's first event of this name (its last for
+ * `done`), whatever else the stream holds.
+ */
+function eventData(stream: string, name: string): Json {
+  const found = events(stream).filter(([event]) => event === name);
+  const [, data] = (name === "done" ? found[found.length - 1] : found[0]) ?? [];
+  if (!data) {
+    throw new Error(`The golden stream ${stream} has no ${name} event`);
+  }
+  return data;
+}
+
 /** A golden stream, with this draft in the place of its own. */
 export function stream(name: string, view?: Json): Answer {
   const body = events(name)
@@ -117,13 +130,14 @@ export function truncatedStream(): Answer {
 
 /** A stream of one answer without a tool call. */
 export function textStream(text: string): Answer {
-  const [conversation, , , , , , , , done] = events("draft_created");
+  const conversation = eventData("draft_created", "conversation");
+  const done = eventData("draft_created", "done");
   return {
     headers: golden.response_headers,
     body: [
-      conversation,
-      ["text_delta", { message_id: done[1].message_id, delta: text }],
-      done,
+      ["conversation", conversation],
+      ["text_delta", { message_id: done.message_id, delta: text }],
+      ["done", done],
     ]
       .map((event) => frame(event as [string, Json]))
       .join(""),
@@ -155,7 +169,8 @@ export function conversation(
     inProgress?: boolean;
   } = {}
 ): Json {
-  const [[, ids], , , , , , , , [, done]] = events("draft_created");
+  const ids = eventData("draft_created", "conversation");
+  const done = eventData("draft_created", "done");
   return {
     ...copy(golden.conversations.finished),
     has_more: false,

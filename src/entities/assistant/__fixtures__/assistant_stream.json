@@ -20,7 +20,11 @@
       "invalid_cel",
       "invalid_arguments",
       "unauthenticated",
-      "error"
+      "error",
+      "found",
+      "not_found",
+      "link_ready",
+      "name_taken"
     ],
     "stream_error_codes": [
       "llm_unavailable",
@@ -63,7 +67,13 @@
       "read_only",
       "failed",
       "interrupted",
-      "outcome_unknown"
+      "outcome_unknown",
+      "name_taken",
+      "object_gone",
+      "stale_draft",
+      "invalid_filter",
+      "opened_in_form",
+      "rules_unreadable"
     ],
     "gateway_results": [
       "ok",
@@ -74,7 +84,8 @@
       "read_only",
       "not_permitted",
       "unauthenticated",
-      "unknown"
+      "unknown",
+      "not_found"
     ],
     "alert_results": [
       "applied",
@@ -83,10 +94,18 @@
       "skipped",
       "not_found"
     ],
+    "object_types": [
+      "preset",
+      "correlation_rule",
+      "dashboard"
+    ],
     "message_statuses": [
       "complete",
       "interrupted",
       "error"
+    ],
+    "discard_reasons": [
+      "opened_in_form"
     ]
   },
   "heartbeat": ": hb\n\n",
@@ -525,6 +544,109 @@
           "data": {
             "message_id": "00000000-0000-4000-8000-000000000004",
             "finish_reason": "cancelled"
+          }
+        }
+      ]
+    },
+    "tool_outcomes": {
+      "raw": "event: conversation\ndata: {\"conversation_id\": \"00000000-0000-4000-8000-000000000001\", \"user_message_id\": \"00000000-0000-4000-8000-000000000002\", \"turn_id\": \"00000000-0000-4000-8000-000000000003\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_1\", \"tool\": \"get_alerts\", \"phase\": \"started\", \"label\": \"Reading alerts\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_1\", \"tool\": \"get_alerts\", \"phase\": \"finished\", \"label\": \"Reading alerts\", \"outcome\": \"found\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_2\", \"tool\": \"get_alerts\", \"phase\": \"started\", \"label\": \"Reading alerts\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_2\", \"tool\": \"get_alerts\", \"phase\": \"finished\", \"label\": \"Reading alerts\", \"outcome\": \"not_found\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_3\", \"tool\": \"open_page\", \"phase\": \"started\", \"label\": \"Preparing a link\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_3\", \"tool\": \"open_page\", \"phase\": \"finished\", \"label\": \"Preparing a link\", \"outcome\": \"link_ready\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_4\", \"tool\": \"save_preset\", \"phase\": \"started\", \"label\": \"Preparing a preset\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_4\", \"tool\": \"save_preset\", \"phase\": \"finished\", \"label\": \"Preparing a preset\", \"outcome\": \"name_taken\"}\n\nevent: text_delta\ndata: {\"message_id\": \"00000000-0000-4000-8000-000000000004\", \"delta\": \"A preset with this name exists already.\"}\n\nevent: done\ndata: {\"message_id\": \"00000000-0000-4000-8000-000000000004\", \"finish_reason\": \"stop\"}\n\n",
+      "events": [
+        {
+          "event": "conversation",
+          "data": {
+            "conversation_id": "00000000-0000-4000-8000-000000000001",
+            "user_message_id": "00000000-0000-4000-8000-000000000002",
+            "turn_id": "00000000-0000-4000-8000-000000000003"
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_1",
+            "tool": "get_alerts",
+            "phase": "started",
+            "label": "Reading alerts"
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_1",
+            "tool": "get_alerts",
+            "phase": "finished",
+            "label": "Reading alerts",
+            "outcome": "found"
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_2",
+            "tool": "get_alerts",
+            "phase": "started",
+            "label": "Reading alerts"
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_2",
+            "tool": "get_alerts",
+            "phase": "finished",
+            "label": "Reading alerts",
+            "outcome": "not_found"
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_3",
+            "tool": "open_page",
+            "phase": "started",
+            "label": "Preparing a link"
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_3",
+            "tool": "open_page",
+            "phase": "finished",
+            "label": "Preparing a link",
+            "outcome": "link_ready"
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_4",
+            "tool": "save_preset",
+            "phase": "started",
+            "label": "Preparing a preset"
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_4",
+            "tool": "save_preset",
+            "phase": "finished",
+            "label": "Preparing a preset",
+            "outcome": "name_taken"
+          }
+        },
+        {
+          "event": "text_delta",
+          "data": {
+            "message_id": "00000000-0000-4000-8000-000000000004",
+            "delta": "A preset with this name exists already."
+          }
+        },
+        {
+          "event": "done",
+          "data": {
+            "message_id": "00000000-0000-4000-8000-000000000004",
+            "finish_reason": "stop"
           }
         }
       ]
@@ -1208,7 +1330,8 @@
             "status_after": null
           }
         ],
-        "finished_at": null
+        "finished_at": null,
+        "object": null
       }
     },
     "applied": {
@@ -1321,7 +1444,8 @@
             "status_after": "acknowledged"
           }
         ],
-        "finished_at": "2026-11-24T10:02:00.123456+00:00"
+        "finished_at": "2026-11-24T10:02:00.123456+00:00",
+        "object": null
       }
     },
     "applied_nothing_to_change": {
@@ -1434,7 +1558,8 @@
             "status_after": null
           }
         ],
-        "finished_at": "2026-11-24T10:02:00.123456+00:00"
+        "finished_at": "2026-11-24T10:02:00.123456+00:00",
+        "object": null
       }
     },
     "applied_unverified": {
@@ -1547,7 +1672,8 @@
             "status_after": null
           }
         ],
-        "finished_at": "2026-11-24T10:02:00.123456+00:00"
+        "finished_at": "2026-11-24T10:02:00.123456+00:00",
+        "object": null
       }
     },
     "partially_applied": {
@@ -1660,7 +1786,8 @@
             "status_after": "firing"
           }
         ],
-        "finished_at": "2026-11-24T10:02:00.123456+00:00"
+        "finished_at": "2026-11-24T10:02:00.123456+00:00",
+        "object": null
       }
     },
     "failed": {
@@ -1773,7 +1900,8 @@
             "status_after": "firing"
           }
         ],
-        "finished_at": "2026-11-24T10:02:00.123456+00:00"
+        "finished_at": "2026-11-24T10:02:00.123456+00:00",
+        "object": null
       }
     },
     "failed_rejected": {
@@ -1886,7 +2014,8 @@
             "status_after": null
           }
         ],
-        "finished_at": "2026-11-24T10:02:00.123456+00:00"
+        "finished_at": "2026-11-24T10:02:00.123456+00:00",
+        "object": null
       }
     },
     "failed_rejected_maybe_written": {
@@ -1999,7 +2128,8 @@
             "status_after": "firing"
           }
         ],
-        "finished_at": "2026-11-24T10:02:00.123456+00:00"
+        "finished_at": "2026-11-24T10:02:00.123456+00:00",
+        "object": null
       }
     },
     "failed_not_permitted": {
@@ -2112,7 +2242,8 @@
             "status_after": null
           }
         ],
-        "finished_at": "2026-11-24T10:02:00.123456+00:00"
+        "finished_at": "2026-11-24T10:02:00.123456+00:00",
+        "object": null
       }
     },
     "failed_read_only": {
@@ -2225,7 +2356,8 @@
             "status_after": null
           }
         ],
-        "finished_at": "2026-11-24T10:02:00.123456+00:00"
+        "finished_at": "2026-11-24T10:02:00.123456+00:00",
+        "object": null
       }
     },
     "failed_unauthenticated": {
@@ -2338,7 +2470,8 @@
             "status_after": null
           }
         ],
-        "finished_at": "2026-11-24T10:02:00.123456+00:00"
+        "finished_at": "2026-11-24T10:02:00.123456+00:00",
+        "object": null
       }
     },
     "failed_interrupted": {
@@ -2451,7 +2584,8 @@
             "status_after": "firing"
           }
         ],
-        "finished_at": "2026-11-24T10:02:00.123456+00:00"
+        "finished_at": "2026-11-24T10:02:00.123456+00:00",
+        "object": null
       }
     },
     "failed_outcome_unknown": {
@@ -2564,7 +2698,8 @@
             "status_after": null
           }
         ],
-        "finished_at": "2026-11-24T10:02:00.123456+00:00"
+        "finished_at": "2026-11-24T10:02:00.123456+00:00",
+        "object": null
       }
     },
     "discarded": {
@@ -2732,6 +2867,228 @@
         ]
       },
       "outcome": null
+    },
+    "pending_resolve": {
+      "id": "00000000-0000-4000-8000-000000000028",
+      "conversation_id": "00000000-0000-4000-8000-000000000001",
+      "kind": "change_alert_status",
+      "state": "pending",
+      "permitted": true,
+      "created_at": "2026-11-24T10:00:00+00:00",
+      "expires_at": "2026-11-24T10:30:00+00:00",
+      "resolved_at": null,
+      "payload": {
+        "version": 1,
+        "selector": {
+          "type": "cel",
+          "cel": "source.contains(\"prometheus\") && severity == \"critical\""
+        },
+        "target_status": "resolved",
+        "note": null,
+        "dispose_on_new_alert": false,
+        "matched_count": 1,
+        "alerts": [
+          {
+            "fingerprint": "prod-db-01:cpu",
+            "name": "High CPU on prod-db-01",
+            "severity": "critical",
+            "from_status": "firing",
+            "service": "postgres",
+            "source": "prometheus",
+            "last_received": "2026-11-24T09:58:00.000Z",
+            "has_incident": true,
+            "has_note": true
+          }
+        ],
+        "skipped": [],
+        "not_found": [],
+        "unresolvable": []
+      },
+      "outcome": null
+    },
+    "pending_reopen": {
+      "id": "00000000-0000-4000-8000-000000000029",
+      "conversation_id": "00000000-0000-4000-8000-000000000001",
+      "kind": "change_alert_status",
+      "state": "pending",
+      "permitted": true,
+      "created_at": "2026-11-24T10:00:00+00:00",
+      "expires_at": "2026-11-24T10:30:00+00:00",
+      "resolved_at": null,
+      "payload": {
+        "version": 1,
+        "selector": {
+          "type": "fingerprints",
+          "fingerprints": [
+            "prod-db-01:cpu"
+          ]
+        },
+        "target_status": "firing",
+        "note": "still happening",
+        "dispose_on_new_alert": false,
+        "matched_count": 1,
+        "alerts": [
+          {
+            "fingerprint": "prod-db-01:cpu",
+            "name": "High CPU on prod-db-01",
+            "severity": "critical",
+            "from_status": "resolved",
+            "service": "postgres",
+            "source": "prometheus",
+            "last_received": "2026-11-24T09:58:00.000Z",
+            "has_incident": true,
+            "has_note": true
+          }
+        ],
+        "skipped": [],
+        "not_found": [],
+        "unresolvable": []
+      },
+      "outcome": null
+    }
+  },
+  "outcomes": {
+    "preset_saved": {
+      "code": "applied",
+      "message": "The preset was saved.",
+      "gateway_result": "ok",
+      "applied_count": 0,
+      "failed_count": 0,
+      "unconfirmed_count": 0,
+      "skipped_count": 0,
+      "not_found_count": 0,
+      "results": [],
+      "finished_at": "2026-11-24T10:02:00.123456+00:00",
+      "object": {
+        "type": "preset",
+        "id": "00000000-0000-4000-8000-000000000040",
+        "name": "Night shift",
+        "path": "/alerts/night-shift"
+      }
+    },
+    "correlation_rule_saved": {
+      "code": "applied",
+      "message": "The correlation rule was saved.",
+      "gateway_result": "ok",
+      "applied_count": 0,
+      "failed_count": 0,
+      "unconfirmed_count": 0,
+      "skipped_count": 0,
+      "not_found_count": 0,
+      "results": [],
+      "finished_at": "2026-11-24T10:02:00.123456+00:00",
+      "object": {
+        "type": "correlation_rule",
+        "id": "00000000-0000-4000-8000-000000000041",
+        "name": "Database storms",
+        "path": "/rules"
+      }
+    },
+    "dashboard_saved": {
+      "code": "applied",
+      "message": "The dashboard was saved.",
+      "gateway_result": "ok",
+      "applied_count": 0,
+      "failed_count": 0,
+      "unconfirmed_count": 0,
+      "skipped_count": 0,
+      "not_found_count": 0,
+      "results": [],
+      "finished_at": "2026-11-24T10:02:00.123456+00:00",
+      "object": {
+        "type": "dashboard",
+        "id": "00000000-0000-4000-8000-000000000042",
+        "name": null,
+        "path": null
+      }
+    },
+    "name_taken": {
+      "code": "name_taken",
+      "message": "A preset with this name exists already.",
+      "gateway_result": null,
+      "applied_count": 0,
+      "failed_count": 0,
+      "unconfirmed_count": 0,
+      "skipped_count": 0,
+      "not_found_count": 0,
+      "results": [],
+      "finished_at": "2026-11-24T10:02:00.123456+00:00",
+      "object": null
+    },
+    "object_gone": {
+      "code": "object_gone",
+      "message": "The correlation rule does not exist any more.",
+      "gateway_result": "not_found",
+      "applied_count": 0,
+      "failed_count": 0,
+      "unconfirmed_count": 0,
+      "skipped_count": 0,
+      "not_found_count": 0,
+      "results": [],
+      "finished_at": "2026-11-24T10:02:00.123456+00:00",
+      "object": {
+        "type": "correlation_rule",
+        "id": "00000000-0000-4000-8000-000000000041",
+        "name": "Database storms",
+        "path": null
+      }
+    },
+    "stale_draft": {
+      "code": "stale_draft",
+      "message": "The dashboard changed after this draft was made.",
+      "gateway_result": null,
+      "applied_count": 0,
+      "failed_count": 0,
+      "unconfirmed_count": 0,
+      "skipped_count": 0,
+      "not_found_count": 0,
+      "results": [],
+      "finished_at": "2026-11-24T10:02:00.123456+00:00",
+      "object": {
+        "type": "dashboard",
+        "id": "00000000-0000-4000-8000-000000000042",
+        "name": "On call",
+        "path": "/dashboard/00000000-0000-4000-8000-000000000042"
+      }
+    },
+    "invalid_filter": {
+      "code": "invalid_filter",
+      "message": "Keep refused the filter of this preset.",
+      "gateway_result": "rejected",
+      "applied_count": 0,
+      "failed_count": 0,
+      "unconfirmed_count": 0,
+      "skipped_count": 0,
+      "not_found_count": 0,
+      "results": [],
+      "finished_at": "2026-11-24T10:02:00.123456+00:00",
+      "object": null
+    },
+    "opened_in_form": {
+      "code": "opened_in_form",
+      "message": "Opened in the form, to finish there.",
+      "gateway_result": null,
+      "applied_count": 0,
+      "failed_count": 0,
+      "unconfirmed_count": 0,
+      "skipped_count": 0,
+      "not_found_count": 0,
+      "results": [],
+      "finished_at": "2026-11-24T10:02:00.123456+00:00",
+      "object": null
+    },
+    "rules_unreadable": {
+      "code": "rules_unreadable",
+      "message": "An existing rule's filter can't be read; fix it on the Correlations page.",
+      "gateway_result": null,
+      "applied_count": 0,
+      "failed_count": 0,
+      "unconfirmed_count": 0,
+      "skipped_count": 0,
+      "not_found_count": 0,
+      "results": [],
+      "finished_at": "2026-11-24T10:02:00.123456+00:00",
+      "object": null
     }
   },
   "conversations": {
@@ -2871,7 +3228,8 @@
                   "status_after": "acknowledged"
                 }
               ],
-              "finished_at": "2026-11-24T10:02:00.123456+00:00"
+              "finished_at": "2026-11-24T10:02:00.123456+00:00",
+              "object": null
             }
           }
         },
@@ -3037,7 +3395,8 @@
                   "status_after": null
                 }
               ],
-              "finished_at": null
+              "finished_at": null,
+              "object": null
             }
           }
         }
@@ -3251,7 +3610,8 @@
                 "status_after": "acknowledged"
               }
             ],
-            "finished_at": "2026-11-24T10:02:00.123456+00:00"
+            "finished_at": "2026-11-24T10:02:00.123456+00:00",
+            "object": null
           }
         }
       }
@@ -3450,6 +3810,20 @@
         }
       }
     },
+    "draft_unsupported": {
+      "status": 409,
+      "headers": {},
+      "body": {
+        "errors": [
+          {
+            "field": null,
+            "code": "draft_unsupported",
+            "message": "This draft cannot be applied by this version of Keep."
+          }
+        ],
+        "detail": "This draft cannot be applied by this version of Keep."
+      }
+    },
     "payload_too_large": {
       "status": 413,
       "headers": {},
@@ -3565,6 +3939,289 @@
         ],
         "detail": "This field is required."
       }
+    },
+    "confirm_derived_required": {
+      "status": 400,
+      "headers": {},
+      "body": {
+        "errors": [
+          {
+            "field": "derived",
+            "code": "field_required",
+            "message": "This field is required."
+          }
+        ],
+        "detail": "This field is required."
+      }
+    },
+    "confirm_derived_invalid": {
+      "status": 400,
+      "headers": {},
+      "body": {
+        "errors": [
+          {
+            "field": "derived",
+            "code": "invalid_value",
+            "message": "This value is not valid."
+          }
+        ],
+        "detail": "This value is not valid."
+      }
+    },
+    "discard_reason_invalid": {
+      "status": 400,
+      "headers": {},
+      "body": {
+        "errors": [
+          {
+            "field": "reason",
+            "code": "invalid_value",
+            "message": "This value is not valid."
+          }
+        ],
+        "detail": "This value is not valid."
+      }
+    }
+  },
+  "requests": {
+    "confirm": {
+      "without_body": null,
+      "derived": {
+        "derived": {
+          "cel_roundtrip": "labels.team == \"payments\"",
+          "sql_query": {
+            "sql": "(labels.team = :labels.team_1)",
+            "params": {
+              "labels.team_1": "payments"
+            }
+          }
+        }
+      }
+    },
+    "discard": {
+      "without_body": null,
+      "opened_in_form": {
+        "reason": "opened_in_form"
+      }
+    }
+  },
+  "confirm_limits": {
+    "sql_chars": 20000,
+    "params": 200,
+    "param_key_chars": 200,
+    "param_value_chars": 500,
+    "cel_roundtrip_chars": 4000,
+    "derived_bytes": 61440
+  },
+  "future": {
+    "values": {
+      "event": "event_of_a_newer_version",
+      "item_type": "item_of_a_newer_version",
+      "kind": "kind_of_a_newer_version",
+      "outcome_code": "code_of_a_newer_version",
+      "object_type": "object_of_a_newer_version",
+      "tool_outcome": "tool_outcome_of_a_newer_version",
+      "gateway_result": "result_of_a_newer_version",
+      "alert_result": "alert_result_of_a_newer_version"
+    },
+    "stream": {
+      "raw": "event: conversation\ndata: {\"conversation_id\": \"00000000-0000-4000-8000-000000000001\", \"user_message_id\": \"00000000-0000-4000-8000-000000000002\", \"turn_id\": \"00000000-0000-4000-8000-000000000003\"}\n\nevent: event_of_a_newer_version\ndata: {\"id\": \"00000000-0000-4000-8000-000000000052\", \"text\": \"Something new.\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_1\", \"tool\": \"save_quiet_hours\", \"phase\": \"started\", \"label\": \"Preparing quiet hours\"}\n\nevent: draft\ndata: {\"draft\": {\"id\": \"00000000-0000-4000-8000-000000000050\", \"conversation_id\": \"00000000-0000-4000-8000-000000000001\", \"kind\": \"kind_of_a_newer_version\", \"state\": \"pending\", \"permitted\": true, \"created_at\": \"2026-11-24T10:00:00+00:00\", \"expires_at\": \"2026-11-24T10:30:00+00:00\", \"resolved_at\": null, \"payload\": {\"version\": 3, \"title\": \"Quiet hours\", \"starts\": \"22:00\"}, \"outcome\": null}}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_1\", \"tool\": \"save_quiet_hours\", \"phase\": \"finished\", \"label\": \"Preparing quiet hours\", \"outcome\": \"tool_outcome_of_a_newer_version\"}\n\nevent: text_delta\ndata: {\"message_id\": \"00000000-0000-4000-8000-000000000004\", \"delta\": \"I drafted quiet hours.\"}\n\nevent: done\ndata: {\"message_id\": \"00000000-0000-4000-8000-000000000004\", \"finish_reason\": \"stop\"}\n\n",
+      "events": [
+        {
+          "event": "conversation",
+          "data": {
+            "conversation_id": "00000000-0000-4000-8000-000000000001",
+            "user_message_id": "00000000-0000-4000-8000-000000000002",
+            "turn_id": "00000000-0000-4000-8000-000000000003"
+          }
+        },
+        {
+          "event": "event_of_a_newer_version",
+          "data": {
+            "id": "00000000-0000-4000-8000-000000000052",
+            "text": "Something new."
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_1",
+            "tool": "save_quiet_hours",
+            "phase": "started",
+            "label": "Preparing quiet hours"
+          }
+        },
+        {
+          "event": "draft",
+          "data": {
+            "draft": {
+              "id": "00000000-0000-4000-8000-000000000050",
+              "conversation_id": "00000000-0000-4000-8000-000000000001",
+              "kind": "kind_of_a_newer_version",
+              "state": "pending",
+              "permitted": true,
+              "created_at": "2026-11-24T10:00:00+00:00",
+              "expires_at": "2026-11-24T10:30:00+00:00",
+              "resolved_at": null,
+              "payload": {
+                "version": 3,
+                "title": "Quiet hours",
+                "starts": "22:00"
+              },
+              "outcome": null
+            }
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_1",
+            "tool": "save_quiet_hours",
+            "phase": "finished",
+            "label": "Preparing quiet hours",
+            "outcome": "tool_outcome_of_a_newer_version"
+          }
+        },
+        {
+          "event": "text_delta",
+          "data": {
+            "message_id": "00000000-0000-4000-8000-000000000004",
+            "delta": "I drafted quiet hours."
+          }
+        },
+        {
+          "event": "done",
+          "data": {
+            "message_id": "00000000-0000-4000-8000-000000000004",
+            "finish_reason": "stop"
+          }
+        }
+      ]
+    },
+    "drafts": {
+      "pending": {
+        "id": "00000000-0000-4000-8000-000000000050",
+        "conversation_id": "00000000-0000-4000-8000-000000000001",
+        "kind": "kind_of_a_newer_version",
+        "state": "pending",
+        "permitted": true,
+        "created_at": "2026-11-24T10:00:00+00:00",
+        "expires_at": "2026-11-24T10:30:00+00:00",
+        "resolved_at": null,
+        "payload": {
+          "version": 3,
+          "title": "Quiet hours",
+          "starts": "22:00"
+        },
+        "outcome": null
+      },
+      "applied": {
+        "id": "00000000-0000-4000-8000-000000000051",
+        "conversation_id": "00000000-0000-4000-8000-000000000001",
+        "kind": "kind_of_a_newer_version",
+        "state": "applied",
+        "permitted": true,
+        "created_at": "2026-11-24T10:00:00+00:00",
+        "expires_at": "2026-11-24T10:30:00+00:00",
+        "resolved_at": "2026-11-24T10:02:00.123456+00:00",
+        "payload": {
+          "version": 3,
+          "title": "Quiet hours",
+          "starts": "22:00"
+        },
+        "outcome": {
+          "code": "code_of_a_newer_version",
+          "message": "The quiet hours were saved.",
+          "gateway_result": "result_of_a_newer_version",
+          "applied_count": 1,
+          "failed_count": 0,
+          "unconfirmed_count": 0,
+          "skipped_count": 0,
+          "not_found_count": 0,
+          "results": [
+            {
+              "fingerprint": "prod-db-01:cpu",
+              "name": "High CPU on prod-db-01",
+              "result": "alert_result_of_a_newer_version",
+              "status_after": "firing"
+            }
+          ],
+          "finished_at": "2026-11-24T10:02:00.123456+00:00",
+          "object": {
+            "type": "object_of_a_newer_version",
+            "id": "00000000-0000-4000-8000-000000000043",
+            "name": "Quiet hours",
+            "path": null
+          }
+        }
+      }
+    },
+    "conversation": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "title": "quiet hours at night",
+      "created_at": "2026-11-24T10:00:00+00:00",
+      "updated_at": "2026-11-24T10:02:00.123456+00:00",
+      "turn_in_progress": false,
+      "has_more": false,
+      "items": [
+        {
+          "type": "message",
+          "id": "00000000-0000-4000-8000-000000000002",
+          "role": "user",
+          "content": "quiet hours at night",
+          "status": "complete",
+          "created_at": "2026-11-24T10:00:00+00:00"
+        },
+        {
+          "type": "item_of_a_newer_version",
+          "id": "00000000-0000-4000-8000-000000000053",
+          "created_at": "2026-11-24T10:00:00+00:00",
+          "text": "Something new."
+        },
+        {
+          "type": "draft",
+          "draft": {
+            "id": "00000000-0000-4000-8000-000000000051",
+            "conversation_id": "00000000-0000-4000-8000-000000000001",
+            "kind": "kind_of_a_newer_version",
+            "state": "applied",
+            "permitted": true,
+            "created_at": "2026-11-24T10:00:00+00:00",
+            "expires_at": "2026-11-24T10:30:00+00:00",
+            "resolved_at": "2026-11-24T10:02:00.123456+00:00",
+            "payload": {
+              "version": 3,
+              "title": "Quiet hours",
+              "starts": "22:00"
+            },
+            "outcome": {
+              "code": "code_of_a_newer_version",
+              "message": "The quiet hours were saved.",
+              "gateway_result": "result_of_a_newer_version",
+              "applied_count": 1,
+              "failed_count": 0,
+              "unconfirmed_count": 0,
+              "skipped_count": 0,
+              "not_found_count": 0,
+              "results": [
+                {
+                  "fingerprint": "prod-db-01:cpu",
+                  "name": "High CPU on prod-db-01",
+                  "result": "alert_result_of_a_newer_version",
+                  "status_after": "firing"
+                }
+              ],
+              "finished_at": "2026-11-24T10:02:00.123456+00:00",
+              "object": {
+                "type": "object_of_a_newer_version",
+                "id": "00000000-0000-4000-8000-000000000043",
+                "name": "Quiet hours",
+                "path": null
+              }
+            }
+          }
+        }
+      ]
     }
   }
 }
