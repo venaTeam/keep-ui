@@ -283,6 +283,47 @@ describe("the context", () => {
   });
 });
 
+describe("a follow-up from a card", () => {
+  const followUp = (text = "Which are still firing?") =>
+    act(() =>
+      contextStore
+        .getState()
+        .startFollowUp({ text, fingerprints: ["fp-a", "fp-b"] })
+    );
+
+  it("pre-fills the composer and sends its alerts as context, not text", async () => {
+    show();
+    followUp();
+    expect(input().value).toBe("Which are still firing?");
+    expect(input()).toHaveFocus();
+    expect(contextStore.getState().composerPrefill).toBeNull();
+    expect(cy("assistant-context-chip-selection")).toHaveTextContent(
+      "2 alerts selected"
+    );
+    await enter();
+    const [message, context] = send.mock.calls[0];
+    expect(message).toBe("Which are still firing?");
+    expect(context.selected_fingerprints).toEqual(["fp-a", "fp-b"]);
+  });
+
+  it("goes in front of what was written", () => {
+    show();
+    type("and the disks");
+    followUp();
+    expect(input().value).toBe("Which are still firing?\nand the disks");
+  });
+
+  it("waits for the panel to open", () => {
+    panelStore.setState({ isOpen: false });
+    show();
+    followUp();
+    expect(contextStore.getState().composerPrefill).not.toBeNull();
+    act(() => panelStore.setState({ isOpen: true }));
+    expect(input().value).toBe("Which are still firing?");
+    expect(contextStore.getState().composerPrefill).toBeNull();
+  });
+});
+
 describe("errors", () => {
   const error = (code: string, retryAfterSeconds: number | null = null) => ({
     code,

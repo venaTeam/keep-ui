@@ -1,9 +1,10 @@
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 import { clsx } from "clsx";
 import { Button } from "@/components/ui";
-import { DraftView } from "@/entities/assistant";
+import { DraftView, useAssistantContextStore } from "@/entities/assistant";
 import { useConfig } from "@/utils/hooks/useConfig";
 import { CardState, getDraftCardState } from "../lib/draft-card-state";
+import { getConfirmBlockedReason } from "../lib/draft-presenter";
 import { formatTime } from "../lib/format-time";
 import { useDraftActions } from "../model/useDraftActions";
 import { useNow } from "../model/useNow";
@@ -73,8 +74,16 @@ export function DraftCard({
   const { data: config } = useConfig();
   const card = useRef<HTMLElement>(null);
   const now = useNow(draft?.expires_at);
-  const { confirm, discard, isConfirming, isDiscarding, error } =
+  const { confirm, discard, isConfirming, isDiscarding, error, refusedReason } =
     useDraftActions(draft?.id, { onChange, onUncertain });
+  const startFollowUp = useAssistantContextStore(
+    (store) => store.startFollowUp
+  );
+  // The payload is parsed, and what Confirm sends derived, once per draft
+  const presentation = useMemo(
+    () => (draft ? presentDraft(draft) : null),
+    [draft]
+  );
   const state = getDraftCardState(draft, {
     readOnly: !!config?.READ_ONLY,
     now,
@@ -91,7 +100,7 @@ export function DraftCard({
     </h3>
   );
 
-  if (!draft) {
+  if (!draft || !presentation) {
     return (
       <section
         aria-label={TITLES[state]}
@@ -110,13 +119,24 @@ export function DraftCard({
     );
   }
 
-  const { body, confirmLabel, notPermittedText } = presentDraft(draft);
+  const {
+    body,
+    confirmLabel,
+    notPermittedText,
+    confirmInput,
+    resultLabels,
+    followUp,
+  } = presentation;
   const label = isOpenedInForm(draft) ? "Opened in form" : TITLES[state];
   const expiresAt = state === "draft" ? formatTime(draft.expires_at) : null;
   const isSubmitting = state === "submitting";
   const canConfirm = (state === "draft" || isSubmitting) && !!confirmLabel;
   const canDiscard =
     isSubmitting || (draft.state === "pending" && state !== "expired");
+  const blockedReason =
+    state === "draft"
+      ? getConfirmBlockedReason(presentation, refusedReason)
+      : null;
 
   // The button that was pressed is about to be disabled, or to disappear
   const keepFocus = () => card.current?.focus();
@@ -129,6 +149,7 @@ export function DraftCard({
       aria-busy={isSubmitting}
       data-cy="assistant-draft-card"
       data-state={state}
+      data-kind={draft.kind}
       className={className}
     >
       {/* All that is left of a discarded draft is its outcome */}
@@ -149,6 +170,7 @@ export function DraftCard({
           draft={draft}
           state={state}
           notPermittedText={notPermittedText}
+          resultLabels={resultLabels}
           isTimedOut={isTimedOut}
         />
         {error && draft.state === "pending" && !isSubmitting && (
@@ -156,9 +178,17 @@ export function DraftCard({
             {error}
           </p>
         )}
+        {canConfirm && blockedReason && (
+          <p
+            data-cy="assistant-draft-confirm-blocked"
+            className="whitespace-pre-wrap break-words text-xs text-gray-700"
+          >
+            {blockedReason}
+          </p>
+        )}
       </div>
 
-      {(canConfirm || canDiscard) && (
+      {(canConfirm || canDiscard || followUp) && (
         <div className="flex flex-wrap gap-2">
           {canConfirm && (
             <Button
@@ -168,10 +198,12 @@ export function DraftCard({
               size="xs"
               data-cy="assistant-draft-confirm"
               loading={isSubmitting}
-              disabled={isSubmitting || isDiscarding}
+              disabled={isSubmitting || isDiscarding || !!blockedReason}
               onClick={() => {
                 keepFocus();
-                confirm();
+                confirm(
+                  (!confirmInput.isBlocked && confirmInput.body) || undefined
+                );
               }}
             >
               {confirmLabel}
@@ -207,6 +239,19 @@ export function DraftCard({
               }}
             >
               Check again
+            </Button>
+          )}
+          {followUp && (
+            <Button
+              type="button"
+              variant="secondary"
+              color="orange"
+              size="xs"
+              title={followUp.text}
+              data-cy="assistant-draft-follow-up"
+              onClick={() => startFollowUp(followUp)}
+            >
+              Follow up
             </Button>
           )}
         </div>

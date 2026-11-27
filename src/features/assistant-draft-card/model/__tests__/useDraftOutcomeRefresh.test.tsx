@@ -1,6 +1,7 @@
 import { renderHook } from "@testing-library/react";
 import { DraftView } from "@/entities/assistant";
 import golden from "@/entities/assistant/__fixtures__/assistant_stream.json";
+import { RefreshKey } from "../../lib/draft-presenter";
 import { useDraftOutcomeRefresh } from "../useDraftOutcomeRefresh";
 
 const mockRevalidate = jest.fn();
@@ -59,4 +60,57 @@ it("refreshes once for drafts that become final together", () => {
   const { rerender } = setup(draft("applying"), draft("applying", "other"));
   rerender([draft("applied"), draft("failed", "other")]);
   expect(mockRevalidate).toHaveBeenCalledTimes(1);
+});
+
+describe("the keys a kind names", () => {
+  const setupWith = (
+    refreshKeysOf: (draft: DraftView) => RefreshKey[],
+    ...drafts: DraftView[]
+  ) =>
+    renderHook(
+      (props: DraftView[]) => useDraftOutcomeRefresh(props, refreshKeysOf),
+      { initialProps: drafts }
+    );
+
+  it("revalidates exact keys apart from prefixes", () => {
+    const { rerender } = setupWith(
+      () => [
+        { key: "/dashboard", isExact: true },
+        { key: "/preset", isExact: false },
+      ],
+      draft("pending")
+    );
+    rerender([draft("applied")]);
+    expect(mockRevalidate).toHaveBeenCalledTimes(2);
+    expect(mockRevalidate).toHaveBeenCalledWith(["/preset"]);
+    expect(mockRevalidate).toHaveBeenCalledWith(["/dashboard"], {
+      isExact: true,
+    });
+  });
+
+  it("revalidates each key once for drafts that become final together", () => {
+    const { rerender } = setupWith(
+      () => [{ key: "/rules", isExact: true }],
+      draft("pending"),
+      draft("pending", "other")
+    );
+    rerender([draft("applied"), draft("applied", "other")]);
+    expect(mockRevalidate).toHaveBeenCalledTimes(1);
+    expect(mockRevalidate).toHaveBeenCalledWith(["/rules"], { isExact: true });
+  });
+
+  it("asks only about the drafts that just became final", () => {
+    const refreshKeysOf = jest.fn(() => [] as RefreshKey[]);
+    const { rerender } = setupWith(
+      refreshKeysOf,
+      draft("applied", "old"),
+      draft("pending")
+    );
+    rerender([draft("applied", "old"), draft("failed")]);
+    expect(refreshKeysOf).toHaveBeenCalledTimes(1);
+    expect(refreshKeysOf).toHaveBeenCalledWith(
+      expect.objectContaining({ id: ID, state: "failed" })
+    );
+    expect(mockRevalidate).not.toHaveBeenCalled();
+  });
 });

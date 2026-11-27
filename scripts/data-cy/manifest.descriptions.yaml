@@ -196,6 +196,9 @@
 "assistant-draft-card":
   description: "A drafted change; data-state is the state of the card."
 
+"assistant-draft-confirm-blocked":
+  description: "Why Confirm is disabled for this draft."
+
 "assistant-draft-confirm":
   description: "Makes the drafted change."
 
@@ -204,6 +207,9 @@
 
 "assistant-draft-check-again":
   description: "Asks again about a change that takes long."
+
+"assistant-draft-follow-up":
+  description: "Pre-fills the composer with the question the draft suggests next."
 
 "assistant-draft-outcome":
   description: "What became of the drafted change."

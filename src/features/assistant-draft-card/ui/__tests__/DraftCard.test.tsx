@@ -4,6 +4,7 @@ import golden from "@/entities/assistant/__fixtures__/assistant_stream.json";
 import { KeepApiError } from "@/shared/api";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { useConfig } from "@/utils/hooks/useConfig";
+import { DERIVED_REFUSED } from "../../model/useDraftActions";
 import { DraftCard, DraftCardProps } from "../DraftCard";
 
 jest.mock("@/utils/metrics", () => ({
@@ -568,6 +569,58 @@ describe("Confirm", () => {
     expect(card()).not.toHaveTextContent("Couldn't reach Keep");
     update(draft("applied"));
     expect(card()).not.toHaveTextContent("Couldn't reach Keep");
+  });
+});
+
+describe("a Confirm the gateway refuses for good", () => {
+  const refuse = (name: "confirm_derived_invalid" | "draft_unsupported") => {
+    const { status, body } = golden.errors[name];
+    post.mockRejectedValue(
+      new KeepApiError(body.detail, "/x", "", body, status)
+    );
+  };
+
+  it.each<["confirm_derived_invalid" | "draft_unsupported", string]>([
+    ["confirm_derived_invalid", DERIVED_REFUSED],
+    ["draft_unsupported", golden.errors.draft_unsupported.body.detail],
+  ])("after %s, stays disabled and says why", async (name, reason) => {
+    refuse(name);
+    show(draft("pending"));
+    await click(confirmButton());
+    expect(card()).toHaveAttribute("data-state", "draft");
+    expect(confirmButton()).toBeDisabled();
+    expect(byCy("assistant-draft-confirm-blocked")).toHaveTextContent(reason);
+    expect(discardButton()).toBeEnabled();
+    expect(onUncertain).not.toHaveBeenCalled();
+    expect(onChange).not.toHaveBeenCalled();
+    // The reason is not an error to try again after
+    expect(card()).not.toHaveTextContent("try again");
+  });
+
+  it("says nothing more once the draft is no longer pending", async () => {
+    refuse("draft_unsupported");
+    const { update } = show(draft("pending"));
+    await click(confirmButton());
+    update(draft("discarded"));
+    expect(byCy("assistant-draft-confirm-blocked")).toBeNull();
+  });
+});
+
+describe("the kind", () => {
+  it("is on the card", () => {
+    show(draft("pending"));
+    expect(card()).toHaveAttribute("data-kind", "change_alert_status");
+  });
+
+  it("of a status change sends no body and suggests no follow-up", async () => {
+    post.mockReturnValue(new Promise(() => {}));
+    show(draft("pending"));
+    expect(byCy("assistant-draft-follow-up")).toBeNull();
+    expect(byCy("assistant-draft-confirm-blocked")).toBeNull();
+    await click(confirmButton());
+    expect(post).toHaveBeenCalledWith(
+      `/assistant/drafts/${golden.drafts.pending.id}/confirm`
+    );
   });
 });
 

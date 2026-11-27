@@ -1,17 +1,12 @@
 import Link from "next/link";
-import { AlertOutcome, AlertResult, DraftView } from "@/entities/assistant";
+import { AlertOutcome, DraftView } from "@/entities/assistant";
 import { CardState } from "../lib/draft-card-state";
+import { ResultLabels } from "../lib/draft-presenter";
 import { formatTime } from "../lib/format-time";
 import { getObjectLink } from "../lib/object-link";
 
-const RESULT_LABELS: [AlertResult, string][] = [
-  ["applied", "Changed"],
-  ["failed", "Not changed"],
-  ["unconfirmed", "Not confirmed"],
-  ["skipped", "Skipped"],
-  ["not_found", "Not found"],
-];
-// The results of a newer gateway, listed so that none goes missing
+// The results without a label of the kind, as of a newer gateway, listed so
+// that none goes missing
 const OTHER_LABEL = "Other";
 
 function ResultList({
@@ -75,10 +70,14 @@ function getText(
   }
 }
 
-function groupResults(results: AlertOutcome[], state: CardState) {
-  const known = new Set<string>(RESULT_LABELS.map(([result]) => result));
+function groupResults(
+  results: AlertOutcome[],
+  labels: ResultLabels,
+  state: CardState
+) {
+  const known = new Set<string>(labels.map(([result]) => result));
   return [
-    ...RESULT_LABELS.map(([result, label]) => ({
+    ...labels.map(([result, label]) => ({
       key: result,
       label,
       results: results.filter((alert) => alert.result === result),
@@ -100,6 +99,8 @@ interface DraftCardOutcomeProps {
   draft: DraftView;
   state: CardState;
   notPermittedText: string;
+  /** The kind's labels of the alert results. */
+  resultLabels: ResultLabels;
   /** The page stopped waiting for a change that is still being applied. */
   isTimedOut: boolean;
 }
@@ -109,6 +110,7 @@ export function DraftCardOutcome({
   draft,
   state,
   notPermittedText,
+  resultLabels,
   isTimedOut,
 }: DraftCardOutcomeProps) {
   const text = getText(draft, state, notPermittedText);
@@ -116,7 +118,11 @@ export function DraftCardOutcome({
     return null;
   }
   const time = formatTime(draft.outcome?.finished_at);
-  const groups = groupResults(draft.outcome?.results ?? [], state);
+  const groups = groupResults(
+    draft.outcome?.results ?? [],
+    resultLabels,
+    state
+  );
   const link = getObjectLink(draft.outcome?.object);
 
   return (

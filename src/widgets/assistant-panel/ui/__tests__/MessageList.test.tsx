@@ -7,6 +7,7 @@ import {
   ToolStatus,
 } from "@/entities/assistant";
 import golden from "@/entities/assistant/__fixtures__/assistant_stream.json";
+import { DRAFT_TOOL_NAMES } from "@/features/assistant-draft-card";
 import { MessageBubble } from "../MessageBubble";
 import { MessageList } from "../MessageList";
 
@@ -166,6 +167,36 @@ describe("a tool", () => {
     const line = cy("assistant-tool-status")[0];
     expect(line).toHaveAttribute("data-outcome", outcome);
     expect(line.textContent).toMatch(/^Preparing a status change: \w+/);
+  });
+
+  it.each(DRAFT_TOOL_NAMES)("%s shows a skeleton of its draft", (name) => {
+    show({ entries: [tool({ tool: name })], isStreaming: true });
+    expect(cy("assistant-draft-card")).toHaveLength(1);
+  });
+
+  it.each([
+    ["the tool limit", "tool_limit", "too many steps for one answer"],
+    ["an outcome of a newer gateway", "summarized", "done"],
+    ["an outcome named like a property", "constructor", "done"],
+  ])("has a text for %s", (_, outcome, text) => {
+    show({ entries: [tool({ phase: "finished", outcome })] });
+    expect(cy("assistant-tool-status")[0]).toHaveTextContent(
+      `Preparing a status change: ${text}`
+    );
+  });
+
+  it.each([
+    ["draft_created", true],
+    ["found", true],
+    ["link_ready", true],
+    ["not_found", false],
+    ["summarized", false],
+  ])("is marked as done when it ended %s: %s", (outcome, isDone) => {
+    show({ entries: [tool({ phase: "finished", outcome })] });
+    const icon = cy("assistant-tool-status")[0].querySelector("svg");
+    // CheckIcon's path, which the other icon does not have
+    const isCheck = !!icon?.innerHTML.includes("m4.5 12.75 6 6 9-13.5");
+    expect(isCheck).toBe(isDone);
   });
 });
 

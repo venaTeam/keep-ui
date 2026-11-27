@@ -4,7 +4,7 @@ import golden from "@/entities/assistant/__fixtures__/assistant_stream.json";
 import { KeepApiError } from "@/shared/api";
 import { useApi } from "@/shared/lib/hooks/useApi";
 import { recordAction, recordError } from "@/utils/metrics";
-import { useDraftActions } from "../useDraftActions";
+import { DERIVED_REFUSED, useDraftActions } from "../useDraftActions";
 
 jest.mock("@/utils/metrics", () => ({
   recordAction: jest.fn(),
@@ -147,6 +147,57 @@ describe("confirm", () => {
     await act(() => result.current.confirm());
     expect(result.current.error).toBe(golden.errors.forbidden.body.detail);
     expect(onUncertain).not.toHaveBeenCalled();
+    expect(result.current.refusedReason).toBeNull();
+  });
+
+  it("sends the body the kind derived", async () => {
+    const body = {
+      derived: {
+        cel_roundtrip: "severity == 'critical'",
+        sql_query: { sql: "severity = :p0", params: { p0: "critical" } },
+      },
+    };
+    post.mockResolvedValue(applied);
+    const { result } = setup();
+    await act(() => result.current.confirm(body));
+    expect(post).toHaveBeenCalledWith(
+      `/assistant/drafts/${pending.id}/confirm`,
+      body
+    );
+  });
+
+  it.each(["confirm_derived_required", "confirm_derived_invalid"] as const)(
+    "is refused for good by a 400 %s",
+    async (name) => {
+      post.mockRejectedValue(refusal(name));
+      const { result } = setup();
+      await act(() => result.current.confirm());
+      expect(result.current.refusedReason).toBe(DERIVED_REFUSED);
+      expect(result.current.error).toBeNull();
+      expect(onUncertain).not.toHaveBeenCalled();
+      expect(onChange).not.toHaveBeenCalled();
+    }
+  );
+
+  it("is refused for good by a 409 draft_unsupported, in the server's words", async () => {
+    post.mockRejectedValue(refusal("draft_unsupported"));
+    const { result } = setup();
+    await act(() => result.current.confirm());
+    expect(result.current.refusedReason).toBe(
+      golden.errors.draft_unsupported.body.detail
+    );
+    expect(result.current.error).toBeNull();
+    expect(onUncertain).not.toHaveBeenCalled();
+    expect(onChange).not.toHaveBeenCalled();
+    expect(recordError).toHaveBeenCalledWith("assistant_confirm", 409);
+  });
+
+  it("is not refused for good by a 400 about another field", async () => {
+    post.mockRejectedValue(refusal("validation"));
+    const { result } = setup();
+    await act(() => result.current.confirm());
+    expect(result.current.refusedReason).toBeNull();
+    expect(result.current.error).toBe(golden.errors.validation.body.detail);
   });
 });
 
@@ -170,6 +221,26 @@ describe("discard", () => {
     await act(() => result.current.discard());
     expect(onChange).toHaveBeenCalledTimes(1);
     expect(recordError).not.toHaveBeenCalled();
+  });
+
+  it("sends the reason it was given", async () => {
+    post.mockResolvedValue(golden.drafts.discarded);
+    const { result } = setup();
+    await act(() => result.current.discard({ reason: "opened_in_form" }));
+    expect(post).toHaveBeenCalledWith(
+      `/assistant/drafts/${pending.id}/discard`,
+      { reason: "opened_in_form" }
+    );
+  });
+
+  it("is never refused for good, unlike Confirm", async () => {
+    post.mockRejectedValue(refusal("draft_unsupported"));
+    const { result } = setup();
+    await act(() => result.current.discard());
+    expect(result.current.refusedReason).toBeNull();
+    expect(result.current.error).toBe(
+      golden.errors.draft_unsupported.body.detail
+    );
   });
 });
 

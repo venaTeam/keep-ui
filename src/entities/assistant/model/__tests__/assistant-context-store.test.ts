@@ -1,4 +1,7 @@
-import { useAssistantContextStore } from "../assistant-context-store";
+import {
+  MAX_FOLLOW_UP_FINGERPRINTS,
+  useAssistantContextStore,
+} from "../assistant-context-store";
 
 const store = useAssistantContextStore;
 const a = { fingerprint: "a", name: "A", severity: "high", status: "firing" };
@@ -53,5 +56,40 @@ it("takes a removed selection back after the message, or once it is cleared", ()
 
 it("stores nothing in the browser", () => {
   store.getState().setSelection([a]);
+  store
+    .getState()
+    .startFollowUp({ text: "Which are still firing?", fingerprints: ["a"] });
   expect(localStorage).toHaveLength(0);
+});
+
+describe("a follow-up", () => {
+  it("makes its alerts the selection and holds its text for the composer", () => {
+    store.getState().setSelection([a]);
+    store.getState().excludeSelection();
+    store.getState().startFollowUp({
+      text: "Which are still firing?",
+      fingerprints: ["b", "c"],
+    });
+    expect(store.getState()).toMatchObject({
+      selection: [{ fingerprint: "b" }, { fingerprint: "c" }],
+      selectionIncluded: true,
+      composerPrefill: "Which are still firing?",
+    });
+
+    store.getState().clearComposerPrefill();
+    expect(store.getState().composerPrefill).toBeNull();
+    // The alerts stay for the message
+    expect(store.getState().selection).toHaveLength(2);
+  });
+
+  it(`takes at most ${MAX_FOLLOW_UP_FINGERPRINTS} alerts`, () => {
+    const fingerprints = Array.from(
+      { length: 25 },
+      (_, index) => `fp-${index}`
+    );
+    store.getState().startFollowUp({ text: "More?", fingerprints });
+    expect(
+      store.getState().selection.map(({ fingerprint }) => fingerprint)
+    ).toEqual(fingerprints.slice(0, MAX_FOLLOW_UP_FINGERPRINTS));
+  });
 });

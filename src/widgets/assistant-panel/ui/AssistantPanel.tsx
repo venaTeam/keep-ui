@@ -65,12 +65,31 @@ export function AssistantPanel() {
   const includeSelection = useAssistantContextStore(
     (state) => state.includeSelection
   );
+  const composerPrefill = useAssistantContextStore(
+    (state) => state.composerPrefill
+  );
+  const clearComposerPrefill = useAssistantContextStore(
+    (state) => state.clearComposerPrefill
+  );
   const page = usePathname() ?? "";
   const chat = useAssistantChat();
   const [text, setText] = useState("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   usePanelFocus(isOpen, inputRef);
+
+  // A card's follow-up: its alerts are the selection already
+  useEffect(() => {
+    // Read when taken, so that a second run of the effect finds nothing
+    const prefill = useAssistantContextStore.getState().composerPrefill;
+    if (prefill === null || !isOpen) {
+      return;
+    }
+    clearComposerPrefill();
+    // In front of what was written in the meantime
+    setText((current) => (current ? `${prefill}\n${current}` : prefill));
+    inputRef.current?.focus();
+  }, [composerPrefill, clearComposerPrefill, isOpen]);
 
   const drafts = useMemo(
     () =>

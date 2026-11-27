@@ -1,13 +1,16 @@
 import { Fragment, memo, useEffect, useRef } from "react";
-import { CHANGE_ALERT_STATUS_KIND, TimelineEntry } from "@/entities/assistant";
-import { DraftCard, DraftCardProps } from "@/features/assistant-draft-card";
+import { TimelineEntry } from "@/entities/assistant";
+import {
+  DRAFT_TOOL_NAMES,
+  DraftCard,
+  DraftCardProps,
+} from "@/features/assistant-draft-card";
 import { MessageBubble } from "./MessageBubble";
 import { Spinner } from "./Spinner";
 import { ToolStatusLine } from "./ToolStatusLine";
 
 // How close to the end still counts as reading the end
 const END_MARGIN_PX = 80;
-const DRAFT_TOOLS = [CHANGE_ALERT_STATUS_KIND];
 
 const MemoDraftCard = memo(DraftCard);
 
@@ -122,7 +125,7 @@ export function MessageList({
                 <ToolStatusLine tool={entry.tool} isStreaming={isStreaming} />
                 {isStreaming &&
                   entry.tool.phase === "started" &&
-                  DRAFT_TOOLS.includes(entry.tool.tool) && (
+                  DRAFT_TOOL_NAMES.includes(entry.tool.tool) && (
                     <MemoDraftCard draft={null} {...draftCallbacks} />
                   )}
               </Fragment>
