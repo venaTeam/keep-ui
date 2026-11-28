@@ -11,6 +11,7 @@ import {
   DRAFT_STATES,
   FINISH_REASONS,
   GATEWAY_RESULTS,
+  LINK_PAGES,
   MESSAGE_STATUSES,
   OBJECT_TYPES,
   OUTCOME_CODES,
@@ -57,7 +58,7 @@ describe("the vendored contract", () => {
       .update(`blob ${bytes.length}\0`)
       .update(bytes)
       .digest("hex");
-    expect(blobId).toBe("bfaf94e1ed517d0f4d0911c7d5f93c82b800918c");
+    expect(blobId).toBe("8e4c147c915236f67a739e1ad37ed8528295fa43");
   });
 
   it("has the same vocabulary as the types", () => {
@@ -75,6 +76,7 @@ describe("the vendored contract", () => {
       object_types: OBJECT_TYPES,
       message_statuses: MESSAGE_STATUSES,
       discard_reasons: DISCARD_REASONS,
+      link_pages: LINK_PAGES,
     });
   });
 
@@ -156,8 +158,40 @@ describe("createStreamParser", () => {
     ["data that is not an object", "event: text_delta\ndata: []\n\n"],
     ["a missing field", 'event: text_delta\ndata: {"delta": "a"}\n\n'],
     ["a draft without an id", 'event: draft\ndata: {"draft": {}}\n\n'],
+    [
+      "a link without a path",
+      'event: link\ndata: {"id": "l", "page": "alerts_feed", "label": "Open"}\n\n',
+    ],
+    [
+      "a link whose page is not text",
+      'event: link\ndata: {"id": "l", "page": 1, "path": "/alerts/feed", "label": "Open"}\n\n',
+    ],
+    [
+      "a link without an id",
+      'event: link\ndata: {"page": "alerts_feed", "path": "/alerts/feed", "label": "Open"}\n\n',
+    ],
+    [
+      "a link without a label",
+      'event: link\ndata: {"id": "l", "page": "alerts_feed", "path": "/alerts/feed"}\n\n',
+    ],
   ])("turns a frame with %s into an error event", (_, raw) => {
     expect(createStreamParser().push(raw)).toEqual([malformed]);
+  });
+
+  // NavigationLink shows only a path navigation.ts reads back
+  it("passes on a link whatever its path says", () => {
+    const data = {
+      id: "l",
+      page: "alerts_feed",
+      param: null,
+      path: "//evil.example",
+      label: "Open",
+    };
+    expect(
+      createStreamParser().push(
+        `event: link\ndata: ${JSON.stringify(data)}\n\n`
+      )
+    ).toEqual([{ event: "link", data }]);
   });
 
   it("goes on after a malformed frame", () => {

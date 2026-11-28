@@ -73,6 +73,35 @@ describe("applyStreamEvent", () => {
     });
   });
 
+  it("collects the links, between their tools' rows", () => {
+    const items = run("link_created").items;
+    expect(items.map((item) => item.type)).toEqual([
+      "tool",
+      "link",
+      "tool",
+      "link",
+      "tool",
+      "link",
+      "text",
+    ]);
+    expect(items.filter((item) => item.type === "link")).toEqual(
+      golden.streams.link_created.events
+        .filter(({ event }) => event === "link")
+        .map(({ data }) => ({ type: "link", link: data }))
+    );
+  });
+
+  it("has one row per link", () => {
+    const link = golden.streams.link_created.events.find(
+      ({ event }) => event === "link"
+    ) as StreamEvent;
+    const turn = applyStreamEvent(
+      applyStreamEvent(startTurn("open it"), link),
+      link
+    );
+    expect(turn.items).toHaveLength(1);
+  });
+
   it("keeps what a truncated stream sent", () => {
     const turn = run("truncated");
     expect(turn.items).toHaveLength(4);
@@ -193,6 +222,87 @@ describe("mergeTimeline", () => {
     ]);
     expect(merged[0]).toMatchObject({
       content: "acknowledge these with the note investigating",
+    });
+  });
+
+  describe("with links", () => {
+    const linkEvents = golden.streams.link_created.events.filter(
+      ({ event }) => event === "link"
+    ) as unknown as Extract<StreamEvent, { event: "link" }>[];
+    // The links of the streamed turn, as the conversation stores them
+    const storedLinks = linkEvents.map(
+      ({ data }): TimelineItem => ({
+        type: "link",
+        ...data,
+        created_at: "2026-11-24T10:00:00+00:00",
+      })
+    );
+
+    it("stores a link with the fields it streamed", () => {
+      const stored = golden.conversations.with_links.items.filter(
+        (item) => item.type === "link"
+      );
+      expect(stored).toHaveLength(4);
+      for (const item of stored) {
+        expect(Object.keys(item).sort()).toEqual(
+          [...Object.keys(linkEvents[0].data), "type", "created_at"].sort()
+        );
+      }
+    });
+
+    it("shows the stored links where they are", () => {
+      const items = golden.conversations.with_links
+        .items as unknown as TimelineItem[];
+      expect(keys(mergeTimeline(items, null))).toEqual([
+        id(2),
+        `link-${id(40)}`,
+        `link-${id(41)}`,
+        id(5),
+        id(6),
+        `link-${id(42)}`,
+        `link-${id(43)}`,
+        id(7),
+      ]);
+      expect(mergeTimeline(items, null)[1]).toEqual({
+        key: `link-${id(40)}`,
+        type: "link",
+        link: {
+          id: id(40),
+          page: "alerts_feed",
+          param: null,
+          path: "/alerts/feed",
+          label: "Open the feed",
+        },
+      });
+    });
+
+    it("gives a live link the key and the entry of the stored one", () => {
+      const turn = run("link_created");
+      const live = mergeTimeline([], turn).filter(
+        (entry) => entry.type === "link"
+      );
+      const stored = mergeTimeline(storedLinks, null);
+      expect(live).toEqual(stored);
+      expect(keys(stored)).toEqual([
+        `link-${id(30)}`,
+        `link-${id(31)}`,
+        `link-${id(32)}`,
+      ]);
+      // Once stored, each link is shown once
+      expect(keys(mergeTimeline(storedLinks, turn))).toEqual([
+        ...keys(stored),
+        id(2),
+        "tool-call_1",
+        "tool-call_2",
+        "tool-call_3",
+        id(4),
+      ]);
+    });
+
+    it("leaves out a stored link without an id", () => {
+      const [first] = storedLinks;
+      const items = [{ ...first, id: undefined }] as unknown as TimelineItem[];
+      expect(mergeTimeline(items, null)).toEqual([]);
     });
   });
 

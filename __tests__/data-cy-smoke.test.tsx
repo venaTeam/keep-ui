@@ -24,6 +24,7 @@ import { Input } from "@/shared/ui/Input";
 import { TabLinkNavigation } from "@/shared/ui/TabLinkNavigation/TabLinkNavigation";
 import { TabNavigationLink } from "@/shared/ui/TabLinkNavigation/TabNavigationLink";
 import { DropdownMenu } from "@/shared/ui/DropdownMenu/DropdownMenu";
+import { NavigationLink } from "@/widgets/assistant-panel/ui/NavigationLink";
 
 // Minimal table stub for TablePagination.
 function makeTableStub() {
@@ -168,6 +169,19 @@ describe("data-cy primitives smoke", () => {
     );
     expect(
       container.querySelector('[data-cy="cy-menu-trigger"]')
+    ).not.toBeNull();
+  });
+
+  it("NavigationLink puts assistant-link on its anchor", () => {
+    const { container } = render(
+      <NavigationLink
+        page="alerts_feed"
+        path="/alerts/feed"
+        label="Open the feed"
+      />
+    );
+    expect(
+      container.querySelector('a[data-cy="assistant-link"]')
     ).not.toBeNull();
   });
 });

@@ -6,7 +6,8 @@
       "tool_status",
       "draft",
       "error",
-      "done"
+      "done",
+      "link"
     ],
     "tool_phases": [
       "started",
@@ -24,7 +25,8 @@
       "found",
       "not_found",
       "link_ready",
-      "name_taken"
+      "name_taken",
+      "tool_limit"
     ],
     "stream_error_codes": [
       "llm_unavailable",
@@ -106,6 +108,15 @@
     ],
     "discard_reasons": [
       "opened_in_form"
+    ],
+    "link_pages": [
+      "alerts_feed",
+      "alerts_preset",
+      "alerts_search",
+      "incidents",
+      "rules",
+      "rule",
+      "dashboard"
     ]
   },
   "heartbeat": ": hb\n\n",
@@ -647,6 +658,475 @@
           "data": {
             "message_id": "00000000-0000-4000-8000-000000000004",
             "finish_reason": "stop"
+          }
+        }
+      ]
+    },
+    "read_tools": {
+      "raw": "event: conversation\ndata: {\"conversation_id\": \"00000000-0000-4000-8000-000000000001\", \"user_message_id\": \"00000000-0000-4000-8000-000000000002\", \"turn_id\": \"00000000-0000-4000-8000-000000000003\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_1\", \"tool\": \"get_field_values\", \"phase\": \"started\", \"label\": \"Reading field values\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_1\", \"tool\": \"get_field_values\", \"phase\": \"finished\", \"label\": \"Reading field values\", \"outcome\": \"found\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_2\", \"tool\": \"validate_cel\", \"phase\": \"started\", \"label\": \"Checking a filter\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_2\", \"tool\": \"validate_cel\", \"phase\": \"finished\", \"label\": \"Checking a filter\", \"outcome\": \"invalid_cel\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_3\", \"tool\": \"count_alerts\", \"phase\": \"started\", \"label\": \"Counting alerts\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_3\", \"tool\": \"count_alerts\", \"phase\": \"finished\", \"label\": \"Counting alerts\", \"outcome\": \"found\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_4\", \"tool\": \"search_alerts\", \"phase\": \"started\", \"label\": \"Searching alerts\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_4\", \"tool\": \"search_alerts\", \"phase\": \"finished\", \"label\": \"Searching alerts\", \"outcome\": \"no_matches\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_5\", \"tool\": \"search_alerts\", \"phase\": \"started\", \"label\": \"Searching alerts\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_5\", \"tool\": \"search_alerts\", \"phase\": \"finished\", \"label\": \"Searching alerts\", \"outcome\": \"error\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_6\", \"tool\": \"get_alerts\", \"phase\": \"started\", \"label\": \"Reading alerts\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_6\", \"tool\": \"get_alerts\", \"phase\": \"finished\", \"label\": \"Reading alerts\", \"outcome\": \"found\"}\n\nevent: text_delta\ndata: {\"message_id\": \"00000000-0000-4000-8000-000000000004\", \"delta\": \"12 alerts are critical; none of them is firing.\"}\n\nevent: done\ndata: {\"message_id\": \"00000000-0000-4000-8000-000000000004\", \"finish_reason\": \"stop\"}\n\n",
+      "events": [
+        {
+          "event": "conversation",
+          "data": {
+            "conversation_id": "00000000-0000-4000-8000-000000000001",
+            "user_message_id": "00000000-0000-4000-8000-000000000002",
+            "turn_id": "00000000-0000-4000-8000-000000000003"
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_1",
+            "tool": "get_field_values",
+            "phase": "started",
+            "label": "Reading field values"
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_1",
+            "tool": "get_field_values",
+            "phase": "finished",
+            "label": "Reading field values",
+            "outcome": "found"
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_2",
+            "tool": "validate_cel",
+            "phase": "started",
+            "label": "Checking a filter"
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_2",
+            "tool": "validate_cel",
+            "phase": "finished",
+            "label": "Checking a filter",
+            "outcome": "invalid_cel"
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_3",
+            "tool": "count_alerts",
+            "phase": "started",
+            "label": "Counting alerts"
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_3",
+            "tool": "count_alerts",
+            "phase": "finished",
+            "label": "Counting alerts",
+            "outcome": "found"
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_4",
+            "tool": "search_alerts",
+            "phase": "started",
+            "label": "Searching alerts"
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_4",
+            "tool": "search_alerts",
+            "phase": "finished",
+            "label": "Searching alerts",
+            "outcome": "no_matches"
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_5",
+            "tool": "search_alerts",
+            "phase": "started",
+            "label": "Searching alerts"
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_5",
+            "tool": "search_alerts",
+            "phase": "finished",
+            "label": "Searching alerts",
+            "outcome": "error"
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_6",
+            "tool": "get_alerts",
+            "phase": "started",
+            "label": "Reading alerts"
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_6",
+            "tool": "get_alerts",
+            "phase": "finished",
+            "label": "Reading alerts",
+            "outcome": "found"
+          }
+        },
+        {
+          "event": "text_delta",
+          "data": {
+            "message_id": "00000000-0000-4000-8000-000000000004",
+            "delta": "12 alerts are critical; none of them is firing."
+          }
+        },
+        {
+          "event": "done",
+          "data": {
+            "message_id": "00000000-0000-4000-8000-000000000004",
+            "finish_reason": "stop"
+          }
+        }
+      ]
+    },
+    "list_tools": {
+      "raw": "event: conversation\ndata: {\"conversation_id\": \"00000000-0000-4000-8000-000000000001\", \"user_message_id\": \"00000000-0000-4000-8000-000000000002\", \"turn_id\": \"00000000-0000-4000-8000-000000000003\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_1\", \"tool\": \"list_presets\", \"phase\": \"started\", \"label\": \"Reading presets\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_1\", \"tool\": \"list_presets\", \"phase\": \"finished\", \"label\": \"Reading presets\", \"outcome\": \"found\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_2\", \"tool\": \"list_correlation_rules\", \"phase\": \"started\", \"label\": \"Reading correlation rules\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_2\", \"tool\": \"list_correlation_rules\", \"phase\": \"finished\", \"label\": \"Reading correlation rules\", \"outcome\": \"error\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_3\", \"tool\": \"list_dashboards\", \"phase\": \"started\", \"label\": \"Reading dashboards\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_3\", \"tool\": \"list_dashboards\", \"phase\": \"finished\", \"label\": \"Reading dashboards\", \"outcome\": \"found\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_4\", \"tool\": \"list_tags\", \"phase\": \"started\", \"label\": \"Reading tags\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_4\", \"tool\": \"list_tags\", \"phase\": \"finished\", \"label\": \"Reading tags\", \"outcome\": \"found\"}\n\nevent: text_delta\ndata: {\"message_id\": \"00000000-0000-4000-8000-000000000004\", \"delta\": \"You have 3 presets; one correlation rule cannot be read.\"}\n\nevent: done\ndata: {\"message_id\": \"00000000-0000-4000-8000-000000000004\", \"finish_reason\": \"stop\"}\n\n",
+      "events": [
+        {
+          "event": "conversation",
+          "data": {
+            "conversation_id": "00000000-0000-4000-8000-000000000001",
+            "user_message_id": "00000000-0000-4000-8000-000000000002",
+            "turn_id": "00000000-0000-4000-8000-000000000003"
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_1",
+            "tool": "list_presets",
+            "phase": "started",
+            "label": "Reading presets"
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_1",
+            "tool": "list_presets",
+            "phase": "finished",
+            "label": "Reading presets",
+            "outcome": "found"
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_2",
+            "tool": "list_correlation_rules",
+            "phase": "started",
+            "label": "Reading correlation rules"
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_2",
+            "tool": "list_correlation_rules",
+            "phase": "finished",
+            "label": "Reading correlation rules",
+            "outcome": "error"
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_3",
+            "tool": "list_dashboards",
+            "phase": "started",
+            "label": "Reading dashboards"
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_3",
+            "tool": "list_dashboards",
+            "phase": "finished",
+            "label": "Reading dashboards",
+            "outcome": "found"
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_4",
+            "tool": "list_tags",
+            "phase": "started",
+            "label": "Reading tags"
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_4",
+            "tool": "list_tags",
+            "phase": "finished",
+            "label": "Reading tags",
+            "outcome": "found"
+          }
+        },
+        {
+          "event": "text_delta",
+          "data": {
+            "message_id": "00000000-0000-4000-8000-000000000004",
+            "delta": "You have 3 presets; one correlation rule cannot be read."
+          }
+        },
+        {
+          "event": "done",
+          "data": {
+            "message_id": "00000000-0000-4000-8000-000000000004",
+            "finish_reason": "stop"
+          }
+        }
+      ]
+    },
+    "link_created": {
+      "raw": "event: conversation\ndata: {\"conversation_id\": \"00000000-0000-4000-8000-000000000001\", \"user_message_id\": \"00000000-0000-4000-8000-000000000002\", \"turn_id\": \"00000000-0000-4000-8000-000000000003\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_1\", \"tool\": \"open_page\", \"phase\": \"started\", \"label\": \"Preparing a link\"}\n\nevent: link\ndata: {\"id\": \"00000000-0000-4000-8000-000000000030\", \"page\": \"alerts_preset\", \"param\": \"team a's (prod) ~ 100%\", \"path\": \"/alerts/team%20a's%20(prod)%20~%20100%25\", \"label\": \"Open Team A's (prod) ~ 100%\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_1\", \"tool\": \"open_page\", \"phase\": \"finished\", \"label\": \"Preparing a link\", \"outcome\": \"link_ready\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_2\", \"tool\": \"open_page\", \"phase\": \"started\", \"label\": \"Preparing a link\"}\n\nevent: link\ndata: {\"id\": \"00000000-0000-4000-8000-000000000031\", \"page\": \"alerts_search\", \"param\": \"severity == \\\"critical\\\" && name.contains(\\\"disk\\\")\", \"path\": \"/alerts/feed?cel=severity%20%3D%3D%20%22critical%22%20%26%26%20name.contains(%22disk%22)\", \"label\": \"Critical disk alerts\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_2\", \"tool\": \"open_page\", \"phase\": \"finished\", \"label\": \"Preparing a link\", \"outcome\": \"link_ready\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_3\", \"tool\": \"open_page\", \"phase\": \"started\", \"label\": \"Preparing a link\"}\n\nevent: link\ndata: {\"id\": \"00000000-0000-4000-8000-000000000032\", \"page\": \"dashboard\", \"param\": \"NOC overview / \\u00e9quipe\", \"path\": \"/dashboard/NOC%20overview%20%2F%20%C3%A9quipe\", \"label\": \"Open NOC overview\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_3\", \"tool\": \"open_page\", \"phase\": \"finished\", \"label\": \"Preparing a link\", \"outcome\": \"link_ready\"}\n\nevent: text_delta\ndata: {\"message_id\": \"00000000-0000-4000-8000-000000000004\", \"delta\": \"Here are the preset, the search and the dashboard.\"}\n\nevent: done\ndata: {\"message_id\": \"00000000-0000-4000-8000-000000000004\", \"finish_reason\": \"stop\"}\n\n",
+      "events": [
+        {
+          "event": "conversation",
+          "data": {
+            "conversation_id": "00000000-0000-4000-8000-000000000001",
+            "user_message_id": "00000000-0000-4000-8000-000000000002",
+            "turn_id": "00000000-0000-4000-8000-000000000003"
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_1",
+            "tool": "open_page",
+            "phase": "started",
+            "label": "Preparing a link"
+          }
+        },
+        {
+          "event": "link",
+          "data": {
+            "id": "00000000-0000-4000-8000-000000000030",
+            "page": "alerts_preset",
+            "param": "team a's (prod) ~ 100%",
+            "path": "/alerts/team%20a's%20(prod)%20~%20100%25",
+            "label": "Open Team A's (prod) ~ 100%"
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_1",
+            "tool": "open_page",
+            "phase": "finished",
+            "label": "Preparing a link",
+            "outcome": "link_ready"
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_2",
+            "tool": "open_page",
+            "phase": "started",
+            "label": "Preparing a link"
+          }
+        },
+        {
+          "event": "link",
+          "data": {
+            "id": "00000000-0000-4000-8000-000000000031",
+            "page": "alerts_search",
+            "param": "severity == \"critical\" && name.contains(\"disk\")",
+            "path": "/alerts/feed?cel=severity%20%3D%3D%20%22critical%22%20%26%26%20name.contains(%22disk%22)",
+            "label": "Critical disk alerts"
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_2",
+            "tool": "open_page",
+            "phase": "finished",
+            "label": "Preparing a link",
+            "outcome": "link_ready"
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_3",
+            "tool": "open_page",
+            "phase": "started",
+            "label": "Preparing a link"
+          }
+        },
+        {
+          "event": "link",
+          "data": {
+            "id": "00000000-0000-4000-8000-000000000032",
+            "page": "dashboard",
+            "param": "NOC overview / \u00e9quipe",
+            "path": "/dashboard/NOC%20overview%20%2F%20%C3%A9quipe",
+            "label": "Open NOC overview"
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_3",
+            "tool": "open_page",
+            "phase": "finished",
+            "label": "Preparing a link",
+            "outcome": "link_ready"
+          }
+        },
+        {
+          "event": "text_delta",
+          "data": {
+            "message_id": "00000000-0000-4000-8000-000000000004",
+            "delta": "Here are the preset, the search and the dashboard."
+          }
+        },
+        {
+          "event": "done",
+          "data": {
+            "message_id": "00000000-0000-4000-8000-000000000004",
+            "finish_reason": "stop"
+          }
+        }
+      ]
+    },
+    "not_found": {
+      "raw": "event: conversation\ndata: {\"conversation_id\": \"00000000-0000-4000-8000-000000000001\", \"user_message_id\": \"00000000-0000-4000-8000-000000000002\", \"turn_id\": \"00000000-0000-4000-8000-000000000003\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_1\", \"tool\": \"open_page\", \"phase\": \"started\", \"label\": \"Preparing a link\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_1\", \"tool\": \"open_page\", \"phase\": \"finished\", \"label\": \"Preparing a link\", \"outcome\": \"not_found\"}\n\nevent: text_delta\ndata: {\"message_id\": \"00000000-0000-4000-8000-000000000004\", \"delta\": \"I could not find a preset with that name.\"}\n\nevent: done\ndata: {\"message_id\": \"00000000-0000-4000-8000-000000000004\", \"finish_reason\": \"stop\"}\n\n",
+      "events": [
+        {
+          "event": "conversation",
+          "data": {
+            "conversation_id": "00000000-0000-4000-8000-000000000001",
+            "user_message_id": "00000000-0000-4000-8000-000000000002",
+            "turn_id": "00000000-0000-4000-8000-000000000003"
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_1",
+            "tool": "open_page",
+            "phase": "started",
+            "label": "Preparing a link"
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_1",
+            "tool": "open_page",
+            "phase": "finished",
+            "label": "Preparing a link",
+            "outcome": "not_found"
+          }
+        },
+        {
+          "event": "text_delta",
+          "data": {
+            "message_id": "00000000-0000-4000-8000-000000000004",
+            "delta": "I could not find a preset with that name."
+          }
+        },
+        {
+          "event": "done",
+          "data": {
+            "message_id": "00000000-0000-4000-8000-000000000004",
+            "finish_reason": "stop"
+          }
+        }
+      ]
+    },
+    "past_the_tool_calls": {
+      "raw": "event: conversation\ndata: {\"conversation_id\": \"00000000-0000-4000-8000-000000000001\", \"user_message_id\": \"00000000-0000-4000-8000-000000000002\", \"turn_id\": \"00000000-0000-4000-8000-000000000003\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_12\", \"tool\": \"get_alerts\", \"phase\": \"started\", \"label\": \"Reading alerts\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_12\", \"tool\": \"get_alerts\", \"phase\": \"finished\", \"label\": \"Reading alerts\", \"outcome\": \"found\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_13\", \"tool\": \"get_alerts\", \"phase\": \"started\", \"label\": \"Reading alerts\"}\n\nevent: tool_status\ndata: {\"tool_call_id\": \"call_13\", \"tool\": \"get_alerts\", \"phase\": \"finished\", \"label\": \"Reading alerts\", \"outcome\": \"tool_limit\"}\n\nevent: text_delta\ndata: {\"message_id\": \"00000000-0000-4000-8000-000000000005\", \"delta\": \"That took too many steps. Ask me for less at a time.\"}\n\nevent: done\ndata: {\"message_id\": \"00000000-0000-4000-8000-000000000005\", \"finish_reason\": \"tool_limit\"}\n\n",
+      "events": [
+        {
+          "event": "conversation",
+          "data": {
+            "conversation_id": "00000000-0000-4000-8000-000000000001",
+            "user_message_id": "00000000-0000-4000-8000-000000000002",
+            "turn_id": "00000000-0000-4000-8000-000000000003"
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_12",
+            "tool": "get_alerts",
+            "phase": "started",
+            "label": "Reading alerts"
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_12",
+            "tool": "get_alerts",
+            "phase": "finished",
+            "label": "Reading alerts",
+            "outcome": "found"
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_13",
+            "tool": "get_alerts",
+            "phase": "started",
+            "label": "Reading alerts"
+          }
+        },
+        {
+          "event": "tool_status",
+          "data": {
+            "tool_call_id": "call_13",
+            "tool": "get_alerts",
+            "phase": "finished",
+            "label": "Reading alerts",
+            "outcome": "tool_limit"
+          }
+        },
+        {
+          "event": "text_delta",
+          "data": {
+            "message_id": "00000000-0000-4000-8000-000000000005",
+            "delta": "That took too many steps. Ask me for less at a time."
+          }
+        },
+        {
+          "event": "done",
+          "data": {
+            "message_id": "00000000-0000-4000-8000-000000000005",
+            "finish_reason": "tool_limit"
           }
         }
       ]
@@ -3243,6 +3723,84 @@
         }
       ]
     },
+    "with_links": {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "title": "where are the critical alerts",
+      "created_at": "2026-11-24T10:00:00+00:00",
+      "updated_at": "2026-11-24T10:00:00+00:00",
+      "turn_in_progress": false,
+      "has_more": false,
+      "items": [
+        {
+          "type": "message",
+          "id": "00000000-0000-4000-8000-000000000002",
+          "role": "user",
+          "content": "where are the critical alerts",
+          "status": "complete",
+          "created_at": "2026-11-24T10:00:00+00:00"
+        },
+        {
+          "type": "link",
+          "id": "00000000-0000-4000-8000-000000000040",
+          "page": "alerts_feed",
+          "param": null,
+          "path": "/alerts/feed",
+          "label": "Open the feed",
+          "created_at": "2026-11-24T10:00:00+00:00"
+        },
+        {
+          "type": "link",
+          "id": "00000000-0000-4000-8000-000000000041",
+          "page": "incidents",
+          "param": null,
+          "path": "/incidents",
+          "label": "Open incidents",
+          "created_at": "2026-11-24T10:00:00+00:00"
+        },
+        {
+          "type": "message",
+          "id": "00000000-0000-4000-8000-000000000005",
+          "role": "assistant",
+          "content": "The feed and the incidents.",
+          "status": "complete",
+          "created_at": "2026-11-24T10:00:00+00:00"
+        },
+        {
+          "type": "message",
+          "id": "00000000-0000-4000-8000-000000000006",
+          "role": "user",
+          "content": "and the rules?",
+          "status": "complete",
+          "created_at": "2026-11-24T10:00:00+00:00"
+        },
+        {
+          "type": "link",
+          "id": "00000000-0000-4000-8000-000000000042",
+          "page": "rules",
+          "param": null,
+          "path": "/rules",
+          "label": "Open correlation rules",
+          "created_at": "2026-11-24T10:00:00+00:00"
+        },
+        {
+          "type": "link",
+          "id": "00000000-0000-4000-8000-000000000043",
+          "page": "rule",
+          "param": "0b3c2d1e-4f5a-4b6c-8d7e-9f0a1b2c3d4e",
+          "path": "/rules?id=0b3c2d1e-4f5a-4b6c-8d7e-9f0a1b2c3d4e",
+          "label": "Open the rule",
+          "created_at": "2026-11-24T10:00:00+00:00"
+        },
+        {
+          "type": "message",
+          "id": "00000000-0000-4000-8000-000000000007",
+          "role": "assistant",
+          "content": "All rules, and the one you asked about.",
+          "status": "complete",
+          "created_at": "2026-11-24T10:00:00+00:00"
+        }
+      ]
+    },
     "in_progress": {
       "id": "00000000-0000-4000-8000-000000000001",
       "title": null,
@@ -4012,6 +4570,873 @@
     "param_value_chars": 500,
     "cel_roundtrip_chars": 4000,
     "derived_bytes": 61440
+  },
+  "chat_context": {
+    "timezone_chars": 64,
+    "timezone": [
+      {
+        "sent": "Europe/Berlin",
+        "kept": "Europe/Berlin"
+      },
+      {
+        "sent": "America/Argentina/Buenos_Aires",
+        "kept": "America/Argentina/Buenos_Aires"
+      },
+      {
+        "sent": "Asia/Kolkata",
+        "kept": "Asia/Kolkata"
+      },
+      {
+        "sent": "UTC",
+        "kept": "UTC"
+      },
+      {
+        "sent": "Mars/Olympus_Mons",
+        "kept": null
+      },
+      {
+        "sent": "europe/berlin",
+        "kept": null
+      },
+      {
+        "sent": "Europe/Berlin\n",
+        "kept": null
+      },
+      {
+        "sent": " Europe/Berlin",
+        "kept": null
+      },
+      {
+        "sent": "Europe/BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+        "kept": null
+      },
+      {
+        "sent": "",
+        "kept": null
+      },
+      {
+        "sent": null,
+        "kept": null
+      },
+      {
+        "sent": 60,
+        "kept": null
+      }
+    ],
+    "search_cel_chars": 2000,
+    "search_cel": [
+      {
+        "sent": "severity == \"critical\"",
+        "accepted": true,
+        "used": "severity == \"critical\""
+      },
+      {
+        "sent": "count < 5 && name.contains(\"disk\")",
+        "accepted": true,
+        "used": "count < 5 && name.contains(\"disk\")"
+      },
+      {
+        "sent": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9",
+        "accepted": true,
+        "used": "\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9"
+      },
+      {
+        "sent": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "accepted": false,
+        "used": null
+      },
+      {
+        "sent": "name == \"a\"\n",
+        "accepted": false,
+        "used": null
+      },
+      {
+        "sent": "name == \"a\tb\"",
+        "accepted": false,
+        "used": null
+      },
+      {
+        "sent": "name == \"a\u007f\"",
+        "accepted": false,
+        "used": null
+      },
+      {
+        "sent": "name == \"a\u0085\"",
+        "accepted": false,
+        "used": null
+      },
+      {
+        "sent": "name == \"\u202enimda\"",
+        "accepted": true,
+        "used": null
+      },
+      {
+        "sent": "name == \"a\u200bb\"",
+        "accepted": true,
+        "used": null
+      },
+      {
+        "sent": "name == \"\u2066x\u2069\"",
+        "accepted": true,
+        "used": null
+      },
+      {
+        "sent": "",
+        "accepted": true,
+        "used": null
+      },
+      {
+        "sent": "   ",
+        "accepted": true,
+        "used": null
+      }
+    ]
+  },
+  "navigation": {
+    "pages": [
+      "alerts_feed",
+      "alerts_preset",
+      "alerts_search",
+      "incidents",
+      "rules",
+      "rule",
+      "dashboard"
+    ],
+    "name_chars": 256,
+    "cel_chars": 2000,
+    "vectors": [
+      {
+        "page": "alerts_feed",
+        "param": null,
+        "role": "admin",
+        "path": "/alerts/feed",
+        "accepted": true,
+        "noc_allowed": true
+      },
+      {
+        "page": "alerts_feed",
+        "param": null,
+        "role": "noc",
+        "path": "/alerts/feed",
+        "accepted": true,
+        "noc_allowed": true
+      },
+      {
+        "page": "alerts_preset",
+        "param": "payments",
+        "role": "admin",
+        "path": "/alerts/payments",
+        "accepted": true,
+        "noc_allowed": true
+      },
+      {
+        "page": "alerts_preset",
+        "param": "prod (eu)!",
+        "role": "noc",
+        "path": "/alerts/prod%20(eu)!",
+        "accepted": true,
+        "noc_allowed": true
+      },
+      {
+        "page": "alerts_preset",
+        "param": "it's * ~ 100%",
+        "role": "admin",
+        "path": "/alerts/it's%20*%20~%20100%25",
+        "accepted": true,
+        "noc_allowed": true
+      },
+      {
+        "page": "alerts_preset",
+        "param": "db/payments",
+        "role": "admin",
+        "path": "/alerts/db%2Fpayments",
+        "accepted": true,
+        "noc_allowed": true
+      },
+      {
+        "page": "alerts_preset",
+        "param": "\u00e9quipe nuit",
+        "role": "admin",
+        "path": "/alerts/%C3%A9quipe%20nuit",
+        "accepted": true,
+        "noc_allowed": true
+      },
+      {
+        "page": "alerts_preset",
+        "param": "\u65e5\u672c\u306e\u8b66\u5831",
+        "role": "admin",
+        "path": "/alerts/%E6%97%A5%E6%9C%AC%E3%81%AE%E8%AD%A6%E5%A0%B1",
+        "accepted": true,
+        "noc_allowed": true
+      },
+      {
+        "page": "alerts_preset",
+        "param": "\ud83d\udd25 sev1",
+        "role": "admin",
+        "path": "/alerts/%F0%9F%94%A5%20sev1",
+        "accepted": true,
+        "noc_allowed": true
+      },
+      {
+        "page": "alerts_preset",
+        "param": "a+b=c&d",
+        "role": "admin",
+        "path": "/alerts/a%2Bb%3Dc%26d",
+        "accepted": true,
+        "noc_allowed": true
+      },
+      {
+        "page": "alerts_preset",
+        "param": "v1.2...",
+        "role": "admin",
+        "path": "/alerts/v1.2...",
+        "accepted": true,
+        "noc_allowed": true
+      },
+      {
+        "page": "alerts_search",
+        "param": "name == \"db\"",
+        "role": "noc",
+        "path": "/alerts/feed?cel=name%20%3D%3D%20%22db%22",
+        "accepted": true,
+        "noc_allowed": true
+      },
+      {
+        "page": "alerts_search",
+        "param": "!(status == \"resolved\") && count > 5",
+        "role": "admin",
+        "path": "/alerts/feed?cel=!(status%20%3D%3D%20%22resolved%22)%20%26%26%20count%20%3E%205",
+        "accepted": true,
+        "noc_allowed": true
+      },
+      {
+        "page": "alerts_search",
+        "param": "service.startsWith('pay')",
+        "role": "admin",
+        "path": "/alerts/feed?cel=service.startsWith('pay')",
+        "accepted": true,
+        "noc_allowed": true
+      },
+      {
+        "page": "incidents",
+        "param": null,
+        "role": "admin",
+        "path": "/incidents",
+        "accepted": true,
+        "noc_allowed": false
+      },
+      {
+        "page": "rules",
+        "param": null,
+        "role": "admin",
+        "path": "/rules",
+        "accepted": true,
+        "noc_allowed": false
+      },
+      {
+        "page": "rule",
+        "param": "6f1c2b9e-3d4a-4c5b-8e7f-0a1b2c3d4e5f",
+        "role": "admin",
+        "path": "/rules?id=6f1c2b9e-3d4a-4c5b-8e7f-0a1b2c3d4e5f",
+        "accepted": true,
+        "noc_allowed": false
+      },
+      {
+        "page": "dashboard",
+        "param": "Ops Overview",
+        "role": "admin",
+        "path": "/dashboard/Ops%20Overview",
+        "accepted": true,
+        "noc_allowed": false
+      },
+      {
+        "page": "dashboard",
+        "param": "SRE: 50% (prod)",
+        "role": "editor",
+        "path": "/dashboard/SRE%3A%2050%25%20(prod)",
+        "accepted": true,
+        "noc_allowed": false
+      },
+      {
+        "page": "incidents",
+        "param": null,
+        "role": "noc",
+        "path": "/incidents",
+        "accepted": false,
+        "noc_allowed": false
+      },
+      {
+        "page": "rules",
+        "param": null,
+        "role": "noc",
+        "path": "/rules",
+        "accepted": false,
+        "noc_allowed": false
+      },
+      {
+        "page": "rule",
+        "param": "6f1c2b9e-3d4a-4c5b-8e7f-0a1b2c3d4e5f",
+        "role": "noc",
+        "path": "/rules?id=6f1c2b9e-3d4a-4c5b-8e7f-0a1b2c3d4e5f",
+        "accepted": false,
+        "noc_allowed": false
+      },
+      {
+        "page": "dashboard",
+        "param": "Ops Overview",
+        "role": "noc",
+        "path": "/dashboard/Ops%20Overview",
+        "accepted": false,
+        "noc_allowed": false
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "alerts/feed",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "//evil.example",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "//evil.example/alerts/feed",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "\\\\evil.example",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/\\evil.example",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "javascript:alert(1)",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "https://evil.example/alerts/feed",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/alerts/%2F..",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/alerts/..",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/alerts/.",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/alerts/%2e%2e",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/alerts/%2E%2E",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/alerts/my%2520preset",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/alerts/feed?cel=name%20%3D%3D%20%22a%2520b%22",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/alerts/Payments",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/alerts/a%2fb",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/alerts/%61bc",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/alerts/my preset",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/alerts/caf\u00e9",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/alerts/caf%C3",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/alerts/a%00b",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/alerts/a/b",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/alerts/",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/alerts",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/alerts/feed/",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/alerts/feed#top",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/alerts/feed?cel=",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/alerts/feed?cel=%20",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/alerts/feed?cel=name%20%3D%3D%20%22a%22%0A",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/alerts/feed?cel=name\n",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/alerts/feed?cel=a%20b&x=1",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/alerts/feed?x=1",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/alerts/feed?cel=a?b",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/rules?id=6F1C2B9E-3D4A-4C5B-8E7F-0A1B2C3D4E5F",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/rules?id=6f1c2b9e3d4a4c5b8e7f0a1b2c3d4e5f",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/rules?id=%7B6f1c2b9e-3d4a-4c5b-8e7f-0a1b2c3d4e5f%7D",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/rules?id=not-a-uuid",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/rules?id=6f1c2b9e-3d4a-4c5b-8e7f-0a1b2c3d4e5f&x=1",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/rules?id=",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/rules/",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/incidents?x=1",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/incidents/6f1c2b9e-3d4a-4c5b-8e7f-0a1b2c3d4e5f",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/dashboard/",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/dashboard/..",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/workflows",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/providers",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/settings",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/deduplication",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/extraction",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/mapping",
+        "accepted": false,
+        "noc_allowed": null
+      },
+      {
+        "page": null,
+        "param": null,
+        "role": "admin",
+        "path": "/topology",
+        "accepted": false,
+        "noc_allowed": null
+      }
+    ],
+    "built": [
+      {
+        "page": "alerts_preset",
+        "param": "Payments",
+        "path": "/alerts/payments"
+      },
+      {
+        "page": "alerts_preset",
+        "param": "Prod (EU)!",
+        "path": "/alerts/prod%20(eu)!"
+      },
+      {
+        "page": "alerts_preset",
+        "param": "\u00c9quipe Nuit",
+        "path": "/alerts/%C3%A9quipe%20nuit"
+      }
+    ],
+    "refused": [
+      {
+        "page": "alerts_feed",
+        "param": "payments"
+      },
+      {
+        "page": "incidents",
+        "param": "x"
+      },
+      {
+        "page": "rules",
+        "param": "6f1c2b9e-3d4a-4c5b-8e7f-0a1b2c3d4e5f"
+      },
+      {
+        "page": "alerts_preset",
+        "param": null
+      },
+      {
+        "page": "alerts_preset",
+        "param": ""
+      },
+      {
+        "page": "alerts_preset",
+        "param": "   "
+      },
+      {
+        "page": "alerts_preset",
+        "param": "feed"
+      },
+      {
+        "page": "alerts_preset",
+        "param": "Feed"
+      },
+      {
+        "page": "alerts_preset",
+        "param": "."
+      },
+      {
+        "page": "alerts_preset",
+        "param": ".."
+      },
+      {
+        "page": "alerts_preset",
+        "param": "/.."
+      },
+      {
+        "page": "alerts_preset",
+        "param": "a/../b"
+      },
+      {
+        "page": "alerts_preset",
+        "param": "a\\..\\b"
+      },
+      {
+        "page": "alerts_preset",
+        "param": "my%20preset"
+      },
+      {
+        "page": "alerts_preset",
+        "param": "a\nb"
+      },
+      {
+        "page": "alerts_preset",
+        "param": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      {
+        "page": "alerts_search",
+        "param": null
+      },
+      {
+        "page": "alerts_search",
+        "param": ""
+      },
+      {
+        "page": "alerts_search",
+        "param": "name ==\t1"
+      },
+      {
+        "page": "alerts_search",
+        "param": "name == \"a%20b\""
+      },
+      {
+        "page": "alerts_search",
+        "param": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      {
+        "page": "rule",
+        "param": null
+      },
+      {
+        "page": "rule",
+        "param": "6F1C2B9E-3D4A-4C5B-8E7F-0A1B2C3D4E5F"
+      },
+      {
+        "page": "rule",
+        "param": "not-a-uuid"
+      },
+      {
+        "page": "dashboard",
+        "param": ""
+      },
+      {
+        "page": "dashboard",
+        "param": ".."
+      },
+      {
+        "page": "workflows",
+        "param": null
+      },
+      {
+        "page": "incident",
+        "param": "6f1c2b9e-3d4a-4c5b-8e7f-0a1b2c3d4e5f"
+      }
+    ]
   },
   "future": {
     "values": {

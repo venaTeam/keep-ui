@@ -6,6 +6,7 @@ import {
   SESSION_HEADER,
   serializeSession,
 } from "@/shared/lib/auth/sessionHeader";
+import { getNocRedirect } from "@/shared/lib/noc-routes";
 
 const { auth } = NextAuth(authConfig);
 
@@ -86,8 +87,9 @@ export const middleware = auth(async (request) => {
   }
 
   // Role-based routing (NOC users)
-  if (role === "noc" && !pathname.startsWith("/alerts")) {
-    return NextResponse.redirect(new URL("/alerts/feed", request.url));
+  const nocRedirect = getNocRedirect(role, pathname);
+  if (nocRedirect) {
+    return NextResponse.redirect(new URL(nocRedirect, request.url));
   }
 
   // Allow all other authenticated requests

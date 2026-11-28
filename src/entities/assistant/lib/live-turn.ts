@@ -1,4 +1,5 @@
 import {
+  AssistantLink,
   DraftView,
   StreamError,
   StreamEvent,
@@ -10,7 +11,8 @@ import {
 type LiveItem =
   | { type: "text"; messageId: string; content: string }
   | { type: "tool"; tool: ToolStatus }
-  | { type: "draft"; draft: DraftView };
+  | { type: "draft"; draft: DraftView }
+  | { type: "link"; link: AssistantLink };
 
 /** The turn being streamed, until the stored conversation has all of it. */
 export interface LiveTurn {
@@ -32,7 +34,21 @@ export type TimelineEntry =
       status: TimelineMessage["status"];
     }
   | { key: string; type: "draft"; draft: DraftView }
-  | { key: string; type: "tool"; tool: ToolStatus };
+  | { key: string; type: "tool"; tool: ToolStatus }
+  | { key: string; type: "link"; link: AssistantLink };
+
+// The same for a streamed link and the stored one (a TimelineLink), so it is
+// shown once
+const linkKey = (id: string) => `link-${id}`;
+
+function toLinkEntry(link: AssistantLink): TimelineEntry {
+  const { id, page, param, path, label } = link;
+  return {
+    key: linkKey(id),
+    type: "link",
+    link: { id, page, param, path, label },
+  };
+}
 
 export function startTurn(userMessage: string): LiveTurn {
   return {
@@ -95,6 +111,15 @@ export function applyStreamEvent(turn: LiveTurn, event: StreamEvent): LiveTurn {
           () => ({ type: "draft", draft: event.data.draft })
         ),
       };
+    case "link":
+      return {
+        ...turn,
+        items: upsert(
+          turn.items,
+          (item) => item.type === "link" && item.link.id === event.data.id,
+          () => ({ type: "link", link: event.data })
+        ),
+      };
     case "error":
       return { ...turn, error: event.data };
     case "done":
@@ -149,6 +174,9 @@ function toEntry(item: TimelineItem): TimelineEntry[] {
           status: item.status,
         },
       ];
+    case "link":
+      // Without its id it has no key, and could be shown twice
+      return typeof item.id === "string" ? [toLinkEntry(item)] : [];
     default:
       // An item of a newer gateway
       return [];
@@ -203,6 +231,8 @@ export function mergeTimeline(
             type: "draft",
             draft: item.draft,
           };
+        case "link":
+          return toLinkEntry(item.link);
       }
     }),
   ];

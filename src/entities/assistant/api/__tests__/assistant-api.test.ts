@@ -47,6 +47,13 @@ it("confirms and discards a draft without a body", async () => {
   ]);
 });
 
+it("keeps the links of a conversation", async () => {
+  get.mockResolvedValue(golden.conversations.with_links);
+  const view = await getConversation(api, "c-1");
+  expect(view).toEqual(golden.conversations.with_links);
+  expect(view.items.filter(({ type }) => type === "link")).toHaveLength(4);
+});
+
 it("leaves out the timeline items of a newer gateway", async () => {
   const { conversation, values } = golden.future;
   get.mockResolvedValue(conversation);

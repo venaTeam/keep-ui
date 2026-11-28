@@ -8,6 +8,8 @@ export {
   isAlertsPage,
 } from "./lib/chat-context";
 export type { TimelineEntry } from "./lib/live-turn";
+export { buildNavigationPath, parseNavigationPath } from "./lib/navigation";
+export type { NavigationTarget } from "./lib/navigation";
 export {
   MAX_FOLLOW_UP_FINGERPRINTS,
   useAssistantContextStore,

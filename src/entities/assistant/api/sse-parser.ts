@@ -28,6 +28,12 @@ const IS_USABLE: Record<
     typeof data.draft.state === "string",
   error: (data) => typeof data.code === "string",
   done: (data) => typeof data.finish_reason === "string",
+  // Its path is shown only once navigation.ts reads it back
+  link: (data) =>
+    typeof data.id === "string" &&
+    typeof data.page === "string" &&
+    typeof data.path === "string" &&
+    typeof data.label === "string",
 };
 
 const malformedFrame = (): StreamEvent => ({

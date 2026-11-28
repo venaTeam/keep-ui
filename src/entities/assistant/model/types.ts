@@ -18,6 +18,7 @@ export const STREAM_EVENT_NAMES = [
   "draft",
   "error",
   "done",
+  "link",
 ] as const;
 export type StreamEventName = (typeof STREAM_EVENT_NAMES)[number];
 
@@ -37,6 +38,8 @@ export const TOOL_OUTCOMES = [
   "not_found",
   "link_ready",
   "name_taken",
+  // A call past the turn's tool calls, which did not run
+  "tool_limit",
 ] as const;
 export type ToolOutcome = (typeof TOOL_OUTCOMES)[number];
 
@@ -136,6 +139,18 @@ export type MessageStatus = (typeof MESSAGE_STATUSES)[number];
 export const DISCARD_REASONS = ["opened_in_form"] as const;
 export type DiscardReason = (typeof DISCARD_REASONS)[number];
 
+/** The pages a link may open (`lib/navigation.ts` has their paths). */
+export const LINK_PAGES = [
+  "alerts_feed",
+  "alerts_preset",
+  "alerts_search",
+  "incidents",
+  "rules",
+  "rule",
+  "dashboard",
+] as const;
+export type LinkPage = (typeof LINK_PAGES)[number];
+
 /** The `kind` of a draft made by the status-change tool. */
 export const CHANGE_ALERT_STATUS_KIND = "change_alert_status";
 
@@ -233,12 +248,34 @@ export interface TimelineDraft {
   draft: DraftView;
 }
 
+/**
+ * A page the assistant offers to open: the user clicks it, nothing navigates
+ * on its own. Shown only when `lib/navigation.ts` reads its path back.
+ */
+export interface AssistantLink {
+  /** The id of the tool row that made it, streamed or stored. */
+  id: string;
+  page: OrUnknown<LinkPage>;
+  /** What the page shows, as the path names it (a preset name lowercased). */
+  param: string | null;
+  /** Built by the gateway from the page and its parameter. */
+  path: string;
+  /** The link's whole text. */
+  label: string;
+}
+
+export interface TimelineLink extends AssistantLink {
+  type: "link";
+  created_at: string;
+}
+
 /** The items this build shows; others are left out when they are read. */
-export type TimelineItem = TimelineMessage | TimelineDraft;
+export type TimelineItem = TimelineMessage | TimelineDraft | TimelineLink;
 
 export const TIMELINE_ITEM_TYPES: readonly TimelineItem["type"][] = [
   "message",
   "draft",
+  "link",
 ];
 
 export interface ConversationView {
@@ -306,7 +343,8 @@ export type StreamEvent =
         message_id: string | null;
         finish_reason: OrUnknown<FinishReason>;
       };
-    };
+    }
+  | { event: "link"; data: AssistantLink };
 
 /** The SQL the browser derived from a filter, as the gateway takes it. */
 export interface SqlQueryInput {

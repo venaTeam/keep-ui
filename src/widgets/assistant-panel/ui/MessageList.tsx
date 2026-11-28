@@ -6,6 +6,7 @@ import {
   DraftCardProps,
 } from "@/features/assistant-draft-card";
 import { MessageBubble } from "./MessageBubble";
+import { NavigationLink } from "./NavigationLink";
 import { Spinner } from "./Spinner";
 import { ToolStatusLine } from "./ToolStatusLine";
 
@@ -129,6 +130,15 @@ export function MessageList({
                     <MemoDraftCard draft={null} {...draftCallbacks} />
                   )}
               </Fragment>
+            );
+          case "link":
+            return (
+              <NavigationLink
+                key={entry.key}
+                page={entry.link.page}
+                path={entry.link.path}
+                label={entry.link.label}
+              />
             );
         }
       })}

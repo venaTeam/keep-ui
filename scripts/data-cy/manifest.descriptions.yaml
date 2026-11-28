@@ -166,6 +166,9 @@
 "assistant-message":
   description: "One message; data-role is user or assistant."
 
+"assistant-link":
+  description: "A page the assistant offers to open; data-page is the page."
+
 "assistant-tool-status":
   description: "What the assistant does with a tool; data-outcome once it is done."
 

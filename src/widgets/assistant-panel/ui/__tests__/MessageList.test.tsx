@@ -1,6 +1,7 @@
 import { ComponentProps } from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import {
+  AssistantLink,
   DraftView,
   TimelineEntry,
   TOOL_OUTCOMES,
@@ -216,6 +217,85 @@ describe("a draft", () => {
     });
     fireEvent.click(cy("assistant-draft-check-again")[0]);
     expect(onCheckAgain).toHaveBeenCalledWith(golden.drafts.applying.id);
+  });
+});
+
+describe("a link", () => {
+  const goldenLinks = [
+    ...golden.streams.link_created.events.flatMap((event) =>
+      event.event === "link" ? [event.data] : []
+    ),
+    ...golden.conversations.with_links.items.flatMap((item) =>
+      item.type === "link"
+        ? [
+            {
+              id: item.id,
+              page: item.page as string,
+              param: item.param,
+              path: item.path as string,
+              label: item.label as string,
+            },
+          ]
+        : []
+    ),
+  ] as unknown as AssistantLink[];
+  const linkEntry = (link: AssistantLink): TimelineEntry => ({
+    key: `link-${link.id}`,
+    type: "link",
+    link,
+  });
+  const [preset] = goldenLinks;
+
+  it.each(goldenLinks)("to $page opens $path when clicked", (link) => {
+    show({ entries: [linkEntry(link)] });
+    const [anchor] = cy("assistant-link");
+    expect(anchor.tagName).toBe("A");
+    expect(anchor).toHaveAttribute("href", link.path);
+    expect(anchor).toHaveAttribute("data-page", link.page);
+    expect(anchor).toHaveTextContent(link.label);
+    expect(anchor).not.toHaveAttribute("target");
+  });
+
+  it("isolates its text from the text around it", () => {
+    show({ entries: [linkEntry(preset)] });
+    expect(screen.getByText(preset.label).tagName).toBe("BDI");
+  });
+
+  it("is shown between the messages it came with", () => {
+    show({
+      entries: [
+        message("1", "user", "where is it"),
+        linkEntry(preset),
+        message("2", "assistant", "there"),
+      ],
+    });
+    expect(
+      Array.from(log().querySelectorAll("[data-cy]")).map(
+        (node) => (node as HTMLElement).dataset.cy
+      )
+    ).toEqual(["assistant-message", "assistant-link", "assistant-message"]);
+  });
+
+  it.each<[string, Partial<AssistantLink>]>([
+    ["another host", { path: "//evil.example/alerts/feed" }],
+    ["a script", { path: "javascript:alert(1)" }],
+    ["a full address", { path: "https://evil.example/alerts/feed" }],
+    ["a page that is not linkable", { path: "/workflows", page: "workflows" }],
+    ["another spelling", { path: "/alerts/Team%20A" }],
+    ["a dot segment", { path: "/alerts/%2F.." }],
+    ["a page other than the one it names", { page: "dashboard" }],
+    ["a page of a newer gateway", { page: "topology", path: "/topology" }],
+    ["a path that is not text", { path: 7 as unknown as string }],
+  ])("is not shown with %s", (_, overrides) => {
+    show({
+      entries: [
+        message("1", "user", "open it"),
+        linkEntry({ ...preset, ...overrides }),
+      ],
+    });
+    expect(cy("assistant-link")).toHaveLength(0);
+    expect(log().querySelectorAll("a")).toHaveLength(0);
+    expect(log()).not.toHaveTextContent(preset.label);
   });
 });
 

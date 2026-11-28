@@ -1,13 +1,13 @@
 {
   "version": "cb39f4c9988b010a615f6aa43789b48062ef4d7b",
   "generatedAt": "2026-05-07T00:18:05.043Z",
-  "totalSelectors": 826,
+  "totalSelectors": 827,
   "byArea": {
     "(dynamic)": 5,
     "ai": 4,
     "alerts": 109,
     "apply": 1,
-    "assistant": 24,
+    "assistant": 25,
     "auth": 49,
     "cancel": 2,
     "cel": 2,
@@ -1465,6 +1465,16 @@
       "file": "widgets/assistant-panel/ui/MessageBubble.tsx",
       "line": 38,
       "description": "One message; data-role is user or assistant.",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "assistant-link",
+      "area": "assistant",
+      "role": "link",
+      "dynamic": false,
+      "file": "widgets/assistant-panel/ui/NavigationLink.tsx",
+      "line": 26,
+      "description": "A page the assistant offers to open; data-page is the page.",
       "mirrorsDataTestId": false
     },
     {

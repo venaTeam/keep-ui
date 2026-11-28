@@ -2,8 +2,7 @@ import { CheckIcon, MinusCircleIcon } from "@heroicons/react/24/outline";
 import { ToolOutcome, ToolStatus } from "@/entities/assistant";
 import { Spinner } from "./Spinner";
 
-// `tool_limit` is the tool error of a turn past its tool calls
-const OUTCOME_TEXTS: Record<ToolOutcome | "tool_limit", string> = {
+const OUTCOME_TEXTS: Record<ToolOutcome, string> = {
   draft_created: "draft ready",
   too_many_matches: "too many alerts match",
   no_matches: "no alert matches",

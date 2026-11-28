@@ -427,6 +427,18 @@ describe("the object an outcome names", () => {
     expect(link()).toHaveAttribute("href", href);
   });
 
+  it("links to a correlation rule by its id", () => {
+    const saved = golden.outcomes.correlation_rule_saved;
+    const path = "/rules?id=0b3c2d1e-4f5a-4b6c-8d7e-9f0a1b2c3d4e";
+    show(
+      withOutcome("applied", {
+        ...saved,
+        object: { ...saved.object, path },
+      } as DraftView["outcome"])
+    );
+    expect(link()).toHaveAttribute("href", path);
+  });
+
   it("links to a known object of a failed draft too", () => {
     show(withOutcome("failed", objectOutcome("stale_draft")));
     expect(card()).toHaveAttribute("data-state", "error");
@@ -466,6 +478,15 @@ describe("the object an outcome names", () => {
     ["a full address", { ...preset.object, path: "https://evil.test/alerts" }],
     ["another page", { ...preset.object, path: "/settings" }],
     ["a page that starts the same", { ...preset.object, path: "/alertsx/y" }],
+    // What navigation.ts does not read back as a page of the object's type
+    ["another type's page", { ...preset.object, path: "/rules" }],
+    [
+      "a search",
+      { ...preset.object, path: "/alerts/feed?cel=name%20%3D%3D%201" },
+    ],
+    ["another spelling", { ...preset.object, path: "/alerts/Night-Shift" }],
+    ["a dot segment", { ...preset.object, path: "/alerts/%2F.." }],
+    ["a fragment", { ...preset.object, path: "/alerts/night-shift#x" }],
     ["a control character", { ...preset.object, path: "/alerts/a\nb" }],
     ["a path that is not text", { ...preset.object, path: 7 }],
   ])("is no link for %s", (_, object) => {

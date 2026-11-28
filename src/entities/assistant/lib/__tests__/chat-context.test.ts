@@ -1,3 +1,5 @@
+import golden from "../../__fixtures__/assistant_stream.json";
+import { MAX_SEARCH_CEL_CHARS } from "../../model/types";
 import { buildChatContext, getSearchCel } from "../chat-context";
 
 const ZONE = "Europe/Paris";
@@ -71,8 +73,53 @@ it("cuts a long page without leaving half a character", () => {
   );
 });
 
-// TODO: also run the gateway fixture's `chat_context` vectors once the fixture
-// copy carries the `search_cel` ones.
+describe("the gateway fixture's chat context", () => {
+  const { chat_context: vectors } = golden;
+
+  it("has the filter limit of the types", () => {
+    expect(vectors.search_cel_chars).toBe(MAX_SEARCH_CEL_CHARS);
+  });
+
+  // Sent only when the gateway takes it (no 400) and gives it to the model
+  it.each(
+    vectors.search_cel.map((vector): [string, typeof vector] => [
+      JSON.stringify(vector.sent).slice(0, 60),
+      vector,
+    ])
+  )(
+    "sends the filter %s only as the gateway uses it",
+    (_, { sent, accepted, used }) => {
+      const isKept = accepted && used !== null;
+      if (isKept) {
+        expect(used).toBe(sent);
+      }
+      expect(
+        buildChatContext("/alerts/feed", [], searchFor(sent)).search_cel
+      ).toBe(isKept ? sent : undefined);
+    }
+  );
+
+  // The browser's zone is sent as it is; the gateway decides what to keep
+  it.each(
+    vectors.timezone.map((vector): [string, typeof vector] => [
+      JSON.stringify(vector.sent),
+      vector,
+    ])
+  )(
+    "sends the time zone %s under the name the gateway reads",
+    (_, { sent, kept }) => {
+      pretendTimeZone(sent as unknown as string);
+      const { timezone } = buildChatContext("/alerts/feed", []);
+      if (kept !== null) {
+        expect(timezone).toBe(kept);
+      }
+      if (typeof sent !== "string" || sent === "") {
+        expect(timezone).toBeUndefined();
+      }
+    }
+  );
+});
+
 describe("the search filter", () => {
   const CRITICAL = 'severity == "critical"';
   const searchCelOf = (cel: string, page = "/alerts/feed") =>
