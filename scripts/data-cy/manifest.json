@@ -1,13 +1,13 @@
 {
   "version": "cb39f4c9988b010a615f6aa43789b48062ef4d7b",
   "generatedAt": "2026-05-07T00:18:05.043Z",
-  "totalSelectors": 825,
+  "totalSelectors": 826,
   "byArea": {
     "(dynamic)": 5,
     "ai": 4,
     "alerts": 109,
     "apply": 1,
-    "assistant": 23,
+    "assistant": 24,
     "auth": 49,
     "cancel": 2,
     "cel": 2,
@@ -1385,6 +1385,16 @@
       "file": "widgets/assistant-panel/ui/ContextChips.tsx",
       "line": 35,
       "description": "The page that goes with the next message.",
+      "mirrorsDataTestId": false
+    },
+    {
+      "selector": "assistant-context-chip-search",
+      "area": "assistant",
+      "role": "context",
+      "dynamic": false,
+      "file": "widgets/assistant-panel/ui/ContextChips.tsx",
+      "line": 32,
+      "description": "The search box filter that goes with the next message.",
       "mirrorsDataTestId": false
     },
     {

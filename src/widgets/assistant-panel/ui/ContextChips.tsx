@@ -1,5 +1,11 @@
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { XMarkIcon } from "@heroicons/react/24/outline";
-import { MAX_SELECTED_FINGERPRINTS } from "@/entities/assistant";
+import {
+  getSearchCel,
+  isAlertsPage,
+  MAX_SELECTED_FINGERPRINTS,
+} from "@/entities/assistant";
 
 const CHIP_CLASSES =
   "flex min-w-0 items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs text-gray-700";
@@ -9,6 +15,32 @@ function getSelectionText(count: number): string {
   return count > MAX_SELECTED_FINGERPRINTS
     ? `${text}, the first ${MAX_SELECTED_FINGERPRINTS} are sent`
     : text;
+}
+
+/**
+ * The search box's filter, as the next message sends it. The only part of the
+ * panel that watches the search params, inside a boundary of its own: on a
+ * statically rendered route, Next renders only this on the client.
+ */
+function SearchChip({ page }: { page: string }) {
+  const searchCel = getSearchCel(page, useSearchParams());
+  if (searchCel === null) {
+    return null;
+  }
+  return (
+    <span
+      data-cy="assistant-context-chip-search"
+      className={CHIP_CLASSES}
+      title={searchCel}
+    >
+      <span className="truncate">
+        Search:{" "}
+        <bdi dir="ltr" className="font-mono">
+          {searchCel}
+        </bdi>
+      </span>
+    </span>
+  );
 }
 
 interface ContextChipsProps {
@@ -38,6 +70,11 @@ export function ContextChips({
         >
           <span className="truncate">Page: {page}</span>
         </span>
+      )}
+      {isAlertsPage(page) && (
+        <Suspense fallback={null}>
+          <SearchChip page={page} />
+        </Suspense>
       )}
       {selectedCount > 0 && (
         <span

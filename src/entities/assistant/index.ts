@@ -2,7 +2,11 @@ export * from "./model/types";
 export { confirmDraft, discardDraft } from "./api/assistant-api";
 export { getAssistantError } from "./api/assistant-error";
 export type { AssistantError } from "./api/assistant-error";
-export { buildChatContext } from "./lib/chat-context";
+export {
+  buildChatContext,
+  getSearchCel,
+  isAlertsPage,
+} from "./lib/chat-context";
 export type { TimelineEntry } from "./lib/live-turn";
 export {
   MAX_FOLLOW_UP_FINGERPRINTS,

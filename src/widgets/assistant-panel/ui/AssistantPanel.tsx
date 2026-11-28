@@ -110,7 +110,8 @@ export function AssistantPanel() {
     includeSelection();
     const isAccepted = await chat.send(
       message,
-      buildChatContext(page, fingerprints)
+      // The address as it is now: the panel doesn't watch the search params
+      buildChatContext(page, fingerprints, window.location.search)
     );
     if (isAccepted) {
       return;

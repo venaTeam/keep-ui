@@ -23,6 +23,17 @@ jest.mock("@/shared/lib/state-utils", () => ({
   useRevalidateMultiple: () => mockRevalidate,
 }));
 jest.mock("next-auth/react", () => ({ signOut: jest.fn() }));
+// What the page's search params hook gives; it may suspend, as it does while
+// Next renders a static route
+let mockSearchParams: () => URLSearchParams = () => new URLSearchParams();
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
+  usePathname: () => "/alerts/feed",
+  useSearchParams: () => mockSearchParams(),
+}));
+
+const ZONE = "Europe/Paris";
+const resolvedOptions = Intl.DateTimeFormat.prototype.resolvedOptions;
 
 type Chat = ReturnType<typeof useAssistantChat>;
 
@@ -98,6 +109,18 @@ beforeEach(() => {
   localStorage.clear();
   panelStore.setState({ ...panelStore.getInitialState(), isOpen: true }, true);
   contextStore.setState(contextStore.getInitialState(), true);
+  mockSearchParams = () => new URLSearchParams();
+  window.history.replaceState(null, "", "/alerts/feed");
+  jest
+    .spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions")
+    .mockImplementation(function (this: Intl.DateTimeFormat) {
+      return { ...resolvedOptions.call(this), timeZone: ZONE };
+    });
+});
+
+afterEach(() => {
+  jest.restoreAllMocks();
+  window.history.replaceState(null, "", "/");
 });
 
 describe("open and closed", () => {
@@ -161,6 +184,7 @@ describe("the composer", () => {
       page: "/alerts/feed",
       selected_fingerprints: [],
       selected_count: 0,
+      timezone: ZONE,
     });
     expect(input()).toHaveValue("");
   });
@@ -280,6 +304,96 @@ describe("the context", () => {
     expect(cy("assistant-context-chip-selection")).toBeNull();
     await enter();
     expect(send.mock.calls[1][1].selected_count).toBe(0);
+  });
+});
+
+describe("the search filter", () => {
+  const CRITICAL = 'severity == "critical"';
+  const TOO_LONG = "x".repeat(2001);
+  const searchChip = () => cy("assistant-context-chip-search");
+  const searchFor = (cel: string) => new URLSearchParams({ cel });
+  const visit = (cel: string) =>
+    window.history.replaceState(null, "", `/alerts/feed?${searchFor(cel)}`);
+
+  it("is the one in the address when the message is sent", async () => {
+    show();
+    // Changed after the panel rendered, without rendering it again
+    visit(CRITICAL);
+    type("what is this");
+    await enter();
+    expect(send.mock.calls[0][1]).toEqual({
+      page: "/alerts/feed",
+      selected_fingerprints: [],
+      selected_count: 0,
+      search_cel: CRITICAL,
+      timezone: ZONE,
+    });
+
+    visit('name == "db"');
+    type("and this");
+    await enter();
+    expect(send.mock.calls[1][1].search_cel).toBe('name == "db"');
+  });
+
+  it.each([
+    ["too long", TOO_LONG],
+    ["with a right-to-left override", 'name == "a‮b"'],
+  ])("is left out when it is %s, and the message is sent", async (_, cel) => {
+    show();
+    visit(cel);
+    type("hello");
+    await enter();
+    expect(send.mock.calls[0][1]).not.toHaveProperty("search_cel");
+  });
+
+  it("has a chip showing what is sent", () => {
+    mockSearchParams = () => searchFor(CRITICAL);
+    show();
+    expect(searchChip()).toHaveTextContent(`Search: ${CRITICAL}`);
+    expect(searchChip()).toHaveAttribute("title", CRITICAL);
+    // Text from the address is laid out on its own, left to right
+    const filter = searchChip()?.querySelector("bdi");
+    expect(filter).toHaveAttribute("dir", "ltr");
+    expect(filter).toHaveTextContent(CRITICAL);
+  });
+
+  it.each([
+    ["none", ""],
+    ["one too long to send", TOO_LONG],
+    ["one with a right-to-left override", 'name == "a‮b"'],
+  ])("has no chip for %s", (_, cel) => {
+    mockSearchParams = () => searchFor(cel);
+    show();
+    expect(cy("assistant-context-chip-page")).not.toBeNull();
+    expect(searchChip()).toBeNull();
+  });
+
+  it("waits for the search params in its own boundary, not the panel", async () => {
+    let resolve: () => void = () => {};
+    const pending = new Promise<void>((done) => (resolve = done));
+    let isPending = true;
+    mockSearchParams = () => {
+      if (isPending) {
+        throw pending;
+      }
+      return searchFor(CRITICAL);
+    };
+    visit(CRITICAL);
+    show();
+    // Everything but the chip is there, and works
+    expect(cy("assistant-panel")).not.toBeNull();
+    expect(cy("assistant-context-chip-page")).not.toBeNull();
+    expect(searchChip()).toBeNull();
+    type("hello");
+    await enter();
+    expect(send.mock.calls[0][1].search_cel).toBe(CRITICAL);
+
+    await act(async () => {
+      isPending = false;
+      resolve();
+      await pending;
+    });
+    expect(searchChip()).toHaveTextContent(`Search: ${CRITICAL}`);
   });
 });
 

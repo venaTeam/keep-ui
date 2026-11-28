@@ -256,6 +256,13 @@ export interface ChatContext {
   selected_fingerprints: string[];
   /** The true size of the selection; the list carries the first 200. */
   selected_count: number;
+  /**
+   * The alerts search box's CEL (`?cel=`), on an `/alerts/` page only. Left
+   * out when there is none, or when it can't be sent whole.
+   */
+  search_cel?: string;
+  /** The browser's IANA time zone; the gateway uses UTC for one it doesn't know. */
+  timezone?: string;
 }
 
 export interface ChatRequest {
@@ -332,3 +339,4 @@ export const MAX_MESSAGE_CHARS = 4000;
 export const MAX_PAGE_CHARS = 200;
 export const MAX_SELECTED_FINGERPRINTS = 200;
 export const MAX_FINGERPRINT_CHARS = 512;
+export const MAX_SEARCH_CEL_CHARS = 2000;

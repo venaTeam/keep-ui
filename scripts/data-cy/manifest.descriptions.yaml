@@ -172,6 +172,9 @@
 "assistant-context-chip-page":
   description: "The page that goes with the next message."
 
+"assistant-context-chip-search":
+  description: "The search box filter that goes with the next message."
+
 "assistant-context-chip-selection":
   description: "The selected alerts that go with the next message."
 
